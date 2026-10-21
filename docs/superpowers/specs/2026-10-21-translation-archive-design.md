@@ -157,7 +157,7 @@ Both imports:
 - **Translator recognition is automatic:** if a signed-in user's X ID matches a translator ID on archived entries, they're that translator. No claim step. (Google-only users can't act as a translator.)
 - **Translator powers:** remove any of their own entries; opt out entirely.
   - **Remove** (owner's decision): the entry disappears from the site, including search, event pages, and public outputs, and that tweet can't be submitted again. The data is kept privately, not deleted, and stays in the private backup marked as removed.
-  - **Opt out:** every entry by that translator disappears from the site the same way, and any future submission of their tweets is refused with a clear message to the submitter.
+  - **Opt out:** applies to the whole account. Every entry by that translator disappears from the site the same way, and nothing they posted can be added again by anyone, through submission, bulk paste, or Notion import. Submitters get a clear message. Imports skip those tweets and list them as skipped.
   - **Undo (my call):** a translator can restore entries they removed, or opt back in, since the data was never deleted.
   - The owner's **hide** works the same way, but only the owner can undo it.
 - **Owner:** a single admin, set by X user ID in config.
