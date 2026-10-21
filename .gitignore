@@ -1,0 +1,10 @@
+node_modules/
+.env*
+.vercel/
+.devdb/
+public/site/
+public/build/
+site/
+src/site/generated.js
+src/kinds/_registry.js
+.superpowers/
