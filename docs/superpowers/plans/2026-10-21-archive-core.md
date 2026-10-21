@@ -41,6 +41,9 @@ Translations are the first item kind. The engine is shaped so later kinds (photo
 - Removed or opted-out content never appears in any public response.
 - **Tweet sources:** syndication `https://cdn.syndication.twimg.com/tweet-result?id={id}&lang=en&token={token}`, with token `((Number(id)/1e15)*Math.PI).toString(36).replace(/(0+|\.)/g,'')`; FxTwitter `https://api.fxtwitter.com/2/status/{id}`.
 - Live-event window: same person + same platform + date within **±1 day**.
+- **Time zones:**
+  - Moments are `timestamptz`. Calendar dates are plain `date`s in the **site time zone** (`site.timezone`, an IANA name). All "which day" logic uses the site time zone, never UTC or the viewer's.
+  - Dates display as stored. Exact times display as "<viewer time> <viewer city> · <site time> <site city>" (one value if the zones match).
 
 ## Architecture and code rules
 
@@ -233,16 +236,16 @@ test('dev server applies vercel rewrites and routes /api', async () => {
 /** @typedef {{ name: string, wordmark: { accent: string, rest: string }, tagline: string, ownerXUserId: string,
  *   sourceLanguage: string, lowercaseNames: boolean, featuredPeople: FeaturedPerson[],
  *   defaultMarkers: Record<string, { personHandle: string } | { role: 'host'|'fan'|'speaker'|'crowd' }>,
- *   ignoredHashtags: string[], types: string[], extraPlatforms: { name: string, pattern: string }[] }} Site */
+ *   ignoredHashtags: string[], types: string[], extraPlatforms: { name: string, pattern: string }[], timezone: string }} Site */
 ```
 
-  - `validateSite(raw: unknown) → { ok: true, site: Site } | { ok: false, errors: string[] }`. Each error names the field path, e.g. `featuredPeople[1].colour: must be a #rrggbb colour`. It applies defaults for optional fields (`lowercaseNames: false`, `extraPlatforms: []`, `types: ['show / interview','fan meet / fan day','live','shared story']`). IG handles are lowercased with `@` stripped. Every `defaultMarkers[*].personHandle` must be a featured person.
+  - `validateSite(raw: unknown) → { ok: true, site: Site } | { ok: false, errors: string[] }`. Each error names the field path, e.g. `featuredPeople[1].colour: must be a #rrggbb colour`. It applies defaults for optional fields (`lowercaseNames: false`, `extraPlatforms: []`, `types: ['show / interview','fan meet / fan day','live','shared story']`). IG handles are lowercased with `@` stripped. Every `defaultMarkers[*].personHandle` must be a featured person. `timezone` is required and must be a valid IANA zone, checked with `new Intl.DateTimeFormat('en', { timeZone })` inside try/catch (error: `timezone: unknown time zone "<value>"`).
   - `loadSite(dir = 'site') → Site`: reads `site.json` and throws `SiteConfigError` with all errors joined.
   - `loadCopy(dir = 'site') → Record<string,string>`: `copyDefaults.json` overlaid by `<dir>/copy.json`. Unknown keys are an error (`unknown copy key: <k>`), which catches typos.
   - `formatName(site, name) → string`: lowercases when `site.lowercaseNames`.
-  - `scripts/build.js` writes `public/site/site.js` as `export default {name, wordmark, tagline, lowercaseNames, copy}` (no owner ID, no secrets), and copies `site/theme.css` and `site/logo.*` into `public/site/`.
+  - `scripts/build.js` writes `public/site/site.js` as `export default {name, wordmark, tagline, lowercaseNames, timezone, copy}` (no owner ID, no secrets), and copies `site/theme.css` and `site/logo.*` into `public/site/`.
   - `deps.site` = `loadSite()`.
-  - **Example site** (`site/`): name "solluna archive", wordmark `{accent:'solluna', rest:'archive'}`, tagline "fan translations, kept". Featured people: `{igHandle:'solsunny', displayName:'sol', emoji:'☀️', colour:'#f2a93b'}` and `{igHandle:'lunamoon', displayName:'luna', emoji:'🌙', colour:'#7a6cf0'}`. `defaultMarkers`: `{'☀️':{personHandle:'solsunny'}, '🌙':{personHandle:'lunamoon'}, '🗣️':{role:'crowd'}, '💬':{role:'fan'}}`. `ignoredHashtags: ['solluna']`, `lowercaseNames: true`, `sourceLanguage: 'th'`, `ownerXUserId: '0'`.
+  - **Example site** (`site/`): name "solluna archive", wordmark `{accent:'solluna', rest:'archive'}`, tagline "fan translations, kept". Featured people: `{igHandle:'solsunny', displayName:'sol', emoji:'☀️', colour:'#f2a93b'}` and `{igHandle:'lunamoon', displayName:'luna', emoji:'🌙', colour:'#7a6cf0'}`. `defaultMarkers`: `{'☀️':{personHandle:'solsunny'}, '🌙':{personHandle:'lunamoon'}, '🗣️':{role:'crowd'}, '💬':{role:'fan'}}`. `ignoredHashtags: ['solluna']`, `lowercaseNames: true`, `sourceLanguage: 'th'`, `timezone: 'Asia/Bangkok'`, `ownerXUserId: '0'`.
   - `site/theme.css` defines every design token (from the spec's "Visual design": paper, card, line, ink, muted, the brand gradient pair, fonts), each with a dark-mode value. The engine CSS only ever uses `var(--…)`.
   - `copyDefaults.json` holds every UI string used by later tasks (tagline fallback, tab labels, FAN-MADE, empty states, `sourceGone` = "Original tweet is no longer available. Translation kept below.", `accountOptedOut` = "this translator has opted out", `showN` = "show {n} translations", and so on). Later tasks add keys here; components read copy, never literals.
 - [ ] **Step 1: Write the failing tests**
@@ -270,6 +273,10 @@ test('copy overrides and rejects unknown keys', () => {
   assert.throws(() => loadCopy('test/fixtures/site-badcopy'), /unknown copy key/);
 });
 test('formatName', () => assert.equal(formatName({ lowercaseNames: true }, 'Sol'), 'sol'));
+test('timezone must be a real IANA zone', () => {
+  const raw = readJson('site/site.json'); raw.timezone = 'Mars/Olympus';
+  assert.ok(validateSite(raw).errors.some(e => e.startsWith('timezone')));
+});
 ```
 
   `test/purity.test.js` collects banned strings from **both** `site/site.json` and `test/fixtures/site/site.json` (people handles, display names, the wordmark accent, ignored hashtags). It also adds the real-world names `emi`, `bonnie`, `emiamily`, `beonnnie` and `emibonnie` as whole words, case-insensitive. It then fails if any file under `src/`, `api/`, `public/js/`, `public/css/` or `scripts/` (excluding `scripts/templates/`) contains one of them.
@@ -364,7 +371,7 @@ test('formatName', () => assert.equal(formatName({ lowercaseNames: true }, 'Sol'
 
 ### Task 5: Engine constants, kinds registry, header parsing
 
-**Files:** Create `src/domain/constants.js`, `src/domain/kinds.js`, `src/domain/header.js`, `test/domain/header.test.js`. Modify `types.js` (add `Header`).
+**Files:** Create `src/domain/constants.js`, `src/domain/kinds.js`, `src/domain/dates.js`, `src/domain/header.js`, `test/domain/dates.test.js`, `test/domain/header.test.js`. Modify `types.js` (add `Header`).
 
 **Interfaces:**
 - Produces:
@@ -374,7 +381,11 @@ test('formatName', () => assert.equal(formatName({ lowercaseNames: true }, 'Sol'
     - `LIVE_WINDOW_DAYS = 1`
     - `PLACEMENTS = ['event','shared_story','unsorted']`
   - `kinds.js`: `KINDS = [{ name: 'translation', table: 'translations', urlPrefix: '/t/' }]`, and `kindByName(name)`. This is the one list later kinds append to.
-  - `parseHeader(text, { ignoredHashtags, personHandles, platforms, postedAt? }) → Header`, where `platforms` = `PLATFORMS` plus the site's `extraPlatforms` (compiled to RegExp by the caller).
+  - `dates.js` (pure; uses `Intl.DateTimeFormat` with `timeZone`, no libraries):
+    - `localDate(instantIso, tz) → 'YYYY-MM-DD'`
+    - `daysBetween(dateA, dateB) → number` (calendar days, no time-of-day)
+    - `localYear(instantIso, tz) → number`
+  - `parseHeader(text, { ignoredHashtags, personHandles, platforms, postedAt?, timezone }) → Header`, where `platforms` = `PLATFORMS` plus the site's `extraPlatforms` (compiled to RegExp by the caller).
 
 ```js
 /** @typedef {{ keyword: string|null, hashtags: string[], personTags: string[], unknownHandleTags: string[],
@@ -386,7 +397,7 @@ test('formatName', () => assert.equal(formatName({ lowercaseNames: true }, 'Sol'
   - **hashtags:** original case, minus ignored and person tags (case-insensitive).
   - **personTags:** lowercase matches of `personHandles`.
   - **unknownHandleTags:** lowercase `#tag`s matching `/^[a-z0-9._]{3,30}$/` that are neither person tags nor ignored.
-  - **live:** the first platform match. The date comes from `[YYMMDD]`, or `d/m` with the year from `postedAt` (current year if missing).
+  - **live:** the first platform match. The date comes from `[YYMMDD]`, or `d/m` with the year from `localYear(postedAt, timezone)` (current year if missing). Header dates are already site-local and are never converted.
   - **context:** the first header line starting with `[`.
 
   Keep `findKeyword`, `splitHashtags`, `detectLive` and `parseLiveDate` as small private functions.
@@ -397,6 +408,7 @@ test('formatName', () => assert.equal(formatName({ lowercaseNames: true }, 'Sol'
   - `'luna tiktok live 12/2'` with `postedAt '2026-02-13T01:00:00Z'` → date `'2026-02-12'`.
   - `SHARED` → keyword `null`, live `null`, unknownHandleTags `['starguest']`.
   - An extra platform `{name:'weverse live', pattern:/weverse\s*live/i}` passed in `platforms` is detected.
+  - **dates:** `localDate('2026-02-12T17:30:00Z', 'Asia/Bangkok') === '2026-02-13'` (00:30 in Bangkok). `localDate('2026-02-12T16:59:00Z', 'Asia/Bangkok') === '2026-02-12'`. `daysBetween('2026-02-12','2026-02-13') === 1`. A New Year's Eve instant gives the right `localYear`.
 - [ ] **Step 2: FAIL** → **Step 3: implement** → **Step 4: PASS** → **Step 5: Commit** — `"Engine constants, kinds registry, header parsing"`
 
 ---
@@ -442,17 +454,18 @@ test('formatName', () => assert.equal(formatName({ lowercaseNames: true }, 'Sol'
 ```
 
   - `normKeyword`, `slugify`.
-  - `matchEvent({ header, postedAt, events, people, formatName }) → EventMatch`. Rules in order:
+  - `matchEvent({ header, postedAt, events, people, formatName, timezone }) → EventMatch`. The entry's date is `header.live.date`, else `localDate(postedAt, timezone)`. All date comparisons use `daysBetween`. Rules in order:
     1. Keyword (normalised) or hashtag (case-insensitive) match.
     2. A live with exactly one person tag: same person + platform, with `|Δdate| ≤ LIVE_WINDOW_DAYS`.
     3. Otherwise, a proposal when there's a keyword, an event hashtag, or a live. If not, `shared_story` when `unknownHandleTags` is non-empty, else `unsorted`.
     4. Suggestions: events within ±`LIVE_WINDOW_DAYS`, excluding the match, newest first, at most 5.
-  - `proposeEvent({ header, postedAt, people, formatName }) → EventProposal|null`. Name = keyword, or `formatName(displayName) + ' ' + platform`. Slug = `${slugify(name)}-${date}`.
+  - `proposeEvent({ header, postedAt, people, formatName, timezone }) → EventProposal|null`. Name = keyword, or `formatName(displayName) + ' ' + platform`. Slug = `${slugify(name)}-${date}`.
 - [ ] **Step 1: Write the failing tests:**
   - `'solluna  at starfest '` matches the event with keyword `'SOLLUNA AT STARFEST'`.
   - An empty header gives `placement 'unsorted'`.
   - A luna tiktok live on `2026-02-13` matches the event dated `2026-02-12`. On `2026-02-15` it proposes `{slug:'luna-tiktok-live-2026-02-15', name:'luna tiktok live', date:'2026-02-15', keywords:[], hashtags:[], livePersonId: LUNA, livePlatform:'tiktok live'}`.
   - `unknownHandleTags ['starguest']` gives `'shared_story'`.
+  - **Midnight:** a luna tiktok live header with no date, posted `2026-02-12T17:30:00Z` (00:30 on the 13th in Bangkok), with `timezone 'Asia/Bangkok'`, proposes date `2026-02-13`. With `timezone 'UTC'` it proposes `2026-02-12`.
 - [ ] **Step 2: FAIL** → **3: implement** → **4: PASS** → **5: Commit** — `"Event matching and proposals"`
 
 ---
@@ -474,7 +487,7 @@ test('formatName', () => assert.equal(formatName({ lowercaseNames: true }, 'Sol'
 ```
 
   `draftTranslation(tweet, ctx) → Draft` holds everything that decides what a translation item *is*. Ingest persists it; the add flow (Plan 2) previews it. Rules:
-  - Person handles = `igHandle` plus `extraHashtags`. Platforms = `PLATFORMS` plus `site.extraPlatforms`.
+  - Person handles = `igHandle` plus `extraHashtags`. Platforms = `PLATFORMS` plus `site.extraPlatforms`. `timezone` = `site.timezone`, passed to `parseHeader`, `matchEvent` and `proposeEvent`.
   - **Overrides:** `placement`, `eventId`, and `newEvent` (gives `eventId = null` and a fresh proposal).
   - **Shared story:** `type = 'shared story'`, no event or proposal. `sharingPersonId` = the person whose handle matches the first person tag or unknown handle tag, if they exist. `aboutPersonIds` = `personIds` minus the sharer.
   - `type` = `overrides.type`, else the matched event's type.
@@ -510,7 +523,7 @@ Read `docs/decisions/0006-data-model-conventions.md` (written in Step 1) before 
 5. **Normalise repeated values.** Platforms, item kinds, categories (types) and clients are lookup rows referenced by id. Tags (hashtags and keywords) are stored once and joined. Accounts are stored once and referenced.
 6. **Relations are join tables, not arrays or JSON:** people on items, tags on items and events, sources on items, links between items, and translation speakers.
 7. **Lookups are extended by inserting rows** (a new platform or category is data, not schema). New item kinds still need a migration for their own table.
-8. **Timestamps are `timestamptz`.** Calendar days are `date`. All text is UTF-8, stored verbatim.
+8. **Timestamps are `timestamptz`.** Calendar days are `date` in the **site time zone** (no per-row time zone). All text is UTF-8, stored verbatim.
 
 **Interfaces:**
 - Produces:
@@ -599,7 +612,9 @@ create table projects (
   starts_on date, ends_on date, category_id smallint references categories(id), /* common columns */ ...);
 
 create table events (
-  id bigint generated always as identity primary key, slug text unique not null, name text not null, occurred_on date not null,
+  id bigint generated always as identity primary key, slug text unique not null, name text not null,
+  occurred_on date not null,            -- calendar date in the site time zone
+  starts_at timestamptz,                -- exact start, when known
   project_id bigint references projects(id), category_id smallint references categories(id), client_id smallint references clients(id),
   live_person_id bigint references people(id), live_platform_id smallint references platforms(id),
   needs_review boolean not null default true, /* common columns */ ...);
@@ -847,7 +862,8 @@ test('two translators land in one event', async () => {
     - `esc`.
     - `getJson(path, params?)`, which throws `ApiError{status}` on a non-OK response.
     - `mount(el, html)` and `on(el, selector, event, fn)`.
-    - `monthLabel('2026-10') → 'october 2026'` and `dayLabel('2026-10-14') → '14 Oct 2026'`.
+    - `monthLabel('2026-10') → 'october 2026'` and `dayLabel('2026-10-14') → '14 Oct 2026'`. Dates are never converted.
+    - `timePair(instantIso, siteTz, viewerTz = Intl.DateTimeFormat().resolvedOptions().timeZone) → string`: `'4:00 pm paris · 10:00 pm bangkok'`. The city is the last part of the IANA name, lowercased, with `_` becoming a space. If both zones are the same, it returns a single value (`'10:00 pm bangkok'`).
     - `site.js` re-exports `/site/site.js` (name, wordmark, tagline, lowercaseNames, copy) and `t(key, vars?)` for copy with `{n}` placeholders.
   - **components:** each exports `render(props) → string`. They're pure, escape everything, never fetch, and take all wording from `t()`.
     - `header.render({ compact, site })`: logo `/site/logo.*`, wordmark (accent in the gradient), tagline, FAN-MADE.
@@ -865,6 +881,7 @@ test('two translators land in one event', async () => {
   - **CSS:** only `var(--…)` tokens, which come from `/site/theme.css`. Classes only; the one inline style is `--c`.
 - [ ] **Step 1: Write the failing tests:**
   - `esc` escapes `& < > " '`.
+  - `timePair('2026-02-12T15:00:00Z', 'Asia/Bangkok', 'Europe/Paris')` gives `'4:00 pm paris · 10:00 pm bangkok'`. With the same zone twice, it gives one value.
   - **Bubbles:** standard emoji (`🌙` replaces `🐱`), formatted names, one `.msg.cont`, `.crowd`, and `<script>` escaped. A role keeps the translator's emoji. Plain and footnotes are kept verbatim.
   - **resultCard:** escapes before highlighting.
   - **header:** renders the wordmark accent from the passed `site`, plus FAN-MADE.
@@ -895,6 +912,7 @@ test('two translators land in one event', async () => {
   - **Item (translation):**
     - **Under 860px:** sticky `.vid` at the top.
     - **860px and wider:** a two-column grid with the sticky video and prev/next on the left; credits (`tl @handle · clip by @source · date`), pills, cast and bubbles on the right.
+    - The posted time uses `timePair`.
     - Footer: original tweet, original media, follows on from, added by, Copy link, Report.
     - "show original" opens a `<pre>` with the escaped verbatim text.
 - [ ] **Step 4: Check in the browser** at 390px and 1280px, with screenshots attached to the task report via the `run` or `browse` skill. **Expected:**
@@ -1012,7 +1030,7 @@ test('two translators land in one event', async () => {
 
 - [ ] **Step 1: Bring in the engine.** `git remote add upstream ../fan-archive` for now (later `git@github.com:mintbluecar/fan-archive.git`), then `git pull upstream main --allow-unrelated-histories`. Resolve by keeping `emibonnie-archive`'s `docs/superpowers/` and taking everything else from upstream. Check `git config user.email`: **expected** `bluerotcar@gmail.com`.
 - [ ] **Step 2: Replace the example `site/`** with emibonnie's values from the spec:
-  - **name:** "emibonnie archive", wordmark `{accent:'emibonnie', rest:'archive'}`, tagline "fan translations, kept", `lowercaseNames: true`, `sourceLanguage: 'th'`.
+  - **name:** "emibonnie archive", wordmark `{accent:'emibonnie', rest:'archive'}`, tagline "fan translations, kept", `lowercaseNames: true`, `sourceLanguage: 'th'`, `timezone: 'Asia/Bangkok'`.
   - **featuredPeople:**
     - `{igHandle:'emiamily', displayName:'emi', emoji:'🧡', colour:'#ff8a3d'}`
     - `{igHandle:'beonnnie', displayName:'bonnie', emoji:'💜', colour:'#9b6cff'}`

@@ -87,6 +87,15 @@ Everything archived is an **item** of some **kind**. This version has one kind: 
 
 The full schema and conventions are in the implementation plan (Task 9) and ADR 0006.
 
+### Time zones (owner's decision)
+
+- **Exact moments** (posted, created, edited, a live's start time) are stored as `timestamptz`.
+- **Calendar days** (the day an event happened) are stored as plain dates, **in the site's time zone** (`site.json` `timezone`, e.g. `Asia/Bangkok` for emibonnie). Every event's date and time refers to that zone, including events held abroad. There is no per-event time zone.
+- **Every "which day" calculation uses the site's time zone,** never UTC or the viewer's: the posted-date fallback, the ±1-day live window, month grouping, and parsing `12/2` or `[260212]`.
+- **Display:**
+  - **Dates** show as stored, so "12 Feb 2026" reads the same for everyone.
+  - **Exact times** show the viewer's own time first (detected from their device and labelled by city), then the site's: "4:00 pm paris · 10:00 pm bangkok". If both zones are the same, it's shown once.
+
 ### Translation (the first item kind)
 
 **Entries have no title** (owner's decision). A tweet stands for itself. Wherever entries are listed (event pages, search, person pages), each one shows the opening lines of its translation text, with speaker emoji, as its preview.
