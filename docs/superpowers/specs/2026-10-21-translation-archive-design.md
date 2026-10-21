@@ -5,7 +5,7 @@ Status: draft for owner review
 
 ## Why this exists
 
-Fans of Emi and Bonnie watch Thai-language clips and streams. Fan translators on X clip moments and post the English translation as a tweet, with the clip attached. X is a poor long-term home for this:
+Fans of emi and bonnie watch Thai-language clips and streams. Fan translators on X clip moments and post the English translation as a tweet, with the clip attached. X is a poor long-term home for this:
 
 - Tweets get deleted and accounts get suspended. When that happens, the translation is lost.
 - X search is too weak to find a particular line. Today the owner finds an old translation by remembering the line, working out which event it came from, looking up the event's date in a personal chat full of saved links, and then scrolling a translator's profile filtered by date. This works when there is one translator. It breaks down as more translators appear.
@@ -80,16 +80,17 @@ A group of translations from the same occasion (a fan meeting, a show appearance
 
 - An event has a display name (defaults to the keyword), a date, keyword(s), hashtag(s), a type, and an optional client/media.
 - **Ignored hashtags:** the owner keeps a list of general hashtags (e.g. #EmiBonnie) that are never used for grouping.
-- **Unsorted:** a translation that doesn't match any event (e.g. a personal livestream with no hashtag) goes to an Unsorted list. The owner files it into an existing event or creates a new one, e.g. "Bonnie personal live, 9 Oct 2026". The owner can also move any translation to a different event.
+- **Unsorted:** a translation that doesn't match any event (e.g. a personal livestream with no hashtag) goes to an Unsorted list. The owner files it into an existing event or creates a new one, e.g. "bonnie personal live, 9 Oct 2026". The owner can also move any translation to a different event.
 - If a tweet's keyword or hashtag doesn't match an existing event, a new event is created automatically and flagged for the owner to look over.
 
 ### Person
 
-A known personality: Emi, Bonnie, Leo (a host), and others as they appear.
+A known personality: emi, bonnie, leo (a host), and others as they appear.
 
 - **Identity is the Instagram handle** (owner's decision). It's the unique key for a person. Emoji are not unique, since there won't be enough of them as the cast grows, and display names can collide.
 - Each person has an IG handle (unique), a **display name**, a **standard emoji**, a **colour**, and their own page listing translations they appear in. Emoji and colour may repeat across people. The display name and IG handle are always shown next to them, so people stay distinguishable.
-- Emi: 🧡, orange. Bonnie: 💜, purple. These two are fixed.
+- emi (@emiamily): 🧡, orange. bonnie (@beonnnie): 💜, purple. These two are fixed.
+- **Display names are lowercase** (owner's preference): "emi", "bonnie", "leo", across the whole site, in bubbles, tags, the cast list, and person pages. New people's display names are saved in lowercase. Text written by translators (titles, translation text, Notion names) is never changed.
 - "Add a new person" asks for the IG handle first. If it already exists, the submitter is pointed to that person instead, which prevents duplicates. Then it asks for display name, emoji, and colour, with suggestions.
 - **(my call)** Someone with no Instagram account can't be added as a known person by submitters. They're mapped to a generic role, and the owner can create them by hand with a placeholder key.
 - **(my call)** IG handles can change. The owner can edit a person's handle. Existing translations stay linked, because links are by internal person ID, not by handle.
@@ -102,7 +103,7 @@ A known personality: Emi, Bonnie, Leo (a host), and others as they appear.
 Translators each use their own speaker markers: 🐰/🦊/🦁/🌧️ for one, 💜/🧡 for others, and sometimes a line has no marker at all. When an entry is submitted:
 
 1. The site finds speaker markers: an emoji or short label at the start of a line, followed by a colon.
-2. For each marker, it pre-fills a guess. 💜 → Bonnie and 🧡 → Emi by default. After that, it uses that translator's previous mappings (e.g. for @vacantvolcanic: 🐰 → Bonnie, 🦊 → Emi, 🦁 → Leo).
+2. For each marker, it pre-fills a guess. 💜 → bonnie and 🧡 → emi by default. After that, it uses that translator's previous mappings (e.g. for @vacantvolcanic: 🐰 → bonnie, 🦊 → emi, 🦁 → leo).
 3. The submitter confirms each marker using a dropdown: known people, "add a new person", or a generic role (Host / Fan / Speaker).
 4. The confirmed mapping is saved on the entry and also remembered for that translator.
 5. 🗣️ (crowd) is pre-mapped to a crowd-reaction style.
