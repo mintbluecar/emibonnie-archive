@@ -675,9 +675,14 @@ create table item_links (from_item_id bigint not null references items(id), to_i
 
 -- translation kind
 create table translations (item_id bigint primary key, kind text not null default 'translation' check (kind = 'translation'),
-  body text not null, text_entered_manually boolean not null default false,
+  text_entered_manually boolean not null default false,
   foreign key (item_id, kind) references items (id, kind));
-create index translations_body_trgm on translations using gin (body gin_trgm_ops);
+-- each tweet's text is its own part: position 0 = main tweet, 1..n = follow-ups (added at intake, by the manual
+-- "check for follow-ups" button, or by attaching a pasted follow-up); parts are never rewritten, only added
+create table translation_parts (item_id bigint not null references translations(item_id), position smallint not null,
+  source_id bigint references item_sources(id), body text not null, created_at timestamptz not null default now(),
+  created_by text references users(id), primary key (item_id, position));
+create index translation_parts_body_trgm on translation_parts using gin (body gin_trgm_ops);
 create table translation_speakers (item_id bigint not null references translations(item_id), marker text not null,
   person_id bigint references people(id), role speaker_role, check ((person_id is null) <> (role is null)),
   primary key (item_id, marker));
@@ -708,7 +713,7 @@ create index audit_log_at on audit_log using brin (at);
 -- attach with a do-block loop over: entity tables (key 'id'): users, people, accounts, projects, events, items, reports, import_jobs, settings(key 'key')
 --                                  child tables (parent key): person_aliases('person_id'), event_people('event_id'), event_tags('event_id'),
 --                                  item_people('item_id'), item_tags('item_id'), item_sources('item_id'), item_links('from_item_id'),
---                                  translations('item_id'), translation_speakers('item_id')
+--                                  translations('item_id'), translation_parts('item_id'), translation_speakers('item_id')
 -- NOT audited: tags, lookups, source_checks, import_rows, speaker_memory, audit_log.
 ```
 
@@ -858,25 +863,29 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
 **Interfaces:**
 - Produces:
   - **The translation repo:**
-    - `insertTranslation(tx, itemId, { body, textEnteredManually })`.
+    - `insertTranslation(tx, itemId, { textEnteredManually })`.
+    - `addParts(tx, itemId, [{ sourceId, body }]) → positions[]`: appends after the current max position and never rewrites existing parts.
+    - `partsOf(itemIds) → Map<id, {position, body}[]>`.
     - `setSpeakers(tx, itemId, map)`. Replaces the set, the same way as `setItemPeople`.
-    - `loadDetails(db, itemIds) → Map<id, { body, speakers: SpeakerMap, sources }>`.
+    - `loadDetails(db, itemIds) → Map<id, { parts: string[], body /* parts joined with a blank line */, speakers: SpeakerMap, sources }>`.
   - **`translation.persist(tx, draft, meta)`** writes the kind-specific rows:
     - the translation body
     - the speakers
     - item tags: keyword and hashtags
-    - sources: primary, **follow-ups (one `follow_up` source per `tweet.followUps` entry, `position` 1…n; their text is appended to the translation body after a blank line, in order)**, media (the clipper account upserted by handle, with `media` = the video variants **or** `{images:[…]}`), quoted (`media` = `{text, authorHandle, authorName, createdAt, images, video}`, so the original post survives deletion like the translation)
+    - sources: primary, **follow-ups (one `follow_up` source per `tweet.followUps` entry, `position` 1…n)**, plus parts (part 0 is the main tweet text; parts 1…n are the follow-ups, each linked to its source), media (the clipper account upserted by handle, with `media` = the video variants **or** `{images:[…]}`), quoted (`media` = `{text, authorHandle, authorName, createdAt, images, video}`, so the original post survives deletion like the translation)
     - the follows-on link
     - speaker memory
   - **`ingestItem(deps, { kind, input, chosen?, overrides?, addedVia, actor }) → IngestResult`.** This is generic: **no kind is named.** The kind comes from the registry.
 
 ```js
-/** @typedef {{ status: 'added'|'pending'|'duplicate'|'removed'|'opted_out'|'deleted'|'unavailable'|'needs_speakers',
+/** @typedef {{ status: 'added'|'attached'|'pending'|'duplicate'|'removed'|'opted_out'|'deleted'|'unavailable'|'needs_speakers',
  *   sourceId: string, itemId?: number, eventId?: number|null, missing?: object[], draft?: object }} IngestResult */
 ```
 
   **Flow.** Each step is a private function:
-  1. `sourceState` returns **duplicate**, **removed** or **pending**.
+  1. `sourceState` returns **duplicate**, **removed** or **pending**. A pasted ID that is already some item's `follow_up` source returns **attached**, with that item.
+  1b. If the kind says the input is a follow-up (`kind.followUpOf(input) → {platform, externalId}|null`: for translations, `replyToId` with the same author as the archived item that owns that ID as a primary or follow-up source), append it to that item as a new part and source in one transaction, and return **attached**.
+     - Add `followUpOf` to the Kind contract. It's optional; kinds without it skip this step.
   2. The kind fetches the source. A deleted or unavailable source returns **deleted** or **unavailable**.
   3. The credited account is opted out: return **opted_out**.
   4. Load the context (site, people, events, ignored tags, `recall`), then run `kind.draft`.
@@ -902,7 +911,12 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
   - **Manual text:** a manually entered text by a non-translator actor gives `pending`.
   - **Rollback:** a `persist` failure (inject a kind whose `persist` throws) leaves **no** `items`, `events` or `audit_log` rows.
   - **Posts:** `POST` stores placement `post`, sol as `author`, and a `quoted` source with the original text and its photo. `PHOTO` stores a media source with 2 images.
-  - **Threads:** `THREAD` stores 1 `follow_up` source, and the body ends with the follow-up text.
+  - **Threads:** `THREAD` stores 1 `follow_up` source and 2 parts (positions 0, 1).
+  - **Attach a pasted follow-up:**
+    - Ingesting `…012` on its own after `THREAD` is archived returns **`attached`**, with the existing `itemId`. It adds no new item. Since `…012` is already a part, it's a no-op that returns `attached`.
+    - A new same-author reply `…014` (add a fixture) is appended as part 2.
+    - A reply by a different author is **not** attached; it goes through normal ingest.
+  - **`checkFollowUps(deps, itemId, { actor }) → { added: number }`:** re-runs `fetchThread` for the primary source and adds missing same-author follow-ups as parts and sources. A second run adds 0. (Plan 2 puts this behind a button; there's no automatic checking.)
   - **Seeding:** `seedDev` on the example site prints `seeded 9`.
 - [ ] **Step 2: Run the tests. Expected: FAIL.** Then implement. **Run the tests. Expected: PASS.** Commit: `"Translation kind persistence; generic ingest; add and seed-dev CLIs"`
 
@@ -943,6 +957,7 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
     - Every query includes `visibleItem`.
     - **Ordering:** `similarity(body, q) desc, posted_at desc` when there's a `q`, otherwise `posted_at desc`.
     - Results are `{ count, results: (Preview & { event, matchLines })[] }`. `limit=0` returns the count only.
+    - The translation `textClause` searches `translation_parts.body` (`exists … ilike`). Ranking uses the best-matching part's `similarity`.
 - [ ] **Step 1: Write the failing tests** (seed: all live fixtures, with full maps):
   - **Preview and detail:**
     - The `LONG` preview's first bubble has the host's standard emoji.
