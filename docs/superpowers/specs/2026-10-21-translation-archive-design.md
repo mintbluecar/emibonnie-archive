@@ -24,6 +24,7 @@ The archive is a website, friendly on mobile and on desktop, that keeps the tran
 5. **Watch while reading.** The clip plays in a player that stays in view while the translation scrolls.
 6. **Respect translators.** Credit is always shown. Translators can remove their entries or opt out entirely.
 7. **Near-zero running cost.** The site runs on free tiers.
+8. **Reusable by other fandoms** (owner's dream). Anyone who wants a translation archive for their favourite pair or group can copy the project as a template, fill in one `site/` folder, and deploy their own. They can keep pulling in improvements without conflicts. emibonnie is the first site built on it.
 
 ## Non-goals (this version)
 
@@ -34,6 +35,9 @@ The archive is a website, friendly on mobile and on desktop, that keeps the tran
 - Native mobile apps.
 
 ## Anti-goals (would make it a failure even if it works)
+
+- The shared template shipping anyone's real translations, or anything that names the owner.
+- Engine code that hardcodes one fandom (names, colours, emoji, hashtags), so another fandom would have to edit the engine.
 
 - A translation shown without credit to its translator, or attributed to the wrong person.
 - Altering a translator's words. The original text is always stored and displayable exactly as posted. Any formatting (speaker bubbles) is a view on top of it.
@@ -313,7 +317,35 @@ These choices are mine. They follow the owner's other fan projects (plain JS, Ve
 
 **Secrets** (X client ID and secret, Google OAuth, database URL, Better Auth secret) live only in Vercel environment variables and local untracked env files. They are never committed.
 
-**Identity:** this is a fan project. The repo lives in the GitHub org `mintbluecar` and commits as the fan identity. The Vercel, Neon, Google Cloud, and X developer accounts must be the fan-side accounts. No public content (README, committed files) names the owner's personal account, real name, or local file paths.
+**Identity:** this is a fan project. The repos (template and emibonnie) live in the GitHub org `mintbluecar` and commits as the fan identity. The Vercel, Neon, Google Cloud, and X developer accounts must be the fan-side accounts. No public content (README, committed files) names the owner's personal account, real name, or local file paths.
+
+## Reusable template (owner's decision: option 1, "copy the template")
+
+Other fans start their own archive by copying a template repo, filling in `site/`, and deploying to their own free Vercel and Neon accounts. Each archive is fully independent: its own data, its own owner, its own moderation. One hosted site for many fandoms, and a published engine package, were both considered and rejected: the first is too much to run and moderate, the second too much upkeep.
+
+**Engine vs. site boundary:**
+- **The engine** is everything outside `site/`. It must not mention any fandom. A test enforces this: it fails if the engine contains the example site's or emibonnie's names, handles, or hashtags.
+- **`site/`** is the only folder an archive owner edits:
+  - `site.json`: archive name, wordmark split (the gradient part, e.g. "emibonnie" + "archive"), tagline, owner's X user ID, source language, **featured people** (IG handle, display name, standard emoji, colour), **default speaker markers** (e.g. 💜 → @beonnnie, 🧡 → @emiamily, 🗣️ → crowd, 💬 → fan), ignored hashtags, types, extra live platforms, and `lowercaseNames` (true for emibonnie).
+  - `theme.css`: brand gradient, paper/card/ink colours, dark-mode values, font families. Fonts default to Nunito plus a Noto/IBM Plex font for the source language's script.
+  - `logo.png`.
+  - `copy.json`: every piece of user-facing wording (tagline, buttons, empty states, opt-out text), so a fandom can change the tone or translate the interface. The engine ships English defaults, and `copy.json` overrides them.
+  - `seed/` (optional): tweets to load for local development.
+- **Setup:** `npm run setup` validates `site.json` (clear errors for missing or invalid fields), runs migrations, and seeds featured people, ignored hashtags and types from it. It's safe to rerun after editing `site.json`. Featured people are seeded from settings, not hardcoded in migrations.
+- **Updates:** an archive owner adds the template as an `upstream` remote and runs `git pull upstream main`. Because they only change `site/`, this doesn't conflict. Engine changes that need a site change (a new required setting) must ship with a default or a clear setup error, plus a note in `CHANGELOG.md`.
+- **Sample data:** the template's `site/` holds a fictional example pair, and its tests use **synthetic tweet fixtures**: real tweet structure, made-up handles and text, including a long post, a Thai line, a live header, a shared story, a clip from another account, and a deleted tweet. Real translators' tweets are never in the template. emibonnie's real example tweets live only in emibonnie's own `site/seed/`.
+- **Docs:** `docs/start-your-own.md` is a step-by-step guide for a fan comfortable following instructions:
+  1. use the template
+  2. edit `site/`
+  3. create the Neon, Vercel and X developer app, and Google sign-in
+  4. add the secrets
+  5. run `npm run setup`
+  6. push to deploy
+  7. pull updates
+
+  `site/README.md` documents every setting.
+- **Repos (my call, confirm):** the engine is developed in a template repo, `mintbluecar/fan-translation-archive`. emibonnie is its own repo, `mintbluecar/emibonnie-archive`, created from the template with emibonnie's `site/` and real data, and it pulls engine updates from upstream. The template can go public when the owner chooses. It contains nothing personal or fandom-specific.
+- **Languages:** the source language is a setting (Thai for emibonnie). Search already works for scripts without spaces (Thai, Chinese, Japanese) and for Korean, through trigram matching. Header parsing (all-caps keywords, `[YYMMDD]` and `d/m` dates, live platforms) is language-neutral. Extra platforms can be added in `site.json`.
 
 ## Later (designed around, not built)
 
