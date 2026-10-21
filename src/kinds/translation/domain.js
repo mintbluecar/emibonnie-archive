@@ -67,24 +67,32 @@ function distinctProposal(proposal, events) {
   return { ...proposal, slug: `${proposal.slug}-${n}`, name: `${proposal.name} (${n})` };
 }
 
+/** @param {number[][]} lists */
+function firstNonEmpty(...lists) {
+  return lists.find((list) => list.length > 0) ?? [];
+}
+
 /**
- * Where the item goes once the submitter's overrides are applied.
+ * Where the item goes once the submitter's overrides are applied. A
+ * proposal made only because of an override is kept distinct from
+ * existing slugs (a signal-less one is just `event-<date>`). A forced
+ * post prefers the linked-account authors, then the tagged people.
  * @param {EventMatch} match
- * @param {{ctx: DraftContext, header: Header, tagIds: number[]}} input
+ * @param {{ctx: DraftContext, header: Header, tagIds: number[], postAuthorIds: number[]}} input
  * @returns {Placing}
  */
-function placingOf(match, { ctx, header, tagIds }) {
+function placingOf(match, { ctx, header, tagIds, postAuthorIds }) {
   const { overrides, events, people, formatName } = ctx;
-  const propose = () => proposeEvent({ header, date: match.date, people, formatName });
+  const propose = () => distinctProposal(proposeEvent({ header, date: match.date, people, formatName }), events);
   const none = { eventId: null, proposal: null, authorIds: [] };
   if (overrides.eventId !== undefined) return { ...none, placement: 'event', eventId: overrides.eventId };
-  if (overrides.newEvent) return { ...none, placement: 'event', proposal: distinctProposal(propose(), events) };
+  if (overrides.newEvent) return { ...none, placement: 'event', proposal: propose() };
   const placement = overrides.placement ?? match.placement;
   if (placement === 'event') {
     if (match.placement !== 'event') return { ...none, placement, proposal: propose() };
     return { ...none, placement, eventId: match.event?.id ?? null, proposal: match.proposal };
   }
-  if (placement === 'post') return { ...none, placement, authorIds: match.authorIds.length > 0 ? match.authorIds : tagIds };
+  if (placement === 'post') return { ...none, placement, authorIds: firstNonEmpty(match.authorIds, postAuthorIds, tagIds) };
   return { ...none, placement };
 }
 
@@ -166,7 +174,7 @@ export function draftTranslation(tweet, ctx) {
   const match = matchEvent({ header, postedAt: tweet.createdAt, events, people, formatName, timezone, postAuthorIds });
   const tagIds = peopleForTags(header.personTags, ctx.people).map((p) => p.id);
   const speakerIds = personIdsFrom(speakers, markers);
-  const placing = placingOf(match, { ctx, header, tagIds });
+  const placing = placingOf(match, { ctx, header, tagIds, postAuthorIds });
   const sharedStory = placing.placement === 'shared_story' ? sharedStoryOf(header, tagIds, speakerIds) : null;
   const presentIds = [...new Set([...speakerIds, ...tagIds])];
   const common = {

@@ -76,6 +76,13 @@ test('buildKindsRegistryModule: an empty kind list is a valid, empty registry', 
   assert.ok(source.includes('export const kindsRegistry = {\n\n};'));
 });
 
+test('buildKindsRegistryModule: default-imports each kind, so entries are Kind objects (no .default)', () => {
+  const source = buildKindsRegistryModule(['translation']);
+  assert.ok(source.includes("import kind0 from './translation/index.js';"));
+  assert.ok(source.includes('  "translation": kind0,'));
+  assert.ok(!source.includes('* as'));
+});
+
 test('buildVercelConfig: region, security headers (Referrer-Policy: no-referrer), buildCommand', () => {
   const site = loadSite('examples/solluna');
   const config = buildVercelConfig(site, []);

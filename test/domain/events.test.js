@@ -155,7 +155,7 @@ test('proposeEvent: keyword name, a slug from it, tags carried', () => {
   assert.equal(proposal.name, 'SOLLUNA AT STARFEST');
   assert.equal(proposal.slug, 'solluna-at-starfest-2026-10-18');
   assert.deepEqual(proposal.keywords, ['SOLLUNA AT STARFEST']);
-  assert.deepEqual(proposal.hashtags, ['sollunastarfest']);
+  assert.deepEqual(proposal.hashtags, ['SolLunaStarfest']);
   assert.equal(proposal.livePlatformCode, null);
 });
 

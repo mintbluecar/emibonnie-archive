@@ -63,17 +63,18 @@ export function listKindFolders(kindsDir) {
 }
 
 /**
- * `src/kinds/_registry.js`: static imports of every kind folder's
- * `index.js`, sorted. An empty `kindNames` list is valid (no kinds yet).
+ * `src/kinds/_registry.js`: a static default import of every kind
+ * folder's `index.js` (its `defineKind(...)` result), sorted, so each
+ * entry is the Kind itself. An empty `kindNames` list is valid.
  * @param {string[]} kindNames
  * @returns {string}
  */
 export function buildKindsRegistryModule(kindNames) {
-  const imports = kindNames.map((name, i) => `import * as kind${i} from './${name}/index.js';`);
+  const imports = kindNames.map((name, i) => `import kind${i} from './${name}/index.js';`);
   const entries = kindNames.map((name, i) => `  ${JSON.stringify(name)}: kind${i},`);
   return (
     `${GENERATED_HEADER}// @ts-check\n${imports.length > 0 ? `${imports.join('\n')}\n\n` : ''}` +
-    `/** @type {Record<string, unknown>} */\n` +
+    `/** @type {Record<string, Readonly<import('./defineKind.js').Kind>>} */\n` +
     `export const kindsRegistry = {\n${entries.join('\n')}\n};\n`
   );
 }

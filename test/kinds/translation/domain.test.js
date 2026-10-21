@@ -190,3 +190,20 @@ test('overrides.text replaces the tweet text and marks it entered manually', () 
   assert.equal(draft.text, '🦁: typed in by hand');
   assert.deepEqual(draft.missing.map((m) => m.marker), ['🦁']);
 });
+
+test("a 'post' override keeps the linked-account authors even when the header matched an event", async () => {
+  const post = await tweet(IDS.POST);
+  const withHeader = { ...post, text: `SOLLUNA HAPPY DAY\n#SLHappyDay2026\n\n${post.text}` };
+  const matched = draftTranslation(withHeader, ctx({ personAccounts: SOL_X, events: [HAPPY_DAY] }));
+  assert.equal(matched.common.eventId, 10);
+  const draft = draftTranslation(withHeader, ctx({ personAccounts: SOL_X, events: [HAPPY_DAY], overrides: { placement: 'post' } }));
+  assert.equal(draft.common.placement, 'post');
+  assert.deepEqual(draft.common.people, [{ personId: SOL, role: 'author' }]);
+});
+
+test("an 'event' override with no signals proposes a slug that does not collide", () => {
+  const taken = { ...HAPPY_DAY, id: 11, slug: 'event-2026-02-12', name: 'event', occurredOn: '2026-02-12' };
+  const draft = draftTranslation(tweetWith('🦁: hi'), ctx({ events: [taken], overrides: { placement: 'event' } }));
+  assert.equal(draft.common.placement, 'event');
+  assert.equal(draft.common.proposal?.slug, 'event-2026-02-12-2');
+});

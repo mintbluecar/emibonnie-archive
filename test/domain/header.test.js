@@ -26,13 +26,12 @@ function header(text, extra = {}) {
 test('EVENT_A: keyword and hashtag', () => {
   const result = header(fxText(IDS.EVENT_A));
   assert.equal(result.keyword, 'SOLLUNA HAPPY DAY');
-  assert.ok(result.hashtags.includes('slhappyday2026'));
+  assert.ok(result.hashtags.includes('SLHappyDay2026'));
 });
 
 test('EVENT_B: drops the ignored #SolLuna', () => {
   const result = header(fxText(IDS.EVENT_B));
-  assert.ok(result.hashtags.includes('slhappyday2026'));
-  assert.ok(!result.hashtags.includes('solluna'));
+  assert.deepEqual(result.hashtags, ['SLHappyDay2026']);
   assert.ok(!result.personTags.includes('solluna'));
   assert.ok(!result.unknownHandleTags.includes('solluna'));
 });
@@ -88,4 +87,9 @@ test('no keyword, hashtag, or live match gives null/empty defaults', () => {
     live: null,
     context: null,
   });
+});
+
+test('hashtags keep their written case; duplicates by norm keep the first spelling', () => {
+  const result = header('#SLHappyDay2026 #SLHAPPYDAY2026 #FanClip\n\n☀️: hi');
+  assert.deepEqual(result.hashtags, ['SLHappyDay2026', 'FanClip']);
 });

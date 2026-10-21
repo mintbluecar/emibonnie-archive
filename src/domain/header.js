@@ -9,9 +9,9 @@ import { localYear } from './dates.js';
  * @typedef {{code: string, platformCode: string, date: string|null}} HeaderLive
  * @typedef {{
  *   keyword: string|null,
- *   hashtags: string[],
- *   personTags: string[],
- *   unknownHandleTags: string[],
+ *   hashtags: string[], // as written (compare with norm)
+ *   personTags: string[], // normed
+ *   unknownHandleTags: string[], // normed
  *   live: HeaderLive|null,
  *   context: string|null,
  * }} Header
@@ -58,11 +58,12 @@ function classifyTag(tag, { ignoredHashtags, personHandles }) {
 }
 
 /**
+ * Adds `value` unless an entry with the same `norm` is already there.
  * @param {string[]} list
  * @param {string} value
  */
 function pushUnique(list, value) {
-  if (!list.includes(value)) list.push(value);
+  if (!list.some((entry) => norm(entry) === norm(value))) list.push(value);
 }
 
 /**
@@ -70,6 +71,7 @@ function pushUnique(list, value) {
  * tag (matches a known handle), a dropped ignored hashtag, a content
  * hashtag (mixed/upper-case, event-tag shaped), or an unknown handle tag
  * (plain lower-case, shaped like an unregistered person's handle).
+ * Duplicates are dropped by `norm`, keeping the first spelling.
  * @param {Line[]} headerLines
  * @param {{ignoredHashtags: string[], personHandles: string[]}} opts
  */
@@ -80,7 +82,9 @@ function collectTags(headerLines, opts) {
     for (const tag of hashtagTokensOf(line.text)) {
       const kind = classifyTag(tag, opts);
       if (kind === 'ignored') continue;
-      pushUnique(buckets[kind], norm(tag));
+      // Content hashtags keep their written case (stored as `tags.display`);
+      // person and unknown handle tags are compared as keys, so are normed.
+      pushUnique(buckets[kind], kind === 'hashtag' ? tag : norm(tag));
     }
   }
   return { personTags: buckets.person, hashtags: buckets.hashtag, unknownHandleTags: buckets.unknown };
