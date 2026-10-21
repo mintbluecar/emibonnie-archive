@@ -5,6 +5,7 @@ import { IDS } from '../../helpers/fixtures.js';
 import { ingestDeps, ingest, rows, count, patchedFetch, SYSTEM } from '../../helpers/ingest.js';
 import { refreshEdits, checkFollowUps } from '../../../src/kinds/translation/upkeep.js';
 import { touchRefresh } from '../../../src/repo/sourceEdits.js';
+import { route as itemRoute } from '../../../src/routes/item.js';
 
 const EDITED_TEXT = "☀️: can't wait to see everyone at the fanmeet next weekend!! (venue changed)";
 
@@ -155,3 +156,46 @@ test('follow-up text comes from its own post fetch, so the thread endpoint rende
     await deps.db.end();
   }
 });
+
+/** EDITED_NEW's edit window closes here (its fixture's `editableUntil`). */
+const WINDOW_CLOSES = new Date('2026-10-14T00:00:00.000Z').getTime();
+const HOUR = 60 * 60 * 1000;
+
+/** @param {any} db @param {number} itemId @returns {Promise<number>} X sources still open */
+async function openCount(db, itemId) {
+  return count(db, "select count(*)::int as n from item_sources where item_id = $1 and platform = 'x' and edit_finalized_at is null", [itemId]);
+}
+
+/** @param {any} deps @returns {Promise<number>} how many background refreshes one item GET schedules */
+async function defersOnGet(deps) {
+  let defers = 0;
+  const input = { params: { kind: 'translation', sourceId: IDS.EDITED_NEW }, query: {}, body: undefined, origin: 'https://a.example' };
+  await itemRoute.run(input, { ...deps, defer: () => { defers += 1; } });
+  return defers;
+}
+
+for (const [status, fetchImpl] of /** @type {[string, typeof fetch][]} */ ([
+  ['unavailable', /** @type {any} */ (async () => new Response('', { status: 503 }))],
+  ['deleted', patchedFetch((kind, _id, json) => (kind === 'thread' ? json : { __typename: 'TweetTombstone' })).fetchImpl],
+])) {
+  test(`a source read as ${status} stays open for 24 h after its window, then is finalized and the item page stops scheduling fetches`, async () => {
+    const deps = await ingestDeps();
+    try {
+      const id = /** @type {number} */ ((await ingest(deps, IDS.EDITED_NEW)).itemId);
+      const at = (/** @type {number} */ t) => ({ ...deps, fetchImpl, now: () => new Date(t) });
+      assert.ok(await openCount(deps.db, id) > 0);
+
+      const early = at(WINDOW_CLOSES + 2 * HOUR);
+      assert.deepEqual(await refreshEdits(early, id, SYSTEM), { updated: 0, editableUntil: '2026-10-14T00:00:00.000Z' });
+      assert.ok(await openCount(deps.db, id) > 0, 'within the grace day it is read again later');
+      assert.equal(await defersOnGet(early), 1);
+
+      const late = at(WINDOW_CLOSES + 25 * HOUR);
+      assert.deepEqual(await refreshEdits(late, id, SYSTEM), { updated: 0, editableUntil: null });
+      assert.equal(await openCount(deps.db, id), 0, 'finalized more than 24 h after the window closed');
+      assert.equal(await defersOnGet(late), 0, 'a following item GET schedules nothing');
+    } finally {
+      await deps.db.end();
+    }
+  });
+}

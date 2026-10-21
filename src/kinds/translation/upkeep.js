@@ -20,6 +20,7 @@ import { addAliases, unfinalizedSources, updateEditState } from '../../repo/sour
 import { isTextEnteredManually, updatePartBody } from './repo.js';
 import { appendPosts } from './persist.js';
 import { asFetched } from './source.js';
+import { GONE_GRACE_HOURS } from '../../domain/constants.js';
 
 /** @typedef {import('../../db/common.js').Db} Db */
 /** @typedef {import('../../db/common.js').Tx} Tx */
@@ -28,6 +29,7 @@ import { asFetched } from './source.js';
 /** @typedef {Awaited<ReturnType<typeof unfinalizedSources>>[number]} OpenSource */
 
 const HANDLE_IN_URL = /^https:\/\/(?:x|twitter)\.com\/([^/]+)\/status\//u;
+const HOUR_MS = 60 * 60 * 1000;
 
 /** @param {Date|string|null} value */
 function toTime(value) {
@@ -35,25 +37,32 @@ function toTime(value) {
 }
 
 /**
- * Whether a post's edit window is over for good: it's gone, it has no
- * window, or the window has closed by `now`.
+ * Whether a post's edit window is over for good. A live post: it has no
+ * window, or the window has closed by `now`. A post that's gone
+ * (`deleted`) or can't be read (`unavailable`): its stored window is
+ * missing, or closed more than `GONE_GRACE_HOURS` ago -- until then it's
+ * read again, in case the source was only briefly unreachable.
  * @param {{ live: boolean, editableUntil: string|null, source: OpenSource, now: Date }} input
  */
 function isClosed({ live, editableUntil, source, now }) {
+  if (!live) {
+    const stored = toTime(source.editableUntil);
+    return stored === null || stored < now.getTime() - GONE_GRACE_HOURS * HOUR_MS;
+  }
   const closesAt = toTime(editableUntil ?? source.editableUntil);
-  return !live || closesAt === null || closesAt < now.getTime();
+  return closesAt === null || closesAt < now.getTime();
 }
 
 /**
  * Applies one re-fetched post: a changed text (unless the part was typed in
  * by hand), any new version ids, and the window -- finalized once it has
- * closed, or once the post is gone for good.
+ * closed, or (a post that's gone or unreadable) a day after it closed, so
+ * the item page stops scheduling fetches of it.
  * @param {Tx} tx
  * @param {{ itemId: number, source: OpenSource, tweet: Tweet, now: Date, manual: boolean }} input
  * @returns {Promise<boolean>} whether the part's body changed
  */
 async function applyRefetch(tx, { itemId, source, tweet, now, manual }) {
-  if (tweet.status === 'unavailable') return false;
   const live = tweet.status === 'live';
   const changed = live && !(manual && source.role === 'primary')
     ? await updatePartBody(tx, { itemId, sourceId: source.id, body: tweet.text })

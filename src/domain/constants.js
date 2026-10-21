@@ -35,6 +35,13 @@ export const REVIEW_STATES = ['pending', 'published', 'rejected'];
 export const LIVE_WINDOW_DAYS = 1;
 
 /**
+ * How long after its edit window closed a post that can't be read
+ * (deleted or unavailable) is still re-fetched before it's finalized.
+ * @type {number}
+ */
+export const GONE_GRACE_HOURS = 24;
+
+/**
  * @typedef {{ code: string, platformCode: string, pattern: RegExp }} LiveTextPattern
  */
 
