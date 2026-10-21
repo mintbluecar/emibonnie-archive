@@ -175,7 +175,7 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
   - **`mediaBox`** (`public/js/components/mediaBox.js`) renders the pinned area from `detail.media`:
     - `video`: `videoPlayer`.
     - `images`: a capped carousel (same 40svh cap on phones; swipe or arrow buttons; `n / total` counter), with `<img loading="lazy" decoding="async" alt="">`, aspect from width/height, and tap opening a full-screen `<dialog>` zoom (Escape or close button, focus returned).
-    - `quote`: a quote card with author name, handle, date and the original text (Thai spans get `lang`).
+    - `quote`: a quote card with author name, handle, date and the original text (Thai spans get `lang`). If `inner` is present, the quoted post's pictures or clip render inside the card, using the same capped carousel or player.
     - `null`: the `sourceGone` note.
   - If Plan 1a Task 2 recorded that **hotlinking fails**, the player uses X's official embed instead (`platform.twitter.com`, added to the CSP), and the video isn't sticky on phones.
   - **The item page:**

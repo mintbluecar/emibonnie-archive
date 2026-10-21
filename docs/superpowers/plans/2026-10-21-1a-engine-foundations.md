@@ -366,12 +366,13 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
 | `JOINT_LIVE` | `…007` | `tl_beta` | first line `#solsunny #lunamoon IG live [260301]`; markers `☀️ 🌙` |
 | `SHARED` | `…005` | `tl_alpha` | first line `#SolLuna #starguest`; markers `💬 🪇` |
 | `TOMB` | `…006` | – | `{"__typename":"TweetTombstone",…}`; no fx file |
-| `POST` | `…008` | `tl_beta` | **quotes** tweet `…010` by `solsunny_x` (author id `8001`; sol's X account) whose text is a Thai sentence; the translation text has no speaker markers. The syndication `quoted_tweet` includes the text. |
+| `POST` | `…008` | `tl_beta` | **quotes** tweet `…010` by `solsunny_x` (author id `8001`; sol's X account) whose text is a Thai sentence **and which carries one photo** on `pbs.twimg.com`; the translation text has no speaker markers. The syndication `quoted_tweet` includes the text. |
+| `THREAD` | `…011` | `tl_beta` | markers `🌙`; fx `/2/thread/…011` lists `…011` and a same-author follow-up `…012` (`replying_to …011`, text "The list in the pic: …"), plus a reply `…013` by a **different** author (must be excluded) |
 | `PHOTO` | `…009` | `tl_alpha` | two photos (`type: 'photo'`, `media_url_https` on `pbs.twimg.com`, with width/height); first line `#solsunny`; markers `☀️` |
 
 **Interfaces:**
 - Produces:
-  - `Tweet` typedef (in `normalize.js`): `{ id, status, authorId, authorHandle, authorName, createdAt, text, textSource, video: {variants, durationMs, width, height}|null, images: {url, width, height}[], quoted: {id, authorId, authorHandle, authorName, text, createdAt}|null, clipSource: {handle,url}|null, quotedId, replyToId }`.
+  - `Tweet` typedef (in `normalize.js`): `{ id, status, authorId, authorHandle, authorName, createdAt, text, textSource, video: {variants, durationMs, width, height}|null, images: {url, width, height}[], quoted: {id, authorId, authorHandle, authorName, text, createdAt, images, video}|null, followUps: {id, text, createdAt}[], clipSource: {handle,url}|null, quotedId, replyToId }`.
   - `parseTweetId(input) → string|null`. It accepts x.com, twitter.com and mobile URLs, `?s=` query strings, `/video/1` suffixes, and bare IDs. It returns the ID only if it matches `^\d{1,20}$`.
   - `extractTweetIds(text) → string[]` returns unique IDs, in order.
   - `SOURCES = [{ name, fetch(deps, id) → object|null }]` lists syndication and fx. Each source uses `redirect:'error'` and `AbortSignal.timeout(3000)`, and returns `null` on any failure.
@@ -386,7 +387,8 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
     - `quotedId` is set.
     - A variant on a non-twimg host is dropped.
   - **`EVENT_A` clip source:** `clipSource` is `clipper_one`.
-  - **Images and quotes:** `PHOTO` gives 2 images, both on `pbs.twimg.com`; a non-pbs host is dropped. `POST` gives `quoted.authorHandle === 'solsunny_x'` and `quoted.text` with the Thai sentence.
+  - **Images and quotes:** `PHOTO` gives 2 images, both on `pbs.twimg.com`; a non-pbs host is dropped. `POST` gives `quoted.authorHandle === 'solsunny_x'`, `quoted.text` with the Thai sentence, and `quoted.images.length === 1`.
+  - **Threads:** `fetchThread(deps, id) → { id, text, createdAt }[]` reads fx `/2/thread/{id}` and returns only follow-ups by the **same author** that reply within the chain, in order. For `THREAD` it returns `[…012]`; it excludes `…013` (another author) and returns `[]` on failure. `fetchTweet` includes them as `followUps`.
   - **Video shape:** `video.width`/`height` come from `mediaDetails[0].original_info`. Make the `LIVE` fixture's video **vertical** (720×1280), and assert that it reads back as such.
   - **`LIVE` source:** the text comes from syndication.
   - **Missing tweets:** `TOMB` is `deleted`, and nothing at all from either source is `unavailable`.
@@ -863,7 +865,7 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
     - the translation body
     - the speakers
     - item tags: keyword and hashtags
-    - sources: primary, follow-ups, media (the clipper account upserted by handle, with `media` = the video variants **or** `{images:[…]}`), quoted (`media` = `{text, authorHandle, authorName, createdAt}`, so the original post survives deletion like the translation)
+    - sources: primary, **follow-ups (one `follow_up` source per `tweet.followUps` entry, `position` 1…n; their text is appended to the translation body after a blank line, in order)**, media (the clipper account upserted by handle, with `media` = the video variants **or** `{images:[…]}`), quoted (`media` = `{text, authorHandle, authorName, createdAt, images, video}`, so the original post survives deletion like the translation)
     - the follows-on link
     - speaker memory
   - **`ingestItem(deps, { kind, input, chosen?, overrides?, addedVia, actor }) → IngestResult`.** This is generic: **no kind is named.** The kind comes from the registry.
@@ -899,8 +901,9 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
   - **Refusals:** duplicate, removed and opted_out.
   - **Manual text:** a manually entered text by a non-translator actor gives `pending`.
   - **Rollback:** a `persist` failure (inject a kind whose `persist` throws) leaves **no** `items`, `events` or `audit_log` rows.
-  - **Posts:** `POST` stores placement `post`, sol as `author`, and a `quoted` source with the original text. `PHOTO` stores a media source with 2 images.
-  - **Seeding:** `seedDev` on the example site prints `seeded 8`.
+  - **Posts:** `POST` stores placement `post`, sol as `author`, and a `quoted` source with the original text and its photo. `PHOTO` stores a media source with 2 images.
+  - **Threads:** `THREAD` stores 1 `follow_up` source, and the body ends with the follow-up text.
+  - **Seeding:** `seedDev` on the example site prints `seeded 9`.
 - [ ] **Step 2: Run the tests. Expected: FAIL.** Then implement. **Run the tests. Expected: PASS.** Commit: `"Translation kind persistence; generic ingest; add and seed-dev CLIs"`
 
 ---
@@ -921,7 +924,8 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
   - **Translation presenter:**
     - `preview(item, details, ctx)`: the first 2 speech bubbles. If there are no speech lines, the first 2 plain lines that aren't part of the header.
     - `detail(item, details, ctx)`: `{ bubbles: BubbleVM[], cast: CastVM[], original: string, credits: { account, clipBy, postedAt, occurredOn }, sources, media: MediaVM|null }`.
-    - `MediaVM = {type:'video', variants, width, height} | {type:'images', images:[{url,width,height}]} | {type:'quote', authorName, authorHandle, text, postedAt}`, in that priority order.
+    - `MediaVM = {type:'video', variants, width, height} | {type:'images', images:[{url,width,height}]} | {type:'quote', authorName, authorHandle, text, postedAt, inner: {type:'video',…}|{type:'images',…}|null}`.
+    - Priority: the translator's own video, then the translator's own images, then the quote (with the quoted post's pictures or clip as `inner`).
     - Video and images are only included while their source's status is live. The quote card always shows, because its text is archived.
   - **`hubs.js`:**
     - `homeView(deps) → { months: [{ month, events: [{ slug, name, occurredOn, hashtag, counts: Record<kind, number> }] }] }`.
