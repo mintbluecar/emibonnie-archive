@@ -372,7 +372,7 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
 
 **Owner input needed.** Ask before starting, and use the answers:
 1. **emibonnie's public contact URL** (`contactUrl`): **`https://x.com/mintbluetoyota`** (the owner's fan X profile, given on 2026-10-21).
-2. **Who made the emibonnie logo**, so the about page credits it correctly.
+2. **The emibonnie logo belongs to GMMTV** (owner, 2026-10-21).
 
 - [ ] **Step 1: Bring in the engine.**
   - `git remote add upstream ../fan-archive` (it becomes the GitHub URL in Task 10), then `git fetch upstream --tags && git merge v0.1.0 --allow-unrelated-histories`.
@@ -392,7 +392,10 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
   - **categories:** the spec's types.
   - **theme.css:** overrides only the tokens: paper `#f6efe3`, card `#fffdf8`, line `#eadfce`, ink `#2b2233`, muted `#8a7f8f`, gradient `#ff6a2b → #e03a85`, `--font-script` IBM Plex Sans Thai. Dark values come from the engine defaults unless they need adjusting.
   - **logo:** `logo.png` from `docs/superpowers/specs/mockups/`.
-  - **copy.json:** the about-page logo credit and any wording changes.
+  - **copy.json:**
+    - The about page credits the logo: "The emibonnie logo belongs to GMMTV and is used here by fans, unofficially."
+    - The footer and about page both say **"Unofficial fan archive. Not affiliated with GMMTV, emi or bonnie."**
+    - Any other wording changes.
 - [ ] **Step 3: Seed.**
   - `git mv test/fixtures/tweets site/seed/tweets`.
   - `site/seed/maps.json`:
