@@ -1,0 +1,78 @@
+<h2>Vertical videos on a phone</h2>
+<p class="subtitle">A 9:16 clip (TikTok / IG live) would fill the whole screen if pinned at full width. Three ways to keep the translation readable. Click any you like.</p>
+
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  .s{--bg:#f6efe3;--card:#fffdf8;--ink:#2b2233;--mute:#8a7f8f;--line:#eadfce;--emi:#ff8a3d;--bon:#9b6cff;font-family:Nunito,'IBM Plex Sans Thai',sans-serif;color:var(--ink)}
+  @media (prefers-color-scheme: dark){.s{--bg:#17141d;--card:#221e2a;--ink:#f1edf7;--mute:#b3aabd;--line:#3a3344}}
+  .ph{width:280px;height:580px;border-radius:26px;overflow:hidden;box-shadow:0 6px 24px #0003;position:relative;background:var(--bg);display:flex;flex-direction:column}
+  .top{padding:8px 12px;font-size:11px;color:var(--mute);flex:none}
+  .vid{background:#14111a;display:flex;justify-content:center;align-items:center;flex:none;position:relative}
+  .clip{background:linear-gradient(160deg,#3a2f4a,#1d1822);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;text-align:center;border-radius:4px}
+  .body{padding:8px 12px;overflow:hidden;flex:1;position:relative}
+  .body:after{content:"";position:absolute;left:0;right:0;bottom:0;height:40px;background:linear-gradient(transparent,var(--bg))}
+  .cred{font-size:10px;color:var(--mute);margin-bottom:6px}
+  .msg{display:flex;gap:6px;margin-bottom:6px;align-items:flex-start}
+  .av{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex:none}
+  .bub{padding:5px 9px;border-radius:4px 12px 12px 12px;font-size:11.5px;line-height:1.4}
+  .nm{font-size:9px;font-weight:800}
+  .e .av{background:#ff8a3d2e}.e .bub{background:#ff8a3d1f}.e .nm{color:#d4651c}
+  .b .av{background:#9b6cff2e}.b .bub{background:#9b6cff1f}.b .nm{color:#7a4fe0}
+  .ctrl{position:absolute;right:6px;bottom:6px;font-size:10px;background:#fff3;color:#fff;border-radius:999px;padding:2px 8px}
+  .mini{position:absolute;right:10px;top:46px;width:72px;height:128px;border-radius:10px;box-shadow:0 6px 18px #0006;z-index:2;overflow:hidden}
+  .mini .clip{width:100%;height:100%;border-radius:0}
+  .mini .x{position:absolute;top:3px;right:3px;font-size:9px;background:#0007;color:#fff;border-radius:999px;padding:0 5px}
+  .cap{font-size:12px;opacity:.75;text-align:center;margin-top:8px;max-width:280px}
+  .row{display:flex;gap:22px;flex-wrap:wrap;justify-content:center}
+</style>
+
+<div class="s">
+<div class="cards">
+
+  <div class="card" data-choice="capped" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px 0"><div class="ph">
+      <div class="top">‹ bonnie tiktok live · 12 Feb 2026</div>
+      <div class="vid" style="height:38%"><div class="clip" style="height:100%;aspect-ratio:9/16">9:16 clip<br>fits the pinned area</div><span class="ctrl">⤢ full screen</span></div>
+      <div class="body">
+        <div class="cred">tl @vacantvolcanic · clip by @vacantvolcanic</div>
+        <div class="msg b"><div class="av">💜</div><div class="bub"><div class="nm">bonnie</div>I haven't played games in a super long time, guys.</div></div>
+        <div class="msg b"><div class="av">💜</div><div class="bub">Ever since back when we were playing it together.</div></div>
+        <div class="msg e"><div class="av">🧡</div><div class="bub"><div class="nm">emi</div>…</div></div>
+      </div>
+    </div></div>
+    <div class="card-body"><h3>A · Capped pinned area</h3><p>The pinned video never takes more than about 40% of the screen. A vertical clip shows narrower, centred, with dark sides. Tap ⤢ for full screen. Simplest; works for every shape.</p></div>
+  </div>
+
+  <div class="card" data-choice="shrink" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px 0"><div class="ph">
+      <div class="top">‹ bonnie tiktok live · 12 Feb 2026</div>
+      <div class="mini"><div class="clip">playing</div><span class="x">✕</span></div>
+      <div class="body" style="padding-top:4px">
+        <div class="cred">tl @vacantvolcanic · scrolled down ↓</div>
+        <div class="msg b" style="margin-right:80px"><div class="av">💜</div><div class="bub"><div class="nm">bonnie</div>I haven't played games in a super long time, guys.</div></div>
+        <div class="msg b" style="margin-right:80px"><div class="av">💜</div><div class="bub">Ever since back when we were playing it together.</div></div>
+        <div class="msg e"><div class="av">🧡</div><div class="bub"><div class="nm">emi</div>I haven't had time for my hobbies at all since then.</div></div>
+        <div class="msg b"><div class="av">💜</div><div class="bub"><div class="nm">bonnie</div>…</div></div>
+      </div>
+    </div></div>
+    <div class="card-body"><h3>B · Shrinks to a floating mini player</h3><p>Starts big at the top. As you scroll into the translation, it shrinks to a small player in the corner and keeps playing. Tap it to grow back. Most room for text.</p></div>
+  </div>
+
+  <div class="card" data-choice="split" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px 0"><div class="ph">
+      <div class="top">‹ bonnie tiktok live · 12 Feb 2026</div>
+      <div style="display:flex;gap:8px;padding:0 8px;flex:1;overflow:hidden">
+        <div style="width:96px;flex:none"><div class="clip" style="width:96px;aspect-ratio:9/16;position:sticky;top:0">9:16<br>side</div></div>
+        <div class="body" style="padding:0">
+          <div class="msg b"><div class="av">💜</div><div class="bub"><div class="nm">bonnie</div>I haven't played games in a super long time, guys.</div></div>
+          <div class="msg b"><div class="av">💜</div><div class="bub">Ever since back when we were playing it together.</div></div>
+          <div class="msg e"><div class="av">🧡</div><div class="bub"><div class="nm">emi</div>I haven't had time for my hobbies…</div></div>
+        </div>
+      </div>
+    </div></div>
+    <div class="card-body"><h3>C · Side by side</h3><p>Vertical clips sit in a narrow column on the left with the bubbles beside them, like the web layout. Only for vertical clips; wide clips stay on top. Text column gets narrow.</p></div>
+  </div>
+
+</div>
+<p class="subtitle" style="margin-top:14px">On web (wide screens) nothing changes: the clip already sits in its own left column, and a vertical clip just fits that column's height.</p>
+</div>

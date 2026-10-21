@@ -303,6 +303,7 @@ Approved with the owner on 2026-10-21 using mockups. The mockups are kept in `do
   - **Phone:** the clip is pinned at the top, and below it scroll the credits ("tl @translator · clip by @source · date"), the cast list, and the bubbles.
   - **Web:** the clip stays in view on the left, with "‹ previous in event / next in event ›" under it, while the right column scrolls through the credits, tag pills, cast list and bubbles.
   - At the bottom: original tweet link, original media link, follows-on links, added by, Copy link, and Report.
+  - **Vertical clips (owner's decision, option A):** the pinned video area on a phone never takes more than about **40% of the screen height**. A clip of any shape is fitted inside it (letterboxed: a vertical 9:16 clip shows narrower and centred, with dark sides), and a **⤢ full screen** button opens it full screen. The clip's shape comes from the source's width and height, so the box is sized before it loads. On web, the clip fits its own column's height. (Mockup: `vertical-video.html`, option A.)
   - **If the tweet is deleted:** the video area is replaced by "Original tweet is no longer available. Translation kept below."
 - **Person page** (`people-me-v1.html`).
   - A header in the person's colour, with emoji, lowercase name, IG handle, and counts (translations, events, shared stories).
