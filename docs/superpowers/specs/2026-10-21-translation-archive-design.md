@@ -132,7 +132,9 @@ Tested examples (2026-10-21):
 
 ## Bulk import (launch content)
 
-The archive launches with existing content, not empty. The owner will not paste links one at a time. There are two sources:
+The archive launches with existing content, not empty. The owner will not paste links one at a time.
+
+Bulk import is a separate admin feature, **for the owner only**. Regular submitters add one tweet at a time. Both use the same intake pipeline (fetching, event matching, remembered speaker mappings, duplicate and opt-out checks), so entries look the same whichever way they came in. Import adds batching, a background queue, and per-translator speaker mapping on top. There are two sources:
 
 1. **The translator's Notion database** (the owner has the translator's permission to import it). Its columns are Name, Date, Artist(s), Type, Client / Media, Keyword, Hashtag, Translation link, and Original media.
    - **(my call)** The owner exports the database from Notion as CSV and uploads it on an admin import page. This needs no Notion integration or token.
