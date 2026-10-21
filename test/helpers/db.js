@@ -25,21 +25,48 @@ export function uniqueName(/** @type {string} */ prefix) {
 }
 
 /**
- * Drops `fa_test_*` schemas and `fa_test_app_*` roles left by runs that
- * crashed before `end()`, once they are older than `STALE_MS`.
+ * Whether `name` is exactly `uniqueName(prefix)`'s format and older than
+ * `STALE_MS` at `now`. Anything else (a hand-made `fa_test_2024_backup`)
+ * is never selected, so the sweep can't drop it.
+ * @param {string} name
+ * @param {'fa_test' | 'fa_test_app'} prefix
+ * @param {number} now
+ */
+export function isStaleTestName(name, prefix, now) {
+  const match = new RegExp(`^${prefix}_(\\d{13})_[0-9a-f]{8}$`).exec(name);
+  return match !== null && Number(match[1]) < now - STALE_MS;
+}
+
+/**
+ * Drops test schemas and roles left by runs that crashed before `end()`.
  * @param {import('../../src/db/client.js').Db} admin
  */
 async function sweepStale(admin) {
-  const cutoff = Date.now() - STALE_MS;
-  const isStale = (/** @type {string} */ name) => Number(name.split('_').at(-2)) < cutoff;
+  const now = Date.now();
   const schemas = await admin.query("select nspname as n from pg_namespace where nspname like 'fa\\_test\\_%'");
-  for (const { n } of schemas.rows.filter((r) => isStale(r.n))) {
+  for (const { n } of schemas.rows.filter((r) => isStaleTestName(r.n, 'fa_test', now))) {
     await admin.query(`drop schema if exists "${n}" cascade`);
   }
   const roles = await admin.query("select rolname as n from pg_roles where rolname like 'fa\\_test\\_app\\_%'");
-  for (const { n } of roles.rows.filter((r) => isStale(r.n))) {
+  for (const { n } of roles.rows.filter((r) => isStaleTestName(r.n, 'fa_test_app', now))) {
     await admin.query(`drop owned by "${n}"`).catch(() => {});
     await admin.query(`drop role if exists "${n}"`).catch(() => {});
+  }
+}
+
+/**
+ * Installs pg_trgm in `public` (not in the first test schema that happens to
+ * run 001 on a fresh server, where dropping that schema would take it along).
+ * Parallel test files may race on the first install; the loser's duplicate
+ * error is harmless once the extension exists.
+ * @param {import('../../src/db/client.js').Db} admin
+ */
+async function ensureTrgmInPublic(admin) {
+  try {
+    await admin.query('create extension if not exists pg_trgm with schema public');
+  } catch (err) {
+    const { rows } = await admin.query("select 1 from pg_extension where extname = 'pg_trgm'");
+    if (rows.length === 0) throw err;
   }
 }
 
@@ -58,6 +85,7 @@ export async function freshDb({ migrated = true } = {}) {
   const schema = uniqueName('fa_test');
   const admin = createDb({ url });
   await sweepStale(admin);
+  await ensureTrgmInPublic(admin);
   await admin.query(`create schema "${schema}"`);
   const db = createDb({ url, schema });
   if (migrated) await migrate(db, { dirs: [{ namespace: 'engine', dir: ENGINE_MIGRATIONS }] });

@@ -60,3 +60,29 @@ test('updated_at is bumped and updated_by set on update; settings (no created_by
   }, { actor: 'member-a' });
   assert.equal(row.updated_by, 'member-a');
 });
+
+test('an update cannot change created_by or created_at', async () => {
+  const row = await db.transaction(async (tx) => {
+    await tx.query("insert into users (id) values ('member-c')");
+    const { rows } = await tx.query("insert into people (display_name, emoji, colour) values ('C', '🙂', '#112233') returning id, created_at");
+    await tx.query("update people set created_by = 'member-c', created_at = '2000-01-01T00:00:00Z', display_name = 'C2' where id = $1", [rows[0].id]);
+    const after = (await tx.query('select created_by, created_at, display_name from people where id = $1', [rows[0].id])).rows[0];
+    return { ...after, original: rows[0].created_at };
+  }, { actor: 'system' });
+  assert.equal(row.created_by, 'system');
+  assert.equal(row.created_at.getTime(), row.original.getTime());
+  assert.equal(row.display_name, 'C2');
+});
+
+test('the trigger functions cannot be executed by public', async () => {
+  const { rows } = await db.query(
+    `select p.proname, has_function_privilege('public', p.oid, 'execute') as public_exec
+     from pg_proc p where p.proname in ('set_common', 'write_audit', 'grant_app_role') and p.pronamespace = current_schema()::regnamespace
+     order by p.proname`,
+  );
+  assert.deepEqual(rows, [
+    { proname: 'grant_app_role', public_exec: false },
+    { proname: 'set_common', public_exec: false },
+    { proname: 'write_audit', public_exec: false },
+  ]);
+});

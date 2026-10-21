@@ -33,7 +33,8 @@ function wrapSession(session) {
   return {
     query: async (sql, params) => {
       const result = await session.query(sql, params);
-      return { rows: result.rows, rowCount: result.affectedRows ?? result.rows.length };
+      // PGlite reports affectedRows 0 for a select; node-postgres's rowCount is the row count there.
+      return { rows: result.rows, rowCount: result.affectedRows || result.rows.length };
     },
     exec: async (sql) => {
       await session.exec(sql);

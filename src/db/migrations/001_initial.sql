@@ -428,7 +428,8 @@ revoke all on table audit_log from public;
 -- triggers
 -- ---------------------------------------------------------------------------
 
--- BEFORE INSERT/UPDATE: stamps the bookkeeping columns the table actually has, from app.actor
+-- BEFORE INSERT/UPDATE: stamps the bookkeeping columns the table actually has, from app.actor, and on
+-- update keeps created_by/created_at as they were
 -- (set by transaction() in src/db/client.js). Refuses the write when no actor is set: after a
 -- transaction ends, current_setting('app.actor', true) reads '' rather than null, hence nullif.
 create function set_common() returns trigger
@@ -449,6 +450,13 @@ begin
   end if;
   if tg_op = 'UPDATE' and cols ? 'updated_at' then
     patch := patch || jsonb_build_object('updated_at', now());
+  end if;
+  -- who created a row, and when, never changes after the insert
+  if tg_op = 'UPDATE' and cols ? 'created_by' then
+    patch := patch || jsonb_build_object('created_by', to_jsonb(old) -> 'created_by');
+  end if;
+  if tg_op = 'UPDATE' and cols ? 'created_at' then
+    patch := patch || jsonb_build_object('created_at', to_jsonb(old) -> 'created_at');
   end if;
   return jsonb_populate_record(new, patch);
 end;
@@ -493,6 +501,10 @@ begin
   return null;
 end;
 $$;
+
+-- Nobody calls these directly; triggers fire regardless of the writer's EXECUTE privilege.
+revoke execute on function set_common() from public;
+revoke execute on function write_audit() from public;
 
 -- Entity tables are keyed by their own id; child, join and kind tables by their parent, so one
 -- item's (or event's, or person's) whole history is one row_key lookup.
@@ -552,3 +564,4 @@ begin
   execute format('revoke insert, update, delete, truncate on table schema_migrations from %s', app);
 end;
 $$;
+revoke execute on function grant_app_role(regrole) from public;
