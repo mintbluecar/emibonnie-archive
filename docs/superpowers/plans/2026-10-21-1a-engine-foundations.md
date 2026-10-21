@@ -372,7 +372,7 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
 
 **Interfaces:**
 - Produces:
-  - `Tweet` typedef (in `normalize.js`): `{ id, status, authorId, authorHandle, authorName, createdAt, text, textSource, video: {variants, durationMs, width, height}|null, images: {url, width, height}[], quoted: {id, authorId, authorHandle, authorName, text, createdAt, images, video}|null, followUps: {id, text, createdAt}[], clipSource: {handle,url}|null, quotedId, replyToId }`.
+  - `Tweet` typedef (in `normalize.js`): `{ id, status, authorId, authorHandle, authorName, createdAt, text, textSource, video: {variants, durationMs, width, height}|null, images: {url, width, height}[], quoted: {id, authorId, authorHandle, authorName, text, createdAt, images, video}|null, followUps: {id, text, createdAt, editableUntil}[], edit: { versionIds: string[], latestId: string, editableUntil: string|null, isStale: boolean }, clipSource: {handle,url}|null, quotedId, replyToId }`.
   - `parseTweetId(input) → string|null`. It accepts x.com, twitter.com and mobile URLs, `?s=` query strings, `/video/1` suffixes, and bare IDs. It returns the ID only if it matches `^\d{1,20}$`.
   - `extractTweetIds(text) → string[]` returns unique IDs, in order.
   - `SOURCES = [{ name, fetch(deps, id) → object|null }]` lists syndication and fx. Each source uses `redirect:'error'` and `AbortSignal.timeout(3000)`, and returns `null` on any failure.
@@ -388,6 +388,10 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
     - A variant on a non-twimg host is dropped.
   - **`EVENT_A` clip source:** `clipSource` is `clipper_one`.
   - **Images and quotes:** `PHOTO` gives 2 images, both on `pbs.twimg.com`; a non-pbs host is dropped. `POST` gives `quoted.authorHandle === 'solsunny_x'`, `quoted.text` with the Thai sentence, and `quoted.images.length === 1`.
+  - **Edits:**
+    - `normalize` reads syndication `edit_control` into `edit`: `versionIds` = `edit_tweet_ids`; `latestId` = the last of those; `editableUntil` = ISO from `editable_until_msecs`, or null if missing; `isStale` = `isStaleEdit`.
+    - `fetchTweet` refetches `latestId` once when `isStale` is true, and returns the latest version, which still carries the full `versionIds`.
+    - Add fixture `EDITED_OLD` (`…015`, stale, with `edit_tweet_ids […015, …016]`) and `EDITED_NEW` (`…016`). `fetchTweet('…015')` returns id `…016` with both IDs in `versionIds`.
   - **Threads:** `fetchThread(deps, id) → { id, text, createdAt }[]` reads fx `/2/thread/{id}` and returns only follow-ups by the **same author** that reply within the chain, in order. For `THREAD` it returns `[…012]`; it excludes `…013` (another author) and returns `[]` on failure. `fetchTweet` includes them as `followUps`.
   - **Video shape:** `video.width`/`height` come from `mediaDetails[0].original_info`. Make the `LIVE` fixture's video **vertical** (720×1280), and assert that it reads back as such.
   - **`LIVE` source:** the text comes from syndication.
@@ -661,11 +665,14 @@ create index item_tags_tag on item_tags (tag_id);
 create table item_sources (id bigint generated always as identity primary key, item_id bigint not null, kind text not null,
   platform text not null references platforms(code), external_id text, url text not null check (url ~ '^https://'),
   role text not null references source_roles(code), position smallint not null default 0, account_id bigint references accounts(id),
-  start_seconds int, media jsonb, status text not null default 'live' check (status in ('live','deleted','unavailable')),
+  start_seconds int, media jsonb, editable_until timestamptz, edit_finalized_at timestamptz, status text not null default 'live' check (status in ('live','deleted','unavailable')),
   created_at timestamptz not null default now(), created_by text references users(id),
   foreign key (item_id, kind) references items (id, kind));
 create unique index item_sources_primary_per_kind on item_sources (kind, platform, external_id) where role = 'primary';
 create unique index item_sources_one_primary on item_sources (item_id) where role = 'primary';
+-- every version id of an edited tweet maps to its source, so any version counts as a duplicate
+create table source_aliases (platform text not null references platforms(code), external_id text not null,
+  source_id bigint not null references item_sources(id), primary key (platform, external_id));
 create index item_sources_item on item_sources (item_id);
 create table source_checks (source_id bigint primary key references item_sources(id), checked_at timestamptz not null,
   consecutive_failures int not null default 0);                       -- NOT audited (health-check churn)
@@ -829,7 +836,7 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
 
     `visibleEvent(alias='e')` is `e.deleted_at is null and exists (select 1 from items i where i.event_id = e.id and <visibleItem>)`.
   - **items:**
-    - `sourceState(kind, platform, externalId) → 'none'|'visible'|'removed'|'pending'`.
+    - `sourceState(kind, platform, externalId) → 'none'|'visible'|'removed'|'pending'`. It looks through `source_aliases`, so any version ID of an edited tweet resolves to the same item.
     - `insertItem(tx, row) → id`. `sort_key` defaults to `extract(epoch from posted_at)` when it isn't given.
     - `neighbours(itemId) → { prev, next }`. Only visible items in the same event, ordered by `(sort_key, occurred_on, posted_at, id)`.
     - `listVisibleItemIds({ eventId?, personId?, accountId?, kind?, placement?, limit, offset }) → { kind, id }[]`.
@@ -916,6 +923,11 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
     - Ingesting `…012` on its own after `THREAD` is archived returns **`attached`**, with the existing `itemId`. It adds no new item. Since `…012` is already a part, it's a no-op that returns `attached`.
     - A new same-author reply `…014` (add a fixture) is appended as part 2.
     - A reply by a different author is **not** attached; it goes through normal ingest.
+  - **Edits:**
+    - Ingest stores `editable_until` on each tweet source, plus a `source_aliases` row for every `versionIds` entry.
+    - Ingesting `EDITED_OLD` archives `…016`, and a later paste of `…015` returns `duplicate`.
+    - **`finalizeEdits(deps, itemId, { actor }) → { updated: number }`:** for each tweet source whose `editable_until < now` and `edit_finalized_at is null`, re-fetch once. If the text changed, update that part's body (audited). Record any new version IDs as aliases, and set `edit_finalized_at`. A second run does nothing. A test fixture where the final text differs gives `updated: 1`, and the audit log holds the old body.
+    - `pendingEditItems(db, now, limit) → itemId[]` serves the daily sweep in Plan 3.
   - **`checkFollowUps(deps, itemId, { actor }) → { added: number }`:** re-runs `fetchThread` for the primary source and adds missing same-author follow-ups as parts and sources. A second run adds 0. (Plan 2 puts this behind a button; there's no automatic checking.)
   - **Seeding:** `seedDev` on the example site prints `seeded 9`.
 - [ ] **Step 2: Run the tests. Expected: FAIL.** Then implement. **Run the tests. Expected: PASS.** Commit: `"Translation kind persistence; generic ingest; add and seed-dev CLIs"`
@@ -1000,7 +1012,7 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
   - **Routes.** Each module is `export const route = { method, path, cache, run }`. Each `run` is under 30 lines and calls services only. Paths:
     - `GET /api/home`
     - `GET /api/event/:slug`
-    - `GET /api/item/:kind/:sourceId` (404 when the kind is unknown)
+    - `GET /api/item/:kind/:sourceId` (404 when the kind is unknown). If the item has a source whose edit window has passed and isn't finalized, the route schedules `finalizeEdits` **in the background** with `waitUntil` (from `@vercel/functions`; the dev server's shim awaits it after responding) and actor `'system'`. The response isn't delayed, and the CDN cache isn't bypassed.
     - `GET /api/search`
     - `GET /api/filters`
     - `GET /api/person/:ig`
