@@ -476,13 +476,16 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
     - `SpeakerMap = Record<string, {person:number}|{role:Role}>`.
   - **`events.js`:**
     - `Event = { id, slug, name, occurredOn, categoryId, clientId, keywords, hashtags, livePeopleIds: number[], livePlatformCode: string|null }`.
-    - `matchEvent({ header, postedAt, events, people, formatName, timezone, postAuthorId? }) → EventMatch`.
+    - `matchEvent({ header, postedAt, events, people, formatName, timezone, postAuthorIds? }) → EventMatch`. `EventMatch` gains `authorIds: number[]` (set for `post`).
       - The entry date is the header's live date, else `localDate(postedAt, tz)`.
       - **Rules, in order:**
         1. A keyword (`norm`) or hashtag (`norm`) matches.
         2. A live whose **set** of person tags equals the event's `livePeopleIds` set, on the same platform, with `daysBetween` ≤ 1.
         3. Otherwise, a proposal when there's a keyword, an event hashtag or a live.
-        4. If none applies: **`post`** when `postAuthorId` is given (the caller found the quoted or media source's account linked to a known person); else `shared_story` when there are unknown handle tags; else `unsorted`.
+        4. If none applies:
+           - **`post`** when `postAuthorIds` is non-empty (the caller found the quoted or media source's account linked to a known person), **or** when `personTags` is non-empty and there are no unknown handle tags (only known people's own tags, e.g. `#solsunny #lunamoon`; the tagged people become the authors).
+           - Else `shared_story` when there are unknown handle tags.
+           - Else `unsorted`.
       - **Suggestions:** events within ±1 day, excluding the match, at most 5.
     - `proposeEvent(...) → EventProposal`.
       - Name: the keyword, or the people's formatted names joined with `" & "`, then the live code (`"sol & luna ig live"`).
@@ -503,7 +506,8 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
     - Parse lines and header, resolve speakers, match the event.
     - Apply overrides: `placement`, `eventId`, `newEvent`.
     - **Shared story:** placement `shared_story`, no event and no proposal, a sharing person from the first person tag or unknown tag that resolves, and the about-people.
-    - **Post:** `ctx.personAccounts` (`[{platform, handle, personId}]`) is matched against `tweet.quoted.authorHandle`, then `clipSource.handle`. A match gives placement `post`, `people` including `{personId, role:'author'}`, and no event.
+    - **Post:** `ctx.personAccounts` (`[{platform, handle, personId}]`) is matched against `tweet.quoted.authorHandle`, then `clipSource.handle`, giving `postAuthorIds`. `matchEvent` also detects a post by person tags only. For a post, every author goes into `people` as `{personId, role:'author'}`, and there's no event.
+    - **Follows on:** when `tweet.quoted.authorId` equals the tweet's own author (the translator quoting their earlier translation), the draft sets `followsOn: {platform:'x', externalId: quoted.id}`. Ingest links it with `item_links 'follows_on'` if that item is archived.
     - `ctx.personAccounts` comes from the accounts linked to people (Task 8).
     - `occurredOn` is the live date, else `localDate(postedAt, tz)`.
   - **`kinds/translation/index.js`:** `export default defineKind({ name:'translation', table:'translations', urlPrefix:'/t/', matchesUrl: parseTweetId, draft: draftTranslation, … })`. `persist`, `loadDetails`, `present` and `search` are completed in Tasks 10–11. Stub them now to throw `not implemented`.
@@ -526,7 +530,9 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
     - `EVENT_B` matches an existing event.
     - `SHARED` gives placement `shared_story`.
     - `POST` with `personAccounts [{platform:'x', handle:'solsunny_x', personId: SOL}]` gives placement `post`, with sol as `author`, and nothing missing (no markers).
-    - `PHOTO` gives placement `post` when sol's handle is the media source, else an event or unsorted per the header.
+    - `PHOTO` (first line `#solsunny`, no other signals) gives placement `post` with sol as `author`, through the person-tags-only rule.
+    - A header `#solsunny #lunamoon` with no keyword gives `post` with **both** as authors. A header `#lunamoon TikTok live [260212]` still gives a live event (the live wins). `#solsunny #starguest` gives `shared_story` (an unknown tag is present).
+    - A tweet quoting its own author's earlier tweet sets `followsOn`.
     - `newEvent` forces a proposal.
   - **defineKind:**
     - It rejects a spec that's missing `search.textClause`.

@@ -159,7 +159,11 @@ A translation that **isn't tied to an event**: someone else talking about emi an
 ### Posts (owner's decision, 2026-10-21)
 
 A translation of something **the people themselves posted**: emi's own tweet, bonnie's IG story, a handwritten note they shared. It's a fourth placement, alongside event, shared story and unsorted.
-- **The add flow suggests "post"** when the translated content comes from a known person's own account (the quoted tweet, or the clip/picture source, belongs to an account linked to that person) and there's no event keyword, event hashtag or live pattern. The submitter can change it.
+- **The add flow suggests "post"** when there's no event keyword, event hashtag or live pattern, and **either**:
+  - the translated content comes from a known person's own account (the quoted tweet, or the clip/picture source, belongs to an account linked to that person), **or**
+  - the header's only tags are **known people's own handle tags**, e.g. `#emiamily #beonnnie` for their IG story exchange (`vacantvolcanic/status/2112869493643034998`). The tagged people become the authors.
+
+  The submitter can change it. When a post quotes the same translator's earlier translation, it's linked as "follows on from" it.
 - **The person is recorded as the post's author** (`item_people` role `author`). Posts show on that person's page and as a **"posts"** option in the type filter. They never appear on the events timeline.
 - **A known person's other accounts** (e.g. their X handle) can be listed in settings, so posts can be recognised. Matching by handle is only used for this suggestion and never grants anyone powers.
 
