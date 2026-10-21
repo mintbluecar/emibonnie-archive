@@ -228,6 +228,8 @@ These choices are mine. They follow the owner's other fan projects (plain JS, Ve
 
 **Backup and removals (my call):** the backup repo is **private**, because removed and opted-out entries are kept in it, marked as removed. A public repo would keep them reachable. Submitter account details (emails, sign-in tokens) are never exported.
 
+**Deploying (my call):** Vercel Hobby can't connect to repos owned by a GitHub organisation, so pushes to `main` deploy through a GitHub Actions workflow using the Vercel CLI (`vercel deploy --prebuilt --prod`) and a Vercel token stored as a repo secret. Pull requests get preview deploys the same way. Checking that this works is one of the first build steps.
+
 **Free-tier check (2026-10-21, official pricing pages):** Vercel Hobby is free and allows non-commercial use. Over-limit usage pauses the feature, with no bill. Neon Free, Better Auth (the framework; only their hosted dashboard is paid), Google sign-in (basic scopes; the app must be set to "In Production" to avoid the 100-user testing cap), and GitHub Actions are all $0. Sign in with X was tested working on a zero-credit app.
 
 **Unofficial sources are fragile.** Both tweet sources are undocumented or third-party and can break when X changes things. Intake must fail gracefully: it falls back to the other source, then to manual text entry. The owner gets an alert when one source has been failing.
