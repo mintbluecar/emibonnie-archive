@@ -144,7 +144,10 @@ The archive launches with existing content, not empty. The owner will not paste 
 
 Both imports:
 - Run as a background queue, throttled (my call: a few tweets per second) so the free tweet sources don't block the server. The owner can see progress and failures and retry them.
-- Use the **"needs speakers"** state for entries whose speaker markers couldn't be mapped automatically. These are live and shown as plain text until someone maps the speakers. A "needs speakers" list lets the owner, or any submitter, work through them later.
+- **Speakers are mapped before entries go live** (owner's decision). Fetching is quick (about 1–2 s per tweet, so roughly 10–15 min for 500), and mapping is grouped so it stays manageable:
+  - After fetching, the import shows **one mapping screen per translator**. It lists every speaker marker that translator used, how often each appears, and an example line, with the default and remembered guesses filled in. One answer covers all of that translator's entries.
+  - Entries whose markers are all mapped this way go live together.
+  - Entries with anything still unclear (a marker that means different people in different entries, or no markers at all) stay in a **"needs speakers"** list for the person who ran the import. They aren't public until they're resolved.
 - Credit the import to the owner as "Added by". The Notion import is also marked as coming from that translator's archive.
 - Tweets that are already deleted: if Notion supplies no text, they're listed for the owner. They can't be recovered automatically.
 
