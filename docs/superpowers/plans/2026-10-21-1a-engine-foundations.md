@@ -665,7 +665,7 @@ create index item_tags_tag on item_tags (tag_id);
 create table item_sources (id bigint generated always as identity primary key, item_id bigint not null, kind text not null,
   platform text not null references platforms(code), external_id text, url text not null check (url ~ '^https://'),
   role text not null references source_roles(code), position smallint not null default 0, account_id bigint references accounts(id),
-  start_seconds int, media jsonb, editable_until timestamptz, edit_finalized_at timestamptz, status text not null default 'live' check (status in ('live','deleted','unavailable')),
+  start_seconds int, media jsonb, editable_until timestamptz, edit_finalized_at timestamptz, last_refreshed_at timestamptz, status text not null default 'live' check (status in ('live','deleted','unavailable')),
   created_at timestamptz not null default now(), created_by text references users(id),
   foreign key (item_id, kind) references items (id, kind));
 create unique index item_sources_primary_per_kind on item_sources (kind, platform, external_id) where role = 'primary';
@@ -710,9 +710,6 @@ create table import_rows (id bigint generated always as identity primary key, jo
   state text not null default 'queued' check (state in ('queued','fetched','needs_speakers','check','published','skipped','failed')),
   item_id bigint references items(id), error text, created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
   unique (job_id, platform, external_id));
--- simple fixed-window rate limits (Plan 1: edit-refresh button; Plan 2 reuses for sign-in and writes)
-create table rate_limits (bucket text not null, window_start timestamptz not null, count int not null default 0,
-  primary key (bucket, window_start));
 create table audit_log (id bigint generated always as identity primary key, table_name text not null, row_key text not null,
   action text not null check (action in ('insert','update','delete')), actor text not null, at timestamptz not null default now(), changes jsonb);
 create index audit_log_row on audit_log (table_name, row_key);
@@ -1023,13 +1020,9 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
       - If the item has a source whose edit window has passed and isn't finalized, the route schedules `refreshEdits` **in the background** with `waitUntil` (from `@vercel/functions`; the dev server's shim awaits it after responding) and actor `'system'`. The response isn't delayed.
       - The response includes `editOpenUntil` (the latest unfinalized `editable_until`, or null), which the page uses to show the button.
     - **`POST /api/item/:kind/:sourceId/refresh`:** the "check for update" button. It needs no sign-in, and runs the Origin check.
-      - **Rate limited** by `src/http/rateLimit.js` `hit(db, bucket, { limit, windowSeconds }) → { ok, retryAfter }`, using the `rate_limits` table:
-        - per item: `item:<id>`, 1 per 60 s
-        - per visitor: `ip:<sha256(ip + daily salt from settings)>`, 20 per hour. Raw IPs are never stored.
-      - Over the limit, it returns 429 with `Retry-After`.
+      - **Throttling** is mostly in the browser (owner's decision; 1b Task 4). The server's only guard: if any of the item's tweet sources has `last_refreshed_at` within the last 60 s, it returns the current state (`{ updated: 0, editOpenUntil, throttled: true }`) without calling X. Otherwise it sets `last_refreshed_at` and runs the refresh. There's no rate-limit table.
       - Returns 409 `{ error: 'edit_window_closed' }` when every source is finalized. Otherwise it runs `refreshEdits` with actor `'system'` and returns `{ updated, editOpenUntil }` with `no-store`.
-      - Old `rate_limits` rows (windows older than a day) are deleted opportunistically, 1% of the time.
-    - Tests: the 2nd refresh within 60 s returns 429; a finalized item returns 409; a foreign Origin returns 403; the hashed IP never appears in the database as a raw IP.
+    - Tests: a 2nd refresh within 60 s returns `throttled: true` and makes no source fetch (assert with a counting `fetchImpl`); a finalized item returns 409; a foreign Origin returns 403.
     - `GET /api/search`
     - `GET /api/filters`
     - `GET /api/person/:ig`
