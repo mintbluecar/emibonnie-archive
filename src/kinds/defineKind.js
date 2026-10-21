@@ -114,6 +114,15 @@
 
 const NAME = /^[a-z][a-z0-9_]*$/;
 const URL_PREFIX = /^\/[a-z0-9-]+\/$/;
+
+/**
+ * Item-page prefixes no kind may take: the engine's own pages and API
+ * (`/e/` events, `/p/` people, `/tl/` translators, search, the API, the
+ * add flow, the me page). `/t/` belongs to the translation kind alone.
+ */
+export const RESERVED_URL_PREFIXES = Object.freeze(['/e/', '/p/', '/tl/', '/search/', '/api/', '/add/', '/me/']);
+/** @type {Readonly<Record<string, string>>} prefix -> the one kind that owns it */
+const OWNED_URL_PREFIXES = Object.freeze({ '/t/': 'translation' });
 const REQUIRED_FUNCTIONS = ['matchesUrl', 'fetchSource', 'draft', 'persist', 'loadDetails'];
 const REQUIRED_GROUPS = { present: ['preview', 'detail'], search: ['textClause', 'rank', 'matchLines'] };
 
@@ -144,7 +153,18 @@ function followUpProblems(spec) {
  */
 function shapeProblems(spec) {
   const bad = STRING_FIELDS.filter(([key, pattern]) => typeof spec[key] !== 'string' || !pattern.test(spec[key]));
-  return [...bad.map(([, , problem]) => problem), ...followUpProblems(spec)];
+  return [...bad.map(([, , problem]) => problem), ...prefixProblems(spec), ...followUpProblems(spec)];
+}
+
+/**
+ * @param {any} spec
+ * @returns {string[]}
+ */
+function prefixProblems(spec) {
+  const prefix = spec.urlPrefix;
+  if (RESERVED_URL_PREFIXES.includes(prefix)) return [`urlPrefix ${prefix} is reserved by the engine`];
+  const owner = Object.hasOwn(OWNED_URL_PREFIXES, prefix) ? OWNED_URL_PREFIXES[prefix] : undefined;
+  return owner && owner !== spec.name ? [`urlPrefix ${prefix} belongs to the ${owner} kind`] : [];
 }
 
 /**

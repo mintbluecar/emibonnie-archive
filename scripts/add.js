@@ -9,7 +9,7 @@
  */
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { createDb } from '../src/db/client.js';
+import { createDb, dbOptionsFromEnv } from '../src/db/client.js';
 import { loadSite } from '../src/site/loadSite.js';
 import { ingestItem } from '../src/services/ingest.js';
 import { createPeople, eventIdBySlug, resolveSpeakerRefs } from '../src/services/intakeRefs.js';
@@ -84,7 +84,7 @@ export async function runAdd({ args, deps, log = console.log }) {
 
 async function main() {
   const site = loadSite(process.env.SITE_DIR ?? 'site');
-  const db = createDb({ url: process.env.DATABASE_URL, dir: process.env.PGLITE_DIR });
+  const db = createDb(dbOptionsFromEnv(process.env));
   try {
     process.exitCode = await runAdd({ args: process.argv.slice(2), deps: { db, site, fetchImpl: fetch } });
   } finally {

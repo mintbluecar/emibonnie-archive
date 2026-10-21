@@ -21,7 +21,8 @@ import { visibleItem } from './visibility.js';
  * @property {number} [accountId]
  * @property {number} [startSeconds]
  * @property {unknown} [media]
- * @property {string|null} [editableUntil] the platform's edit window (ISO), for posts that can be edited
+ * @property {string|null} [editableUntil] the platform's edit window (ISO), for posts that can be edited;
+ *   without one the source is stored finalized (`edit_finalized_at = now()`)
  */
 
 /**
@@ -40,9 +41,11 @@ export async function addSources(tx, itemId, kind, sources) {
       accountId = null, startSeconds = null, media = null, editableUntil = null,
     } = source;
     const { rows } = await tx.query(
+      // A post with no edit window can never change, so it is finalized at intake and never re-fetched.
       `insert into item_sources (item_id, kind, platform, external_id, url, role, position, account_id, start_seconds, media,
-         editable_until)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11) returning id`,
+         editable_until, edit_finalized_at)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::timestamptz,
+         case when $11::timestamptz is null then now() end) returning id`,
       [itemId, kind, platform, externalId, url, role, position, accountId, startSeconds,
         media === null ? null : JSON.stringify(media), editableUntil],
     );

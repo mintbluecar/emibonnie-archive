@@ -87,3 +87,27 @@ test('without a built page, a minimal shell carries the meta', () => {
   assert.equal(metaContent(html, 'og:image'), null);
   assert.equal(escapeAttr(`<>&"'`), '&lt;&gt;&amp;&quot;&#39;');
 });
+
+test('injectMeta replaces a page\'s own title, og:*, twitter:* and description tags', () => {
+  const page = `<!doctype html><html><head>
+<meta charset="utf-8">
+<title>Old title</title>
+<meta property="og:title" content="old og">
+<meta content="old desc" property='og:description'>
+<meta name="twitter:card" content="summary_large_image">
+<meta name="description" content="old">
+<meta name="viewport" content="width=device-width">
+<TITLE>second</TITLE>
+</head><body>keep</body></html>`;
+  const html = injectMeta(page, { title: 'New', description: 'Fresh', image: 'https://a.example/logo.svg' });
+  assert.equal((html.match(/<title>/gi) ?? []).length, 1);
+  assert.match(html, /<title>New<\/title>/);
+  assert.equal((html.match(/og:title/g) ?? []).length, 1);
+  assert.equal((html.match(/og:description/g) ?? []).length, 1);
+  assert.equal((html.match(/twitter:card/g) ?? []).length, 1);
+  assert.equal((html.match(/name="description"/g) ?? []).length, 1);
+  for (const old of ['Old title', 'old og', 'old desc', 'summary_large_image', 'second', 'content="old"']) assert.ok(!html.includes(old), old);
+  assert.match(html, /<meta charset="utf-8">/);
+  assert.match(html, /name="viewport"/);
+  assert.match(html, /<body>keep<\/body>/);
+});

@@ -29,7 +29,7 @@ const routeDeps = () => ({ ...deps, defer: () => {} });
 test('every route is { method, path, cache, run }, with a unique method+path', () => {
   for (const r of routes) {
     assert.ok(['GET', 'POST'].includes(r.method), r.path);
-    assert.match(r.path, /^\/api\//);
+    assert.match(r.path, /^\/(api\/|e\/:slug$|t\/:sourceId$)/, 'API paths, plus the original page paths of the meta routes');
     assert.equal(typeof r.run, 'function');
     assert.ok(r.cache === 'no-store' || r.cache === PUBLIC || r.cache === VIDEO, r.path);
     assert.equal(r.cache === 'no-store', r.method !== 'GET', `${r.path}: GETs are cached, writes are no-store`);
@@ -130,4 +130,64 @@ test('the item GET refreshes an elapsed, unfinalized edit window in the backgrou
   const again = await api.call('GET', `/api/item/translation/${IDS.PHOTO}`);
   assert.equal(JSON.parse(again.text).editOpenUntil, null);
   assert.equal(api.pending.length, 0, 'nothing to refresh once finalized');
+});
+
+test('public GET 404s are cached for 60 s only', async () => {
+  const api = apiFor(deps);
+  for (const path of ['/api/event/no-such-event', '/api/item/translation/1', '/api/person/nobody', '/api/account/nobody', '/api/video/translation/1']) {
+    const res = await api.call('GET', path);
+    assert.equal(res.status, 404, path);
+    assert.equal(res.headers.get('cache-control'), 'public, s-maxage=60', path);
+  }
+});
+
+test('unknown query params on API GETs are a no-store 400; meta pages ignore tracking params', async () => {
+  const api = apiFor(deps);
+  for (const path of ['/api/home?x=1', `/api/event/${SLUG}?v=2`, '/api/filters?_=1', '/api/search?q=everyone&bogus=1', `/api/video/translation/${IDS.EVENT_A}?t=1`]) {
+    const res = await api.call('GET', path);
+    assert.equal(res.status, 400, path);
+    assert.equal(res.headers.get('cache-control'), 'no-store', path);
+  }
+  assert.equal((await api.call('GET', '/api/search?q=everyone&limit=2&people=1,2&peopleMode=any')).status, 200);
+  assert.equal((await api.call('GET', `/api/meta/t/${IDS.LONG}?s=20&utm_source=share`)).status, 200);
+  assert.equal((await api.call('GET', `/t/${IDS.LONG}?s=20`)).status, 200);
+});
+
+test('the meta routes also answer on the original page paths (/t/:id, /e/:slug), with the same HTML', async () => {
+  const api = apiFor(deps);
+  const viaRewrite = await api.call('GET', `/api/meta/t/${IDS.LONG}`);
+  const original = await api.call('GET', `/t/${IDS.LONG}`);
+  assert.equal(original.status, 200);
+  assert.equal(original.headers.get('cache-control'), PUBLIC);
+  assert.equal(original.text, viaRewrite.text);
+  assert.match(original.text, /og:title/);
+  const event = await api.call('GET', `/e/${SLUG}`);
+  assert.equal(event.text, (await api.call('GET', `/api/meta/e/${SLUG}`)).text);
+  assert.match(event.text, /SOLLUNA HAPPY DAY/);
+  assert.equal((await api.call('GET', `/zz/${IDS.LONG}`)).status, 404, 'only registered kind prefixes');
+  assert.equal((await api.call('GET', '/api/nope')).status, 404);
+});
+
+test('HEAD on a real route: the GET headers, an empty body', async () => {
+  const api = apiFor(deps);
+  const res = await api.call('HEAD', '/api/home');
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('cache-control'), PUBLIC);
+  assert.equal(res.text, '');
+  const page = await api.call('HEAD', `/t/${IDS.LONG}`);
+  assert.match(page.headers.get('content-type') ?? '', /^text\/html/);
+  assert.equal(page.text, '');
+});
+
+test('a post with no edit window is finalized at intake, so viewing it never schedules a fetch', async () => {
+  const id = await itemIdOf(deps.db, IDS.LONG);
+  const open = await rows(deps.db, "select id from item_sources where item_id = $1 and editable_until is null and edit_finalized_at is null", [id]);
+  assert.deepEqual(open, [], 'every no-window source of LONG is finalized');
+  let fetches = 0;
+  let defers = 0;
+  const counting = { ...deps, fetchImpl: /** @type {typeof fetch} */ (async (...args) => { fetches += 1; return deps.fetchImpl(...args); }) };
+  const view = await itemRoute.run(input({ kind: 'translation', sourceId: IDS.LONG }), { ...counting, defer: () => { defers += 1; } });
+  assert.equal(view.editOpenUntil, null);
+  assert.equal(defers, 0);
+  assert.equal(fetches, 0);
 });

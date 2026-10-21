@@ -13,14 +13,16 @@
  * headers or the query string.
  */
 import { matchRoute } from './router.js';
-import { BadRequest, NotFound, Conflict, RateLimited } from './errors.js';
+import { BadRequest, NotFound, Conflict, RateLimited, PayloadTooLarge } from './errors.js';
 import { originAllowed } from './origin.js';
-import { parseQuery, readBody } from './query.js';
+import { assertKnownParams, parseQuery, readBody } from './query.js';
 
 /** Every public GET (Global Constraints: Caching). */
 export const PUBLIC_CACHE = 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400';
 /** Video: the stored variants change rarely. */
 export const VIDEO_CACHE = 'public, s-maxage=600, stale-while-revalidate=86400, stale-if-error=86400';
+/** A public GET's 404: cached briefly, so a newly visible item appears within a minute. */
+export const NOT_FOUND_CACHE = 'public, s-maxage=60';
 /** Writes and errors. */
 export const NO_STORE = 'no-store';
 
@@ -28,8 +30,11 @@ export const NO_STORE = 'no-store';
  * @typedef {{ db: { end(): Promise<void> }, fetchImpl: typeof fetch, now: () => Date, site: any, [key: string]: unknown }} BaseDeps
  * @typedef {BaseDeps & { defer: (task: () => Promise<unknown>) => void }} Deps
  * @typedef {{ params: Record<string, string>, query: Record<string, string|string[]>, body: unknown, origin: string }} RouteInput
- * @typedef {{ method: string, path: string, cache: string, lists?: readonly string[],
+ * @typedef {{ method: string, path: string, cache: string, query?: readonly string[]|null, lists?: readonly string[],
  *   run: (input: RouteInput, deps: any) => Promise<unknown> }} Route
+ *   `query`: the query params a GET accepts (default none; null accepts any,
+ *   for pages reached through shared links that carry tracking params).
+ *   `lists`: which of them hold lists.
  * @typedef {{ routes: Route[], makeDeps: () => BaseDeps, waitUntil: (promise: Promise<unknown>) => void,
  *   log?: (line: string) => void, env?: Record<string, string|undefined> }} HandlerOptions
  */
@@ -49,7 +54,8 @@ function describe(err) {
  * @param {{ method: string, pathname: string, log: (line: string) => void }} ctx
  */
 function errorResponse(err, route, { method, pathname, log }) {
-  if (err instanceof NotFound) return json(404, { error: 'not_found' }, route?.method === 'GET' ? route.cache : NO_STORE);
+  if (err instanceof NotFound) return json(404, { error: 'not_found' }, route?.method === 'GET' ? NOT_FOUND_CACHE : NO_STORE);
+  if (err instanceof PayloadTooLarge) return json(413, { error: 'payload_too_large' }, NO_STORE);
   if (err instanceof BadRequest) return json(400, { error: 'bad_request', message: err.message }, NO_STORE);
   if (err instanceof URIError) return json(400, { error: 'bad_request', message: 'malformed path' }, NO_STORE);
   if (err instanceof Conflict) return json(409, { error: err.code }, NO_STORE);
@@ -89,11 +95,24 @@ export async function withDeps(makeDeps, { waitUntil, onError }, fn) {
 }
 
 /**
+ * HEAD is answered by the matching GET route: same status and headers, no body.
+ * @param {(request: Request) => Promise<Response>} handle
+ * @returns {(request: Request) => Promise<Response>}
+ */
+function withHead(handle) {
+  return async (request) => {
+    if (request.method !== 'HEAD') return handle(request);
+    const res = await handle(new Request(request.url, { method: 'GET', headers: request.headers }));
+    return new Response(null, { status: res.status, headers: res.headers });
+  };
+}
+
+/**
  * @param {HandlerOptions} options
  * @returns {(request: Request) => Promise<Response>}
  */
 export function createHandler({ routes, makeDeps, waitUntil, log = console.error, env = process.env }) {
-  return async function handle(request) {
+  return withHead(async function handle(request) {
     const url = new URL(request.url);
     const ctx = { method: request.method, pathname: url.pathname, log };
     /** @type {Route|null} */
@@ -103,12 +122,14 @@ export function createHandler({ routes, makeDeps, waitUntil, log = console.error
       if (!match) return json(404, { error: 'not_found' }, NO_STORE);
       route = match.route;
       if (route.method !== 'GET' && !originAllowed(request, env)) return json(403, { error: 'forbidden' }, NO_STORE);
-      const input = { params: match.params, query: parseQuery(url.searchParams, route.lists), body: await readBody(request), origin: url.origin };
+      const query = parseQuery(url.searchParams, route.lists);
+      if (route.method === 'GET') assertKnownParams(query, route.query);
+      const input = { params: match.params, query, body: await readBody(request), origin: url.origin };
       const onError = (/** @type {unknown} */ err) => log(`[api] ${ctx.method} ${ctx.pathname} background work failed: ${describe(err)}`);
       const result = await withDeps(makeDeps, { waitUntil, onError }, (deps) => /** @type {Route} */ (route).run(input, deps));
       return toResponse(result, route.cache);
     } catch (err) {
       return errorResponse(err, route, ctx);
     }
-  };
+  });
 }

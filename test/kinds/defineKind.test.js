@@ -66,3 +66,11 @@ test('rejects a missing or malformed platform', () => {
 test('rejects a urlPrefix that is not /x/', () => {
   assert.throws(() => defineKind({ ...spec(), urlPrefix: 'd' }), /urlPrefix/);
 });
+
+test('rejects a reserved urlPrefix, and /t/ for any kind but translation', () => {
+  for (const urlPrefix of ['/e/', '/p/', '/tl/', '/search/', '/api/', '/add/', '/me/', '/t/']) {
+    assert.throws(() => defineKind({ ...spec(), urlPrefix }), /urlPrefix .* (is reserved|belongs to the translation kind)/, urlPrefix);
+  }
+  assert.equal(defineKind({ ...spec(), name: 'translation', urlPrefix: '/t/' }).urlPrefix, '/t/');
+  assert.throws(() => defineKind({ ...spec(), name: 'translation', urlPrefix: '/e/' }), /reserved/);
+});

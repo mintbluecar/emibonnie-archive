@@ -121,3 +121,18 @@ export function createDb({ url, dir, schema } = {}) {
   const searchPath = searchPathFor(schema);
   return url ? createNeonDb(url, searchPath) : createPgliteDb(dir, searchPath);
 }
+
+/**
+ * The database options a deployed function or a dev process uses. In
+ * production (`VERCEL` set) a missing `DATABASE_URL` is an error, never a
+ * silent fallback to PGlite; elsewhere `PGLITE_DIR` (or memory) serves dev.
+ * @param {Record<string, string|undefined>} env
+ * @returns {DbOptions}
+ */
+export function dbOptionsFromEnv(env) {
+  if (env.VERCEL) {
+    if (!env.DATABASE_URL) throw new Error('DATABASE_URL is not set: a deployed function needs the Postgres connection string');
+    return { url: env.DATABASE_URL };
+  }
+  return { url: env.DATABASE_URL || undefined, dir: env.PGLITE_DIR };
+}

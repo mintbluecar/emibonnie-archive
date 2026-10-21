@@ -52,7 +52,8 @@ async function guardedRefresh(deps, itemId) {
 /**
  * The item page: `itemView` plus `editOpenUntil` (the latest unfinalized
  * `editable_until`, or null) and, when an unfinalized window has elapsed,
- * a `refresh` for the caller to run in the background.
+ * a `refresh` for the caller to run in the background. A post with no
+ * window is finalized at intake, so it never schedules one.
  * @param {ItemDeps} deps @param {string} kindName @param {string} sourceId
  * @returns {Promise<{ view: ItemView & { editOpenUntil: string|null }, refresh: (() => Promise<unknown>)|null } | null>}
  */
@@ -62,7 +63,7 @@ export async function itemPage(deps, kindName, sourceId) {
   if (id === null || !view) return null;
   const open = await unfinalizedSources(deps.db, id);
   const now = (deps.now?.() ?? new Date()).getTime();
-  const elapsed = open.some((s) => s.editableUntil === null || new Date(s.editableUntil).getTime() < now);
+  const elapsed = open.some((s) => s.editableUntil !== null && new Date(s.editableUntil).getTime() < now);
   return { view: { ...view, editOpenUntil: latestUntil(open) }, refresh: elapsed ? () => guardedRefresh(deps, id) : null };
 }
 

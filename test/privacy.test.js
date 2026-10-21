@@ -45,11 +45,11 @@ async function representativeCalls() {
   const ids = [...Object.values(IDS), '1'];
   /** @type {[string, string][]} */
   const calls = [['GET', '/api/home'], ['GET', '/api/filters']];
-  for (const slug of [...slugs, 'no-such-event']) calls.push(['GET', `/api/event/${slug}`], ['GET', `/api/meta/e/${slug}`]);
+  for (const slug of [...slugs, 'no-such-event']) calls.push(['GET', `/api/event/${slug}`], ['GET', `/api/meta/e/${slug}`], ['GET', `/e/${slug}`]);
   for (const id of ids) {
     calls.push(
       ['GET', `/api/item/translation/${id}`], ['POST', `/api/item/translation/${id}/refresh`],
-      ['GET', `/api/video/translation/${id}`], ['GET', `/api/meta/t/${id}`],
+      ['GET', `/api/video/translation/${id}`], ['GET', `/api/meta/t/${id}`], ['GET', `/t/${id}`],
     );
   }
   for (const ig of [...people, 'nobody']) calls.push(['GET', `/api/person/${ig}`]);

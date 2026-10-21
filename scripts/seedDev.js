@@ -9,7 +9,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { createDb } from '../src/db/client.js';
+import { createDb, dbOptionsFromEnv } from '../src/db/client.js';
 import { loadSite } from '../src/site/loadSite.js';
 import { offlineFetch } from '../src/sources/offlineFetch.js';
 import { seedDev } from '../src/services/seedDev.js';
@@ -21,7 +21,7 @@ import { runSetup } from './setup.js';
  */
 export async function runSeedDev({ siteDir, db: given, log = console.log }) {
   const site = loadSite(siteDir);
-  const db = given ?? createDb({ url: process.env.DATABASE_URL, dir: process.env.PGLITE_DIR });
+  const db = given ?? createDb(dbOptionsFromEnv(process.env));
   try {
     await runSetup({ siteDir, site, db, log });
     const mapsPath = path.join(siteDir, 'seed', 'maps.json');

@@ -40,3 +40,11 @@ export class RateLimited extends Error {
     this.name = 'RateLimited';
   }
 }
+
+/** A request body over the size limit (413). */
+export class PayloadTooLarge extends Error {
+  constructor() {
+    super('payload too large');
+    this.name = 'PayloadTooLarge';
+  }
+}

@@ -19,6 +19,10 @@ import { kindsOf, presenterContext, previewsFor } from './cards.js';
 
 const DESCRIPTION_MAX = 200;
 const SHELL = '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title></title>\n</head>\n<body></body>\n</html>\n';
+/** A page's own `<title>` elements, removed before injecting. */
+const OWN_TITLE = /<title\b[^>]*>[\s\S]*?<\/title\s*>[ \t]*\n?/gi;
+/** A page's own `og:*`, `twitter:*` and `description` meta tags, removed before injecting. */
+const OWN_META = /<meta\b[^>]*\b(?:property|name)\s*=\s*["']?(?:og:|twitter:|description["'\s>/])[^>]*>[ \t]*\n?/gi;
 /** @type {Record<string, string>} */
 const ENTITIES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
@@ -34,8 +38,9 @@ function clip(text, max) {
 }
 
 /**
- * Puts `meta` into `html` (null: the built-in shell): replaces its
- * `<title>` and adds the meta tags before `</head>`. Replacement callbacks
+ * Puts `meta` into `html` (null: the built-in shell): removes the page's
+ * own `<title>`, `og:*`, `twitter:*` and `description` tags, then adds
+ * the new ones before `</head>`. Replacement callbacks
  * keep `$&`-style patterns in the page or the values inert.
  * @param {string|null} html @param {Meta} meta @returns {string}
  */
@@ -50,10 +55,8 @@ export function injectMeta(html, meta) {
     '<meta name="twitter:card" content="summary">',
     `<meta name="description" content="${escapeAttr(meta.description)}">`,
   ].join('\n');
-  const titled = /<title>[\s\S]*?<\/title>/i.test(page)
-    ? page.replace(/<title>[\s\S]*?<\/title>/i, () => `<title>${title}</title>`)
-    : page.replace(/<\/head>/i, () => `<title>${title}</title>\n</head>`);
-  return titled.replace(/<\/head>/i, () => `${tags}\n</head>`);
+  const bare = page.replace(OWN_TITLE, '').replace(OWN_META, '');
+  return bare.replace(/<\/head>/i, () => `<title>${title}</title>\n${tags}\n</head>`);
 }
 
 /** @param {MetaDeps} deps @param {string} name @returns {Promise<string|null>} */

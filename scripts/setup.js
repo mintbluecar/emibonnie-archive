@@ -7,7 +7,7 @@
  */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createDb } from '../src/db/client.js';
+import { createDb, dbOptionsFromEnv } from '../src/db/client.js';
 import { migrate } from '../src/db/migrate.js';
 import { loadSite } from '../src/site/loadSite.js';
 import { seedFromSite } from '../src/services/seedFromSite.js';
@@ -70,7 +70,7 @@ export async function runSetup(options = {}) {
   const site = options.site ?? loadSite(siteDir);
   const log = options.log ?? console.log;
   const ownDb = !options.db;
-  const db = options.db ?? createDb({ url: process.env.DATABASE_URL, dir: process.env.PGLITE_DIR });
+  const db = options.db ?? createDb(dbOptionsFromEnv(process.env));
 
   try {
     const applied = await migrate(db, {
