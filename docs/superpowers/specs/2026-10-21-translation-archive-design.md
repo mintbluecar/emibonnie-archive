@@ -152,7 +152,7 @@ Bulk import is a separate admin feature, **for the owner only**. Regular submitt
    - Not every link in the collection is a translation (some are event links). Imported tweets without translation-like text, such as no speaker markers and little text, go to a "check these" list instead of going live.
 
 Both imports:
-- Run as a background queue, throttled (my call: a few tweets per second) so the free tweet sources don't block the server. The owner can see progress and failures and retry them.
+- Run as a background queue, throttled (my call: a few tweets per second) so the free tweet sources don't block the server. The queue lives in the database. A **GitHub Actions job** works through it, because Vercel functions are capped at 5 minutes per run and a large import takes longer. The admin page starts the job and shows progress and failures, with retry.
 - **Speakers are mapped before entries go live** (owner's decision). Fetching is quick (about 1–2 s per tweet, so roughly 10–15 min for 500), and mapping is grouped so it stays manageable:
   - After fetching, the import shows **one mapping screen per translator**. It lists every speaker marker that translator used, how often each appears, and an example line, with the default and remembered guesses filled in. One answer covers all of that translator's entries.
   - Entries whose markers are all mapped this way go live together.
@@ -205,7 +205,7 @@ The approved mockups (phone and web) are in `.superpowers/brainstorm/` during br
 
 ## Tweet health check
 
-A scheduled job (daily) re-checks archived tweets through syndication and updates Tweet status. Deleted or unavailable tweets switch the translation page to the "no longer available" state. Archived text is never touched.
+A scheduled **GitHub Actions** job (daily) re-checks archived tweets through syndication and updates Tweet status. Deleted or unavailable tweets switch the translation page to the "no longer available" state. Archived text is never touched.
 
 ## Search
 
@@ -220,13 +220,15 @@ These choices are mine. They follow the owner's other fan projects (plain JS, Ve
 |---|---|---|---|
 | Front end | Plain HTML/CSS/JS, no framework | Matches the owner's other projects. Fast on phones. | React/Astro: more than a browse-and-search site needs |
 | Hosting + server | Vercel (free), serverless functions | The owner already uses it. Covers sign-in, intake, and admin. | Cloudflare: also good, but a new platform for the owner |
-| Database | Neon Postgres (free, via Vercel) | Full-text + trigram search for Thai. Free tier sleeps but never deletes. | Supabase: pauses free projects after a week without activity. GitHub-as-DB: submitters would need GitHub accounts |
+| Database | Neon Postgres (free plan, **signed up with Neon directly**, not via the Vercel Marketplace, which moves billing to Vercel) | Full-text + trigram search for Thai (`pg_trgm` 1.6 supported). Free: 1 GB per project, 100 compute-hours a month, no card. Sleeps after 5 min idle, so expect a slower first query after a quiet spell. No documented deletion of inactive free projects. | Supabase: pauses free projects after a week without activity. GitHub-as-DB: submitters would need GitHub accounts |
 | Auth | Better Auth (MIT, self-hosted in the app) | One library for X + Google, stored in our own DB, no per-user fees | Hand-rolled OAuth |
 | Tweet data | X syndication + FxTwitter, server-side, cached | Free. Long-post text. Detects deletions. | Paid X API ($0.005 per post read) |
-| Scheduled jobs | GitHub Actions (or Vercel Cron) | Health check + backup | |
+| Scheduled and long jobs | GitHub Actions (private repo, free org: 2,000 min a month; it stops at the limit, with no charge, when no card is on file) | Daily tweet health check, nightly backup, bulk import runs. Expected about 300 to 450 min a month plus imports | Vercel Cron: once a day at most, and functions are capped at 5 min |
 | Backup | Nightly export of public archive data (translations, credits, links, events, people) to JSON in a **private** `mintbluecar` repo | Survives the site or database dying | Provider-only backups |
 
 **Backup and removals (my call):** the backup repo is **private**, because removed and opted-out entries are kept in it, marked as removed. A public repo would keep them reachable. Submitter account details (emails, sign-in tokens) are never exported.
+
+**Free-tier check (2026-10-21, official pricing pages):** Vercel Hobby is free and allows non-commercial use. Over-limit usage pauses the feature, with no bill. Neon Free, Better Auth (the framework; only their hosted dashboard is paid), Google sign-in (basic scopes; the app must be set to "In Production" to avoid the 100-user testing cap), and GitHub Actions are all $0. Sign in with X was tested working on a zero-credit app.
 
 **Unofficial sources are fragile.** Both tweet sources are undocumented or third-party and can break when X changes things. Intake must fail gracefully: it falls back to the other source, then to manual text entry. The owner gets an alert when one source has been failing.
 
