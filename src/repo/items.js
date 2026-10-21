@@ -8,6 +8,7 @@
  */
 import { camelRow } from './rows.js';
 import { visibleItem } from './visibility.js';
+import { BadRequest } from '../domain/errors.js';
 
 /** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
 /**
@@ -159,12 +160,22 @@ function buildFilterClauses({ eventId, personId, accountId, kind, placement }) {
 }
 
 /**
+ * @param {string} name @param {unknown} value
+ * @returns {number} `value`, when it's a non-negative integer
+ */
+function countArg(name, value) {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) throw new BadRequest(`${name} must be a non-negative integer`);
+  return value;
+}
+
+/**
  * Defaults to ascending event order -- `(sort_key, occurred_on,
  * posted_at, id)`, the same tuple `neighbours` orders by -- so paging
  * through this list visits items in the order a visitor would step
  * through them with prev/next. `order: 'desc'` reverses it ("newest
- * first"). `limit` is clamped to `MAX_LIST_LIMIT` regardless of what's
- * asked for.
+ * first"). `limit` (default 50) is clamped to `MAX_LIST_LIMIT` regardless
+ * of what's asked for; `limit` and `offset` must be non-negative integers
+ * (anything else, NaN included, is a `BadRequest`).
  * @param {Tx} db
  * @param {{ eventId?: number, personId?: number, accountId?: number, kind?: string,
  *   placement?: string, limit?: number, offset?: number, order?: 'asc'|'desc' }} [filters]
@@ -173,7 +184,8 @@ function buildFilterClauses({ eventId, personId, accountId, kind, placement }) {
 export async function listVisibleItemIds(db, filters = {}) {
   const { limit = DEFAULT_LIST_LIMIT, offset = 0, order = 'asc' } = filters;
   const dir = order === 'desc' ? 'desc' : 'asc';
-  const clampedLimit = Math.min(limit, MAX_LIST_LIMIT);
+  const clampedLimit = Math.min(countArg('limit', limit), MAX_LIST_LIMIT);
+  countArg('offset', offset);
   const { conditions, personClause, params } = buildFilterClauses(filters);
   params.push(clampedLimit, offset);
   const { rows } = await db.query(
@@ -201,40 +213,6 @@ export async function countVisibleItemsByKind(db, filters = {}) {
     params,
   );
   return Object.fromEntries(rows.map((r) => [r.kind, r.n]));
-}
-
-/** @param {Tx} db @returns {Promise<{ eventId: number, count: number }[]>} */
-export async function countsByEvent(db) {
-  const { rows } = await db.query(
-    `select i.event_id as event_id, count(*)::int as n from items i
-     join events e on e.id = i.event_id
-     where e.deleted_at is null and ${visibleItem('i')} group by i.event_id`,
-  );
-  return rows.map((r) => ({ eventId: r.event_id, count: r.n }));
-}
-
-/**
- * Counts each item once even when the person holds more than one role
- * on it (an `exists` check, not a join -- a join would count a row per
- * matching `item_people` role, double-counting that item).
- * @param {Tx} db @param {number} personId @returns {Promise<number>}
- */
-export async function countsForPerson(db, personId) {
-  const { rows } = await db.query(
-    `select count(*)::int as n from items i
-     where exists (select 1 from item_people ip where ip.item_id = i.id and ip.person_id = $1) and ${visibleItem('i')}`,
-    [personId],
-  );
-  return rows[0].n;
-}
-
-/** @param {Tx} db @param {number} accountId @returns {Promise<number>} */
-export async function countsForAccount(db, accountId) {
-  const { rows } = await db.query(
-    `select count(*)::int as n from items i where i.credited_account_id = $1 and ${visibleItem('i')}`,
-    [accountId],
-  );
-  return rows[0].n;
 }
 
 /**

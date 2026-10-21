@@ -84,16 +84,21 @@
  * @typedef {{ months: { month: string, events: HomeEvent[] }[] }} HomeView
  *   Visible events, newest first; `month` is `YYYY-MM`.
  *
- * @typedef {{ kind: string, items: Preview[] }} Section
- * @typedef {{ kind: string, items: (Preview & { event: EventRef|null })[] }} DatedSection
- *   Sections come in registry order; kinds with no items are left out.
+ * @typedef {{ kind: string, total: number, hasMore: boolean, items: Preview[] }} Section
+ * @typedef {{ kind: string, total: number, hasMore: boolean, items: (Preview & { event: EventRef|null })[] }} DatedSection
+ *   Sections come in registry order; kinds with no visible items are left
+ *   out. Hub pages (event, person, translator) take `?limit=` (1 to 50,
+ *   default 50) and `?offset=` (0 to 10000, default 0), applied to every
+ *   section: `items` is that page of the kind's items, `total` every
+ *   visible one (a count query), `hasMore` whether any follow the page.
+ *   Out-of-range values are a 400.
  *
  * @typedef {{
  *   event: { slug: string, name: string, occurredOn: string, hashtags: string[], keywords: string[],
  *     type: string|null, client: string|null },
  *   accountCount: number, counts: Record<string, number>, people: PersonChip[], sections: Section[],
  * }} EventView
- *   Items in event order (oldest first). `type`: the event's category
+ *   Items in event order (oldest first), paged per section. `type`: the event's category
  *   name; `client`: its client/media name. `counts`: visible items per
  *   kind (a count query, so never capped by a section's page size; kinds
  *   with none are left out).
@@ -102,14 +107,15 @@
  *   person: PersonChip & { featured: boolean }, counts: { items: number, events: number, sharedStories: number },
  *   sections: DatedSection[], redirectTo?: string,
  * }} PersonView
- *   Items newest first (at most 200 per kind). `redirectTo`: the person's
+ *   Items newest first, paged per section. `redirectTo`: the person's
  *   current IG handle, when the one asked for isn't it (case included).
  *
  * @typedef {{
  *   account: { handle: string, displayName: string|null }, counts: { items: number },
  *   sections: DatedSection[], redirectTo?: string,
  * }} AccountView
- *   Items newest first (at most 200 per kind). `redirectTo`: the current
+ *   Items newest first, paged per section; `counts.items` counts every
+ *   visible item (a count query). `redirectTo`: the current
  *   handle, when the one asked for isn't it (an old handle, or other case).
  * @typedef {{ account: { handle: string, optedOut: true } }} OptedOutAccountView
  *   All an opted-out account's page gets: `handle` is the one asked for.

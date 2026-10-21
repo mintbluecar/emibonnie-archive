@@ -4,7 +4,7 @@ import { after, before, test } from 'node:test';
 import { freshDb } from '../helpers/db.js';
 import { insertEvent, insertItem, insertAccount, insertUser, insertPerson } from '../helpers/seed.js';
 import { visibleEvent, visibleItem } from '../../src/repo/visibility.js';
-import { countsByEvent, countsForAccount, countsForPerson, listVisibleItemIds, neighbours } from '../../src/repo/items.js';
+import { countVisibleItemsByKind, listVisibleItemIds, neighbours } from '../../src/repo/items.js';
 import { setItemPeople } from '../../src/repo/itemPeople.js';
 
 /** @type {Awaited<ReturnType<typeof freshDb>>} */
@@ -139,12 +139,9 @@ for (const { name, hide } of CASES) {
     const visibleIds = await listVisibleItemIds(db, { eventId });
     assert.deepEqual(visibleIds.map((r) => r.id), [sibling]);
 
-    const counts = await countsByEvent(db);
-    const thisEvent = counts.find((c) => c.eventId === eventId);
-    assert.equal(thisEvent?.count, 1);
-
-    assert.equal(await countsForAccount(db, accountId), 0, 'the hidden item\'s own account must count 0');
-    assert.equal(await countsForPerson(db, personId), 0, 'the hidden item\'s own person must count 0');
+    assert.deepEqual(await countVisibleItemsByKind(db, { eventId }), { translation: 1 });
+    assert.deepEqual(await countVisibleItemsByKind(db, { accountId }), {}, 'the hidden item\'s own account must count 0');
+    assert.deepEqual(await countVisibleItemsByKind(db, { personId }), {}, 'the hidden item\'s own person must count 0');
     assert.deepEqual(await listVisibleItemIds(db, { accountId }), []);
     assert.deepEqual(await listVisibleItemIds(db, { personId }), []);
 

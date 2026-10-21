@@ -8,6 +8,7 @@
 import { BadRequest } from '../domain/errors.js';
 import { PLACEMENTS } from '../domain/constants.js';
 import { searchItems } from '../repo/search.js';
+import { absent, integer } from './params.js';
 import { kindsOf, eventRefOf, presenterContext, previewsFor } from './cards.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
@@ -35,20 +36,6 @@ const CONTROL = {
 const SMALLINT_MAX = 32767;
 const BIGINT_ID_MAX = Number.MAX_SAFE_INTEGER;
 const DATE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
-
-/** @param {unknown} value */
-const absent = (value) => value === undefined || value === null || value === '';
-
-/**
- * @param {string} name @param {unknown} value @param {number} max @param {number} [fallback]
- * @returns {number}
- */
-function integer(name, value, max, fallback) {
-  if (absent(value) && fallback !== undefined) return fallback;
-  const n = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : value;
-  if (typeof n !== 'number' || !Number.isInteger(n) || n < 0 || n > max) throw new BadRequest(`${name} must be an integer from 0 to ${max}`);
-  return n;
-}
 
 /** @param {unknown} q @returns {string|null} */
 function queryOf(q) {

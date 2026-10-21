@@ -3,14 +3,16 @@ import { PUBLIC_CACHE } from '../http/handler.js';
 import { NotFound } from '../http/errors.js';
 import { personView } from '../services/hubs.js';
 
-/** `GET /api/person/:ig`: a person's page (with `redirectTo` after a handle change). */
+/** `GET /api/person/:ig`: a person's page (with `redirectTo` after a handle
+ * change); `?limit=`/`?offset=` page each section (src/http/contracts.js `Section`). */
 export const route = {
   method: 'GET',
   path: '/api/person/:ig',
   cache: PUBLIC_CACHE,
+  query: ['limit', 'offset'],
   /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async ({ params }, deps) => {
-    const view = await personView(deps, params.ig);
+  run: async ({ params, query }, deps) => {
+    const view = await personView(deps, params.ig, query);
     if (!view) throw new NotFound();
     return view;
   },

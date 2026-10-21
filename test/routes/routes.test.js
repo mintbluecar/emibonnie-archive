@@ -149,6 +149,12 @@ test('unknown query params on API GETs are a no-store 400; meta pages ignore tra
     assert.equal(res.headers.get('cache-control'), 'no-store', path);
   }
   assert.equal((await api.call('GET', '/api/search?q=everyone&limit=2&people=1,2&peopleMode=any')).status, 200);
+  for (const path of [`/api/event/${SLUG}?limit=1&offset=1`, '/api/person/solsunny?limit=2', '/api/account/tl_alpha?offset=0']) {
+    assert.equal((await api.call('GET', path)).status, 200, path);
+  }
+  for (const path of [`/api/event/${SLUG}?limit=0`, '/api/person/solsunny?limit=51', '/api/account/tl_alpha?offset=x', `/api/event/${SLUG}?limit=1&limit=2`]) {
+    assert.equal((await api.call('GET', path)).status, 400, path);
+  }
   assert.equal((await api.call('GET', `/api/meta/t/${IDS.LONG}?s=20&utm_source=share`)).status, 200);
   assert.equal((await api.call('GET', `/t/${IDS.LONG}?s=20`)).status, 200);
 });

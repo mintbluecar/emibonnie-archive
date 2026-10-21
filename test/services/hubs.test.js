@@ -227,3 +227,38 @@ test('addedByOf: the public form of a submitter', () => {
   assert.deepEqual(addedByOf({ ...base, onX: true, xHandle: 'h' }), { kind: 'handle', handle: 'h' });
   assert.deepEqual(addedByOf({ ...base, deleted: true, onX: true, xHandle: 'h' }), { kind: 'fan' });
 });
+
+test('hub sections page with limit/offset: real totals, hasMore, and counts that ignore the page', async () => {
+  const slug = 'solluna-happy-day-2026-10-19';
+  const first = /** @type {any} */ (await eventView(deps, slug, { limit: '1' }));
+  assert.deepEqual(first.sections.map((/** @type {any} */ s) => [s.kind, s.total, s.hasMore, s.items.length]), [['translation', 2, true, 1]]);
+  assert.equal(first.sections[0].items[0].sourceId, IDS.EVENT_A);
+  assert.deepEqual(first.counts, { translation: 2 });
+  const second = /** @type {any} */ (await eventView(deps, slug, { limit: '1', offset: '1' }));
+  assert.deepEqual(second.sections[0].items.map((/** @type {any} */ i) => i.sourceId), [IDS.EVENT_B]);
+  assert.equal(second.sections[0].hasMore, false);
+  const whole = /** @type {any} */ (await eventView(deps, slug));
+  assert.equal(whole.sections[0].items.length, 2);
+  assert.equal(whole.sections[0].hasMore, false);
+
+  const person = /** @type {any} */ (await personView(deps, 'solsunny', { limit: 2 }));
+  assert.equal(person.sections[0].items.length, 2);
+  assert.equal(person.sections[0].total, person.counts.items);
+  assert.equal(person.sections[0].hasMore, true);
+
+  const full = /** @type {any} */ (await accountView(deps, 'tl_alpha'));
+  const paged = /** @type {any} */ (await accountView(deps, 'tl_alpha', { limit: 1, offset: 0 }));
+  assert.ok(full.counts.items > 1, 'tl_alpha has several items');
+  assert.equal(paged.counts.items, full.counts.items, 'counts.items is a count, not the page length');
+  assert.equal(paged.sections[0].items.length, 1);
+  assert.equal(paged.sections[0].hasMore, true);
+});
+
+test('hub paging params out of range are a BadRequest', async () => {
+  for (const params of [{ limit: '0' }, { limit: '51' }, { limit: 'abc' }, { limit: '-1' }, { offset: '10001' }, { offset: '1.5' }, { limit: Number.NaN }]) {
+    await assert.rejects(eventView(deps, 'solluna-happy-day-2026-10-19', params), { name: 'BadRequest' }, JSON.stringify(params));
+    await assert.rejects(personView(deps, 'solsunny', params), { name: 'BadRequest' });
+    await assert.rejects(accountView(deps, 'tl_alpha', params), { name: 'BadRequest' });
+  }
+  assert.ok(await eventView(deps, 'solluna-happy-day-2026-10-19', { limit: '50', offset: '10000' }));
+});

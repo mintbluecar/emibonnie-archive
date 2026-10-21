@@ -4,7 +4,7 @@ import { after, before, test } from 'node:test';
 import { freshDb } from '../helpers/db.js';
 import { insertEvent, insertItem, insertPerson } from '../helpers/seed.js';
 import {
-  countsByEvent, countsForPerson, insertItem as insertItemRepo, listVisibleItemIds, neighbours, sourceState,
+  countVisibleItemsByKind, insertItem as insertItemRepo, listVisibleItemIds, neighbours, sourceState,
 } from '../../src/repo/items.js';
 import { setItemPeople, listItemPeople } from '../../src/repo/itemPeople.js';
 import { addSources, primarySource, setStatus, touchCheck } from '../../src/repo/itemSources.js';
@@ -17,6 +17,11 @@ before(async () => { db = await freshDb(); });
 after(async () => { await db.end(); });
 
 const system = { actor: 'system' };
+
+/** Every visible item matching `filters`, from the per-kind count. @param {Parameters<typeof countVisibleItemsByKind>[1]} filters */
+async function visibleTotal(filters) {
+  return Object.values(await countVisibleItemsByKind(db, filters)).reduce((n, c) => n + c, 0);
+}
 
 /** @param {string} table @param {string | number} key */
 async function auditCount(table, key) {
@@ -232,24 +237,24 @@ test('speakerMemory: remember then recall round-trips a person and a role marker
   assert.deepEqual(await recall(db, accountId), { A: { person: personId } });
 });
 
-test('countsForPerson counts only visible items', async () => {
+test('countVisibleItemsByKind({ personId }) counts only visible items', async () => {
   const personId = await db.transaction((tx) => insertPerson(tx, { name: 'Counted' }), system);
   const itemId = await db.transaction((tx) => insertItem(tx), system);
   await db.transaction((tx) => setItemPeople(tx, itemId, [{ personId, role: 'present' }]), system);
-  assert.equal(await countsForPerson(db, personId), 1);
+  assert.equal(await visibleTotal({ personId }), 1);
 
   await db.transaction((tx) => tx.query("update items set deleted_at = now(), deleted_reason = 'erased' where id = $1", [itemId]), system);
-  assert.equal(await countsForPerson(db, personId), 0);
+  assert.equal(await visibleTotal({ personId }), 0);
 });
 
-test('countsForPerson counts an item once even when the person holds 2 roles on it', async () => {
+test('countVisibleItemsByKind({ personId }) counts an item once even when the person holds 2 roles on it', async () => {
   const personId = await db.transaction((tx) => insertPerson(tx, { name: 'Double-cast' }), system);
   const itemId = await db.transaction((tx) => insertItem(tx), system);
   await db.transaction(
     (tx) => setItemPeople(tx, itemId, [{ personId, role: 'present' }, { personId, role: 'about' }]),
     system,
   );
-  assert.equal(await countsForPerson(db, personId), 1);
+  assert.equal(await visibleTotal({ personId }), 1);
   const list = await listVisibleItemIds(db, { personId });
   assert.equal(list.length, 1);
 });
@@ -267,22 +272,32 @@ test('listVisibleItemIds defaults to ascending event order, matching neighbours;
   assert.deepEqual(descending.map((r) => r.id), [c, b, a]);
 });
 
-test('listVisibleItemIds clamps limit to 200 even when a larger limit is requested', async () => {
+test('listVisibleItemIds: 50 by default, and clamps limit to 200 even when a larger limit is requested', async () => {
   const eventId = await db.transaction((tx) => insertEvent(tx, { slug: 'list-clamp' }), system);
-  await db.transaction((tx) => insertItem(tx, { placement: 'event', eventId, sortKey: 1 }), system);
-  const rows = await listVisibleItemIds(db, { eventId, limit: 10000 });
-  assert.ok(rows.length <= 200);
+  await db.transaction(async (tx) => {
+    for (let i = 0; i < 205; i += 1) await insertItem(tx, { placement: 'event', eventId, sortKey: i });
+  }, system);
+  assert.equal(await visibleTotal({ eventId }), 205);
+  assert.equal((await listVisibleItemIds(db, { eventId })).length, 50, 'default limit');
+  assert.equal((await listVisibleItemIds(db, { eventId, limit: 10000 })).length, 200, 'clamped');
+  assert.equal((await listVisibleItemIds(db, { eventId, limit: 10, offset: 200 })).length, 5);
+  assert.equal((await listVisibleItemIds(db, { eventId, limit: 0 })).length, 0);
 });
 
-test('countsByEvent excludes items under a soft-deleted event', async () => {
+test('listVisibleItemIds rejects a limit or offset that is not a non-negative integer', async () => {
+  for (const bad of [Number.NaN, -1, 1.5, '10', Infinity, null]) {
+    await assert.rejects(listVisibleItemIds(db, { limit: /** @type {any} */ (bad) }), { name: 'BadRequest', message: /limit/ });
+    await assert.rejects(listVisibleItemIds(db, { offset: /** @type {any} */ (bad) }), { name: 'BadRequest', message: /offset/ });
+  }
+});
+
+test('countVisibleItemsByKind({ eventId }) excludes items under a soft-deleted event', async () => {
   const eventId = await db.transaction((tx) => insertEvent(tx, { slug: 'event-deleted-counts' }), system);
   await db.transaction((tx) => insertItem(tx, { placement: 'event', eventId }), system);
-  const before1 = (await countsByEvent(db)).find((c) => c.eventId === eventId);
-  assert.equal(before1?.count, 1);
+  assert.equal(await visibleTotal({ eventId }), 1);
 
   await db.transaction((tx) => tx.query("update events set deleted_at = now(), deleted_by = 'system' where id = $1", [eventId]), system);
-  const after1 = (await countsByEvent(db)).find((c) => c.eventId === eventId);
-  assert.equal(after1, undefined);
+  assert.deepEqual(await countVisibleItemsByKind(db, { eventId }), {});
 });
 
 test('listVisibleItemIds({eventId}) returns nothing once the event is soft-deleted', async () => {
