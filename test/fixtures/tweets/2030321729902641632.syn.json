@@ -1,0 +1,185 @@
+{
+ "__typename": "Tweet",
+ "favorite_count": 725,
+ "lang": "en",
+ "possibly_sensitive": false,
+ "created_at": "2026-03-07T16:36:36.000Z",
+ "display_text_range": [
+  0,
+  282
+ ],
+ "entities": {
+  "hashtags": [
+   {
+    "indices": [
+     30,
+     53
+    ],
+    "text": "EmiBonnieLoveSessionD1"
+   }
+  ],
+  "media": [
+   {
+    "display_url": "pic.x.com/cuHFebjaDk",
+    "expanded_url": "https://x.com/vacantvolcanic/status/2030321729902641632/video/1",
+    "indices": [
+     279,
+     302
+    ],
+    "url": "https://t.co/cuHFebjaDk"
+   }
+  ]
+ },
+ "id_str": "2030321729902641632",
+ "text": "ANY LOVE EMIBONNIE SESSION D1\n#EmiBonnieLoveSessionD1\n\n[After \"Number One Girl\" by ROSÉ, before \"ของขวัญปีใหม่ (Golden Night)\" by Jeff Satur]\n\n🗣️: (fans screaming after the song)\n🐰: You guys liked that song? Did you guys like that song?\n🗣️: Yes!!!\n🦊: I'm glad that you all liked https://t.co/cuHFebjaDk",
+ "user": {
+  "id_str": "708534266120896512",
+  "name": "K-bab",
+  "screen_name": "vacantvolcanic",
+  "is_blue_verified": true,
+  "profile_image_shape": "Circle",
+  "verified": false,
+  "profile_image_url_https": "https://pbs.twimg.com/profile_images/2030891515325902848/FLyql_TH_normal.jpg"
+ },
+ "edit_control": {
+  "edit_tweet_ids": [
+   "2030321729902641632"
+  ],
+  "editable_until_msecs": "1772904996000",
+  "edits_remaining": "5",
+  "is_edit_eligible": true
+ },
+ "mediaDetails": [
+  {
+   "additional_media_info": {},
+   "display_url": "pic.x.com/cuHFebjaDk",
+   "expanded_url": "https://x.com/vacantvolcanic/status/2030321729902641632/video/1",
+   "ext_media_availability": {
+    "status": "Available"
+   },
+   "indices": [
+    279,
+    302
+   ],
+   "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2030321215945289728/img/L1C8dEzOONcxy_4N.jpg",
+   "original_info": {
+    "focus_rects": [],
+    "height": 3840,
+    "width": 2160
+   },
+   "sizes": {
+    "large": {
+     "h": 2048,
+     "resize": "fit",
+     "w": 1152
+    },
+    "medium": {
+     "h": 1200,
+     "resize": "fit",
+     "w": 675
+    },
+    "small": {
+     "h": 680,
+     "resize": "fit",
+     "w": 383
+    },
+    "thumb": {
+     "h": 150,
+     "resize": "crop",
+     "w": 150
+    }
+   },
+   "type": "video",
+   "url": "https://t.co/cuHFebjaDk",
+   "video_info": {
+    "aspect_ratio": [
+     9,
+     16
+    ],
+    "duration_millis": 154458,
+    "variants": [
+     {
+      "content_type": "application/x-mpegURL",
+      "url": "https://video.twimg.com/amplify_video/2030321215945289728/pl/SdYda7sK1exFeXmb.m3u8?v=0dd"
+     },
+     {
+      "bitrate": 632000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/2030321215945289728/vid/avc1/320x568/CEhUjIjicXshYkVp.mp4"
+     },
+     {
+      "bitrate": 950000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/2030321215945289728/vid/avc1/480x852/CMn5cit2WUD8IP2A.mp4"
+     },
+     {
+      "bitrate": 2176000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/2030321215945289728/vid/avc1/720x1280/XLhHs-moCDWbfdbO.mp4"
+     },
+     {
+      "bitrate": 10368000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/2030321215945289728/vid/avc1/1080x1920/BFSApL4c1chP9yn1.mp4"
+     },
+     {
+      "bitrate": 25128000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/2030321215945289728/vid/avc1/2160x3840/TO-WPvyze2LgFq_1.mp4"
+     }
+    ]
+   }
+  }
+ ],
+ "photos": [],
+ "video": {
+  "aspectRatio": [
+   9,
+   16
+  ],
+  "contentType": "media_entity",
+  "durationMs": 154458,
+  "mediaAvailability": {
+   "status": "available"
+  },
+  "poster": "https://pbs.twimg.com/amplify_video_thumb/2030321215945289728/img/L1C8dEzOONcxy_4N.jpg",
+  "variants": [
+   {
+    "type": "application/x-mpegURL",
+    "src": "https://video.twimg.com/amplify_video/2030321215945289728/pl/SdYda7sK1exFeXmb.m3u8?v=0dd"
+   },
+   {
+    "type": "video/mp4",
+    "src": "https://video.twimg.com/amplify_video/2030321215945289728/vid/avc1/320x568/CEhUjIjicXshYkVp.mp4"
+   },
+   {
+    "type": "video/mp4",
+    "src": "https://video.twimg.com/amplify_video/2030321215945289728/vid/avc1/480x852/CMn5cit2WUD8IP2A.mp4"
+   },
+   {
+    "type": "video/mp4",
+    "src": "https://video.twimg.com/amplify_video/2030321215945289728/vid/avc1/720x1280/XLhHs-moCDWbfdbO.mp4"
+   },
+   {
+    "type": "video/mp4",
+    "src": "https://video.twimg.com/amplify_video/2030321215945289728/vid/avc1/1080x1920/BFSApL4c1chP9yn1.mp4"
+   },
+   {
+    "type": "video/mp4",
+    "src": "https://video.twimg.com/amplify_video/2030321215945289728/vid/avc1/2160x3840/TO-WPvyze2LgFq_1.mp4"
+   }
+  ],
+  "videoId": {
+   "type": "tweet",
+   "id": "2030321729902641632"
+  },
+  "viewCount": 0
+ },
+ "conversation_count": 9,
+ "news_action_type": "conversation",
+ "isEdited": false,
+ "isStaleEdit": false,
+ "note_tweet": {
+  "id": "Tm90ZVR3ZWV0UmVzdWx0czoyMDMwMzIxNzI5NTY3MTI5NjAw"
+ }
+}

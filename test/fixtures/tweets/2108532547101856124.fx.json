@@ -1,0 +1,262 @@
+{
+ "status": {
+  "type": "status",
+  "url": "https://x.com/SugarHoneyz13/status/2108532547101856124",
+  "id": "2108532547101856124",
+  "text": "EMIBONNIE ANY HAPPY FAMILY \n#GMMTVFANIVAL2026HappyFamilyxEB\n\n💜: I texted...\n🧡: What!\n💜: \"I saw it already. You can delete it now, bie.\"\n🧡: And then I texted, \"Do you miss me?\" but you didn't reply, babe!\n💜: No... but I... I replied to so many of your stories, but you didn't reply to me first!\n🧡: Not true!\n💜: It is true!\n🧡: Not true!\n💜: It is true!\n🧡: Bonnie asked \"Is that correct?\" and I already replied to you that it was correct!\n💜: Let's go clear it up at home! Go clear it up at home! https://x.com/phannii_p/status/2108523935654670719/video/1",
+  "raw_text": {
+   "text": "EMIBONNIE ANY HAPPY FAMILY \n#GMMTVFANIVAL2026HappyFamilyxEB\n\n💜: I texted...\n🧡: What!\n💜: \"I saw it already. You can delete it now, bie.\"\n🧡: And then I texted, \"Do you miss me?\" but you didn't reply, babe!\n💜: No... but I... I replied to so many of your stories, but you didn't reply to me first!\n🧡: Not true!\n💜: It is true!\n🧡: Not true!\n💜: It is true!\n🧡: Bonnie asked \"Is that correct?\" and I already replied to you that it was correct!\n💜: Let's go clear it up at home! Go clear it up at home! https://t.co/zsWagehIxa",
+   "display_text_range": [
+    0,
+    526
+   ],
+   "facets": [
+    {
+     "type": "hashtag",
+     "indices": [
+      28,
+      59
+     ],
+     "original": "GMMTVFANIVAL2026HappyFamilyxEB"
+    },
+    {
+     "type": "url",
+     "indices": [
+      492,
+      515
+     ],
+     "original": "https://t.co/zsWagehIxa",
+     "replacement": "https://x.com/phannii_p/status/2108523935654670719/video/1",
+     "display": "x.com/phannii_p/stat…"
+    },
+    {
+     "type": "media",
+     "indices": [
+      492,
+      515
+     ],
+     "id": "2108523821515112448",
+     "display": "pic.x.com/zsWagehIxa",
+     "original": "https://t.co/zsWagehIxa",
+     "replacement": "https://x.com/phannii_p/status/2108523935654670719/video/1"
+    }
+   ]
+  },
+  "author": {
+   "screen_name": "SugarHoneyz13",
+   "url": "https://x.com/SugarHoneyz13",
+   "id": "1983108901907427328",
+   "followers": 4829,
+   "following": 143,
+   "likes": 39610,
+   "media_count": 1396,
+   "statuses": 37912,
+   "name": "Lovely",
+   "description": "✨🦊 @emiamily @beonnnie🐰✨",
+   "raw_description": {
+    "text": "✨🦊 @emiamily @beonnnie🐰✨",
+    "facets": []
+   },
+   "location": "dek 71 (17 y/o)",
+   "banner_url": "https://pbs.twimg.com/profile_banners/1983108901907427328/1764498396",
+   "avatar_url": "https://pbs.twimg.com/profile_images/2089660075367694338/1K48_cvJ_200x200.jpg",
+   "joined": "Tue Oct 28 09:49:57 +0000 2025",
+   "protected": false,
+   "website": null,
+   "verification": {
+    "verified": true,
+    "verified_at": null,
+    "type": "individual"
+   },
+   "type": "profile"
+  },
+  "replies": 7,
+  "reposts": 811,
+  "likes": 2631,
+  "bookmarks": 531,
+  "quotes": 105,
+  "embed_card": "player",
+  "created_at": "Fri Oct 09 12:18:28 +0000 2026",
+  "created_timestamp": 1791548308,
+  "possibly_sensitive": false,
+  "views": 60935,
+  "is_note_tweet": true,
+  "community_note": null,
+  "lang": "en",
+  "replying_to": null,
+  "media": {
+   "all": [
+    {
+     "id": "2108523821515112448",
+     "url": "https://video.twimg.com/amplify_video/2108523821515112448/vid/avc1/1080x1920/cvKoA7Bm3UWKULYl.mp4?tag=29",
+     "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/2108523821515112448/img/bZBXKzNgtr3XjVff.jpg",
+     "duration": 28.765,
+     "width": 1080,
+     "height": 1920,
+     "format": "video/mp4",
+     "type": "video",
+     "formats": [
+      {
+       "url": "https://video.twimg.com/amplify_video/2108523821515112448/pl/nQQQulcyxaFkouXh.m3u8?tag=29",
+       "container": "m3u8"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2108523821515112448/vid/avc1/320x568/ALspKBOzKSVIJs-I.mp4?tag=29",
+       "bitrate": 632000,
+       "container": "mp4",
+       "codec": "h264"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2108523821515112448/vid/avc1/480x852/lgDoNjv2VCcUAv_V.mp4?tag=29",
+       "bitrate": 950000,
+       "container": "mp4",
+       "codec": "h264"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2108523821515112448/vid/avc1/720x1280/I-1shdhs_sFzNhSE.mp4?tag=29",
+       "bitrate": 2176000,
+       "container": "mp4",
+       "codec": "h264"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2108523821515112448/vid/avc1/1080x1920/cvKoA7Bm3UWKULYl.mp4?tag=29",
+       "bitrate": 10368000,
+       "container": "mp4",
+       "codec": "h264"
+      }
+     ],
+     "publisher": {
+      "screen_name": "phannii_p",
+      "url": "https://x.com/phannii_p",
+      "id": "1721822511296606208",
+      "followers": 959,
+      "following": 1258,
+      "likes": 64071,
+      "media_count": 1006,
+      "statuses": 102261,
+      "name": "pn.",
+      "description": "",
+      "raw_description": {
+       "text": "",
+       "facets": []
+      },
+      "location": "",
+      "banner_url": "https://pbs.twimg.com/profile_banners/1721822511296606208/1778342259",
+      "avatar_url": "https://pbs.twimg.com/profile_images/2086453223595147264/AY4Hc8n9_normal.jpg",
+      "joined": "Tue Nov 07 09:31:03 +0000 2023",
+      "protected": false,
+      "website": null,
+      "verification": {
+       "verified": false,
+       "verified_at": null,
+       "type": null
+      },
+      "type": "profile"
+     }
+    }
+   ],
+   "videos": [
+    {
+     "id": "2108523821515112448",
+     "url": "https://video.twimg.com/amplify_video/2108523821515112448/vid/avc1/1080x1920/cvKoA7Bm3UWKULYl.mp4?tag=29",
+     "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/2108523821515112448/img/bZBXKzNgtr3XjVff.jpg",
+     "duration": 28.765,
+     "width": 1080,
+     "height": 1920,
+     "format": "video/mp4",
+     "type": "video",
+     "formats": [
+      {
+       "url": "https://video.twimg.com/amplify_video/2108523821515112448/pl/nQQQulcyxaFkouXh.m3u8?tag=29",
+       "container": "m3u8"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2108523821515112448/vid/avc1/320x568/ALspKBOzKSVIJs-I.mp4?tag=29",
+       "bitrate": 632000,
+       "container": "mp4",
+       "codec": "h264"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2108523821515112448/vid/avc1/480x852/lgDoNjv2VCcUAv_V.mp4?tag=29",
+       "bitrate": 950000,
+       "container": "mp4",
+       "codec": "h264"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2108523821515112448/vid/avc1/720x1280/I-1shdhs_sFzNhSE.mp4?tag=29",
+       "bitrate": 2176000,
+       "container": "mp4",
+       "codec": "h264"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2108523821515112448/vid/avc1/1080x1920/cvKoA7Bm3UWKULYl.mp4?tag=29",
+       "bitrate": 10368000,
+       "container": "mp4",
+       "codec": "h264"
+      }
+     ],
+     "publisher": {
+      "screen_name": "phannii_p",
+      "url": "https://x.com/phannii_p",
+      "id": "1721822511296606208",
+      "followers": 959,
+      "following": 1258,
+      "likes": 64071,
+      "media_count": 1006,
+      "statuses": 102261,
+      "name": "pn.",
+      "description": "",
+      "raw_description": {
+       "text": "",
+       "facets": []
+      },
+      "location": "",
+      "banner_url": "https://pbs.twimg.com/profile_banners/1721822511296606208/1778342259",
+      "avatar_url": "https://pbs.twimg.com/profile_images/2086453223595147264/AY4Hc8n9_normal.jpg",
+      "joined": "Tue Nov 07 09:31:03 +0000 2023",
+      "protected": false,
+      "website": null,
+      "verification": {
+       "verified": false,
+       "verified_at": null,
+       "type": null
+      },
+      "type": "profile"
+     }
+    }
+   ]
+  },
+  "provider": "twitter",
+  "reposted_by": null
+ },
+ "thread": null,
+ "author": {
+  "screen_name": "SugarHoneyz13",
+  "url": "https://x.com/SugarHoneyz13",
+  "id": "1983108901907427328",
+  "followers": 4829,
+  "following": 143,
+  "likes": 39610,
+  "media_count": 1396,
+  "statuses": 37912,
+  "name": "Lovely",
+  "description": "✨🦊 @emiamily @beonnnie🐰✨",
+  "raw_description": {
+   "text": "✨🦊 @emiamily @beonnnie🐰✨",
+   "facets": []
+  },
+  "location": "dek 71 (17 y/o)",
+  "banner_url": "https://pbs.twimg.com/profile_banners/1983108901907427328/1764498396",
+  "avatar_url": "https://pbs.twimg.com/profile_images/2089660075367694338/1K48_cvJ_200x200.jpg",
+  "joined": "Tue Oct 28 09:49:57 +0000 2025",
+  "protected": false,
+  "website": null,
+  "verification": {
+   "verified": true,
+   "verified_at": null,
+   "type": "individual"
+  },
+  "type": "profile"
+ },
+ "code": 200
+}

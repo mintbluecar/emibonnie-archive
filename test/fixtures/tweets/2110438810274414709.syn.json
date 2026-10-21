@@ -1,0 +1,380 @@
+{
+ "__typename": "Tweet",
+ "favorite_count": 539,
+ "lang": "en",
+ "possibly_sensitive": false,
+ "created_at": "2026-10-14T18:33:17.000Z",
+ "display_text_range": [
+  0,
+  278
+ ],
+ "entities": {
+  "hashtags": [
+   {
+    "indices": [
+     26,
+     50
+    ],
+    "text": "MoonshadowSeriesFinalEP"
+   },
+   {
+    "indices": [
+     51,
+     63
+    ],
+    "text": "fonkanittha"
+   }
+  ],
+  "media": [
+   {
+    "display_url": "pic.x.com/d2BcOJuE8b",
+    "expanded_url": "https://x.com/vacantvolcanic/status/2110438810274414709/video/1",
+    "indices": [
+     277,
+     300
+    ],
+    "url": "https://t.co/d2BcOJuE8b"
+   }
+  ]
+ },
+ "id_str": "2110438810274414709",
+ "text": "LOVE TO THE MOON AND KEY \n#MoonshadowSeriesFinalEP #fonkanittha\n\n🦁: What impressed you abt this scene?\n🌧️: I was impressed with this scene ever since I read the script for it. It's what inspired me to discuss with the songwriters how this character was going to love so deeply https://t.co/d2BcOJuE8b",
+ "user": {
+  "id_str": "708534266120896512",
+  "name": "K-bab",
+  "screen_name": "vacantvolcanic",
+  "is_blue_verified": true,
+  "profile_image_shape": "Circle",
+  "verified": false,
+  "profile_image_url_https": "https://pbs.twimg.com/profile_images/2030891515325902848/FLyql_TH_normal.jpg"
+ },
+ "edit_control": {
+  "edit_tweet_ids": [
+   "2110438810274414709"
+  ],
+  "editable_until_msecs": "1792006397000",
+  "edits_remaining": "5",
+  "is_edit_eligible": true
+ },
+ "mediaDetails": [
+  {
+   "additional_media_info": {},
+   "display_url": "pic.x.com/d2BcOJuE8b",
+   "expanded_url": "https://x.com/vacantvolcanic/status/2110438810274414709/video/1",
+   "ext_media_availability": {
+    "status": "Available"
+   },
+   "indices": [
+    277,
+    300
+   ],
+   "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2110438049800974336/img/4RMkxAomW2yD4EIk.jpg",
+   "original_info": {
+    "focus_rects": [],
+    "height": 3840,
+    "width": 2160
+   },
+   "sizes": {
+    "large": {
+     "h": 2048,
+     "resize": "fit",
+     "w": 1152
+    },
+    "medium": {
+     "h": 1200,
+     "resize": "fit",
+     "w": 675
+    },
+    "small": {
+     "h": 680,
+     "resize": "fit",
+     "w": 383
+    },
+    "thumb": {
+     "h": 150,
+     "resize": "crop",
+     "w": 150
+    }
+   },
+   "type": "video",
+   "url": "https://t.co/d2BcOJuE8b",
+   "video_info": {
+    "aspect_ratio": [
+     9,
+     16
+    ],
+    "duration_millis": 170905,
+    "variants": [
+     {
+      "content_type": "application/x-mpegURL",
+      "url": "https://video.twimg.com/amplify_video/2110438049800974336/pl/GEKhEItp31HRmY6J.m3u8?v=e0e"
+     },
+     {
+      "bitrate": 632000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/2110438049800974336/vid/avc1/320x568/Z5m4w_hTqM-VJW6N.mp4"
+     },
+     {
+      "bitrate": 950000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/2110438049800974336/vid/avc1/480x852/bYhRHWdYc3VgDZx3.mp4"
+     },
+     {
+      "bitrate": 2176000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/2110438049800974336/vid/avc1/720x1280/oHC4YRHwDhCIaXgM.mp4"
+     },
+     {
+      "bitrate": 10368000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/2110438049800974336/vid/avc1/1080x1920/g6R3pyz5mtbT1bX6.mp4"
+     },
+     {
+      "bitrate": 25128000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/2110438049800974336/vid/avc1/2160x3840/4yGKcVzwv4Svi1gG.mp4"
+     }
+    ]
+   }
+  }
+ ],
+ "photos": [],
+ "video": {
+  "aspectRatio": [
+   9,
+   16
+  ],
+  "contentType": "media_entity",
+  "durationMs": 170905,
+  "mediaAvailability": {
+   "status": "available"
+  },
+  "poster": "https://pbs.twimg.com/amplify_video_thumb/2110438049800974336/img/4RMkxAomW2yD4EIk.jpg",
+  "variants": [
+   {
+    "type": "application/x-mpegURL",
+    "src": "https://video.twimg.com/amplify_video/2110438049800974336/pl/GEKhEItp31HRmY6J.m3u8?v=e0e"
+   },
+   {
+    "type": "video/mp4",
+    "src": "https://video.twimg.com/amplify_video/2110438049800974336/vid/avc1/320x568/Z5m4w_hTqM-VJW6N.mp4"
+   },
+   {
+    "type": "video/mp4",
+    "src": "https://video.twimg.com/amplify_video/2110438049800974336/vid/avc1/480x852/bYhRHWdYc3VgDZx3.mp4"
+   },
+   {
+    "type": "video/mp4",
+    "src": "https://video.twimg.com/amplify_video/2110438049800974336/vid/avc1/720x1280/oHC4YRHwDhCIaXgM.mp4"
+   },
+   {
+    "type": "video/mp4",
+    "src": "https://video.twimg.com/amplify_video/2110438049800974336/vid/avc1/1080x1920/g6R3pyz5mtbT1bX6.mp4"
+   },
+   {
+    "type": "video/mp4",
+    "src": "https://video.twimg.com/amplify_video/2110438049800974336/vid/avc1/2160x3840/4yGKcVzwv4Svi1gG.mp4"
+   }
+  ],
+  "videoId": {
+   "type": "tweet",
+   "id": "2110438810274414709"
+  },
+  "viewCount": 0
+ },
+ "conversation_count": 2,
+ "news_action_type": "conversation",
+ "quoted_tweet": {
+  "favorite_count": 1163,
+  "lang": "en",
+  "possibly_sensitive": false,
+  "reply_count": 12,
+  "retweet_count": 356,
+  "created_at": "2026-10-14T18:08:31.000Z",
+  "display_text_range": [
+   0,
+   279
+  ],
+  "entities": {
+   "hashtags": [
+    {
+     "indices": [
+      26,
+      50
+     ],
+     "text": "MoonshadowSeriesFinalEP"
+    },
+    {
+     "indices": [
+      51,
+      63
+     ],
+     "text": "fonkanittha"
+    }
+   ],
+   "media": [
+    {
+     "display_url": "pic.x.com/WlgsCHbYZS",
+     "expanded_url": "https://x.com/vacantvolcanic/status/2110432579635831075/video/1",
+     "indices": [
+      278,
+      301
+     ],
+     "url": "https://t.co/WlgsCHbYZS"
+    }
+   ]
+  },
+  "id_str": "2110432579635831075",
+  "text": "LOVE TO THE MOON AND KEY \n#MoonshadowSeriesFinalEP #fonkanittha\n\n🦁: Among all the scenes in this series, do you have a favourite scene, P'Fon?\n🌧️: Actually, I love a lot of scenes. There are a lot of scenes that I love and each scene has moments that impressed me, both when it https://t.co/WlgsCHbYZS",
+  "user": {
+   "id_str": "708534266120896512",
+   "name": "K-bab",
+   "screen_name": "vacantvolcanic",
+   "is_blue_verified": true,
+   "profile_image_shape": "Circle",
+   "verified": false,
+   "profile_image_url_https": "https://pbs.twimg.com/profile_images/2030891515325902848/FLyql_TH_normal.jpg"
+  },
+  "edit_control": {
+   "edit_tweet_ids": [
+    "2110432579635831075"
+   ],
+   "editable_until_msecs": "1792004911000",
+   "edits_remaining": "5",
+   "is_edit_eligible": true
+  },
+  "mediaDetails": [
+   {
+    "additional_media_info": {},
+    "display_url": "pic.x.com/WlgsCHbYZS",
+    "expanded_url": "https://x.com/vacantvolcanic/status/2110432579635831075/video/1",
+    "ext_media_availability": {
+     "status": "Available"
+    },
+    "indices": [
+     278,
+     301
+    ],
+    "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2110431851492122624/img/jeyl4dSBf5_MfypT.jpg",
+    "original_info": {
+     "focus_rects": [],
+     "height": 3840,
+     "width": 2160
+    },
+    "sizes": {
+     "large": {
+      "h": 2048,
+      "resize": "fit",
+      "w": 1152
+     },
+     "medium": {
+      "h": 1200,
+      "resize": "fit",
+      "w": 675
+     },
+     "small": {
+      "h": 680,
+      "resize": "fit",
+      "w": 383
+     },
+     "thumb": {
+      "h": 150,
+      "resize": "crop",
+      "w": 150
+     }
+    },
+    "type": "video",
+    "url": "https://t.co/WlgsCHbYZS",
+    "video_info": {
+     "aspect_ratio": [
+      9,
+      16
+     ],
+     "duration_millis": 263956,
+     "variants": [
+      {
+       "content_type": "application/x-mpegURL",
+       "url": "https://video.twimg.com/amplify_video/2110431851492122624/pl/S8VWymijsKYUzilO.m3u8?v=7fa"
+      },
+      {
+       "bitrate": 632000,
+       "content_type": "video/mp4",
+       "url": "https://video.twimg.com/amplify_video/2110431851492122624/vid/avc1/320x568/jWymfEXsZCVwlf9x.mp4"
+      },
+      {
+       "bitrate": 950000,
+       "content_type": "video/mp4",
+       "url": "https://video.twimg.com/amplify_video/2110431851492122624/vid/avc1/480x852/pAx6K8CMS1Fe05lA.mp4"
+      },
+      {
+       "bitrate": 2176000,
+       "content_type": "video/mp4",
+       "url": "https://video.twimg.com/amplify_video/2110431851492122624/vid/avc1/720x1280/tUs86Q9wZ1dyNiRN.mp4"
+      },
+      {
+       "bitrate": 10368000,
+       "content_type": "video/mp4",
+       "url": "https://video.twimg.com/amplify_video/2110431851492122624/vid/avc1/1080x1920/M2djtSpCoJqSVCZh.mp4"
+      },
+      {
+       "bitrate": 25128000,
+       "content_type": "video/mp4",
+       "url": "https://video.twimg.com/amplify_video/2110431851492122624/vid/avc1/2160x3840/kUeseEXkoxrq0IaI.mp4"
+      }
+     ]
+    }
+   }
+  ],
+  "photos": [],
+  "video": {
+   "aspectRatio": [
+    9,
+    16
+   ],
+   "contentType": "media_entity",
+   "durationMs": 263956,
+   "mediaAvailability": {
+    "status": "available"
+   },
+   "poster": "https://pbs.twimg.com/amplify_video_thumb/2110431851492122624/img/jeyl4dSBf5_MfypT.jpg",
+   "variants": [
+    {
+     "type": "application/x-mpegURL",
+     "src": "https://video.twimg.com/amplify_video/2110431851492122624/pl/S8VWymijsKYUzilO.m3u8?v=7fa"
+    },
+    {
+     "type": "video/mp4",
+     "src": "https://video.twimg.com/amplify_video/2110431851492122624/vid/avc1/320x568/jWymfEXsZCVwlf9x.mp4"
+    },
+    {
+     "type": "video/mp4",
+     "src": "https://video.twimg.com/amplify_video/2110431851492122624/vid/avc1/480x852/pAx6K8CMS1Fe05lA.mp4"
+    },
+    {
+     "type": "video/mp4",
+     "src": "https://video.twimg.com/amplify_video/2110431851492122624/vid/avc1/720x1280/tUs86Q9wZ1dyNiRN.mp4"
+    },
+    {
+     "type": "video/mp4",
+     "src": "https://video.twimg.com/amplify_video/2110431851492122624/vid/avc1/1080x1920/M2djtSpCoJqSVCZh.mp4"
+    },
+    {
+     "type": "video/mp4",
+     "src": "https://video.twimg.com/amplify_video/2110431851492122624/vid/avc1/2160x3840/kUeseEXkoxrq0IaI.mp4"
+    }
+   ],
+   "videoId": {
+    "type": "tweet",
+    "id": "2110432579635831075"
+   },
+   "viewCount": 0
+  },
+  "isEdited": false,
+  "isStaleEdit": false
+ },
+ "isEdited": false,
+ "isStaleEdit": false,
+ "note_tweet": {
+  "id": "Tm90ZVR3ZWV0UmVzdWx0czoyMTEwNDM4ODEwMDI2OTk5ODA4"
+ }
+}

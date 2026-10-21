@@ -1,0 +1,260 @@
+{
+ "status": {
+  "type": "status",
+  "url": "https://x.com/vacantvolcanic/status/2003413749940834557",
+  "id": "2003413749940834557",
+  "text": "https://x.com/nxris_s/status/2003137191904772539/video/1\n#EmiBonnie #NamtanFilm #michirujjang\n\n💬: Can you review EmiBonnie during the Starlympics?\n🪇: I sat at the back on the stands and so many things happened before my eyes, so many. P'Namtan, P'Film were standing in front of me. P'Emi, P'Bonnie were there too. Thank you for loving each other for me to see 🤭",
+  "raw_text": {
+   "text": "https://t.co/i5Jkm3Q2k7\n#EmiBonnie #NamtanFilm #michirujjang\n\n💬: Can you review EmiBonnie during the Starlympics?\n🪇: I sat at the back on the stands and so many things happened before my eyes, so many. P'Namtan, P'Film were standing in front of me. P'Emi, P'Bonnie were there too. Thank you for loving each other for me to see 🤭",
+   "display_text_range": [
+    0,
+    331
+   ],
+   "facets": [
+    {
+     "type": "url",
+     "indices": [
+      0,
+      23
+     ],
+     "original": "https://t.co/i5Jkm3Q2k7",
+     "replacement": "https://x.com/nxris_s/status/2003137191904772539/video/1",
+     "display": "x.com/nxris_s/status…"
+    },
+    {
+     "type": "media",
+     "indices": [
+      0,
+      23
+     ],
+     "id": "2003137096765325312",
+     "display": "pic.x.com/8evzsyGSbE",
+     "original": "https://t.co/8evzsyGSbE",
+     "replacement": "https://x.com/nxris_s/status/2003137191904772539/video/1"
+    },
+    {
+     "type": "hashtag",
+     "indices": [
+      24,
+      34
+     ],
+     "original": "EmiBonnie"
+    },
+    {
+     "type": "hashtag",
+     "indices": [
+      35,
+      46
+     ],
+     "original": "NamtanFilm"
+    },
+    {
+     "type": "hashtag",
+     "indices": [
+      47,
+      60
+     ],
+     "original": "michirujjang"
+    }
+   ]
+  },
+  "author": {
+   "screen_name": "vacantvolcanic",
+   "url": "https://x.com/vacantvolcanic",
+   "id": "708534266120896512",
+   "followers": 7931,
+   "following": 468,
+   "likes": 57892,
+   "media_count": 3327,
+   "statuses": 19829,
+   "name": "K-bab",
+   "description": "embn, any. gmmtv girls. gl. autocorrect victim. be chill na kub :) (any in pfp by @lavendysoblue_)",
+   "raw_description": {
+    "text": "embn, any. gmmtv girls. gl. autocorrect victim. be chill na kub :) (any in pfp by @lavendysoblue_)",
+    "facets": []
+   },
+   "location": "TH",
+   "banner_url": "https://pbs.twimg.com/profile_banners/708534266120896512/1778516545",
+   "avatar_url": "https://pbs.twimg.com/profile_images/2030891515325902848/FLyql_TH_200x200.jpg",
+   "joined": "Sat Mar 12 06:05:07 +0000 2016",
+   "protected": false,
+   "website": {
+    "url": "https://linktr.ee/vacantvolcanic",
+    "display_url": "linktr.ee/vacantvolcanic"
+   },
+   "verification": {
+    "verified": true,
+    "verified_at": null,
+    "type": "individual"
+   },
+   "type": "profile"
+  },
+  "replies": 0,
+  "reposts": 79,
+  "likes": 313,
+  "bookmarks": 34,
+  "quotes": 0,
+  "embed_card": "player",
+  "created_at": "Tue Dec 23 10:33:54 +0000 2025",
+  "created_timestamp": 1766486034,
+  "possibly_sensitive": false,
+  "views": 10255,
+  "is_note_tweet": true,
+  "community_note": null,
+  "lang": "en",
+  "replying_to": null,
+  "media": {
+   "all": [
+    {
+     "id": "2003137096765325312",
+     "url": "https://video.twimg.com/amplify_video/2003137096765325312/vid/avc1/466x850/tIdWJas0prNdIDv0.mp4?tag=21",
+     "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/2003137096765325312/img/Uiob5CHRx1WutsWU.jpg",
+     "duration": 25.231,
+     "width": 466,
+     "height": 850,
+     "format": "video/mp4",
+     "type": "video",
+     "formats": [
+      {
+       "url": "https://video.twimg.com/amplify_video/2003137096765325312/pl/l-4JjBu9NZMMmxrp.m3u8?tag=21",
+       "container": "m3u8"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2003137096765325312/vid/avc1/320x582/gR6iKUa9K7slBzO-.mp4?tag=21",
+       "bitrate": 632000,
+       "container": "mp4",
+       "codec": "h264"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2003137096765325312/vid/avc1/466x850/tIdWJas0prNdIDv0.mp4?tag=21",
+       "bitrate": 950000,
+       "container": "mp4",
+       "codec": "h264"
+      }
+     ],
+     "publisher": {
+      "screen_name": "nxris_s",
+      "url": "https://x.com/nxris_s",
+      "id": "1564243219894108162",
+      "followers": 2099,
+      "following": 1470,
+      "likes": 99202,
+      "media_count": 2829,
+      "statuses": 129607,
+      "name": "Bangearn.n",
+      "description": "I'll always be here to support you, no matter what 💐 #EmiBonnie #emiamily #beonnnie #ANY 💜🧡🦋",
+      "raw_description": {
+       "text": "I'll always be here to support you, no matter what 💐 #EmiBonnie #emiamily #beonnnie #ANY 💜🧡🦋",
+       "facets": []
+      },
+      "location": "",
+      "banner_url": "https://pbs.twimg.com/profile_banners/1564243219894108162/1756268840",
+      "avatar_url": "https://pbs.twimg.com/profile_images/2033166234607624192/p5Gr6xhd_normal.jpg",
+      "joined": "Mon Aug 29 13:27:33 +0000 2022",
+      "protected": false,
+      "website": null,
+      "verification": {
+       "verified": false,
+       "verified_at": null,
+       "type": null
+      },
+      "type": "profile"
+     }
+    }
+   ],
+   "videos": [
+    {
+     "id": "2003137096765325312",
+     "url": "https://video.twimg.com/amplify_video/2003137096765325312/vid/avc1/466x850/tIdWJas0prNdIDv0.mp4?tag=21",
+     "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/2003137096765325312/img/Uiob5CHRx1WutsWU.jpg",
+     "duration": 25.231,
+     "width": 466,
+     "height": 850,
+     "format": "video/mp4",
+     "type": "video",
+     "formats": [
+      {
+       "url": "https://video.twimg.com/amplify_video/2003137096765325312/pl/l-4JjBu9NZMMmxrp.m3u8?tag=21",
+       "container": "m3u8"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2003137096765325312/vid/avc1/320x582/gR6iKUa9K7slBzO-.mp4?tag=21",
+       "bitrate": 632000,
+       "container": "mp4",
+       "codec": "h264"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2003137096765325312/vid/avc1/466x850/tIdWJas0prNdIDv0.mp4?tag=21",
+       "bitrate": 950000,
+       "container": "mp4",
+       "codec": "h264"
+      }
+     ],
+     "publisher": {
+      "screen_name": "nxris_s",
+      "url": "https://x.com/nxris_s",
+      "id": "1564243219894108162",
+      "followers": 2099,
+      "following": 1470,
+      "likes": 99202,
+      "media_count": 2829,
+      "statuses": 129607,
+      "name": "Bangearn.n",
+      "description": "I'll always be here to support you, no matter what 💐 #EmiBonnie #emiamily #beonnnie #ANY 💜🧡🦋",
+      "raw_description": {
+       "text": "I'll always be here to support you, no matter what 💐 #EmiBonnie #emiamily #beonnnie #ANY 💜🧡🦋",
+       "facets": []
+      },
+      "location": "",
+      "banner_url": "https://pbs.twimg.com/profile_banners/1564243219894108162/1756268840",
+      "avatar_url": "https://pbs.twimg.com/profile_images/2033166234607624192/p5Gr6xhd_normal.jpg",
+      "joined": "Mon Aug 29 13:27:33 +0000 2022",
+      "protected": false,
+      "website": null,
+      "verification": {
+       "verified": false,
+       "verified_at": null,
+       "type": null
+      },
+      "type": "profile"
+     }
+    }
+   ]
+  },
+  "provider": "twitter",
+  "reposted_by": null
+ },
+ "thread": null,
+ "author": {
+  "screen_name": "vacantvolcanic",
+  "url": "https://x.com/vacantvolcanic",
+  "id": "708534266120896512",
+  "followers": 7931,
+  "following": 468,
+  "likes": 57892,
+  "media_count": 3327,
+  "statuses": 19829,
+  "name": "K-bab",
+  "description": "embn, any. gmmtv girls. gl. autocorrect victim. be chill na kub :) (any in pfp by @lavendysoblue_)",
+  "raw_description": {
+   "text": "embn, any. gmmtv girls. gl. autocorrect victim. be chill na kub :) (any in pfp by @lavendysoblue_)",
+   "facets": []
+  },
+  "location": "TH",
+  "banner_url": "https://pbs.twimg.com/profile_banners/708534266120896512/1778516545",
+  "avatar_url": "https://pbs.twimg.com/profile_images/2030891515325902848/FLyql_TH_200x200.jpg",
+  "joined": "Sat Mar 12 06:05:07 +0000 2016",
+  "protected": false,
+  "website": {
+   "url": "https://linktr.ee/vacantvolcanic",
+   "display_url": "linktr.ee/vacantvolcanic"
+  },
+  "verification": {
+   "verified": true,
+   "verified_at": null,
+   "type": "individual"
+  },
+  "type": "profile"
+ },
+ "code": 200
+}

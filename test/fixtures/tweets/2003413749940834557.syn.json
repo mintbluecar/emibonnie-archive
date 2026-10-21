@@ -1,0 +1,172 @@
+{
+ "__typename": "Tweet",
+ "favorite_count": 313,
+ "lang": "en",
+ "possibly_sensitive": false,
+ "created_at": "2025-12-23T10:33:54.000Z",
+ "display_text_range": [
+  0,
+  277
+ ],
+ "entities": {
+  "hashtags": [
+   {
+    "indices": [
+     24,
+     34
+    ],
+    "text": "EmiBonnie"
+   },
+   {
+    "indices": [
+     35,
+     46
+    ],
+    "text": "NamtanFilm"
+   },
+   {
+    "indices": [
+     47,
+     60
+    ],
+    "text": "michirujjang"
+   }
+  ],
+  "media": [
+   {
+    "display_url": "pic.x.com/8evzsyGSbE",
+    "expanded_url": "https://x.com/nxris_s/status/2003137191904772539/video/1",
+    "indices": [
+     0,
+     23
+    ],
+    "url": "https://t.co/8evzsyGSbE"
+   }
+  ]
+ },
+ "id_str": "2003413749940834557",
+ "text": "https://t.co/8evzsyGSbE\n#EmiBonnie #NamtanFilm #michirujjang\n\n💬: Can you review EmiBonnie during the Starlympics?\n🪇: I sat at the back on the stands and so many things happened before my eyes, so many. P'Namtan, P'Film were standing in front of me. P'Emi, P'Bonnie were there",
+ "user": {
+  "id_str": "708534266120896512",
+  "name": "K-bab",
+  "screen_name": "vacantvolcanic",
+  "is_blue_verified": true,
+  "profile_image_shape": "Circle",
+  "verified": false,
+  "profile_image_url_https": "https://pbs.twimg.com/profile_images/2030891515325902848/FLyql_TH_normal.jpg"
+ },
+ "edit_control": {
+  "edit_tweet_ids": [
+   "2003413749940834557"
+  ],
+  "editable_until_msecs": "1766489634000",
+  "edits_remaining": "5",
+  "is_edit_eligible": true
+ },
+ "mediaDetails": [
+  {
+   "additional_media_info": {},
+   "display_url": "pic.x.com/8evzsyGSbE",
+   "expanded_url": "https://x.com/nxris_s/status/2003137191904772539/video/1",
+   "ext_media_availability": {
+    "status": "Available"
+   },
+   "indices": [
+    0,
+    23
+   ],
+   "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/2003137096765325312/img/Uiob5CHRx1WutsWU.jpg",
+   "original_info": {
+    "focus_rects": [],
+    "height": 850,
+    "width": 466
+   },
+   "sizes": {
+    "large": {
+     "h": 850,
+     "resize": "fit",
+     "w": 466
+    },
+    "medium": {
+     "h": 850,
+     "resize": "fit",
+     "w": 466
+    },
+    "small": {
+     "h": 680,
+     "resize": "fit",
+     "w": 373
+    },
+    "thumb": {
+     "h": 150,
+     "resize": "crop",
+     "w": 150
+    }
+   },
+   "type": "video",
+   "url": "https://t.co/8evzsyGSbE",
+   "video_info": {
+    "aspect_ratio": [
+     233,
+     425
+    ],
+    "duration_millis": 25231,
+    "variants": [
+     {
+      "content_type": "application/x-mpegURL",
+      "url": "https://video.twimg.com/amplify_video/2003137096765325312/pl/l-4JjBu9NZMMmxrp.m3u8"
+     },
+     {
+      "bitrate": 632000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/2003137096765325312/vid/avc1/320x582/gR6iKUa9K7slBzO-.mp4"
+     },
+     {
+      "bitrate": 950000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/2003137096765325312/vid/avc1/466x850/tIdWJas0prNdIDv0.mp4"
+     }
+    ]
+   }
+  }
+ ],
+ "photos": [],
+ "video": {
+  "aspectRatio": [
+   233,
+   425
+  ],
+  "contentType": "media_entity",
+  "durationMs": 25231,
+  "mediaAvailability": {
+   "status": "available"
+  },
+  "poster": "https://pbs.twimg.com/amplify_video_thumb/2003137096765325312/img/Uiob5CHRx1WutsWU.jpg",
+  "variants": [
+   {
+    "type": "application/x-mpegURL",
+    "src": "https://video.twimg.com/amplify_video/2003137096765325312/pl/l-4JjBu9NZMMmxrp.m3u8"
+   },
+   {
+    "type": "video/mp4",
+    "src": "https://video.twimg.com/amplify_video/2003137096765325312/vid/avc1/320x582/gR6iKUa9K7slBzO-.mp4"
+   },
+   {
+    "type": "video/mp4",
+    "src": "https://video.twimg.com/amplify_video/2003137096765325312/vid/avc1/466x850/tIdWJas0prNdIDv0.mp4"
+   }
+  ],
+  "videoId": {
+   "type": "tweet",
+   "id": "2003413749940834557"
+  },
+  "viewCount": 0
+ },
+ "conversation_count": 0,
+ "news_action_type": "conversation",
+ "isEdited": false,
+ "isStaleEdit": false,
+ "note_tweet": {
+  "id": "Tm90ZVR3ZWV0UmVzdWx0czoyMDAzNDEzNzQ5ODEwNzU3NjMy"
+ }
+}

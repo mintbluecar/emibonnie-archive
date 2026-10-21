@@ -1,0 +1,204 @@
+{
+ "status": {
+  "type": "status",
+  "url": "https://x.com/vacantvolcanic/status/2021992269596045801",
+  "id": "2021992269596045801",
+  "text": "#beonnnie TikTok live [260212]\n\n💬: I miss Moo Tod (Fried Pork = Bonnie's PUBG name).\n🐰: I haven't played games in a super long time, guys. Super long. Ever since back when we were playing it together. I haven't had time for my hobbies at all since then.",
+  "raw_text": {
+   "text": "#beonnnie TikTok live [260212]\n\n💬: I miss Moo Tod (Fried Pork = Bonnie's PUBG name).\n🐰: I haven't played games in a super long time, guys. Super long. Ever since back when we were playing it together. I haven't had time for my hobbies at all since then. https://t.co/tLrO9x3Ow4",
+   "display_text_range": [
+    0,
+    253
+   ],
+   "facets": [
+    {
+     "type": "hashtag",
+     "indices": [
+      0,
+      9
+     ],
+     "original": "beonnnie"
+    },
+    {
+     "type": "media",
+     "indices": [
+      254,
+      277
+     ],
+     "id": "2021992208002691080",
+     "display": "pic.x.com/tLrO9x3Ow4",
+     "original": "https://t.co/tLrO9x3Ow4",
+     "replacement": "https://x.com/vacantvolcanic/status/2021992269596045801/video/1"
+    }
+   ]
+  },
+  "author": {
+   "screen_name": "vacantvolcanic",
+   "url": "https://x.com/vacantvolcanic",
+   "id": "708534266120896512",
+   "followers": 7931,
+   "following": 468,
+   "likes": 57892,
+   "media_count": 3327,
+   "statuses": 19829,
+   "name": "K-bab",
+   "description": "embn, any. gmmtv girls. gl. autocorrect victim. be chill na kub :) (any in pfp by @lavendysoblue_)",
+   "raw_description": {
+    "text": "embn, any. gmmtv girls. gl. autocorrect victim. be chill na kub :) (any in pfp by @lavendysoblue_)",
+    "facets": []
+   },
+   "location": "TH",
+   "banner_url": "https://pbs.twimg.com/profile_banners/708534266120896512/1778516545",
+   "avatar_url": "https://pbs.twimg.com/profile_images/2030891515325902848/FLyql_TH_200x200.jpg",
+   "joined": "Sat Mar 12 06:05:07 +0000 2016",
+   "protected": false,
+   "website": {
+    "url": "https://linktr.ee/vacantvolcanic",
+    "display_url": "linktr.ee/vacantvolcanic"
+   },
+   "verification": {
+    "verified": true,
+    "verified_at": null,
+    "type": "individual"
+   },
+   "type": "profile"
+  },
+  "replies": 0,
+  "reposts": 58,
+  "likes": 314,
+  "bookmarks": 23,
+  "quotes": 1,
+  "embed_card": "player",
+  "created_at": "Thu Feb 12 16:58:18 +0000 2026",
+  "created_timestamp": 1770915498,
+  "possibly_sensitive": false,
+  "views": 5011,
+  "is_note_tweet": false,
+  "community_note": null,
+  "lang": "en",
+  "replying_to": null,
+  "media": {
+   "all": [
+    {
+     "id": "2021992208002691080",
+     "url": "https://video.twimg.com/amplify_video/2021992208002691080/vid/avc1/1206x1808/9JKANVJhhKn2F53n.mp4?tag=21",
+     "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/2021992208002691080/img/25zrFPnurNMLm4zv.jpg",
+     "duration": 15.028,
+     "width": 1206,
+     "height": 1808,
+     "format": "video/mp4",
+     "type": "video",
+     "formats": [
+      {
+       "url": "https://video.twimg.com/amplify_video/2021992208002691080/pl/__QiNYwhaHEgBvd3.m3u8?tag=21&v=cfc",
+       "container": "m3u8"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2021992208002691080/vid/avc1/320x478/4TjoJY5oKcSn8kG3.mp4?tag=21",
+       "bitrate": 632000,
+       "container": "mp4",
+       "codec": "h264"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2021992208002691080/vid/avc1/480x718/1VzvHmAj0NZFAkog.mp4?tag=21",
+       "bitrate": 950000,
+       "container": "mp4",
+       "codec": "h264"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2021992208002691080/vid/avc1/720x1078/4wxCzxG1IQFrpw-0.mp4?tag=21",
+       "bitrate": 2176000,
+       "container": "mp4",
+       "codec": "h264"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2021992208002691080/vid/avc1/1206x1808/9JKANVJhhKn2F53n.mp4?tag=21",
+       "bitrate": 10368000,
+       "container": "mp4",
+       "codec": "h264"
+      }
+     ],
+     "publisher": null
+    }
+   ],
+   "videos": [
+    {
+     "id": "2021992208002691080",
+     "url": "https://video.twimg.com/amplify_video/2021992208002691080/vid/avc1/1206x1808/9JKANVJhhKn2F53n.mp4?tag=21",
+     "thumbnail_url": "https://pbs.twimg.com/amplify_video_thumb/2021992208002691080/img/25zrFPnurNMLm4zv.jpg",
+     "duration": 15.028,
+     "width": 1206,
+     "height": 1808,
+     "format": "video/mp4",
+     "type": "video",
+     "formats": [
+      {
+       "url": "https://video.twimg.com/amplify_video/2021992208002691080/pl/__QiNYwhaHEgBvd3.m3u8?tag=21&v=cfc",
+       "container": "m3u8"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2021992208002691080/vid/avc1/320x478/4TjoJY5oKcSn8kG3.mp4?tag=21",
+       "bitrate": 632000,
+       "container": "mp4",
+       "codec": "h264"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2021992208002691080/vid/avc1/480x718/1VzvHmAj0NZFAkog.mp4?tag=21",
+       "bitrate": 950000,
+       "container": "mp4",
+       "codec": "h264"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2021992208002691080/vid/avc1/720x1078/4wxCzxG1IQFrpw-0.mp4?tag=21",
+       "bitrate": 2176000,
+       "container": "mp4",
+       "codec": "h264"
+      },
+      {
+       "url": "https://video.twimg.com/amplify_video/2021992208002691080/vid/avc1/1206x1808/9JKANVJhhKn2F53n.mp4?tag=21",
+       "bitrate": 10368000,
+       "container": "mp4",
+       "codec": "h264"
+      }
+     ],
+     "publisher": null
+    }
+   ]
+  },
+  "provider": "twitter",
+  "reposted_by": null
+ },
+ "thread": null,
+ "author": {
+  "screen_name": "vacantvolcanic",
+  "url": "https://x.com/vacantvolcanic",
+  "id": "708534266120896512",
+  "followers": 7931,
+  "following": 468,
+  "likes": 57892,
+  "media_count": 3327,
+  "statuses": 19829,
+  "name": "K-bab",
+  "description": "embn, any. gmmtv girls. gl. autocorrect victim. be chill na kub :) (any in pfp by @lavendysoblue_)",
+  "raw_description": {
+   "text": "embn, any. gmmtv girls. gl. autocorrect victim. be chill na kub :) (any in pfp by @lavendysoblue_)",
+   "facets": []
+  },
+  "location": "TH",
+  "banner_url": "https://pbs.twimg.com/profile_banners/708534266120896512/1778516545",
+  "avatar_url": "https://pbs.twimg.com/profile_images/2030891515325902848/FLyql_TH_200x200.jpg",
+  "joined": "Sat Mar 12 06:05:07 +0000 2016",
+  "protected": false,
+  "website": {
+   "url": "https://linktr.ee/vacantvolcanic",
+   "display_url": "linktr.ee/vacantvolcanic"
+  },
+  "verification": {
+   "verified": true,
+   "verified_at": null,
+   "type": "individual"
+  },
+  "type": "profile"
+ },
+ "code": 200
+}

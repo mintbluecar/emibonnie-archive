@@ -1,0 +1,171 @@
+{
+ "__typename": "Tweet",
+ "favorite_count": 1462,
+ "lang": "en",
+ "possibly_sensitive": false,
+ "created_at": "2026-10-10T02:37:42.000Z",
+ "display_text_range": [
+  0,
+  267
+ ],
+ "entities": {
+  "hashtags": [
+   {
+    "indices": [
+     198,
+     229
+    ],
+    "text": "GMMTVFANIVAL2026HappyFamilyxEB"
+   },
+   {
+    "indices": [
+     230,
+     240
+    ],
+    "text": "EmiBonnie"
+   }
+  ],
+  "media": [
+   {
+    "display_url": "pic.x.com/Na5plMzwwI",
+    "expanded_url": "https://x.com/yazzyminttt/status/2108636912588337360/video/1",
+    "indices": [
+     242,
+     265
+    ],
+    "url": "https://t.co/Na5plMzwwI"
+   }
+  ]
+ },
+ "id_str": "2108748780564816034",
+ "text": "Rough trans\n: Bonnie, mommy has sth to tell you. I like you so much, \n💜: really? \n:but i like your girlfriend more. I am sorry. I really cant help it. \n💜: maeee maeee!!!\n\nEMIBONNIE ANY HAPPY FAMILY\n#GMMTVFANIVAL2026HappyFamilyxEB\n#EmiBonnie  https://t.co/Na5plMzwwI",
+ "user": {
+  "id_str": "62832889",
+  "name": "you do you 🫡👌🏻",
+  "screen_name": "danaNYB",
+  "is_blue_verified": true,
+  "profile_image_shape": "Circle",
+  "verified": false,
+  "profile_image_url_https": "https://pbs.twimg.com/profile_images/2087389503317012480/T7MeeoB9_normal.jpg"
+ },
+ "edit_control": {
+  "edit_tweet_ids": [
+   "2108748780564816034"
+  ],
+  "editable_until_msecs": "1791603462000",
+  "edits_remaining": "5",
+  "is_edit_eligible": true
+ },
+ "mediaDetails": [
+  {
+   "additional_media_info": {},
+   "display_url": "pic.x.com/Na5plMzwwI",
+   "expanded_url": "https://x.com/yazzyminttt/status/2108636912588337360/video/1",
+   "ext_media_availability": {
+    "status": "Available"
+   },
+   "indices": [
+    242,
+    265
+   ],
+   "media_url_https": "https://pbs.twimg.com/media/HUNiDS1bwAAHxlK.jpg",
+   "original_info": {
+    "focus_rects": [],
+    "height": 2048,
+    "width": 1152
+   },
+   "sizes": {
+    "large": {
+     "h": 2048,
+     "resize": "fit",
+     "w": 1152
+    },
+    "medium": {
+     "h": 1200,
+     "resize": "fit",
+     "w": 675
+    },
+    "small": {
+     "h": 680,
+     "resize": "fit",
+     "w": 383
+    },
+    "thumb": {
+     "h": 150,
+     "resize": "crop",
+     "w": 150
+    }
+   },
+   "type": "video",
+   "url": "https://t.co/Na5plMzwwI",
+   "video_info": {
+    "aspect_ratio": [
+     9,
+     16
+    ],
+    "duration_millis": 12170,
+    "variants": [
+     {
+      "content_type": "application/x-mpegURL",
+      "url": "https://video.twimg.com/amplify_video/2108636859035459584/pl/pWP8YLhoD99lxoJV.m3u8"
+     },
+     {
+      "bitrate": 632000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/2108636859035459584/vid/avc1/320x568/FXU8bCGYT1u4FAaL.mp4"
+     },
+     {
+      "bitrate": 950000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/2108636859035459584/vid/avc1/480x852/jxVPKOlRzq8XVLPi.mp4"
+     },
+     {
+      "bitrate": 2176000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/2108636859035459584/vid/avc1/720x1280/2hmlymWiKexdZySe.mp4"
+     }
+    ]
+   }
+  }
+ ],
+ "photos": [],
+ "video": {
+  "aspectRatio": [
+   9,
+   16
+  ],
+  "contentType": "media_entity",
+  "durationMs": 12170,
+  "mediaAvailability": {
+   "status": "available"
+  },
+  "poster": "https://pbs.twimg.com/media/HUNiDS1bwAAHxlK.jpg",
+  "variants": [
+   {
+    "type": "application/x-mpegURL",
+    "src": "https://video.twimg.com/amplify_video/2108636859035459584/pl/pWP8YLhoD99lxoJV.m3u8"
+   },
+   {
+    "type": "video/mp4",
+    "src": "https://video.twimg.com/amplify_video/2108636859035459584/vid/avc1/320x568/FXU8bCGYT1u4FAaL.mp4"
+   },
+   {
+    "type": "video/mp4",
+    "src": "https://video.twimg.com/amplify_video/2108636859035459584/vid/avc1/480x852/jxVPKOlRzq8XVLPi.mp4"
+   },
+   {
+    "type": "video/mp4",
+    "src": "https://video.twimg.com/amplify_video/2108636859035459584/vid/avc1/720x1280/2hmlymWiKexdZySe.mp4"
+   }
+  ],
+  "videoId": {
+   "type": "tweet",
+   "id": "2108748780564816034"
+  },
+  "viewCount": 0
+ },
+ "conversation_count": 0,
+ "news_action_type": "conversation",
+ "isEdited": false,
+ "isStaleEdit": false
+}
