@@ -156,7 +156,7 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
 
 ---
 
-### Task 4: Translation page and video player
+### Task 4: Translation page and media box (video, pictures, quote)
 
 **Files:**
 - Create: `public/item.html`, `public/js/pages/item.js`, `public/js/components/videoPlayer.js`, `test/components/videoPlayer.test.js`
@@ -172,6 +172,11 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
     - Start from the stored variants in the item response.
     - On an `error` event, refetch `/api/video/:kind/:sourceId` once.
     - If that refetch returns 404 or errors, swap in `t('item.sourceGone')`.
+  - **`mediaBox`** (`public/js/components/mediaBox.js`) renders the pinned area from `detail.media`:
+    - `video`: `videoPlayer`.
+    - `images`: a capped carousel (same 40svh cap on phones; swipe or arrow buttons; `n / total` counter), with `<img loading="lazy" decoding="async" alt="">`, aspect from width/height, and tap opening a full-screen `<dialog>` zoom (Escape or close button, focus returned).
+    - `quote`: a quote card with author name, handle, date and the original text (Thai spans get `lang`).
+    - `null`: the `sourceGone` note.
   - If Plan 1a Task 2 recorded that **hotlinking fails**, the player uses X's official embed instead (`platform.twitter.com`, added to the CSP), and the video isn't sticky on phones.
   - **The item page:**
     - **Phone:** a sticky `.vid` at the top.
@@ -183,6 +188,7 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
 - [ ] **Step 1: Write the failing tests:**
   - **pickVariant:** a small screen gets 632k; a large one gets 2176k.
   - **render:** a 720×1280 clip renders a full-screen button and a `data-aspect="0.5625"` attribute.
+  - **mediaBox:** `images` with 2 entries renders 2 `<img>` elements and `1 / 2`; `quote` renders the author handle and escaped text; `null` renders the `sourceGone` copy.
   - **bind:** a fake `fetch` returns 404 after a simulated `error` event, and the element ends up containing the `sourceGone` copy.
 - [ ] **Step 2: FAIL** → implement → **PASS.** Browser check: the video stays pinned while the `LONG` text scrolls, at 390px and 1280px. Commit: `"Translation page with stored-variant video player"`
 
@@ -196,8 +202,8 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
 **Interfaces:**
 - Produces:
   - `searchState`: `parseState(URLSearchParams)`, `toQuery(state)`, `filterCount(state)` (doesn't count `q`), `withFilter`, `withoutFilter`. All are immutable.
-    - `State = { q, people:number[], peopleMode:'any'|'all', types:string[] /* category names and 'shared story' */, event, account, client, from, to }`.
-    - The names map 1:1 onto `/api/search` params: `toApiParams(state)` turns `'shared story'` into `placements=shared_story`, and `event` into `eventSlug`, and so on.
+    - `State = { q, people:number[], peopleMode:'any'|'all', types:string[] /* category names, 'shared story', 'posts' */, event, account, client, from, to }`.
+    - The names map 1:1 onto `/api/search` params: `toApiParams(state)` turns `'shared story'` into `placements=shared_story` and `'posts'` into `placements=post`, and `event` into `eventSlug`, and so on.
     - **The URL is the single source of truth.** Scoped search is simply a link.
   - `filterSheet.render({ state, options, count })` and `bind(el, { state, onChange })`.
     - Options come from `/api/filters`.
@@ -252,7 +258,7 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
     - The contact link is `site.contactUrl`.
   - `404.html` is used by Vercel for unknown paths.
 - [ ] **Step 1: Compose tests** on snapshots:
-  - Person groups include a shared-story group label.
+  - Person groups include a shared-story group label and a **posts** group, for posts they authored.
   - An opted-out translator shows the opted-out copy and nothing else.
   - The privacy page contains every required section key (one test lists them).
 - [ ] **Step 2: Implement. Then check in the browser and with the tests:**
@@ -280,6 +286,7 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
   - **Extra checks on the item page:**
     - The `.vid` stays at `top: 0` after scrolling 2,000px.
     - **Real playback:** with the network allowed, the `LONG` clip's `<video>` reaches `readyState >= 2`, and no 403 appears for `video.twimg.com`. This is the in-browser check that was deferred from the 1a spike.
+    - **The `PHOTO` page** shows 2 images in the capped area, and tapping opens the zoom dialog (Escape closes it). **The `POST` page** shows the quote card above the translation.
     - For the **vertical** `LIVE` clip at 390×844, the `.vid` box is at most 40% of the viewport height (≤ 338px), and the first bubble is visible without scrolling.
     - The `LONG` 🐱 line shows `🌙 luna`.
   - **Extra check on search:** opening the filter sheet and pressing Escape returns focus to the filter icon.

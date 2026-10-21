@@ -289,7 +289,7 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
 - Produces:
 
 ```js
-/** @typedef {{ igHandle: string, displayName: string, emoji: string, colour: string }} FeaturedPerson */
+/** @typedef {{ igHandle: string, displayName: string, emoji: string, colour: string, otherAccounts?: { platform: string, handle: string }[] }} FeaturedPerson */
 /** @typedef {{ code: string, platformCode: string, pattern: string }} LivePattern */
 /** @typedef {{ name: string, wordmark: { accent: string, rest: string }, tagline: string, ownerXUserId: string,
  *   sourceLanguage: string, timezone: string, region: string, lowercaseNames: boolean, featuredPeople: FeaturedPerson[],
@@ -366,10 +366,12 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
 | `JOINT_LIVE` | `…007` | `tl_beta` | first line `#solsunny #lunamoon IG live [260301]`; markers `☀️ 🌙` |
 | `SHARED` | `…005` | `tl_alpha` | first line `#SolLuna #starguest`; markers `💬 🪇` |
 | `TOMB` | `…006` | – | `{"__typename":"TweetTombstone",…}`; no fx file |
+| `POST` | `…008` | `tl_beta` | **quotes** tweet `…010` by `solsunny_x` (author id `8001`; sol's X account) whose text is a Thai sentence; the translation text has no speaker markers. The syndication `quoted_tweet` includes the text. |
+| `PHOTO` | `…009` | `tl_alpha` | two photos (`type: 'photo'`, `media_url_https` on `pbs.twimg.com`, with width/height); first line `#solsunny`; markers `☀️` |
 
 **Interfaces:**
 - Produces:
-  - `Tweet` typedef (in `normalize.js`): `{ id, status, authorId, authorHandle, authorName, createdAt, text, textSource, video: {variants, durationMs, width, height}|null, clipSource: {handle,url}|null, quotedId, replyToId }`.
+  - `Tweet` typedef (in `normalize.js`): `{ id, status, authorId, authorHandle, authorName, createdAt, text, textSource, video: {variants, durationMs, width, height}|null, images: {url, width, height}[], quoted: {id, authorId, authorHandle, authorName, text, createdAt}|null, clipSource: {handle,url}|null, quotedId, replyToId }`.
   - `parseTweetId(input) → string|null`. It accepts x.com, twitter.com and mobile URLs, `?s=` query strings, `/video/1` suffixes, and bare IDs. It returns the ID only if it matches `^\d{1,20}$`.
   - `extractTweetIds(text) → string[]` returns unique IDs, in order.
   - `SOURCES = [{ name, fetch(deps, id) → object|null }]` lists syndication and fx. Each source uses `redirect:'error'` and `AbortSignal.timeout(3000)`, and returns `null` on any failure.
@@ -384,6 +386,7 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
     - `quotedId` is set.
     - A variant on a non-twimg host is dropped.
   - **`EVENT_A` clip source:** `clipSource` is `clipper_one`.
+  - **Images and quotes:** `PHOTO` gives 2 images, both on `pbs.twimg.com`; a non-pbs host is dropped. `POST` gives `quoted.authorHandle === 'solsunny_x'` and `quoted.text` with the Thai sentence.
   - **Video shape:** `video.width`/`height` come from `mediaDetails[0].original_info`. Make the `LIVE` fixture's video **vertical** (720×1280), and assert that it reads back as such.
   - **`LIVE` source:** the text comes from syndication.
   - **Missing tweets:** `TOMB` is `deleted`, and nothing at all from either source is `unavailable`.
@@ -405,7 +408,7 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
 - Produces:
   - **`constants.js`** (engine-only values):
     - `ROLES = ['host','fan','speaker','crowd']`
-    - `PLACEMENTS = ['event','shared_story','unsorted']`
+    - `PLACEMENTS = ['event','shared_story','post','unsorted']`
     - `REVIEW_STATES = ['pending','published','rejected']`
     - `LIVE_WINDOW_DAYS = 1`
     - `LIVE_PATTERNS = [{code:'tiktok live', platformCode:'tiktok', pattern:/tiktok\s*live/i}, {code:'ig live', platformCode:'instagram', pattern:/\b(ig|instagram)\s*live/i}, {code:'youtube live', platformCode:'youtube', pattern:/youtube\s*live/i}, {code:'x space', platformCode:'x', pattern:/\b(x|twitter)\s*space/i}]`. A site's `extraLivePatterns` are compiled and appended by the caller.
@@ -467,13 +470,13 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
     - `SpeakerMap = Record<string, {person:number}|{role:Role}>`.
   - **`events.js`:**
     - `Event = { id, slug, name, occurredOn, categoryId, clientId, keywords, hashtags, livePeopleIds: number[], livePlatformCode: string|null }`.
-    - `matchEvent({ header, postedAt, events, people, formatName, timezone }) → EventMatch`.
+    - `matchEvent({ header, postedAt, events, people, formatName, timezone, postAuthorId? }) → EventMatch`.
       - The entry date is the header's live date, else `localDate(postedAt, tz)`.
       - **Rules, in order:**
         1. A keyword (`norm`) or hashtag (`norm`) matches.
         2. A live whose **set** of person tags equals the event's `livePeopleIds` set, on the same platform, with `daysBetween` ≤ 1.
         3. Otherwise, a proposal when there's a keyword, an event hashtag or a live.
-        4. If none applies: `shared_story` when there are unknown handle tags, else `unsorted`.
+        4. If none applies: **`post`** when `postAuthorId` is given (the caller found the quoted or media source's account linked to a known person); else `shared_story` when there are unknown handle tags; else `unsorted`.
       - **Suggestions:** events within ±1 day, excluding the match, at most 5.
     - `proposeEvent(...) → EventProposal`.
       - Name: the keyword, or the people's formatted names joined with `" & "`, then the live code (`"sol & luna ig live"`).
@@ -494,6 +497,8 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
     - Parse lines and header, resolve speakers, match the event.
     - Apply overrides: `placement`, `eventId`, `newEvent`.
     - **Shared story:** placement `shared_story`, no event and no proposal, a sharing person from the first person tag or unknown tag that resolves, and the about-people.
+    - **Post:** `ctx.personAccounts` (`[{platform, handle, personId}]`) is matched against `tweet.quoted.authorHandle`, then `clipSource.handle`. A match gives placement `post`, `people` including `{personId, role:'author'}`, and no event.
+    - `ctx.personAccounts` comes from the accounts linked to people (Task 8).
     - `occurredOn` is the live date, else `localDate(postedAt, tz)`.
   - **`kinds/translation/index.js`:** `export default defineKind({ name:'translation', table:'translations', urlPrefix:'/t/', matchesUrl: parseTweetId, draft: draftTranslation, … })`. `persist`, `loadDetails`, `present` and `search` are completed in Tasks 10–11. Stub them now to throw `not implemented`.
 - [ ] **Step 1: Write the failing tests:**
@@ -514,6 +519,8 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
     - With everything chosen, nothing is missing.
     - `EVENT_B` matches an existing event.
     - `SHARED` gives placement `shared_story`.
+    - `POST` with `personAccounts [{platform:'x', handle:'solsunny_x', personId: SOL}]` gives placement `post`, with sol as `author`, and nothing missing (no markers).
+    - `PHOTO` gives placement `post` when sol's handle is the media source, else an event or unsorted per the header.
     - `newEvent` forces a proposal.
   - **defineKind:**
     - It rejects a spec that's missing `search.textClause`.
@@ -584,7 +591,7 @@ create table source_roles (code text primary key);        insert into source_rol
 create table added_via (code text primary key);           insert into added_via values ('submit'),('notion'),('paste'),('cli'),('telegram');
 create table deleted_reasons (code text primary key);     insert into deleted_reasons values ('removed_by_account'),('hidden_by_owner'),('duplicate'),('spam'),('blocked_submitter'),('erased');
 create table link_relations (code text primary key);      insert into link_relations values ('follows_on');
-create table item_person_roles (code text primary key);   insert into item_person_roles values ('present'),('sharing'),('about');
+create table item_person_roles (code text primary key);   insert into item_person_roles values ('present'),('sharing'),('about'),('author');
 create table categories (id smallint generated always as identity primary key, name text not null, deleted_at timestamptz, created_at timestamptz not null default now());
 create unique index categories_name on categories (lower(name)) where deleted_at is null;
 create table clients (like categories including all);     -- same shape
@@ -629,7 +636,7 @@ create index event_tags_tag on event_tags (tag_id);
 
 -- items (shared by all kinds)
 create table items (id bigint generated always as identity primary key, kind text not null references item_kinds(code),
-  placement text not null check (placement in ('event','shared_story','unsorted')), event_id bigint references events(id),
+  placement text not null check (placement in ('event','shared_story','post','unsorted')), event_id bigint references events(id),
   category_id smallint references categories(id), client_id smallint references clients(id),
   credited_account_id bigint references accounts(id), occurred_on date not null, posted_at timestamptz,
   added_via text not null references added_via(code),
@@ -769,6 +776,8 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
     - `softDeleteEvent(tx, id)` moves the event's items to `unsorted` in the same transaction.
   - **`seedFromSite(deps) → { people, hashtags, categories }`.**
     - **Only fills in what's missing.** Featured people are created if their IG handle is unknown; existing people are left alone (admin edits win). Ignored hashtags and categories are added if missing.
+    - Each featured person's `otherAccounts` (e.g. their X handle) are created as handle-only accounts linked to that person, with `is_identity` false.
+    - `people.listPersonAccounts() → [{platform, handle, personId}]` feeds the post detection.
     - It stores `settings.timezone` on first run. On later runs it **refuses** to continue if `site.timezone` differs from the stored value, with an error that explains why: changing it would reinterpret every stored date.
     - The actor is `'system'`.
   - **`scripts/setup.js`:** `loadSite`, then `migrate` (both namespaces), then `seedFromSite`, then checks that the registry kinds equal the `item_kinds` rows (fails with a hint if not), then prints a summary.
@@ -854,7 +863,7 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
     - the translation body
     - the speakers
     - item tags: keyword and hashtags
-    - sources: primary, follow-ups, media (the clipper account upserted by handle, with `media` = the variants), quoted
+    - sources: primary, follow-ups, media (the clipper account upserted by handle, with `media` = the video variants **or** `{images:[…]}`), quoted (`media` = `{text, authorHandle, authorName, createdAt}`, so the original post survives deletion like the translation)
     - the follows-on link
     - speaker memory
   - **`ingestItem(deps, { kind, input, chosen?, overrides?, addedVia, actor }) → IngestResult`.** This is generic: **no kind is named.** The kind comes from the registry.
@@ -890,7 +899,8 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
   - **Refusals:** duplicate, removed and opted_out.
   - **Manual text:** a manually entered text by a non-translator actor gives `pending`.
   - **Rollback:** a `persist` failure (inject a kind whose `persist` throws) leaves **no** `items`, `events` or `audit_log` rows.
-  - **Seeding:** `seedDev` on the example site prints `seeded 6`.
+  - **Posts:** `POST` stores placement `post`, sol as `author`, and a `quoted` source with the original text. `PHOTO` stores a media source with 2 images.
+  - **Seeding:** `seedDev` on the example site prints `seeded 8`.
 - [ ] **Step 2: Run the tests. Expected: FAIL.** Then implement. **Run the tests. Expected: PASS.** Commit: `"Translation kind persistence; generic ingest; add and seed-dev CLIs"`
 
 ---
@@ -910,7 +920,9 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
     - `PersonChip = { id, name, emoji, colour, igHandle }`.
   - **Translation presenter:**
     - `preview(item, details, ctx)`: the first 2 speech bubbles. If there are no speech lines, the first 2 plain lines that aren't part of the header.
-    - `detail(item, details, ctx)`: `{ bubbles: BubbleVM[], cast: CastVM[], original: string, credits: { account, clipBy, postedAt, occurredOn }, sources, video: { variants }|null }`. `video` comes from the stored `media` on the primary or media source, only when its status is live.
+    - `detail(item, details, ctx)`: `{ bubbles: BubbleVM[], cast: CastVM[], original: string, credits: { account, clipBy, postedAt, occurredOn }, sources, media: MediaVM|null }`.
+    - `MediaVM = {type:'video', variants, width, height} | {type:'images', images:[{url,width,height}]} | {type:'quote', authorName, authorHandle, text, postedAt}`, in that priority order.
+    - Video and images are only included while their source's status is live. The quote card always shows, because its text is archived.
   - **`hubs.js`:**
     - `homeView(deps) → { months: [{ month, events: [{ slug, name, occurredOn, hashtag, counts: Record<kind, number> }] }] }`.
     - `eventView(deps, slug) → { event, accountCount, people, sections: [{ kind, items: Preview[] }] }`. Sections come in registry order, and empty kinds are left out.
@@ -923,7 +935,7 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
     - **People:**
       - `any` uses `exists(item_people … person_id = any($n))`.
       - `all` uses `i.id in (select item_id from item_people where person_id = any($n) group by item_id having count(distinct person_id) = cardinality($n))`.
-    - "Shared story" in the type filter means `placements: ['shared_story']`.
+    - "Shared story" and "posts" in the type filter mean `placements: ['shared_story']` and `['post']`.
     - Every query includes `visibleItem`.
     - **Ordering:** `similarity(body, q) desc, posted_at desc` when there's a `q`, otherwise `posted_at desc`.
     - Results are `{ count, results: (Preview & { event, matchLines })[] }`. `limit=0` returns the count only.
@@ -941,7 +953,7 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
     - `hug` finds `LONG`.
     - `ครบ` ranks `LONG` first, and `EXPLAIN` shows the trigram index on Postgres (skip this check if the Task 2 spike recorded no Thai trigrams).
     - `all` returns no more results than `any`, and more than 0.
-    - `placements:['shared_story']` returns `[SHARED]`.
+    - `placements:['shared_story']` returns `[SHARED]`; `placements:['post']` includes `POST`.
     - `q:'a'` and `offset:5000` throw `BadRequest`.
     - Removed, opted-out and blocked items never appear.
     - An injection-shaped `q` returns count 0.
