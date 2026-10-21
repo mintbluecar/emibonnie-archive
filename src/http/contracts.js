@@ -107,7 +107,8 @@
  *   person: PersonChip & { featured: boolean }, counts: { items: number, events: number, sharedStories: number },
  *   sections: DatedSection[], redirectTo?: string,
  * }} PersonView
- *   Items newest first, paged per section. `redirectTo`: the person's
+ *   Items newest first, paged per section. A person who isn't featured
+ *   and is on no visible item has no page (404). `redirectTo`: the person's
  *   current IG handle, when the one asked for isn't it (case included).
  *
  * @typedef {{
@@ -124,8 +125,10 @@
  *   people: PersonChip[], categories: { id: number, name: string }[],
  *   events: { slug: string, name: string }[], accounts: { handle: string }[],
  * }} FilterOptions
- *   `events`: the 200 most recent visible events. `accounts`: only accounts
- *   with a visible item (so never an opted-out one).
+ *   `people`: featured people, and anyone else on a visible item.
+ *   `categories`: those of a visible item. `events`: the 200 most recent
+ *   visible events. `accounts`: only accounts with a visible item (so
+ *   never an opted-out one).
  *
  * @typedef {Preview & { event: EventRef|null, matchLines: string[] }} SearchResult
  *   `matchLines`: the verbatim lines containing `q` (at most 3; none without `q`).

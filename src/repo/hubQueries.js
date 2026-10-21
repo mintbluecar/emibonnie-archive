@@ -1,7 +1,8 @@
 // @ts-check
 /**
  * hubQueries: the counts and lists the hub pages (home, event, person,
- * filters) need. Visible items only (`visibility.js`).
+ * filters) need. Visible items only (`visibility.js`): a person, category
+ * or account appears only through an item a visitor may see.
  */
 import { visibleItem } from './visibility.js';
 import { EVENT_NOT_DELETED } from './items.js';
@@ -88,4 +89,30 @@ export async function visibleAccountHandles(db) {
      order by lower(a.handle), a.id`,
   );
   return rows.map((row) => ({ handle: row.handle }));
+}
+
+/**
+ * The people on at least one visible item (any role), by id.
+ * @param {Tx} db
+ * @returns {Promise<Set<number>>}
+ */
+export async function visiblePersonIds(db) {
+  const { rows } = await db.query(
+    `select distinct ip.person_id from item_people ip join items i on i.id = ip.item_id where ${VISIBLE}`,
+  );
+  return new Set(rows.map((row) => Number(row.person_id)));
+}
+
+/**
+ * The categories (types) of at least one visible item, in id order.
+ * @param {Tx} db
+ * @returns {Promise<{ id: number, name: string }[]>}
+ */
+export async function visibleCategories(db) {
+  const { rows } = await db.query(
+    `select c.id, c.name from categories c
+     where c.deleted_at is null and exists (select 1 from items i where i.category_id = c.id and ${VISIBLE})
+     order by c.id`,
+  );
+  return rows.map((row) => ({ id: row.id, name: row.name }));
 }

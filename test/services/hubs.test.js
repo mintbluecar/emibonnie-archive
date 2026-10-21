@@ -7,6 +7,10 @@ import { homeView, eventView, personView, accountView, filterOptions } from '../
 import { itemView, addedByOf } from '../../src/services/itemView.js';
 import { search } from '../../src/services/search.js';
 import { upsertAccount } from '../../src/repo/accounts.js';
+import { addPerson } from '../../src/repo/people.js';
+import { ensureCategory } from '../../src/repo/lookups.js';
+import { setItemPeople } from '../../src/repo/itemPeople.js';
+import { insertItem, insertUser } from '../helpers/seed.js';
 
 /** @type {any} */
 let deps;
@@ -96,7 +100,7 @@ test('filterOptions: people, categories, visible events, and only accounts with 
   assert.deepEqual(before.accounts, [{ handle: 'tl_alpha' }, { handle: 'tl_beta' }, { handle: 'tl_gamma' }]);
   assert.equal(before.events.length, 4);
   assert.deepEqual(Object.keys(before.events[0]).sort(), ['name', 'slug']);
-  assert.ok(before.categories.some((c) => c.name === 'live'));
+  assert.deepEqual(before.categories, [], 'no visible item has a category yet');
   assert.deepEqual(before.people.map((p) => p.name), ['sol', 'luna', 'host']);
 
   await deps.db.transaction((/** @type {any} */ tx) => tx.query("update accounts set opted_out_at = now() where handle = 'tl_gamma'"), SYSTEM);
@@ -261,4 +265,55 @@ test('hub paging params out of range are a BadRequest', async () => {
     await assert.rejects(accountView(deps, 'tl_alpha', params), { name: 'BadRequest' });
   }
   assert.ok(await eventView(deps, 'solluna-happy-day-2026-10-19', { limit: '50', offset: '10000' }));
+});
+
+test('filters and person pages only through visible items: a person and category known only from a hidden item stay out', async () => {
+  const { personId, itemId, categoryId } = await deps.db.transaction(async (/** @type {any} */ tx) => {
+    const person = await addPerson(tx, { igHandle: 'hidden_only', displayName: 'Hidden', emoji: '🫥', colour: '#123456' });
+    const category = await ensureCategory(tx, 'backstage');
+    const item = await insertItem(tx, { reviewState: 'pending' });
+    await tx.query('update items set category_id = $1 where id = $2', [category, item]);
+    await setItemPeople(tx, item, [{ personId: person.id, role: 'present' }]);
+    return { personId: person.id, itemId: item, categoryId: category };
+  }, SYSTEM);
+  const names = async () => (await filterOptions(deps)).people.map((p) => p.igHandle);
+  const categories = async () => (await filterOptions(deps)).categories.map((c) => c.name);
+  const set = (/** @type {string} */ sql) => deps.db.transaction((/** @type {any} */ tx) => tx.query(sql, [itemId]), SYSTEM);
+  try {
+    assert.ok(!(await names()).includes('hidden_only'), 'pending: person not listed');
+    assert.ok(!(await categories()).includes('backstage'), 'pending: category not listed');
+    assert.equal(await personView(deps, 'hidden_only'), null, 'pending: no person page');
+
+    await deps.db.transaction(async (/** @type {any} */ tx) => {
+      const blocked = await insertUser(tx, { blockedAt: true });
+      await tx.query("update items set review_state = 'published' where id = $1", [itemId]);
+      await tx.query('alter table items disable trigger items_set_common');
+      await tx.query('update items set created_by = $1 where id = $2', [blocked, itemId]);
+      await tx.query('alter table items enable trigger items_set_common');
+    }, SYSTEM);
+    assert.ok(!(await names()).includes('hidden_only'), 'blocked submitter: person not listed');
+    assert.ok(!(await categories()).includes('backstage'), 'blocked submitter: category not listed');
+    assert.equal(await personView(deps, 'hidden_only'), null, 'blocked submitter: no person page');
+
+    await deps.db.transaction(async (/** @type {any} */ tx) => {
+      await tx.query('alter table items disable trigger items_set_common');
+      await tx.query("update items set created_by = 'system' where id = $1", [itemId]);
+      await tx.query('alter table items enable trigger items_set_common');
+    }, SYSTEM);
+    assert.ok((await names()).includes('hidden_only'), 'visible: listed');
+    assert.deepEqual(await categories(), ['backstage']);
+    assert.equal((/** @type {any} */ (await personView(deps, 'hidden_only'))).counts.items, 1);
+
+    await set("update items set review_state = 'pending' where id = $1");
+    await deps.db.transaction((/** @type {any} */ tx) => tx.query('update people set featured = true where id = $1', [personId]), SYSTEM);
+    assert.ok((await names()).includes('hidden_only'), 'a featured person is always listed');
+    assert.ok(await personView(deps, 'hidden_only'), 'and always has a page');
+  } finally {
+    await deps.db.transaction(async (/** @type {any} */ tx) => {
+      await tx.query('delete from item_people where item_id = $1', [itemId]);
+      await tx.query("update items set deleted_at = now(), deleted_reason = 'spam', category_id = null where id = $1", [itemId]);
+      await tx.query('update people set featured = false, deleted_at = now() where id = $1', [personId]);
+      await tx.query('update categories set deleted_at = now() where id = $1', [categoryId]);
+    }, SYSTEM);
+  }
 });

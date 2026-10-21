@@ -8,8 +8,9 @@
 import { listVisibleEvents, getVisibleEventBySlug } from '../repo/events.js';
 import { getPersonByHandle, listPeople } from '../repo/people.js';
 import { findAccountForView } from '../repo/accounts.js';
-import { listCategories } from '../repo/lookups.js';
-import { countsByEventKind, eventCrowd, eventLabels, personCounts, visibleAccountHandles } from '../repo/hubQueries.js';
+import {
+  countsByEventKind, eventCrowd, eventLabels, personCounts, visibleAccountHandles, visibleCategories, visiblePersonIds,
+} from '../repo/hubQueries.js';
 import { formatName } from '../site/loadSite.js';
 import { kindsOf, chipOf } from './cards.js';
 import { sectionsOf } from './sections.js';
@@ -80,15 +81,21 @@ async function personFor(deps, ig) {
   return account?.personId ? getPersonByHandle(deps.db, account.handle) : null;
 }
 
-/** @param {ViewDeps} deps @param {string} ig @param {PageParams} [params] @returns {Promise<PersonView|null>} */
+/**
+ * A person's page. A person who isn't featured has a page only while
+ * they're on a visible item (null otherwise, like an unknown handle).
+ * @param {ViewDeps} deps @param {string} ig @param {PageParams} [params] @returns {Promise<PersonView|null>}
+ */
 export async function personView(deps, ig, params = {}) {
   const page = hubPage(params);
   const person = await personFor(deps, ig);
   if (!person) return null;
+  const counts = await personCounts(deps.db, person.id);
+  if (!person.featured && counts.items === 0) return null;
   const chip = chipOf(person, (name) => formatName(deps.site, name));
   const view = {
     person: { ...chip, featured: person.featured },
-    counts: await personCounts(deps.db, person.id),
+    counts,
     sections: (await sectionsOf(deps, { scope: { personId: person.id }, order: 'desc', page, withEvent: true })).sections,
   };
   return person.igHandle !== null && person.igHandle !== ig.replace(/^@/, '') ? { ...view, redirectTo: person.igHandle } : view;
@@ -115,14 +122,20 @@ export async function accountView(deps, handle, params = {}) {
   return null;
 }
 
-/** @param {ViewDeps} deps @returns {Promise<FilterOptions>} */
+/**
+ * The search filter options: featured people always, anyone else only
+ * while on a visible item; categories, events and accounts only through
+ * visible items.
+ * @param {ViewDeps} deps @returns {Promise<FilterOptions>}
+ */
 export async function filterOptions(deps) {
-  const [people, categories, events, accounts] = await Promise.all([
-    listPeople(deps.db), listCategories(deps.db), listVisibleEvents(deps.db, { limit: RECENT_EVENTS }), visibleAccountHandles(deps.db),
+  const [people, onVisible, categories, events, accounts] = await Promise.all([
+    listPeople(deps.db), visiblePersonIds(deps.db), visibleCategories(deps.db),
+    listVisibleEvents(deps.db, { limit: RECENT_EVENTS }), visibleAccountHandles(deps.db),
   ]);
   const format = (/** @type {string} */ name) => formatName(deps.site, name);
   return {
-    people: people.map((p) => chipOf(p, format)),
+    people: people.filter((p) => p.featured || onVisible.has(p.id)).map((p) => chipOf(p, format)),
     categories,
     events: events.map((e) => ({ slug: e.slug, name: e.name })),
     accounts,
