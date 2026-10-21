@@ -26,8 +26,8 @@ test('followUpOf: a reply gives the candidate parent ref; otherwise null', () =>
   assert.equal(translation.followUpOf?.({ replyToId: null }), null);
 });
 
-test('present and search are stubs until Task 11 (persist and loadDetails: test/services/ingest.test.js)', () => {
+test('present and search are implemented (behaviour: test/kinds/translation/presenter.test.js)', () => {
   assert.equal(typeof translation.appendFollowUp, 'function');
-  assert.throws(() => translation.present.preview({}, {}, {}), /not implemented/);
-  assert.throws(() => translation.search.textClause(1), /not implemented/);
+  assert.equal(typeof translation.present.preview, 'function');
+  assert.match(translation.search.textClause(1), /translation_parts/);
 });

@@ -16,6 +16,16 @@ import { camelRow } from './rows.js';
 const COLUMNS = 'id, platform, external_id, handle, display_name, person_id, is_identity';
 
 /**
+ * Appends the row's old handle (lower-cased) to `meta.previousHandles`
+ * when an update changes it other than by case, so a page asked for an
+ * old handle can redirect to the current one (`findAccountForView`).
+ * SQL for the `set` list of an `update accounts`, where `handle` is still
+ * the old value and `$3` is the new one.
+ */
+const REMEMBER_OLD_HANDLE = `meta = case when lower(handle) = lower($3) or meta->'previousHandles' ? lower(handle) then meta
+  else jsonb_set(meta, '{previousHandles}', coalesce(meta->'previousHandles', '[]'::jsonb) || to_jsonb(lower(handle))) end`;
+
+/**
  * Updates by `(platform, external_id)`. If no row has it, adopts a
  * handle-only row with the same `(platform, lower(handle))` by setting
  * its external id. Otherwise inserts.
@@ -25,7 +35,7 @@ const COLUMNS = 'id, platform, external_id, handle, display_name, person_id, is_
  */
 async function upsertByExternalId(tx, { platform, externalId, handle, displayName }) {
   const byExternal = await tx.query(
-    `update accounts set handle = $3, display_name = coalesce($4, display_name)
+    `update accounts set handle = $3, display_name = coalesce($4, display_name), ${REMEMBER_OLD_HANDLE}
      where platform = $1 and external_id = $2 returning id`,
     [platform, externalId, handle, displayName ?? null],
   );
@@ -141,4 +151,31 @@ async function findByHandleRow(db, { platform, handle, handleOnly }) {
     [platform, handle, handleOnly],
   );
   return rows[0] ?? null;
+}
+
+/**
+ * The account a public page for `handle` shows: the one currently holding
+ * it (an external-id row first), else the one that held it before a handle
+ * change (`current: false`; the page redirects to `handle`, the current one).
+ * @param {Tx} db
+ * @param {string} platform
+ * @param {string} handle
+ * @returns {Promise<{ id: number, handle: string, displayName: string|null, personId: number|null,
+ *   optedOut: boolean, current: boolean }|null>}
+ */
+export async function findAccountForView(db, platform, handle) {
+  const { rows } = await db.query(
+    `select id, handle, display_name, person_id, opted_out_at is not null as opted_out, lower(handle) = lower($2) as current
+     from accounts
+     where platform = $1 and deleted_at is null and (lower(handle) = lower($2) or meta->'previousHandles' ? lower($2))
+     order by (lower(handle) = lower($2)) desc, (external_id is null) asc, updated_at desc
+     limit 1`,
+    [platform, handle],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    id: row.id, handle: row.handle, displayName: row.display_name, personId: row.person_id,
+    optedOut: row.opted_out, current: row.current,
+  };
 }

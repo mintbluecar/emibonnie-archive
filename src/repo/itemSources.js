@@ -68,16 +68,20 @@ export async function listSources(db, itemId) {
 }
 
 /**
- * Every source of each item, grouped by item id, in `(position, id)` order.
+ * Every source of each item, grouped by item id, in `(position, id)` order,
+ * each with its account's current handle (`accountHandle`; null when there's
+ * no account or it has opted out).
  * @param {Tx} db
  * @param {number[]} itemIds
  * @returns {Promise<Map<number, Record<string, unknown>[]>>}
  */
 export async function listSourcesFor(db, itemIds) {
   const { rows } = await db.query(
-    `select id, item_id, kind, platform, external_id, url, role, position, account_id, start_seconds, media,
-       editable_until, edit_finalized_at, last_refreshed_at, status
-     from item_sources where item_id = any($1::bigint[]) order by item_id, position, id`,
+    `select s.id, s.item_id, s.kind, s.platform, s.external_id, s.url, s.role, s.position, s.account_id, s.start_seconds, s.media,
+       s.editable_until, s.edit_finalized_at, s.last_refreshed_at, s.status,
+       case when a.opted_out_at is null then a.handle end as account_handle
+     from item_sources s left join accounts a on a.id = s.account_id
+     where s.item_id = any($1::bigint[]) order by s.item_id, s.position, s.id`,
     [itemIds],
   );
   /** @type {Map<number, Record<string, unknown>[]>} */

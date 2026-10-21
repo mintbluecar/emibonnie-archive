@@ -1,0 +1,113 @@
+// @ts-check
+/**
+ * The JSON shapes the public API returns (the pages in Plan 1b render
+ * them). The server resolves everything shown -- names (through the
+ * site's `formatName`), standard emoji, colours, continuation and which
+ * media to show -- so the browser only renders. Text is raw: it is
+ * escaped by the page, never here.
+ *
+ * Dates are `YYYY-MM-DD`; timestamps are ISO 8601 strings.
+ *
+ * @typedef {{ id: number, name: string, emoji: string, colour: string, igHandle: string|null }} PersonChip
+ *
+ * @typedef {{ kind: 'speech', emoji: string, name: string|null, colour?: string, text: string, cont: boolean }} SpeechBubble
+ *   A line with a speaker marker. A known person shows their standard
+ *   emoji, name and colour; a generic role keeps the translator's own
+ *   marker as `emoji`, is named after the role, and has no `colour`; a
+ *   marker the item never mapped keeps the marker, with `name: null` and
+ *   no `colour` (both neutral). `cont`: the previous bubble had the same
+ *   speaker, so the page shows no emoji or name.
+ * @typedef {SpeechBubble
+ *   | { kind: 'crowd', text: string }
+ *   | { kind: 'plain', text: string }
+ *   | { kind: 'note', mark: '*'|'**', text: string }} BubbleVM
+ *   `note`s (footnotes) always come after every other bubble.
+ *
+ * @typedef {{ sourceId: string, url: string }} ItemLink
+ * @typedef {{ slug: string, name: string, occurredOn: string }} EventRef
+ *
+ * @typedef {{
+ *   kind: string, sourceId: string, url: string, lines: BubbleVM[], people: PersonChip[],
+ *   accountHandle: string|null, hasVideo: boolean, followsOnFrom: ItemLink|null,
+ * }} Preview
+ *   An item in a list: its opening lines (the first 2 speech bubbles, or
+ *   failing that the first 2 plain lines that aren't header). `hasVideo`:
+ *   the item's media (MediaVM) is, or quotes, a clip that is still live.
+ *   `followsOnFrom`: the visible item this one follows on from.
+ *
+ * @typedef {{ url: string, width: number, height: number }} ImageVM
+ * @typedef {{ bitrate: number, url: string }} VariantVM
+ * @typedef {{ type: 'video', variants: VariantVM[], width: number, height: number }} VideoVM
+ * @typedef {{ type: 'images', images: ImageVM[] }} ImagesVM
+ * @typedef {{ type: 'quote', authorName: string|null, authorHandle: string|null, text: string, postedAt: string|null,
+ *   inner: VideoVM|ImagesVM|null }} QuoteVM
+ * @typedef {VideoVM|ImagesVM|QuoteVM} MediaVM
+ *   What the pinned area shows: the translator's own clip, else their own
+ *   pictures, else the quoted post (its pictures or clip as `inner`). A
+ *   clip or pictures only while their source is live; the quote card
+ *   always (its text is archived), its `inner` only while live.
+ *
+ * @typedef {{ kind: 'person', id: number, emoji: string, name: string, colour: string, igHandle: string|null }
+ *   | { kind: 'role', role: string, emoji: string, name: string }} CastVM
+ *   Who speaks, in order of first line. Crowd and unmapped markers are left out.
+ * @typedef {{ role: string, url: string, status: 'live'|'deleted'|'unavailable' }} SourceLinkVM
+ * @typedef {{
+ *   bubbles: BubbleVM[], cast: CastVM[], original: string,
+ *   credits: { account: { handle: string, displayName: string|null }|null, clipBy: string|null,
+ *     postedAt: string|null, occurredOn: string },
+ *   sources: SourceLinkVM[], media: MediaVM|null,
+ * }} DetailVM
+ *   `original` is the verbatim text (every part, joined by a blank line).
+ *   `clipBy`: the clip/picture account, when it isn't the translator.
+ *
+ * @typedef {DetailVM & {
+ *   kind: string, sourceId: string, url: string, event: EventRef|null, people: PersonChip[],
+ *   followsOnFrom: ItemLink|null, prev: ItemLink|null, next: ItemLink|null,
+ * }} ItemView
+ *   `prev`/`next`: the visible neighbours in the item's event.
+ *
+ * @typedef {{ slug: string, name: string, occurredOn: string, hashtag: string|null, counts: Record<string, number> }} HomeEvent
+ *   `counts`: visible items per kind (kinds with none are left out).
+ * @typedef {{ months: { month: string, events: HomeEvent[] }[] }} HomeView
+ *   Visible events, newest first; `month` is `YYYY-MM`.
+ *
+ * @typedef {{ kind: string, items: Preview[] }} Section
+ * @typedef {{ kind: string, items: (Preview & { event: EventRef|null })[] }} DatedSection
+ *   Sections come in registry order; kinds with no items are left out.
+ *
+ * @typedef {{
+ *   event: { slug: string, name: string, occurredOn: string, hashtags: string[], keywords: string[] },
+ *   accountCount: number, people: PersonChip[], sections: Section[],
+ * }} EventView
+ *   Items in event order (oldest first).
+ *
+ * @typedef {{
+ *   person: PersonChip & { featured: boolean }, counts: { items: number, events: number, sharedStories: number },
+ *   sections: DatedSection[], redirectTo?: string,
+ * }} PersonView
+ *   Items newest first (at most 200 per kind). `redirectTo`: the person's
+ *   current IG handle, when the one asked for isn't it (case included).
+ *
+ * @typedef {{
+ *   account: { handle: string, displayName: string|null }, counts: { items: number },
+ *   sections: DatedSection[], redirectTo?: string,
+ * }} AccountView
+ *   Items newest first (at most 200 per kind). `redirectTo`: the current
+ *   handle, when the one asked for isn't it (an old handle, or other case).
+ * @typedef {{ account: { handle: string, optedOut: true } }} OptedOutAccountView
+ *   All an opted-out account's page gets: `handle` is the one asked for.
+ *
+ * @typedef {{
+ *   people: PersonChip[], categories: { id: number, name: string }[],
+ *   events: { slug: string, name: string }[], accounts: { handle: string }[],
+ * }} FilterOptions
+ *   `events`: the 200 most recent visible events. `accounts`: only accounts
+ *   with a visible item (so never an opted-out one).
+ *
+ * @typedef {Preview & { event: EventRef|null, matchLines: string[] }} SearchResult
+ *   `matchLines`: the verbatim lines containing `q` (at most 3; none without `q`).
+ * @typedef {{ count: number, results: SearchResult[] }} SearchResponse
+ *   `count`: every match, ignoring `limit`/`offset`; `limit: 0` gives the count only.
+ */
+
+export {};

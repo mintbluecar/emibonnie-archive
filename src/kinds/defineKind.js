@@ -78,6 +78,15 @@
  *   least a `status` ingest can read.
  * @typedef {any} Db
  * @typedef {{
+ *   people: Map<number, import('../repo/people.js').Person>,
+ *   formatName: (name: string) => string,
+ *   urlFor: (kind: string, sourceId: string) => string,
+ *   chips: (people: { personId: number }[]) => import('../http/contracts.js').PersonChip[],
+ * }} PresentContext
+ *   What a presenter may consult, loaded once per request by the caller
+ *   (src/services/cards.js): every known person by id, the site's name
+ *   formatting, public URLs by kind, and person chips for a card's people.
+ * @typedef {{
  *   name: string,
  *   table: string,
  *   urlPrefix: string,
@@ -90,14 +99,23 @@
  *   persist(tx: Db, draft: any, meta: object): Promise<number>,
  *   loadDetails(db: Db, itemIds: number[]): Promise<Map<number, object>>,
  *   present: { preview(item: any, details: any, ctx: any): object, detail(item: any, details: any, ctx: any): object },
- *   search: { textClause(paramIndex: number): string, matchLines(details: any, q: string): string[] },
+ *   search: { textClause(paramIndex: number): string, rank(paramIndex: number): string, matchLines(details: any, q: string): string[] },
  * }} Kind
+ *
+ * `present.preview(card, details, ctx)` / `present.detail(card, details, ctx)`
+ * build the `Preview` / `DetailVM` of src/http/contracts.js from a
+ * `Card` (src/repo/cards.js), the kind's own `loadDetails` entry and the
+ * caller's presenter context. `search.textClause(n)` is a SQL condition
+ * on the item aliased `i` matching the bound `ilike` pattern `$n`;
+ * `search.rank(n)` a SQL number expression scoring `i` against the bound
+ * raw query `$n` (higher first); both interpolate only `n`.
+ * `search.matchLines(details, q)` picks the lines a result shows.
  */
 
 const NAME = /^[a-z][a-z0-9_]*$/;
 const URL_PREFIX = /^\/[a-z0-9-]+\/$/;
 const REQUIRED_FUNCTIONS = ['matchesUrl', 'fetchSource', 'draft', 'persist', 'loadDetails'];
-const REQUIRED_GROUPS = { present: ['preview', 'detail'], search: ['textClause', 'matchLines'] };
+const REQUIRED_GROUPS = { present: ['preview', 'detail'], search: ['textClause', 'rank', 'matchLines'] };
 
 /**
  * Each string field of the spec, the pattern it must match, and the problem when it doesn't.

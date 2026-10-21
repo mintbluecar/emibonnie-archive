@@ -10,6 +10,7 @@ import { loadSite } from '../../src/site/loadSite.js';
 import { runSetup } from '../../scripts/setup.js';
 import { ingestItem } from '../../src/services/ingest.js';
 import { createPeople, resolveSpeakerRefs } from '../../src/services/intakeRefs.js';
+import { runSeedDev } from '../../scripts/seedDev.js';
 
 export const SITE_DIR = 'examples/solluna';
 export const site = loadSite(SITE_DIR);
@@ -83,4 +84,25 @@ export function patchedFetch(patch) {
     return new Response(JSON.stringify(json), { status: 200, headers: { 'content-type': 'application/json' } });
   };
   return { fetchImpl: /** @type {typeof fetch} */ (fetchImpl), calls };
+}
+
+/**
+ * `ingestDeps()` with every post of the example site's seed (`seed/maps.json`:
+ * the live fixtures, every speaker mapped) ingested.
+ */
+export async function seededDeps() {
+  const deps = await ingestDeps();
+  await runSeedDev({ siteDir: SITE_DIR, db: deps.db, log: () => {} });
+  return deps;
+}
+
+/**
+ * The item archiving `sourceId` as its primary source.
+ * @param {any} db
+ * @param {string} sourceId
+ * @returns {Promise<number>}
+ */
+export async function itemIdOf(db, sourceId) {
+  const [row] = await rows(db, "select item_id from item_sources where role = 'primary' and external_id = $1", [sourceId]);
+  return row.item_id;
 }

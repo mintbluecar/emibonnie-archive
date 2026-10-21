@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { freshDb } from '../helpers/db.js';
-import { getAccount, getAccountByHandle, upsertAccount } from '../../src/repo/accounts.js';
+import { findAccountForView, getAccount, getAccountByHandle, upsertAccount } from '../../src/repo/accounts.js';
 
 /** @type {Awaited<ReturnType<typeof freshDb>>} */
 let db;
@@ -57,4 +57,22 @@ test('getAccountByHandle prefers an external-id row over a handle-only one', asy
 
 test('getAccountByHandle returns null when nothing matches', async () => {
   assert.equal(await getAccountByHandle(db, 'x', 'never_seen_handle'), null);
+});
+
+test('a handle change remembers the old handle; findAccountForView resolves it, preferring a current holder', async () => {
+  const id = await db.transaction((tx) => upsertAccount(tx, { platform: 'x', externalId: '7101', handle: 'Before_Name' }), system);
+  await db.transaction((tx) => upsertAccount(tx, { platform: 'x', externalId: '7101', handle: 'after_name' }), system);
+  await db.transaction((tx) => upsertAccount(tx, { platform: 'x', externalId: '7101', handle: 'After_Name' }), system);
+  const { rows } = await db.query('select meta from accounts where id = $1', [id]);
+  assert.deepEqual(rows[0].meta.previousHandles, ['before_name']);
+
+  const old = await findAccountForView(db, 'x', 'before_name');
+  assert.equal(old?.id, id);
+  assert.equal(old?.handle, 'After_Name');
+  assert.equal(old?.current, false);
+  assert.equal((await findAccountForView(db, 'x', 'after_name'))?.current, true);
+
+  const taker = await db.transaction((tx) => upsertAccount(tx, { platform: 'x', externalId: '7102', handle: 'before_name' }), system);
+  assert.equal((await findAccountForView(db, 'x', 'BEFORE_NAME'))?.id, taker);
+  assert.equal(await findAccountForView(db, 'x', 'never_seen'), null);
 });

@@ -1,11 +1,12 @@
 // @ts-check
-import { defineKind, notImplemented } from '../defineKind.js';
+import { defineKind } from '../defineKind.js';
 import { draftTranslation } from './domain.js';
 import { fetchTranslationSource } from './source.js';
 import { parseTweetId } from '../../sources/url.js';
 import { appendFollowUp, persistTranslation } from './persist.js';
 import { loadDetails } from './repo.js';
 import { present } from './presenter.js';
+import { search } from './search.js';
 
 /**
  * A reply is a candidate follow-up of the tweet it replies to. Whether
@@ -29,5 +30,5 @@ export default defineKind({
   persist: persistTranslation,
   loadDetails,
   present,
-  search: { textClause: notImplemented('translation.search.textClause'), matchLines: notImplemented('translation.search.matchLines') },
+  search,
 });

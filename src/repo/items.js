@@ -128,7 +128,7 @@ const DEFAULT_LIST_LIMIT = 50;
  * this file, including under an explicit `eventId` filter; items with
  * no event (`post`/`unsorted`/`shared_story` placements) are unaffected.
  */
-const EVENT_NOT_DELETED = 'not exists (select 1 from events ev where ev.id = i.event_id and ev.deleted_at is not null)';
+export const EVENT_NOT_DELETED = 'not exists (select 1 from events ev where ev.id = i.event_id and ev.deleted_at is not null)';
 
 /**
  * The equality/exists clauses for `listVisibleItemIds`' optional

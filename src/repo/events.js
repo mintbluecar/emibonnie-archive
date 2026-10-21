@@ -8,6 +8,7 @@
  */
 import { camelRow } from './rows.js';
 import { ensureTags } from './tags.js';
+import { visibleEvent } from './visibility.js';
 
 /** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
 /** @typedef {import('../domain/events.js').Event} Event */
@@ -18,11 +19,11 @@ const SELECT = `
     coalesce(k.list, '{}') as keywords, coalesce(h.list, '{}') as hashtags, coalesce(lp.list, '{}') as live_people_ids
   from events e
   left join lateral (
-    select array_agg(t.display) as list from event_tags et join tags t on t.id = et.tag_id
+    select array_agg(t.display order by t.id) as list from event_tags et join tags t on t.id = et.tag_id
     where et.event_id = e.id and t.kind = 'keyword'
   ) k on true
   left join lateral (
-    select array_agg(t.display) as list from event_tags et join tags t on t.id = et.tag_id
+    select array_agg(t.display order by t.id) as list from event_tags et join tags t on t.id = et.tag_id
     where et.event_id = e.id and t.kind = 'hashtag'
   ) h on true
   left join lateral (
@@ -45,6 +46,27 @@ export async function listEvents(db) {
 /** @param {Tx} db @param {string} slug @returns {Promise<Event|null>} */
 export async function getEventBySlug(db, slug) {
   const { rows } = await db.query(`${SELECT} and e.slug = $1`, [slug]);
+  return rows[0] ? toEvent(rows[0]) : null;
+}
+
+/**
+ * Visible events only (`visibility.js`: not deleted, with a visible item),
+ * newest first, at most `limit` when given.
+ * @param {Tx} db
+ * @param {{ limit?: number }} [options]
+ * @returns {Promise<Event[]>}
+ */
+export async function listVisibleEvents(db, { limit } = {}) {
+  const { rows } = await db.query(
+    `${SELECT} and ${visibleEvent('e')} order by e.occurred_on desc, e.id desc ${limit === undefined ? '' : 'limit $1'}`,
+    limit === undefined ? [] : [limit],
+  );
+  return rows.map(toEvent);
+}
+
+/** @param {Tx} db @param {string} slug @returns {Promise<Event|null>} null unless visible */
+export async function getVisibleEventBySlug(db, slug) {
+  const { rows } = await db.query(`${SELECT} and e.slug = $1 and ${visibleEvent('e')}`, [slug]);
   return rows[0] ? toEvent(rows[0]) : null;
 }
 

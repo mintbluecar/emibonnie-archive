@@ -15,7 +15,7 @@ function spec() {
     persist: async () => 1,
     loadDetails: async () => new Map(),
     present: { preview: () => ({}), detail: () => ({}) },
-    search: { textClause: () => 'true', matchLines: () => [] },
+    search: { textClause: () => 'true', rank: () => '0', matchLines: () => [] },
   };
 }
 
@@ -31,6 +31,12 @@ test('rejects a spec missing search.textClause', () => {
   const bad = /** @type {any} */ (spec());
   delete bad.search.textClause;
   assert.throws(() => defineKind(bad), /search\.textClause/);
+});
+
+test('rejects a spec missing search.rank', () => {
+  const bad = /** @type {any} */ (spec());
+  delete bad.search.rank;
+  assert.throws(() => defineKind(bad), /search\.rank/);
 });
 
 test('rejects a spec missing fetchSource', () => {
