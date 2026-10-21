@@ -52,11 +52,12 @@ The archive is a website, friendly on mobile and on desktop, that keeps the tran
 
 ### Translation (one archived entry)
 
+**Entries have no title** (owner's decision). A tweet stands for itself. Wherever entries are listed (event pages, search, person pages), each one shows the opening lines of its translation text, with speaker emoji, as its preview.
+
 One translator's translation of one clip, or one moment. It has these fields, which mirror the translator's Notion columns:
 
 | Field | Source | Notes |
 |---|---|---|
-| Name | submitter, suggested from first line | short title, e.g. "EFM: Emi and Bonnie - messages to fans" |
 | Date | tweet's posted date, editable | date the moment happened if known, otherwise post date |
 | Artist(s) | derived from mapped speakers, editable | the known people in the entry |
 | Type | submitter picks from a list the owner manages | e.g. show / interview, fan meet / fan day, live |
@@ -90,7 +91,7 @@ A known personality: emi, bonnie, leo (a host), and others as they appear.
 - **Identity is the Instagram handle** (owner's decision). It's the unique key for a person. Emoji are not unique, since there won't be enough of them as the cast grows, and display names can collide.
 - Each person has an IG handle (unique), a **display name**, a **standard emoji**, a **colour**, and their own page listing translations they appear in. Emoji and colour may repeat across people. The display name and IG handle are always shown next to them, so people stay distinguishable.
 - emi (@emiamily): 🧡, orange. bonnie (@beonnnie): 💜, purple. These two are fixed.
-- **Display names are lowercase** (owner's preference): "emi", "bonnie", "leo", across the whole site, in bubbles, tags, the cast list, and person pages. New people's display names are saved in lowercase. Text written by translators (titles, translation text, Notion names) is never changed.
+- **Display names are lowercase** (owner's preference): "emi", "bonnie", "leo", across the whole site, in bubbles, tags, the cast list, and person pages. New people's display names are saved in lowercase. Text written by translators (translation text, keywords, hashtags) is never changed.
 - "Add a new person" asks for the IG handle first. If it already exists, the submitter is pointed to that person instead, which prevents duplicates. Then it asks for display name, emoji, and colour, with suggestions.
 - **(my call)** Someone with no Instagram account can't be added as a known person by submitters. They're mapped to a generic role, and the owner can create them by hand with a placeholder key.
 - **(my call)** IG handles can change. The owner can edit a person's handle. Existing translations stay linked, because links are by internal person ID, not by handle.
@@ -128,7 +129,7 @@ The **chosen style is chat bubbles, everyone on the left in one column**, with a
 3. **Duplicates:** if the tweet ID is already archived, the submitter is sent to the existing entry.
 4. **Quotes:** if the tweet quotes another tweet by the same translator, the site offers to archive that one too and link it as "follows on from". If it quotes someone else's tweet that holds the clip, that becomes Original media.
 5. **Threads** (follow-up replies by the same translator, for extra context or overflow text): the free sources show a reply's parent but not its children. The submitter can paste any follow-up tweet links, and the site appends their text to the same entry, in order. If the pasted tweet is itself a reply in the translator's own thread, the site walks up through the parents and offers to include them.
-6. The site pre-fills Name, Keyword, Hashtags, Event match, Artist(s), and the speaker map. The submitter confirms speakers and any details that weren't found, then saves.
+6. The site pre-fills Keyword, Hashtags, Event match, Artist(s), and the speaker map. The submitter confirms speakers and any details that weren't found, then saves.
 7. The entry is **live immediately**. It records who added it.
 
 Tested examples (2026-10-21):
@@ -142,10 +143,10 @@ The archive launches with existing content, not empty. The owner will not paste 
 
 Bulk import is a separate admin feature, **for the owner only**. Regular submitters add one tweet at a time. Both use the same intake pipeline (fetching, event matching, remembered speaker mappings, duplicate and opt-out checks), so entries look the same whichever way they came in. Import adds batching, a background queue, and per-translator speaker mapping on top. There are two sources:
 
-1. **The translator's Notion database** (the owner has the translator's permission to import it). Its columns are Name, Date, Artist(s), Type, Client / Media, Keyword, Hashtag, Translation link, and Original media.
+1. **The translator's Notion database** (the owner has the translator's permission to import it). Its columns are Name, Date, Artist(s), Type, Client / Media, Keyword, Hashtag, Translation link, and Original media. **The Name column is ignored** (owner's decision). It's that translator's own titling, and entries don't have titles.
    - **(my call)** The owner exports the database from Notion as CSV and uploads it on an admin import page. This needs no Notion integration or token.
    - Each row's Translation link is fetched like a normal submission.
-   - The Notion values for Name, Date, Artist(s), Type, Client/Media, Keyword, Hashtag, and Original media take priority over anything parsed from the tweet, since the translator curated them.
+   - The Notion values for Date, Artist(s), Type, Client/Media, Keyword, Hashtag, and Original media take priority over anything parsed from the tweet, since the translator curated them.
 2. **The owner's own collection of links**, held in a personal chat.
    - **(my call)** An admin "bulk paste" box accepts any block of text, such as a chat export or a copied conversation. It pulls out every `x.com` / `twitter.com` status link, skips ones already archived, and queues the rest.
    - Not every link in the collection is a translation (some are event links). Imported tweets without translation-like text, such as no speaker markers and little text, go to a "check these" list instead of going live.
@@ -172,7 +173,7 @@ Both imports:
   - **Undo (my call):** a translator can restore entries they removed, or opt back in, since the data was never deleted.
   - The owner's **hide** works the same way, but only the owner can undo it.
 - **Owner:** a single admin, set by X user ID in config.
-- **Editing (my call):** a submitter can edit their own entries. A translator can edit the details of their own translations (speaker map, name, type, event, order) but not the translation text, which stays verbatim. The owner can edit everything. Every edit is logged (who, when, before/after), so a wrong change can be undone.
+- **Editing (my call):** a submitter can edit their own entries. A translator can edit the details of their own translations (speaker map, type, event, order) but not the translation text, which stays verbatim. The owner can edit everything. Every edit is logged (who, when, before/after), so a wrong change can be undone.
 - **"Added by" (my call):** shows the submitter's X handle. Google-only users choose a public display name when they first submit. Names and emails from Google are never shown publicly, and emails are never exported.
 - **Blocking:** the owner can block a user. Their submissions are hidden and they can't submit again.
 - **Approval switch:** a site setting "new submissions need approval". It's **off** at launch (entries go live immediately). When it's on, new entries wait in the owner's review list.
@@ -187,7 +188,7 @@ The approved mockups (phone and web) are in `.superpowers/brainstorm/` during br
 - **Event page.** Name, date, keyword, hashtag, type, client/media, number of translations, and translators. Filter by person and translator. The list is in event order (the order things happened), with a toggle for newest first.
 - **Translation page.**
   - **Web:** the video is on the left and stays fixed while the right column scrolls. **Phone:** the video is pinned to the top while the text scrolls underneath.
-  - Then the title, date, translator, "clip by" credit, tags (people, type, client, keyword, hashtag), and the speaker bubbles.
+  - Then the date, translator, "clip by" credit, tags (people, type, client, keyword, hashtag), and the speaker bubbles.
   - At the bottom: original tweet link, original media link, "follows on from" / "next" links, added by, Copy link, and Report.
   - **If the tweet is deleted:** the video area is replaced by "Original tweet is no longer available. Translation kept below."
 - **Person page.** The person's emoji, colour, and name, with their translations grouped by event.
@@ -209,7 +210,7 @@ A scheduled job (daily) re-checks archived tweets through syndication and update
 ## Search
 
 - Postgres full-text search on the English text, plus trigram (`pg_trgm`) matching so that Thai, which has no spaces between words, and partial words still match.
-- Search covers: translation text, Name, Keyword, hashtags, event names, people names, and translator handles.
+- Search covers: translation text, Keyword, hashtags, event names, people names, and translator handles.
 
 ## Technical setup
 
