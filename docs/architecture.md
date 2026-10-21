@@ -71,7 +71,7 @@ site/                    a site's own folder (gitignored in the template); examp
 
 ```
 package.json  package-lock.json  .nvmrc  .editorconfig  LICENSE (MIT)  README.md  CHANGELOG.md  SECURITY.md
-eslint.config.js  jsconfig.json  vercel.json (GENERATED)  robots.txt
+eslint.config.js  jsconfig.json  vercel.json (GENERATED)  robots.txt (copied to public/ by the build)
 CONTRIBUTING.md  docs/architecture.md  docs/decisions/0000…0009  docs/spikes.md
 .github/pull_request_template.md  .github/ISSUE_TEMPLATE/{bug,kind-proposal}.md  .github/workflows/ci.yml  .github/dependabot.yml
 examples/solluna/{site.json,theme.css,copy.json,logo.svg,seed/}

@@ -222,14 +222,3 @@ export function defineKind(spec) {
   if (problems.length > 0) throw new TypeError(`invalid kind ${JSON.stringify(spec?.name)}: ${problems.join('; ')}`);
   return Object.freeze({ ...spec, present: Object.freeze({ ...spec.present }), search: Object.freeze({ ...spec.search }) });
 }
-
-/**
- * A placeholder for a contract method a kind hasn't implemented yet.
- * @param {string} what
- * @returns {() => never}
- */
-export function notImplemented(what) {
-  return () => {
-    throw new Error(`not implemented: ${what}`);
-  };
-}

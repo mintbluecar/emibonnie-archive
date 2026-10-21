@@ -1,9 +1,16 @@
 // @ts-check
-import { PUBLIC_CACHE } from '../http/handler.js';
+import { NOT_FOUND_CACHE, PUBLIC_CACHE } from '../http/handler.js';
 import { eventMetaPage, itemMetaPage } from '../services/meta.js';
 
-/** @param {string} html */
-const htmlResponse = (html) => new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+/**
+ * The page, cached as briefly as a 404 when it carries the generic meta
+ * of a hidden or missing target (so a newly visible one gets its preview
+ * within a minute); the handler keeps that shorter cache for a GET.
+ * @param {{ html: string, found: boolean }} page
+ */
+const htmlResponse = ({ html, found }) => new Response(html, {
+  headers: { 'content-type': 'text/html; charset=utf-8', ...(found ? {} : { 'cache-control': NOT_FOUND_CACHE }) },
+});
 
 /**
  * `GET /api/meta/e/:slug` (behind the `/e/:slug` rewrite): the event page

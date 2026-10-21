@@ -82,6 +82,18 @@ function copySiteAssets(siteDir, outDir) {
 }
 
 /**
+ * Copies the engine's `robots.txt` into `public/`, where the platform
+ * serves static files from (the repo-root copy is the one to edit).
+ * @param {string} repoRoot
+ */
+function copyRobots(repoRoot) {
+  const robots = path.join(repoRoot, 'robots.txt');
+  if (!existsSync(robots)) return;
+  mkdirSync(path.join(repoRoot, 'public'), { recursive: true });
+  cpSync(robots, path.join(repoRoot, 'public', 'robots.txt'));
+}
+
+/**
  * The route table's meta rewrites. Imported from this engine checkout
  * (so its dependencies resolve here) after the kinds registry is written.
  * @returns {Promise<{ source: string, destination: string }[]>}
@@ -124,6 +136,7 @@ export async function runBuild(options = {}) {
   writeFileSync(path.join(publicSiteDir, 'site.js'), buildPublicSiteModule(site));
   writeFileSync(path.join(publicSiteDir, 'tokens.css'), tokensCss);
   const assets = copySiteAssets(siteDir, publicSiteDir);
+  copyRobots(repoRoot);
 
   writeFileSync(path.join(repoRoot, 'src/site/generated.js'), buildGeneratedSiteModule(site, copy, assets));
 

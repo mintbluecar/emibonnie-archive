@@ -64,9 +64,16 @@ function errorResponse(err, route, { method, pathname, log }) {
   return json(500, { error: 'internal' }, NO_STORE);
 }
 
-/** @param {unknown} result @param {string} cache */
-function toResponse(result, cache) {
-  const response = result instanceof Response ? result : json(200, result, cache);
+/**
+ * The route's cache header always wins, with one exception: a GET route's
+ * own Response may shorten it to `NOT_FOUND_CACHE` (the meta pages'
+ * generic meta for a hidden or missing target).
+ * @param {unknown} result @param {Route} route
+ */
+function toResponse(result, route) {
+  const response = result instanceof Response ? result : json(200, result, route.cache);
+  const own = response.headers.get('cache-control');
+  const cache = route.method === 'GET' && own === NOT_FOUND_CACHE ? own : route.cache;
   response.headers.set('cache-control', cache);
   return response;
 }
@@ -127,7 +134,7 @@ export function createHandler({ routes, makeDeps, waitUntil, log = console.error
       const input = { params: match.params, query, body: await readBody(request), origin: url.origin };
       const onError = (/** @type {unknown} */ err) => log(`[api] ${ctx.method} ${ctx.pathname} background work failed: ${describe(err)}`);
       const result = await withDeps(makeDeps, { waitUntil, onError }, (deps) => /** @type {Route} */ (route).run(input, deps));
-      return toResponse(result, route.cache);
+      return toResponse(result, route);
     } catch (err) {
       return errorResponse(err, route, ctx);
     }

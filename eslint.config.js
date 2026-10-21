@@ -23,9 +23,14 @@ const domainRestrictedPatterns = {
   message: 'src/domain is pure: no I/O, no clock, no imports from other layers.',
 };
 
-const kindDomainSiblingPattern = {
-  regex: '^(\\./|\\.\\./[^/]+/)(repo|presenter|search|index)(\\.js)?$',
-  message: "src/kinds/<kind>/domain.js is pure: it may not import the kind's repo, presenter, search or index.",
+/**
+ * A kind's domain.js is pure, by allowlist: its only (runtime) imports
+ * are modules under src/domain/. Types it needs from elsewhere come in
+ * through JSDoc `import('…')` types, which ESLint never sees as imports.
+ */
+const kindDomainAllowlistPattern = {
+  regex: '^(?!\\.\\./\\.\\./domain/(?!.*\\.\\.)[\\w./-]+$)',
+  message: "src/kinds/<kind>/domain.js is pure: it may import only from src/domain/ (use JSDoc import() types for anything else).",
 };
 
 /**
@@ -67,12 +72,9 @@ export default [
     },
   },
   {
-    // A kind's domain.js follows the domain rules, and the dir globs above
-    // can't see a relative import of its own siblings (./repo.js), so those
-    // are blocked by name too (and the same files of any other kind).
     files: ['src/kinds/*/domain.js'],
     rules: {
-      'no-restricted-imports': ['error', { patterns: [domainRestrictedPatterns, kindDomainSiblingPattern] }],
+      'no-restricted-imports': ['error', { patterns: [kindDomainAllowlistPattern] }],
     },
   },
   {

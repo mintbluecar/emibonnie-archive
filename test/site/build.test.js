@@ -29,6 +29,7 @@ function makeBuildRepoRoot() {
   const repoRoot = mkdtempSync(path.join(tmpdir(), 'fan-archive-build-'));
   cpSync('src', path.join(repoRoot, 'src'), { recursive: true });
   cpSync('examples/solluna', path.join(repoRoot, 'site'), { recursive: true });
+  cpSync('robots.txt', path.join(repoRoot, 'robots.txt'));
   return { repoRoot, siteDir: path.join(repoRoot, 'site') };
 }
 
@@ -105,6 +106,7 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
     assert.ok(existsSync(path.join(repoRoot, 'public/site/tokens.css')));
     assert.ok(existsSync(path.join(repoRoot, 'public/site/theme.css')));
     assert.ok(existsSync(path.join(repoRoot, 'public/site/logo.svg')));
+    assert.equal(readFileSync(path.join(repoRoot, 'public/robots.txt'), 'utf8'), readFileSync('robots.txt', 'utf8'), 'robots.txt is served from public/');
 
     const vercelJson = JSON.parse(readFileSync(path.join(repoRoot, 'vercel.json'), 'utf8'));
     assert.deepEqual(vercelJson.regions, ['sin1']);

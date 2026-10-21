@@ -213,3 +213,18 @@ test('an unknown query param on a GET route is a no-store 400; a route may accep
   assert.equal((await handle(new Request(`${BASE}/api/any?s=20&utm_source=x`))).status, 200);
   assert.equal(state.ended, 2, 'refused before any deps are built');
 });
+
+test("a GET route's own Response may shorten its cache to NOT_FOUND_CACHE, and to nothing else; a write never", async () => {
+  const own = (/** @type {string} */ method, /** @type {string} */ cache, /** @type {string} */ asked) => ({
+    method, path: `/api/own/${method.toLowerCase()}/${asked.length}`, cache,
+    run: async () => new Response('x', { headers: { 'cache-control': asked } }),
+  });
+  const routes = [own('GET', PUBLIC_CACHE, NOT_FOUND_CACHE), own('GET', PUBLIC_CACHE, 'no-cache'), own('POST', NO_STORE, NOT_FOUND_CACHE)];
+  const { handle } = handlerFor(routes);
+  const call = (/** @type {any} */ r) => handle(new Request(`${BASE}${r.path}`, { method: r.method, headers: { origin: BASE } }));
+  assert.equal((await call(routes[0])).headers.get('cache-control'), NOT_FOUND_CACHE);
+  assert.equal((await call(routes[1])).headers.get('cache-control'), PUBLIC_CACHE);
+  const written = await handlerFor(routes, { env: { ALLOWED_ORIGINS: BASE } }).handle(new Request(`${BASE}${routes[2].path}`, { method: 'POST', headers: { origin: BASE } }));
+  assert.equal(written.status, 200);
+  assert.equal(written.headers.get('cache-control'), NO_STORE);
+});

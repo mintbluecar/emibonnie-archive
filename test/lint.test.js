@@ -27,3 +27,20 @@ test('services may import from src/kinds only _registry.js and defineKind.js', a
   assert.deepEqual(await rulesHit(file, "export { refreshEdits } from '../kinds/translation/upkeep.js';"), ['no-restricted-imports']);
   assert.deepEqual(await rulesHit('src/services/nested/x.js', "export { present } from '../../kinds/translation/presenter.js';"), ['no-restricted-imports']);
 });
+
+test("a kind's domain.js may import only from src/domain/", async () => {
+  const file = 'src/kinds/translation/domain.js';
+  assert.deepEqual(await rulesHit(file, "export { norm } from '../../domain/text.js';"), []);
+  for (const code of [
+    "export { loadDetails } from './repo.js';",
+    "export { present } from './presenter.js';",
+    "export { defineKind } from '../defineKind.js';",
+    "export { fetchTweet } from '../../sources/fetchTweet.js';",
+    "export { visibleItem } from '../../repo/visibility.js';",
+    "export { readFileSync } from 'node:fs';",
+    "export { default as x } from 'esbuild';",
+    "export { norm } from '../../domain/../repo/text.js';",
+  ]) {
+    assert.deepEqual(await rulesHit(file, code), ['no-restricted-imports'], code);
+  }
+});

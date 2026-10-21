@@ -4,6 +4,7 @@ node_modules/
 .devdb/
 public/site/
 public/build/
+public/robots.txt
 /site/
 src/site/generated.js
 src/kinds/_registry.js
