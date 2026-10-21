@@ -1,0 +1,23 @@
+{
+  "nav.home": "home",
+  "nav.search": "search",
+  "nav.add": "add",
+  "nav.me": "me",
+  "badge.fanMade": "FAN-MADE",
+  "footer.about": "about",
+  "footer.takedown": "takedown",
+  "footer.privacy": "privacy",
+  "footer.unofficial": "unofficial, not affiliated with the artists or their agency",
+  "account.signInWithX": "sign in with X",
+  "account.signInWithGoogle": "sign in with Google",
+  "account.optedOut": "this translator has opted out",
+  "account.optOutLabel": "opt out",
+  "account.optOutConfirm": "yes, i would like to opt out",
+  "item.sourceGone": "Original tweet is no longer available. Translation kept below.",
+  "item.showOriginal": "show original",
+  "item.followsOn": "follows on from",
+  "event.unsorted": "unsorted",
+  "event.sharedStory": "shared story",
+  "search.empty": "no results",
+  "search.filters": "filters"
+}

@@ -1,0 +1,10 @@
+/*
+ * solluna archive's theme: only overrides engine tokens from
+ * src/styles/tokens.css (see docs/site-settings.md). The brand gradient
+ * runs between the two featured people's colours.
+ */
+
+:root {
+  --gradient-from: #c47a12;
+  --gradient-to: #6a5cd6;
+}

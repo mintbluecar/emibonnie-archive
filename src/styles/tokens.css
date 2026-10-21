@@ -1,0 +1,36 @@
+/*
+ * Engine default design tokens ("soft pastel on paper", see
+ * docs/superpowers/specs/2026-10-21-translation-archive-design.md,
+ * "Visual design"). A site's `theme.css` only overrides these custom
+ * properties; it never defines new ones, so new engine tokens never break
+ * an older site. `scripts/build.js` fails the build if engine CSS
+ * references a token that isn't defined here.
+ *
+ * Dark-mode values are the builder's choice (the spec leaves exact values
+ * to the builder); `--color-card`'s dark value is the "dark card colour"
+ * `src/site/schema.js` uses for the ≥3:1 contrast check on featured
+ * people's colours.
+ */
+
+:root {
+  --color-bg: #f6efe3;
+  --color-card: #fffdf8;
+  --color-card-shadow: #eadfce;
+  --color-ink: #2b2233;
+  --color-ink-muted: #8a7f8f;
+  --gradient-from: #ff6a2b;
+  --gradient-to: #e03a85;
+  --radius-card: 16px;
+  --font-latin: 'Nunito', sans-serif;
+  --font-source: 'IBM Plex Sans Thai', sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #140f19;
+    --color-card: #1c1522;
+    --color-card-shadow: #0d0a11;
+    --color-ink: #f4eef8;
+    --color-ink-muted: #a89aad;
+  }
+}

@@ -1,0 +1,133 @@
+// @ts-check
+import {
+  requireString,
+  checkWordmark,
+  checkOwnerXUserId,
+  checkTimezone,
+  checkRegion,
+  checkContactUrl,
+  checkLowercaseNames,
+  checkStringArray,
+  checkOneFeaturedPerson,
+  checkOneMarker,
+  checkOneLivePattern,
+} from './fieldValidators.js';
+
+export { contrastRatio, DEFAULT_CARD_COLOUR, DARK_CARD_COLOUR, ALLOWED_REGIONS } from './contrast.js';
+
+/** @typedef {{ igHandle: string, displayName: string, emoji: string, colour: string }} FeaturedPerson */
+/** @typedef {{ code: string, platformCode: string, pattern: string }} LivePattern */
+/**
+ * @typedef {{ name: string, wordmark: { accent: string, rest: string }, tagline: string, ownerXUserId: string,
+ *   sourceLanguage: string, timezone: string, region: string, lowercaseNames: boolean, featuredPeople: FeaturedPerson[],
+ *   defaultMarkers: Record<string, { personHandle: string } | { role: string }>, ignoredHashtags: string[],
+ *   categories: string[], extraLivePatterns: LivePattern[], contactUrl: string }} Site
+ */
+
+const DEFAULT_CATEGORIES = ['show / interview', 'fan meet / fan day', 'live'];
+
+/**
+ * @param {string[]} errors
+ * @param {any} raw
+ * @returns {FeaturedPerson[]}
+ */
+function checkFeaturedPeople(errors, raw) {
+  const list = raw.featuredPeople;
+  if (!Array.isArray(list) || list.length === 0) {
+    errors.push('featuredPeople: required, must be a non-empty array');
+    return [];
+  }
+  const seenHandles = new Set();
+  return list.map((person, index) => checkOneFeaturedPerson(errors, person, index, seenHandles));
+}
+
+/**
+ * @param {string[]} errors
+ * @param {any} raw
+ * @param {FeaturedPerson[]} featuredPeople
+ * @returns {Record<string, { personHandle: string } | { role: string }>}
+ */
+function checkDefaultMarkers(errors, raw, featuredPeople) {
+  const markers = raw.defaultMarkers;
+  if (markers === undefined) return {};
+  if (typeof markers !== 'object' || markers === null) {
+    errors.push('defaultMarkers: must be an object mapping a marker to a person or role');
+    return {};
+  }
+  const handles = new Set(featuredPeople.map((person) => person.igHandle));
+  /** @type {Record<string, { personHandle: string } | { role: string }>} */
+  const result = {};
+  for (const [marker, target] of Object.entries(markers)) {
+    result[marker] = checkOneMarker(errors, marker, target, handles);
+  }
+  return result;
+}
+
+/**
+ * @param {string[]} errors
+ * @param {any} raw
+ * @returns {LivePattern[]}
+ */
+function checkExtraLivePatterns(errors, raw) {
+  const value = raw.extraLivePatterns;
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    errors.push('extraLivePatterns: must be an array');
+    return [];
+  }
+  return value.map((pattern, index) => checkOneLivePattern(errors, pattern, index));
+}
+
+/**
+ * Validates and normalises a site's raw `site.json`. Every error names the
+ * field path it came from.
+ * @param {unknown} raw
+ * @returns {{ ok: true, site: Site } | { ok: false, errors: string[] }}
+ */
+export function validateSite(raw) {
+  if (typeof raw !== 'object' || raw === null) {
+    return { ok: false, errors: ['site: must be an object'] };
+  }
+
+  /** @type {any} */
+  const input = raw;
+  /** @type {string[]} */
+  const errors = [];
+
+  requireString(errors, 'name', input.name);
+  const wordmark = checkWordmark(errors, input);
+  requireString(errors, 'tagline', input.tagline);
+  const ownerXUserId = checkOwnerXUserId(errors, input);
+  requireString(errors, 'sourceLanguage', input.sourceLanguage);
+  const timezone = checkTimezone(errors, input);
+  const region = checkRegion(errors, input);
+  const lowercaseNames = checkLowercaseNames(errors, input);
+  const featuredPeople = checkFeaturedPeople(errors, input);
+  const defaultMarkers = checkDefaultMarkers(errors, input, featuredPeople);
+  const ignoredHashtags = checkStringArray(errors, 'ignoredHashtags', input.ignoredHashtags, []);
+  const categories = checkStringArray(errors, 'categories', input.categories, DEFAULT_CATEGORIES);
+  const extraLivePatterns = checkExtraLivePatterns(errors, input);
+  const contactUrl = checkContactUrl(errors, input);
+
+  if (errors.length > 0) return { ok: false, errors };
+
+  return {
+    ok: true,
+    site: {
+      name: input.name,
+      wordmark,
+      tagline: input.tagline,
+      ownerXUserId,
+      sourceLanguage: input.sourceLanguage,
+      timezone,
+      region,
+      lowercaseNames,
+      featuredPeople,
+      defaultMarkers,
+      ignoredHashtags,
+      categories,
+      extraLivePatterns,
+      contactUrl,
+    },
+  };
+}

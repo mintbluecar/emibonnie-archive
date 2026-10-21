@@ -4,7 +4,7 @@ node_modules/
 .devdb/
 public/site/
 public/build/
-site/
+/site/
 src/site/generated.js
 src/kinds/_registry.js
 .superpowers/

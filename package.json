@@ -10,7 +10,7 @@
   "scripts": {
     "test": "node --test",
     "check": "tsc --noEmit -p jsconfig.json && eslint .",
-    "dev": "node scripts/dev.js",
+    "dev": "node scripts/build.js && node scripts/dev.js",
     "build": "node scripts/build.js",
     "setup": "node scripts/setup.js",
     "doctor": "node scripts/doctor.js",
