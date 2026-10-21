@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { freshDb } from '../helpers/db.js';
 import { insertEvent, insertItem, insertPerson } from '../helpers/seed.js';
-import { countsForPerson, insertItem as insertItemRepo, neighbours, sourceState } from '../../src/repo/items.js';
+import {
+  countsByEvent, countsForPerson, insertItem as insertItemRepo, listVisibleItemIds, neighbours, sourceState,
+} from '../../src/repo/items.js';
 import { setItemPeople, listItemPeople } from '../../src/repo/itemPeople.js';
 import { addSources, primarySource, setStatus, touchCheck } from '../../src/repo/itemSources.js';
 import { link, linksFrom } from '../../src/repo/itemLinks.js';
@@ -19,6 +21,12 @@ const system = { actor: 'system' };
 /** @param {string} table @param {string | number} key */
 async function auditCount(table, key) {
   const { rows } = await db.query('select count(*)::int as n from audit_log where table_name = $1 and row_key = $2', [table, String(key)]);
+  return rows[0].n;
+}
+
+/** The total row count of `audit_log`, across every table. */
+async function auditTotal() {
+  const { rows } = await db.query('select count(*)::int as n from audit_log');
   return rows[0].n;
 }
 
@@ -39,6 +47,29 @@ test('sourceState: none -> visible -> removed, and resolves through source_alias
   await db.transaction((tx) => tx.query("update items set deleted_at = now(), deleted_reason = 'hidden_by_owner' where id = $1", [itemId]), system);
   assert.equal(await sourceState(db, 'translation', 'x', '9001'), 'removed');
   assert.equal(await sourceState(db, 'translation', 'x', '9001-v2'), 'removed');
+});
+
+test('sourceState is deterministic: a visible match wins over a removed one sharing a follow-up external id', async () => {
+  const removedItemId = await db.transaction((tx) => insertItem(tx), system);
+  await db.transaction(
+    (tx) => addSources(tx, removedItemId, 'translation', [
+      { platform: 'x', externalId: '9410', url: 'https://x.example/status/9410' },
+      { platform: 'x', externalId: '9411', url: 'https://x.example/status/9411', role: 'follow_up', position: 1 },
+    ]),
+    system,
+  );
+  await db.transaction((tx) => tx.query("update items set deleted_at = now(), deleted_reason = 'spam' where id = $1", [removedItemId]), system);
+
+  const visibleItemId = await db.transaction((tx) => insertItem(tx), system);
+  await db.transaction(
+    (tx) => addSources(tx, visibleItemId, 'translation', [
+      { platform: 'x', externalId: '9500', url: 'https://x.example/status/9500' },
+      { platform: 'x', externalId: '9411', url: 'https://x.example/status/9411-dup', role: 'follow_up', position: 1 },
+    ]),
+    system,
+  );
+
+  assert.equal(await sourceState(db, 'translation', 'x', '9411'), 'visible');
 });
 
 test('insertItem defaults sort_key to extract(epoch from posted_at) when not given', async () => {
@@ -62,6 +93,13 @@ test('insertItem keeps an explicit sort_key over the posted_at default', async (
   assert.equal(rows[0].sort_key, 42);
 });
 
+test('insertItem throws when neither sortKey nor postedAt is given', async () => {
+  await assert.rejects(
+    db.transaction((tx) => insertItemRepo(tx, { kind: 'translation', placement: 'unsorted', occurredOn: '2026-02-13', addedVia: 'cli' }), system),
+    /insertItem: sortKey or postedAt required/,
+  );
+});
+
 test('neighbours: ordering is stable when two items share a sort_key (id tiebreaks)', async () => {
   const eventId = await db.transaction((tx) => insertEvent(tx, { slug: 'neighbours-tie' }), system);
   const a = await db.transaction((tx) => insertItem(tx, { placement: 'event', eventId, sortKey: 5 }), system);
@@ -76,6 +114,17 @@ test('neighbours: ordering is stable when two items share a sort_key (id tiebrea
   const lastNeighbours = await neighbours(db, c);
   assert.equal(lastNeighbours.prev, b);
   assert.equal(lastNeighbours.next, null);
+});
+
+test('neighbours: a shared sort_key and sub-millisecond posted_at still tie-break by id (no JS Date round-trip)', async () => {
+  const eventId = await db.transaction((tx) => insertEvent(tx, { slug: 'neighbours-submillis' }), system);
+  const postedAt = '2026-02-13T10:00:00.123456Z';
+  const a = await db.transaction((tx) => insertItem(tx, { placement: 'event', eventId, sortKey: 7, postedAt }), system);
+  const b = await db.transaction((tx) => insertItem(tx, { placement: 'event', eventId, sortKey: 7, postedAt }), system);
+  assert.ok(a < b);
+
+  assert.deepEqual(await neighbours(db, a), { prev: null, next: b });
+  assert.deepEqual(await neighbours(db, b), { prev: a, next: null });
 });
 
 test('setItemPeople: {1:present,2:present} -> {1:present} logs exactly one delete, zero inserts for person 1', async () => {
@@ -125,18 +174,18 @@ test('setStatus writes only when the status actually changes', async () => {
   assert.equal(primary?.status, 'deleted');
 });
 
-test('touchCheck writes only source_checks (unaudited): zero item_sources audit rows', async () => {
+test('touchCheck writes only source_checks (unaudited): the total audit_log row count is unchanged', async () => {
   const itemId = await db.transaction((tx) => insertItem(tx), system);
   const sourceId = await db.transaction(
     (tx) => addSources(tx, itemId, 'translation', [{ platform: 'x', externalId: '9200', url: 'https://x.example/status/9200' }]),
     system,
   ).then((ids) => ids[0]);
-  const before1 = await auditCount('item_sources', itemId);
+  const totalBefore = await auditTotal();
 
   await touchCheck(db, sourceId);
   await touchCheck(db, sourceId);
 
-  assert.equal(await auditCount('item_sources', itemId), before1);
+  assert.equal(await auditTotal(), totalBefore);
   const { rows } = await db.query('select consecutive_failures from source_checks where source_id = $1', [sourceId]);
   assert.equal(rows[0].consecutive_failures, 0);
 
@@ -191,4 +240,56 @@ test('countsForPerson counts only visible items', async () => {
 
   await db.transaction((tx) => tx.query("update items set deleted_at = now(), deleted_reason = 'erased' where id = $1", [itemId]), system);
   assert.equal(await countsForPerson(db, personId), 0);
+});
+
+test('countsForPerson counts an item once even when the person holds 2 roles on it', async () => {
+  const personId = await db.transaction((tx) => insertPerson(tx, { name: 'Double-cast' }), system);
+  const itemId = await db.transaction((tx) => insertItem(tx), system);
+  await db.transaction(
+    (tx) => setItemPeople(tx, itemId, [{ personId, role: 'present' }, { personId, role: 'about' }]),
+    system,
+  );
+  assert.equal(await countsForPerson(db, personId), 1);
+  const list = await listVisibleItemIds(db, { personId });
+  assert.equal(list.length, 1);
+});
+
+test('listVisibleItemIds defaults to ascending event order, matching neighbours; order: desc gives newest first', async () => {
+  const eventId = await db.transaction((tx) => insertEvent(tx, { slug: 'list-order' }), system);
+  const a = await db.transaction((tx) => insertItem(tx, { placement: 'event', eventId, sortKey: 1 }), system);
+  const b = await db.transaction((tx) => insertItem(tx, { placement: 'event', eventId, sortKey: 2 }), system);
+  const c = await db.transaction((tx) => insertItem(tx, { placement: 'event', eventId, sortKey: 3 }), system);
+
+  const ascending = await listVisibleItemIds(db, { eventId });
+  assert.deepEqual(ascending.map((r) => r.id), [a, b, c]);
+
+  const descending = await listVisibleItemIds(db, { eventId, order: 'desc' });
+  assert.deepEqual(descending.map((r) => r.id), [c, b, a]);
+});
+
+test('listVisibleItemIds clamps limit to 200 even when a larger limit is requested', async () => {
+  const eventId = await db.transaction((tx) => insertEvent(tx, { slug: 'list-clamp' }), system);
+  await db.transaction((tx) => insertItem(tx, { placement: 'event', eventId, sortKey: 1 }), system);
+  const rows = await listVisibleItemIds(db, { eventId, limit: 10000 });
+  assert.ok(rows.length <= 200);
+});
+
+test('countsByEvent excludes items under a soft-deleted event', async () => {
+  const eventId = await db.transaction((tx) => insertEvent(tx, { slug: 'event-deleted-counts' }), system);
+  await db.transaction((tx) => insertItem(tx, { placement: 'event', eventId }), system);
+  const before1 = (await countsByEvent(db)).find((c) => c.eventId === eventId);
+  assert.equal(before1?.count, 1);
+
+  await db.transaction((tx) => tx.query("update events set deleted_at = now(), deleted_by = 'system' where id = $1", [eventId]), system);
+  const after1 = (await countsByEvent(db)).find((c) => c.eventId === eventId);
+  assert.equal(after1, undefined);
+});
+
+test('listVisibleItemIds({eventId}) returns nothing once the event is soft-deleted', async () => {
+  const eventId = await db.transaction((tx) => insertEvent(tx, { slug: 'event-deleted-list' }), system);
+  await db.transaction((tx) => insertItem(tx, { placement: 'event', eventId }), system);
+  assert.equal((await listVisibleItemIds(db, { eventId })).length, 1);
+
+  await db.transaction((tx) => tx.query("update events set deleted_at = now(), deleted_by = 'system' where id = $1", [eventId]), system);
+  assert.deepEqual(await listVisibleItemIds(db, { eventId }), []);
 });
