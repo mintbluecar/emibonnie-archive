@@ -979,7 +979,8 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
       - Hidden or missing targets get generic site meta and a 200 status, so nothing leaks.
       - `vercel.json` rewrites `/t/:id` → `/meta/t/:id` and `/e/:slug` → `/meta/e/:slug`.
   - The `cache` header follows Global Constraints for public GETs.
-  - The build writes `vercel.json` routes, rewrites, `regions`, and the headers from the spec's "Trust, safety and privacy" section: CSP, `frame-ancestors 'none'`, referrer policy, nosniff, HSTS.
+  - The build writes `vercel.json` routes, rewrites, `regions`, and the headers from the spec's "Trust, safety and privacy" section: CSP, `frame-ancestors 'none'`, **`Referrer-Policy: no-referrer`**, nosniff, HSTS.
+  - Clip playback depends on `no-referrer`: `video.twimg.com` returns 403 to a foreign Referer, as found in the Task 2 spike.
 - [ ] **Step 1: Write the failing tests.**
   - **Route checks** (call each route's `run` with test deps):
     - `event` returns `sections[0].kind`.

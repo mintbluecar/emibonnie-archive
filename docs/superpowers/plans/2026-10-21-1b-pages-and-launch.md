@@ -164,7 +164,8 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
 **Interfaces:**
 - Produces:
   - `videoPlayer.pickVariant(variants, isSmall)`: the smallest variant when `isSmall`. Otherwise the largest at or below 2,200,000 bps, or the smallest if none qualifies.
-  - `videoPlayer.render({ variants, width, height })`: `<video controls playsinline preload="metadata" referrerpolicy="no-referrer">` inside a `.vid` box.
+  - `videoPlayer.render({ variants, width, height })`: `<video controls playsinline preload="metadata">` inside a `.vid` box.
+    - Every page has `<meta name="referrer" content="no-referrer">`, on top of the site-wide header, because `video.twimg.com` 403s a foreign Referer and `<video>` has no `referrerpolicy` attribute.
     - **Vertical clips (owner's decision, option A):** on phones the `.vid` box is capped at `max-height: 40svh`. The video uses `object-fit: contain` (letterboxed on a dark background), and the box gets `aspect-ratio` from `width/height`, set in `bind()` via `style.setProperty` for CSP. A **⤢ full screen** button calls `video.requestFullscreen()`, falling back to `webkitEnterFullscreen()` on iOS.
     - On web, the video fits its column, with `max-height: calc(100svh - header)`.
   - `videoPlayer.bind(el, { kind, sourceId, initial })`:
@@ -278,6 +279,7 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
     - axe finds no `serious` or `critical` violations.
   - **Extra checks on the item page:**
     - The `.vid` stays at `top: 0` after scrolling 2,000px.
+    - **Real playback:** with the network allowed, the `LONG` clip's `<video>` reaches `readyState >= 2`, and no 403 appears for `video.twimg.com`. This is the in-browser check that was deferred from the 1a spike.
     - For the **vertical** `LIVE` clip at 390×844, the `.vid` box is at most 40% of the viewport height (≤ 338px), and the first bubble is visible without scrolling.
     - The `LONG` 🐱 line shows `🌙 luna`.
   - **Extra check on search:** opening the filter sheet and pressing Escape returns focus to the filter icon.

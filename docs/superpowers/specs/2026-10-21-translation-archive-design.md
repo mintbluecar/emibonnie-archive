@@ -381,7 +381,7 @@ A scheduled job re-checks archived tweets through syndication and updates their 
 - Tweet fetching accepts only numeric IDs and refuses redirects.
 
 **Headers:**
-- A strict Content Security Policy (self, video.twimg.com for media, pbs.twimg.com for images), `frame-ancestors 'none'`, strict referrer policy, nosniff, HSTS.
+- A strict Content Security Policy (self, video.twimg.com for media, pbs.twimg.com for images), `frame-ancestors 'none'`, **`Referrer-Policy: no-referrer` site-wide** (Task 2 found `video.twimg.com` refuses requests that carry another site's Referer, and `<video>` has no per-element referrer attribute), nosniff, HSTS.
 - Fonts are self-hosted, so visitors' IP addresses aren't sent to Google.
 
 **Accounts and operations:**
