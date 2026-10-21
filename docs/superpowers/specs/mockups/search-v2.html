@@ -1,0 +1,117 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>search-v2</title><style>body{margin:24px;background:#f3eee6;font-family:system-ui,sans-serif}.cards{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}.subtitle{opacity:.7}</style>
+<h2>Search with a filter icon</h2>
+<p class="subtitle">Home header fixed (logo + "emibonnie archive" + fan-made). Then search results, and the filter sheet that slides up. Results text is from the examples; matches are highlighted.</p>
+
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  .s{--bg:#f6efe3;--card:#fffdf8;--ink:#2b2233;--mute:#8a7f8f;--line:#eadfce;--emi:#ff8a3d;--bon:#9b6cff;--leo:#2fa89a;
+     font-family:Nunito,'IBM Plex Sans Thai',sans-serif;color:var(--ink)}
+  .row3{display:flex;gap:26px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+  .cap{font-size:12px;opacity:.7;text-align:center;margin-top:8px;max-width:300px}
+  .ph{width:300px;height:600px;border-radius:26px;overflow:hidden;box-shadow:0 6px 24px #0003;position:relative;background:var(--bg)}
+  .in{padding:14px;height:100%;box-sizing:border-box;overflow:hidden}
+  .tabbar{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;padding:10px 0 14px;font-size:11px;background:var(--card);border-top:1px solid var(--line);color:var(--mute)}
+  .tabbar .on{color:var(--bon);font-weight:800}
+  .grad{background:linear-gradient(90deg,#ff6a2b,#e03a85);-webkit-background-clip:text;color:transparent}
+  .hdr{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+  .hdr img{width:34px;height:34px}
+  .hdr .t{font-weight:800;font-size:18px;line-height:1.1}
+  .fan{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.04em;border:1.5px solid var(--line);border-radius:999px;padding:1px 7px;color:var(--mute);background:var(--card);margin-left:2px;vertical-align:middle}
+  .sub{font-size:11px;color:var(--mute);margin:4px 0 12px}
+  .search{display:flex;gap:6px;margin-bottom:8px}
+  .search .box{flex:1;background:var(--card);border:1.5px solid var(--bon);border-radius:14px;padding:8px 12px;font-size:12.5px}
+  .search .fbtn{display:flex;align-items:center;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:8px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+  .search .fbtn b{background:var(--bon);color:#fff;border-radius:999px;padding:0 6px;margin-left:3px;font-size:10px}
+  .active{margin-bottom:10px}
+  .af{display:inline-block;font-size:11px;border-radius:999px;padding:3px 9px;margin:0 4px 4px 0;background:#9b6cff1a;border:1.5px solid #9b6cff55;color:#5b3fa0;font-weight:700}
+  .rc{font-size:11px;color:var(--mute);margin-bottom:6px}
+  .res{background:var(--card);border-radius:16px;padding:10px 12px;margin-bottom:8px;box-shadow:0 2px 0 var(--line)}
+  .res .ev{font-size:10.5px;font-weight:800;color:var(--bon);margin-bottom:3px}
+  .res .tx{font-size:12.5px;line-height:1.45;margin-bottom:5px}
+  .res mark{background:#ffd9a8;border-radius:3px;padding:0 2px;color:inherit}
+  .res .m{font-size:10.5px;color:var(--mute)}
+  .dim{position:absolute;inset:0;background:#2b223355}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:22px 22px 0 0;padding:10px 14px 14px;max-height:88%;overflow:hidden}
+  .grab{width:36px;height:4px;border-radius:4px;background:var(--line);margin:0 auto 10px}
+  .sh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .sh b{font-size:15px}.sh span{font-size:12px;color:var(--mute)}
+  .grp{margin-top:10px}
+  .grp .lbl{font-size:10.5px;font-weight:800;color:var(--mute);margin-bottom:5px;text-transform:lowercase}
+  .opt{display:inline-block;font-size:11.5px;border-radius:999px;padding:3px 10px;margin:0 4px 5px 0;border:1.5px solid var(--line);background:var(--bg)}
+  .opt.on{border-color:var(--bon);background:#9b6cff1a;color:#5b3fa0;font-weight:700}
+  .opt.e.on{border-color:var(--emi);background:#ff8a3d1a;color:#b9531a}
+  .seg{display:inline-flex;border:1.5px solid var(--line);border-radius:999px;overflow:hidden;font-size:10.5px;margin-left:6px;vertical-align:middle}
+  .seg span{padding:1px 8px}.seg .on{background:var(--bon);color:#fff}
+  .sel{display:flex;justify-content:space-between;font-size:12px;border:1.5px solid var(--line);border-radius:12px;padding:7px 10px;background:var(--bg)}
+  .apply{margin-top:12px;text-align:center;background:linear-gradient(90deg,#ff6a2b,#e03a85);color:#fff;font-weight:800;border-radius:14px;padding:10px;font-size:13px}
+</style>
+
+<div class="s">
+<div class="row3">
+
+  <!-- HOME HEADER FIX -->
+  <div>
+    <div class="ph"><div class="in">
+      <div class="hdr"><img src="logo.png" alt=""><div class="t"><span class="grad">emibonnie</span> archive</div></div>
+      <div class="sub">fan translations, kept <span class="fan">FAN-MADE</span></div>
+      <div class="search"><div class="box" style="border-color:var(--line);color:var(--mute)">🔍 search what they said…</div><div class="fbtn" aria-label="filters"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="vertical-align:-3px"><path d="M4 6h16M7 12h10M10 18h4"/></svg></div></div>
+      <div style="font-size:11px;font-weight:800;color:var(--bon);margin:14px 2px 6px">october 2026</div>
+      <div class="res" style="display:flex;justify-content:space-between;align-items:center"><div><b style="font-size:13px">LOVE TO THE MOON AND KEY</b><div class="m">14 Oct · #MoonshadowSeriesFinalEP</div></div><span class="af" style="margin:0">12</span></div>
+      <div class="res" style="display:flex;justify-content:space-between;align-items:center"><div><b style="font-size:13px">EMIBONNIE ANY HAPPY FAMILY</b><div class="m">9 Oct · #GMMTVFANIVAL2026HappyFamilyxEB</div></div><span class="af" style="margin:0">7</span></div>
+      <div style="font-size:11px;font-weight:800;color:var(--bon);margin:14px 2px 6px">march 2026</div>
+      <div class="res" style="display:flex;justify-content:space-between;align-items:center"><div><b style="font-size:13px">ANY LOVE EMIBONNIE SESSION D1</b><div class="m">7 Mar · #EmiBonnieLoveSessionD1</div></div><span class="af" style="margin:0">31</span></div>
+    </div>
+    <div class="tabbar"><span class="on">events</span><span>search</span><span>＋ add</span><span>me</span></div></div>
+    <div class="cap">Home: logo + "emibonnie archive", fan-made badge</div>
+  </div>
+
+  <!-- RESULTS -->
+  <div>
+    <div class="ph"><div class="in">
+      <div class="search"><div class="box">hug</div><div class="fbtn" aria-label="filters" style="position:relative"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="vertical-align:-3px"><path d="M4 6h16M7 12h10M10 18h4"/></svg><b style="position:absolute;top:-6px;right:-6px;margin:0">2</b></div></div>
+      <div class="active"><span class="af">💜 bonnie ✕</span><span class="af">fan meet / fan day ✕</span><span class="af" style="background:none;border-color:var(--line);color:var(--mute)">clear all</span></div>
+      <div class="rc">3 translations · newest first ▾</div>
+      <div class="res">
+        <div class="ev">LOVE TO THE MOON AND KEY · 14 Oct 2026</div>
+        <div class="tx">💜 That shocked me. Come and <mark>hug</mark> me.<br>🧡 We <mark>hug</mark> all the time!</div>
+        <div class="m">🧡 💜 🦁 · tl @vacantvolcanic</div>
+      </div>
+      <div class="res">
+        <div class="ev">ANY LOVE EMIBONNIE SESSION D1 · 7 Mar 2026</div>
+        <div class="tx">💜 (hold's P'Mi's hand) … she wanted a <mark>hug</mark> after the song</div>
+        <div class="m">🧡 💜 · tl @translator</div>
+      </div>
+      <div class="res">
+        <div class="ev">EMIBONNIE 1ST FM IN TAIPEI · 17 May 2025</div>
+        <div class="tx">💜 …and then she <mark>hug</mark>ged me in front of everyone</div>
+        <div class="m">🧡 💜 · tl @translator</div>
+      </div>
+    </div>
+    <div class="tabbar"><span>events</span><span class="on">search</span><span>＋ add</span><span>me</span></div></div>
+    <div class="cap">Results: active filters as removable chips; matching lines shown with the word highlighted. (2nd and 3rd results are made up.)</div>
+  </div>
+
+  <!-- FILTER SHEET -->
+  <div>
+    <div class="ph"><div class="in">
+      <div class="search"><div class="box">hug</div><div class="fbtn" aria-label="filters" style="position:relative"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="vertical-align:-3px"><path d="M4 6h16M7 12h10M10 18h4"/></svg><b style="position:absolute;top:-6px;right:-6px;margin:0">2</b></div></div>
+    </div>
+    <div class="dim"></div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sh"><b>filters</b><span>reset</span></div>
+      <div class="grp"><div class="lbl">who's in it <span class="seg"><span class="on">any of</span><span>all of</span></span></div>
+        <span class="opt e">🧡 emi</span><span class="opt on">💜 bonnie</span><span class="opt">🦁 leo</span><span class="opt">+ more</span></div>
+      <div class="grp"><div class="lbl">type</div>
+        <span class="opt">show / interview</span><span class="opt on">fan meet / fan day</span><span class="opt">live</span><span class="opt">series</span></div>
+      <div class="grp"><div class="lbl">event</div><div class="sel"><span>any event</span><span>▾</span></div></div>
+      <div class="grp"><div class="lbl">translator</div><div class="sel"><span>any translator</span><span>▾</span></div></div>
+      <div class="grp"><div class="lbl">client / media</div><div class="sel"><span>any</span><span>▾</span></div></div>
+      <div class="grp"><div class="lbl">date</div><div class="sel"><span>any time</span><span>▾</span></div></div>
+      <div class="apply">show 3 translations</div>
+    </div></div>
+    <div class="cap">Filter sheet: people (any of / all of), type, event, translator, client/media, date. Button shows the live count.</div>
+  </div>
+</div>
+</div>

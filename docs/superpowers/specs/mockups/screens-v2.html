@@ -1,0 +1,156 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>screens-v2</title><style>body{margin:24px;background:#f3eee6;font-family:system-ui,sans-serif}.cards{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}.subtitle{opacity:.7}</style>
+<h2>With the emibonnie logo</h2>
+<p class="subtitle">Logo in the header; the brand gradient now uses the logo's orange and pink. Speaker colours unchanged (bonnie still purple) so you can compare.</p>
+
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  .brandlogo{width:30px;height:30px;vertical-align:middle;margin-right:6px}
+  .wnav .brandlogo{width:24px;height:24px}
+  .s{--bg:#f6efe3;--card:#fffdf8;--ink:#2b2233;--mute:#8a7f8f;--line:#eadfce;--emi:#ff8a3d;--bon:#9b6cff;--leo:#2fa89a;--gen:#9a9087;
+     font-family:Nunito,'IBM Plex Sans Thai',sans-serif;color:var(--ink)}
+  .row3{display:flex;gap:26px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+  .cap{font-size:12px;opacity:.7;text-align:center;margin-top:8px}
+  .ph{width:300px;height:600px;border-radius:26px;overflow:hidden;box-shadow:0 6px 24px #0003;position:relative;background:var(--bg)}
+  .in{padding:14px;height:100%;box-sizing:border-box;overflow:hidden}
+  .tabbar{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;padding:10px 0 14px;font-size:11px;background:var(--card);border-top:1px solid var(--line);color:var(--mute)}
+  .tabbar .on{color:var(--bon);font-weight:800}
+  .logo{font-weight:800;font-size:19px}
+  .grad{background:linear-gradient(90deg,#ff6a2b,#e03a85);-webkit-background-clip:text;color:transparent}
+  .sub{font-size:11px;color:var(--mute);margin-bottom:12px}
+  .search{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:9px 12px;font-size:12px;color:var(--mute);margin-bottom:12px}
+  .mo{font-size:11px;font-weight:800;color:var(--bon);margin:12px 2px 6px}
+  .ev{background:var(--card);border-radius:16px;padding:11px 12px;margin-bottom:8px;box-shadow:0 2px 0 var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .ev b{display:block;font-size:13px}
+  .ev small{font-size:11px;color:var(--mute)}
+  .count{font-size:11px;border-radius:999px;padding:2px 8px;background:linear-gradient(90deg,#ff8a3d22,#9b6cff22);color:#5b3fa0;font-weight:700;white-space:nowrap}
+  .back{font-size:12px;color:var(--mute);margin-bottom:8px}
+  .h{font-weight:800;font-size:16px;line-height:1.25}
+  .meta{font-size:11px;color:var(--mute);margin:4px 0 8px}
+  .pill{display:inline-block;font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;margin:0 4px 4px 0;background:var(--card);border:1.5px solid var(--line)}
+  .chips{margin-bottom:10px}
+  .chip{display:inline-block;font-size:11px;border-radius:999px;padding:3px 10px;margin:0 4px 4px 0;background:var(--card);border:1.5px solid var(--line)}
+  .chip.on{border-color:var(--bon);color:#5b3fa0;font-weight:700}
+  .ent{background:var(--card);border-radius:16px;padding:10px 12px;margin-bottom:8px;box-shadow:0 2px 0 var(--line)}
+  .ent .pv{font-size:12.5px;line-height:1.45;margin-bottom:6px}
+  .ent .pv span{margin-right:3px}
+  .ent .m{font-size:10.5px;color:var(--mute)}
+  .vid{background:#1d1822;color:#fff;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;font-size:12px;position:relative}
+  .vid:after{content:"▶";position:absolute;width:38px;height:38px;border-radius:50%;background:#fff3;display:flex;align-items:center;justify-content:center}
+  .cast{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 6px}
+  .cast span{font-size:11px;border-radius:999px;padding:2px 8px;border:1.5px solid;background:var(--card)}
+  .msg{display:flex;gap:7px;align-items:flex-start;margin-bottom:3px}
+  .msg.f{margin-top:8px}
+  .av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex:none}
+  .av.x{visibility:hidden}
+  .bub{padding:6px 10px;border-radius:4px 14px 14px 14px;font-size:12.5px;line-height:1.45;max-width:220px}
+  .msg:not(.f) .bub{border-radius:14px}
+  .nm{font-size:10px;font-weight:800;margin-bottom:1px}
+  .crowd{margin:7px 0 7px 33px;font-size:11px;color:var(--mute);font-style:italic}
+  .e .av{background:#ff8a3d2e}.e .bub{background:#ff8a3d1f}.e .nm{color:#d4651c}
+  .b .av{background:#9b6cff2e}.b .bub{background:#9b6cff1f}.b .nm{color:#7a4fe0}
+  .l .av{background:#2fa89a2e}.l .bub{background:#2fa89a1f}.l .nm{color:#1f8478}
+  .g .av{background:#9a90872e}.g .bub{background:#9a908718}.g .nm{color:#7a7068}
+  .credit{font-size:11px;color:var(--mute);margin-bottom:4px}
+  .credit b{color:var(--ink)}
+  /* web */
+  .web{max-width:940px;margin:34px auto 0;border-radius:14px;overflow:hidden;box-shadow:0 6px 24px #0003;background:var(--bg)}
+  .wnav{display:flex;justify-content:space-between;align-items:center;padding:10px 18px;background:var(--card);border-bottom:1px solid var(--line);font-size:12px;color:var(--mute)}
+  .wnav .logo{font-size:16px;color:var(--ink)}
+  .wbody{display:grid;grid-template-columns:1.15fr 1fr;gap:22px;padding:18px;height:420px}
+  .wbody .vid{border-radius:14px}
+  .wscroll{overflow:hidden;position:relative}
+  .wscroll:after{content:"";position:absolute;left:0;right:0;bottom:0;height:60px;background:linear-gradient(transparent,var(--bg))}
+  .navparts{display:flex;justify-content:space-between;font-size:11px;margin-top:8px;color:var(--mute)}
+</style>
+
+<div class="s">
+<div class="row3">
+
+  <!-- HOME -->
+  <div>
+    <div class="ph"><div class="in">
+      <div class="logo"><img class="brandlogo" src="logo.png" alt="">archive</div>
+      <div class="sub"><span class="grad" style="font-weight:800">emibonnie</span> fan translations, kept</div>
+      <div class="search">🔍 search what they said…</div>
+      <div class="mo">october 2026</div>
+      <div class="ev"><div><b>LOVE TO THE MOON AND KEY</b><small>14 Oct · #MoonshadowSeriesFinalEP</small></div><span class="count">12</span></div>
+      <div class="ev"><div><b>EMIBONNIE ANY HAPPY FAMILY</b><small>9 Oct · #GMMTVFANIVAL2026HappyFamilyxEB</small></div><span class="count">7</span></div>
+      <div class="mo">march 2026</div>
+      <div class="ev"><div><b>ANY LOVE EMIBONNIE SESSION D1</b><small>7 Mar · #EmiBonnieLoveSessionD1</small></div><span class="count">31</span></div>
+      <div class="mo">may 2025</div>
+      <div class="ev"><div><b>EMIBONNIE 1ST FM IN TAIPEI</b><small>17 May · #EmiBonnieFMinTaipei</small></div><span class="count">18</span></div>
+      <div class="ev"><div><b>EMIBONNIE AT EFM</b><small>15 May · #EmiBonniexFANDOMLIVE</small></div><span class="count">4</span></div>
+    </div>
+    <div class="tabbar"><span class="on">events</span><span>search</span><span>＋ add</span><span>me</span></div></div>
+    <div class="cap">Home</div>
+  </div>
+
+  <!-- EVENT -->
+  <div>
+    <div class="ph"><div class="in">
+      <div class="back">‹ events</div>
+      <div class="h">LOVE TO THE MOON AND KEY</div>
+      <div class="meta">14 Oct 2026 · 12 translations · 2 translators</div>
+      <div><span class="pill">#MoonshadowSeriesFinalEP</span><span class="pill">show / interview</span></div>
+      <div class="chips" style="margin-top:6px"><span class="chip on">all</span><span class="chip">🧡 emi</span><span class="chip">💜 bonnie</span><span class="chip">🦁 leo</span><span class="chip">translator ▾</span></div>
+      <div class="ent">
+        <div class="pv"><span>🦁</span>Among all the scenes in this series, do you have a favourite?<br><span>🧡</span>…</div>
+        <div class="m">🧡 💜 🦁 · tl @vacantvolcanic · 🎬</div>
+      </div>
+      <div class="ent">
+        <div class="pv"><span>🦁</span>What impressed you abt this scene?<br><span>·</span>I was impressed with this scene ever since I read the script…</div>
+        <div class="m">🧡 💜 🦁 · tl @vacantvolcanic · 🎬 · follows on ↑</div>
+      </div>
+      <div class="ent">
+        <div class="pv"><span>💜</span>…</div>
+        <div class="m">💜 · tl @translator · 🎬</div>
+      </div>
+    </div>
+    <div class="tabbar"><span class="on">events</span><span>search</span><span>＋ add</span><span>me</span></div></div>
+    <div class="cap">Event: entries show opening lines, no titles</div>
+  </div>
+
+  <!-- TRANSLATION -->
+  <div>
+    <div class="ph" style="display:flex;flex-direction:column">
+      <div style="padding:10px 14px 6px;font-size:12px;color:var(--mute);flex:none">‹ LOVE TO THE MOON AND KEY</div>
+      <div class="vid" style="flex:none">clip · pinned</div>
+      <div class="in" style="padding-top:10px;height:auto;flex:1">
+        <div class="credit">tl <b>@vacantvolcanic</b> · clip by <b>@vacantvolcanic</b> · 14 Oct 2026</div>
+        <div class="cast"><span style="border-color:var(--emi)">🧡 emi</span><span style="border-color:var(--bon)">💜 bonnie</span><span style="border-color:var(--leo)">🦁 leo</span><span style="border-color:var(--gen)">speaker</span></div>
+        <div class="msg f l"><div class="av">🦁</div><div class="bub"><div class="nm">leo</div>Emi and Bonnie, is there anything you want to say abt this scene?</div></div>
+        <div class="msg f e"><div class="av">🧡</div><div class="bub"><div class="nm">emi</div>Actually, I like this scene too.</div></div>
+        <div class="msg f b"><div class="av">💜</div><div class="bub"><div class="nm">bonnie</div>Me too.</div></div>
+        <div class="msg f l"><div class="av">🦁</div><div class="bub"><div class="nm">leo</div>You're just following what they say?</div></div>
+        <div class="msg f b"><div class="av">💜</div><div class="bub"><div class="nm">bonnie</div>Yes, it's already complete/dating (Bonnie didn't pronounce the word clearly).*</div></div>
+      </div>
+      <div class="tabbar" style="position:static"><span class="on">events</span><span>search</span><span>＋ add</span><span>me</span></div>
+    </div>
+    <div class="cap">Translation (phone): clip pinned, bubbles scroll</div>
+  </div>
+</div>
+
+<!-- WEB TRANSLATION -->
+<div class="web">
+  <div class="wnav"><span class="logo"><img class="brandlogo" src="logo.png" alt=""><span class="grad">emibonnie</span> archive</span><span>events · search · ＋ add · sign in with X</span></div>
+  <div class="wbody">
+    <div>
+      <div class="vid">clip · stays in view while the right side scrolls</div>
+      <div class="navparts"><span>‹ previous in event</span><span>next in event ›</span></div>
+    </div>
+    <div class="wscroll">
+      <div class="back">‹ LOVE TO THE MOON AND KEY</div>
+      <div class="credit">tl <b>@vacantvolcanic</b> · clip by <b>@vacantvolcanic</b> · 14 Oct 2026 · <span style="color:var(--bon)">follows on from ↑</span></div>
+      <div><span class="pill">#MoonshadowSeriesFinalEP</span><span class="pill">#fonkanittha</span><span class="pill">show / interview</span></div>
+      <div class="cast"><span style="border-color:var(--emi)">🧡 emi</span><span style="border-color:var(--bon)">💜 bonnie</span><span style="border-color:var(--leo)">🦁 leo</span><span style="border-color:var(--gen)">speaker</span></div>
+      <div class="msg f l"><div class="av">🦁</div><div class="bub" style="max-width:340px"><div class="nm">leo</div>What impressed you abt this scene?</div></div>
+      <div class="msg f g"><div class="av">🌧️</div><div class="bub" style="max-width:340px"><div class="nm">speaker</div>I was impressed with this scene ever since I read the script for it. It's what inspired me to discuss with the songwriters how this character was going to love so deeply until she's remembered…</div></div>
+      <div class="msg f l"><div class="av">🦁</div><div class="bub" style="max-width:340px"><div class="nm">leo</div>Emi and Bonnie, is there anything you want to say abt this scene?</div></div>
+      <div class="msg f e"><div class="av">🧡</div><div class="bub" style="max-width:340px"><div class="nm">emi</div>Actually, I like this scene too.</div></div>
+      <div class="msg f b"><div class="av">💜</div><div class="bub" style="max-width:340px"><div class="nm">bonnie</div>Me too.</div></div>
+    </div>
+  </div>
+</div>
+<div class="cap">Translation (web)</div>
+</div>

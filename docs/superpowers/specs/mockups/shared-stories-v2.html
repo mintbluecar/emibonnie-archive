@@ -1,0 +1,130 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>shared-stories-v2</title><style>body{margin:24px;background:#f3eee6;font-family:system-ui,sans-serif}.cards{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}.subtitle{opacity:.7}</style>
+<h2>Shared stories, and setting up a new event</h2>
+<p class="subtitle">Left: home gets two tabs. Middle: adding @vacantvolcanic's Starlympics post as a shared story. Right: a new event's details are set while adding, and locked after.</p>
+
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  .s{--bg:#f6efe3;--card:#fffdf8;--ink:#2b2233;--mute:#8a7f8f;--line:#eadfce;--emi:#ff8a3d;--bon:#9b6cff;--ok:#2f9a5b;
+     font-family:Nunito,'IBM Plex Sans Thai',sans-serif;color:var(--ink)}
+  .row3{display:flex;gap:26px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+  .cap{font-size:12px;opacity:.7;text-align:center;margin-top:8px;max-width:300px}
+  .ph{width:300px;height:600px;border-radius:26px;overflow:hidden;box-shadow:0 6px 24px #0003;position:relative;background:var(--bg)}
+  .in{padding:14px 14px 70px;height:100%;box-sizing:border-box;overflow:hidden}
+  .grad{background:linear-gradient(90deg,#ff6a2b,#e03a85);-webkit-background-clip:text;color:transparent}
+  .hdr{display:flex;align-items:center;gap:8px}
+  .hdr img{width:34px;height:34px}
+  .hdr .t{font-weight:800;font-size:18px}
+  .fan{display:inline-block;font-size:9.5px;font-weight:800;border:1.5px solid var(--line);border-radius:999px;padding:1px 7px;color:var(--mute);background:var(--card)}
+  .sub{font-size:11px;color:var(--mute);margin:4px 0 10px}
+  .search{display:flex;gap:6px;margin-bottom:10px}
+  .search .box{flex:1;background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:8px 12px;font-size:12px;color:var(--mute)}
+  .search .fbtn{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:8px 10px;display:flex;align-items:center}
+  .tabs{display:flex;background:var(--card);border:1.5px solid var(--line);border-radius:999px;padding:3px;margin-bottom:10px}
+  .tabs span{flex:1;text-align:center;font-size:12px;padding:5px 0;border-radius:999px;color:var(--mute)}
+  .tabs .on{background:linear-gradient(90deg,#ff6a2b,#e03a85);color:#fff;font-weight:800}
+  .mo{font-size:11px;font-weight:800;color:var(--bon);margin:10px 2px 6px}
+  .st{background:var(--card);border-radius:16px;padding:10px 12px;margin-bottom:8px;box-shadow:0 2px 0 var(--line)}
+  .st .who{font-size:11px;font-weight:800;margin-bottom:3px}
+  .st .tx{font-size:12px;line-height:1.45;margin-bottom:5px}
+  .st .m{font-size:10.5px;color:var(--mute)}
+  .tabbar{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;padding:10px 0 14px;font-size:11px;background:var(--card);border-top:1px solid var(--line);color:var(--mute)}
+  .tabbar .on{color:var(--bon);font-weight:800}
+  .steps{display:flex;gap:4px;margin-bottom:12px}
+  .steps span{flex:1;height:4px;border-radius:4px;background:var(--line)}
+  .steps span.on{background:linear-gradient(90deg,#ff6a2b,#e03a85)}
+  .h{font-weight:800;font-size:17px;margin-bottom:8px}
+  .card{background:var(--card);border-radius:16px;padding:10px 12px;margin-bottom:8px;box-shadow:0 2px 0 var(--line)}
+  .tw{display:flex;gap:8px}
+  .thumb{width:70px;height:48px;border-radius:8px;background:#1d1822;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;flex:none}
+  .tw .t{font-size:11.5px;line-height:1.4}
+  .tw .t b{display:block;font-size:11px}
+  .lbl{font-size:10.5px;font-weight:800;color:var(--mute);margin:6px 0 6px}
+  .choice{display:flex;gap:6px;margin-bottom:8px}
+  .choice span{flex:1;text-align:center;font-size:12px;border:1.5px solid var(--line);border-radius:12px;padding:8px 4px;background:var(--card)}
+  .choice .on{border-color:var(--bon);background:#9b6cff14;color:#5b3fa0;font-weight:800}
+  .fld{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:7px 0;border-top:1px solid var(--line)}
+  .fld:first-child{border-top:none}
+  .fld .k{color:var(--mute)}
+  .fld .v{font-weight:700;text-align:right}
+  .hint{font-size:10.5px;color:var(--mute);line-height:1.4;margin-top:6px}
+  .newp{color:#b9531a;font-size:10.5px;font-weight:800}
+  .foot{position:absolute;left:14px;right:14px;bottom:14px}
+  .btn{text-align:center;background:linear-gradient(90deg,#ff6a2b,#e03a85);color:#fff;font-weight:800;border-radius:14px;padding:10px;font-size:13px}
+  .back{font-size:12px;color:var(--mute);margin-bottom:8px;display:flex;justify-content:space-between}
+  .edit{color:var(--bon);font-weight:800}
+  .ev{font-weight:800;font-size:16px}
+  .meta{font-size:11px;color:var(--mute);margin:3px 0 10px}
+  .dim{position:absolute;inset:0;background:#2b223355}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:22px 22px 0 0;padding:10px 14px 14px}
+  .grab{width:36px;height:4px;border-radius:4px;background:var(--line);margin:0 auto 10px}
+  .in2{border:1.5px solid var(--line);border-radius:12px;padding:7px 10px;font-size:12px;background:var(--bg);margin-bottom:8px;display:flex;justify-content:space-between}
+  .in2 small{color:var(--mute)}
+  .lock{font-size:10.5px;color:var(--mute);margin:2px 0 10px;line-height:1.4}
+</style>
+
+<div class="s">
+<div class="row3">
+
+  <!-- HOME TABS -->
+  <div>
+    <div class="ph"><div class="in">
+      <div class="hdr"><img src="logo.png" alt=""><div class="t"><span class="grad">emibonnie</span> archive</div></div>
+      <div class="sub">fan translations, kept <span class="fan">FAN-MADE</span></div>
+      <div class="search"><div class="box">🔍 search what they said…</div><div class="fbtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg></div></div>
+      <div class="tabs"><span>events</span><span class="on">shared stories</span></div>
+      <div class="mo">december 2025</div>
+      <div class="st">
+        <div class="who">🪇 michirujjang <span style="color:var(--mute);font-weight:400">on</span> 🧡 emi 💜 bonnie</div>
+        <div class="tx">"I sat at the back on the stands and so many things happened before my eyes, so many…"</div>
+        <div class="m">23 Dec 2025 · tl @vacantvolcanic · clip by @nxris_s</div>
+      </div>
+      <div class="st">
+        <div class="who">someone <span style="color:var(--mute);font-weight:400">on</span> 💜 bonnie</div>
+        <div class="tx">"…"</div>
+        <div class="m">made-up placeholder</div>
+      </div>
+    </div>
+    <div class="tabbar"><span class="on">home</span><span>search</span><span>＋ add</span><span>me</span></div></div>
+    <div class="cap">Home has two tabs: events and shared stories. Stories are listed newest first, by who's talking about whom.</div>
+  </div>
+
+  <!-- ADD AS SHARED STORY -->
+  <div>
+    <div class="ph"><div class="in">
+      <div class="steps"><span class="on"></span><span class="on"></span><span></span></div>
+      <div class="h">check the details</div>
+      <div class="card"><div class="tw"><div class="thumb">▶ 0:39</div><div class="t"><b>@vacantvolcanic · 23 Dec 2025</b>#EmiBonnie #NamtanFilm #michirujjang 💬: Can you review EmiBonnie during the Starlympics?…</div></div></div>
+      <div class="lbl">what is this?</div>
+      <div class="choice"><span>part of an event</span><span class="on">shared story</span></div>
+      <div class="card">
+        <div class="fld"><span class="k">who's sharing</span><span class="v">🪇 michirujjang <span class="newp">new person · @michirujjang</span></span></div>
+        <div class="fld"><span class="k">about</span><span class="v">🧡 emi 💜 bonnie</span></div>
+        <div class="fld"><span class="k">clip by</span><span class="v">@nxris_s</span></div>
+      </div>
+      <div class="hint">No event hashtag, keyword or live found, so we suggested "shared story". #michirujjang looks like an IG handle, so we suggest adding them as a person. #EmiBonnie and #NamtanFilm are ignored tags.</div>
+    </div>
+    <div class="foot"><div class="btn">next: speakers</div></div></div>
+    <div class="cap">Step 2 asks "part of an event, or a shared story?" Shared stories skip the event and record who's sharing.</div>
+  </div>
+
+  <!-- NEW EVENT INLINE -->
+  <div>
+    <div class="ph"><div class="in">
+      <div class="steps"><span class="on"></span><span class="on"></span><span></span></div>
+      <div class="h">check the details</div>
+      <div class="lbl">what is this?</div>
+      <div class="choice"><span class="on">part of an event</span><span>shared story</span></div>
+      <div class="lbl">new event <span style="background:#ff8a3d22;color:#b9531a;border-radius:999px;padding:1px 7px">set it up now</span></div>
+      <div class="in2"><span>bonnie tiktok live</span><small>name</small></div>
+      <div class="in2"><span>12 Feb 2026</span><small>📅 date</small></div>
+      <div class="in2"><span>live</span><small>type ▾</small></div>
+      <div class="in2"><span style="color:var(--mute)">none</span><small>client / media ▾</small></div>
+      <div class="in2"><span>TikTok live · #beonnnie</span><small>keywords ＋</small></div>
+      <div class="lock">🔒 Once saved, only the owner can change this event. If something's wrong later, use Report on the event.</div>
+    </div>
+    <div class="foot"><div class="btn">next: speakers</div></div></div>
+    <div class="cap">Creating a new event: its details are editable here, during adding. After saving, only you (the owner) can edit it; others can report a problem.</div>
+  </div>
+</div>
+</div>

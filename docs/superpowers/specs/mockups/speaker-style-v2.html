@@ -1,0 +1,36 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>speaker-style-v2</title><style>body{margin:24px;background:#f3eee6;font-family:system-ui,sans-serif}.cards{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}.subtitle{opacity:.7}</style>
+<h2>Chat bubbles, everyone on one side</h2>
+<p class="subtitle">Bubbles from A, single-column flow and cast legend from C. Same speaker twice in a row collapses the name and avatar.</p>
+
+<style>
+  :root{--emi:#ff8a3d;--bon:#9b6cff;--host:#3db8a8}
+  .ph{width:300px;margin:0 auto;border:2px solid #8884;border-radius:20px;padding:12px;background:var(--bg-secondary,#fff1);font-size:13px;line-height:1.45}
+  .legend{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .lg{font-size:11px;border-radius:999px;padding:2px 8px;border:1.5px solid}
+  .msg{display:flex;gap:7px;margin-bottom:3px;align-items:flex-start}
+  .msg.first{margin-top:9px}
+  .av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;flex:none}
+  .av.blank{visibility:hidden}
+  .bub{padding:6px 10px;border-radius:4px 14px 14px 14px;max-width:230px}
+  .msg:not(.first) .bub{border-radius:14px}
+  .nm{font-size:10px;font-weight:700;margin-bottom:2px}
+  .crowd{margin:9px 0 9px 35px;font-size:11px;opacity:.65;font-style:italic}
+  .note{margin-top:12px;border-top:1px solid #8884;padding-top:8px;font-size:11px;opacity:.75}
+</style>
+
+<div class="ph">
+  <div class="legend"><span class="lg" style="border-color:var(--emi)">🦊 Emi</span><span class="lg" style="border-color:var(--bon)">🐰 Bonnie</span><span class="lg" style="border-color:var(--host)">🦁 Host</span></div>
+
+  <div class="msg first"><div class="av" style="background:#3db8a833">🦁</div><div class="bub" style="background:#3db8a822"><div class="nm" style="color:var(--host)">Host</div>Emi and Bonnie, is there anything you want to say abt this scene?</div></div>
+  <div class="msg first"><div class="av" style="background:#ff8a3d33">🦊</div><div class="bub" style="background:#ff8a3d22"><div class="nm" style="color:var(--emi)">Emi</div>Actually, I like this scene too.</div></div>
+  <div class="msg first"><div class="av" style="background:#9b6cff33">🐰</div><div class="bub" style="background:#9b6cff22"><div class="nm" style="color:var(--bon)">Bonnie</div>Me too.</div></div>
+  <div class="msg first"><div class="av" style="background:#3db8a833">🦁</div><div class="bub" style="background:#3db8a822"><div class="nm" style="color:var(--host)">Host</div>You're just following what they say?</div></div>
+  <div class="msg first"><div class="av" style="background:#9b6cff33">🐰</div><div class="bub" style="background:#9b6cff22"><div class="nm" style="color:var(--bon)">Bonnie</div>Yes, it's already complete/dating*</div></div>
+  <div class="msg"><div class="av blank"></div><div class="bub" style="background:#9b6cff22">It's complete! Complete! The content is complete!</div></div>
+  <div class="crowd">🗣️ Ahhh~</div>
+  <div class="msg first"><div class="av" style="background:#ff8a3d33">🦊</div><div class="bub" style="background:#ff8a3d22"><div class="nm" style="color:var(--emi)">Emi</div>We hug all the time!</div></div>
+  <div class="crowd">🗣️ 🐒🐒🐒🐒🐒🐒</div>
+  <div class="msg first"><div class="av" style="background:#ff8a3d33">🦊</div><div class="bub" style="background:#ff8a3d22"><div class="nm" style="color:var(--emi)">Emi</div>We hug all the time.</div></div>
+
+  <div class="note">* Bonnie didn't pronounce ครบ (krob), "complete", very clearly. Without the "r" it becomes คบ (job), "to date".</div>
+</div>

@@ -1,0 +1,108 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>people-me-v1</title><style>body{margin:24px;background:#f3eee6;font-family:system-ui,sans-serif}.cards{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}.subtitle{opacity:.7}</style>
+<h2>Person, translator, and "me"</h2>
+<p class="subtitle">Left: a person's page. Middle: a translator's page. Right: "me" for a signed-in translator, with remove and opt-out. Counts are made up.</p>
+
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  .s{--bg:#f6efe3;--card:#fffdf8;--ink:#2b2233;--mute:#8a7f8f;--line:#eadfce;--emi:#ff8a3d;--bon:#9b6cff;--ok:#2f9a5b;--bad:#c8433a;
+     font-family:Nunito,'IBM Plex Sans Thai',sans-serif;color:var(--ink)}
+  .row3{display:flex;gap:26px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+  .cap{font-size:12px;opacity:.7;text-align:center;margin-top:8px;max-width:300px}
+  .ph{width:300px;height:620px;border-radius:26px;overflow:hidden;box-shadow:0 6px 24px #0003;position:relative;background:var(--bg)}
+  .in{padding:14px 14px 70px;height:100%;box-sizing:border-box;overflow:hidden}
+  .tabbar{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;padding:10px 0 14px;font-size:11px;background:var(--card);border-top:1px solid var(--line);color:var(--mute)}
+  .tabbar .on{color:var(--bon);font-weight:800}
+  .back{font-size:12px;color:var(--mute);margin-bottom:10px}
+  .hero{border-radius:20px;padding:16px;text-align:center;margin-bottom:12px}
+  .hero .em{font-size:40px;line-height:1}
+  .hero .nm{font-weight:800;font-size:22px;margin-top:4px}
+  .hero .ig{font-size:12px;color:var(--mute)}
+  .hero .ct{font-size:11.5px;margin-top:6px}
+  .seg{display:flex;background:var(--card);border:1.5px solid var(--line);border-radius:999px;padding:3px;margin-bottom:10px}
+  .seg span{flex:1;text-align:center;font-size:11.5px;padding:4px 0;border-radius:999px;color:var(--mute)}
+  .seg .on{background:#9b6cff1f;color:#5b3fa0;font-weight:800}
+  .grp{font-size:11px;font-weight:800;color:var(--bon);margin:10px 2px 6px}
+  .ent{background:var(--card);border-radius:16px;padding:9px 12px;margin-bottom:7px;box-shadow:0 2px 0 var(--line)}
+  .ent .pv{font-size:12px;line-height:1.45;margin-bottom:4px}
+  .ent .m{font-size:10.5px;color:var(--mute)}
+  .ent.sel{outline:2px solid var(--bad)}
+  .chk{display:inline-block;width:14px;height:14px;border-radius:4px;border:1.5px solid var(--line);vertical-align:-2px;margin-right:6px;background:var(--bg)}
+  .chk.on{background:var(--bad);border-color:var(--bad)}
+  .tav{width:52px;height:52px;border-radius:50%;background:#1d9bf022;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto}
+  .stats{display:flex;justify-content:center;gap:16px;font-size:11px;color:var(--mute);margin-top:6px}
+  .stats b{display:block;font-size:15px;color:var(--ink)}
+  .h{font-weight:800;font-size:17px}
+  .who{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:14px;padding:9px 11px;margin:8px 0 10px;font-size:12px}
+  .badge{font-size:9.5px;font-weight:800;border-radius:999px;padding:1px 7px;background:#2f9a5b1f;color:var(--ok)}
+  .bar{display:flex;justify-content:space-between;align-items:center;background:var(--card);border-radius:12px;padding:7px 10px;margin-bottom:8px;font-size:11.5px}
+  .rm{color:var(--bad);font-weight:800}
+  .danger{border:1.5px solid #c8433a55;border-radius:14px;padding:10px 11px;margin-top:10px;background:#c8433a0a}
+  .danger b{font-size:12.5px;color:var(--bad)}
+  .danger p{font-size:11px;color:var(--mute);margin:4px 0 8px;line-height:1.4}
+  .dbtn{display:inline-block;font-size:11.5px;font-weight:800;color:var(--bad);border:1.5px solid var(--bad);border-radius:10px;padding:5px 10px}
+</style>
+
+<div class="s">
+<div class="row3">
+
+  <!-- PERSON -->
+  <div>
+    <div class="ph"><div class="in">
+      <div class="back">‹ back</div>
+      <div class="hero" style="background:linear-gradient(160deg,#9b6cff26,#9b6cff08)">
+        <div class="em">💜</div>
+        <div class="nm" style="color:#7a4fe0">bonnie</div>
+        <div class="ig">@beonnnie</div>
+        <div class="ct">in 412 translations · 58 events · 9 shared stories</div>
+      </div>
+      <div class="seg"><span class="on">by event</span><span>all, newest</span><span>with…</span></div>
+      <div class="grp">LOVE TO THE MOON AND KEY · 14 Oct 2026</div>
+      <div class="ent"><div class="pv">💜 Yes, it's already complete/dating…</div><div class="m">🧡 💜 🦁 · tl @vacantvolcanic</div></div>
+      <div class="grp">bonnie tiktok live · 12 Feb 2026</div>
+      <div class="ent"><div class="pv">💜 I haven't played games in a super long time, guys. Super long…</div><div class="m">💜 · tl @vacantvolcanic</div></div>
+      <div class="grp">shared story · 23 Dec 2025</div>
+      <div class="ent"><div class="pv">🪇 …P'Emi, P'Bonnie were there too. Thank you for loving each other…</div><div class="m">🪇 michirujjang · tl @vacantvolcanic</div></div>
+    </div>
+    <div class="tabbar"><span class="on">home</span><span>search</span><span>＋ add</span><span>me</span></div></div>
+    <div class="cap">Person: their emoji, colour, IG. Translations grouped by event, including shared stories about them. "with…" filters to moments with someone else too.</div>
+  </div>
+
+  <!-- TRANSLATOR -->
+  <div>
+    <div class="ph"><div class="in">
+      <div class="back">‹ back</div>
+      <div class="hero" style="background:var(--card)">
+        <div class="tav">𝕏</div>
+        <div class="nm" style="font-size:18px">@vacantvolcanic</div>
+        <div class="ig">on X · <span style="color:var(--bon)">open profile ↗</span></div>
+        <div class="stats"><span><b>298</b>translations</span><span><b>61</b>events</span><span><b>2023–2026</b>active</span></div>
+      </div>
+      <div class="seg"><span class="on">by event</span><span>all, newest</span></div>
+      <div class="grp">LOVE TO THE MOON AND KEY · 14 Oct 2026</div>
+      <div class="ent"><div class="pv">🦁 What impressed you abt this scene?…</div><div class="m">🧡 💜 🦁</div></div>
+      <div class="ent"><div class="pv">🦁 Among all the scenes in this series…</div><div class="m">🧡 💜 🦁</div></div>
+      <div class="grp">ANY LOVE EMIBONNIE SESSION D1 · 7 Mar 2026</div>
+      <div class="ent"><div class="pv">🗣️ (fans screaming after the song) 💜 You guys liked that song?…</div><div class="m">🧡 💜</div></div>
+    </div>
+    <div class="tabbar"><span class="on">home</span><span>search</span><span>＋ add</span><span>me</span></div></div>
+    <div class="cap">Translator: their X handle (as last seen), totals, translations by event. If they opt out, this page just says "this translator has opted out".</div>
+  </div>
+
+  <!-- ME (TRANSLATOR) -->
+  <div>
+    <div class="ph"><div class="in">
+      <div class="h">me</div>
+      <div class="who"><span class="tav" style="width:30px;height:30px;font-size:14px;margin:0">𝕏</span><span>@vacantvolcanic <span class="badge">✓ translator</span></span></div>
+      <div class="seg"><span class="on">my translations</span><span>added by me</span></div>
+      <div class="bar"><span><span class="chk on"></span>1 selected</span><span class="rm">remove from archive</span></div>
+      <div class="ent sel"><div class="pv"><span class="chk on"></span>💜 I haven't played games in a super long time…</div><div class="m">bonnie tiktok live · 12 Feb 2026</div></div>
+      <div class="ent"><div class="pv"><span class="chk"></span>🦁 What impressed you abt this scene?…</div><div class="m">LOVE TO THE MOON AND KEY · 14 Oct 2026</div></div>
+      <div class="ent" style="opacity:.55"><div class="pv"><span class="chk"></span>🦁 Among all the scenes… </div><div class="m">removed by you · <span style="color:var(--bon);font-weight:800">restore</span></div></div>
+      <div class="danger"><b>opt out of the archive</b><p>Hides all 298 of your translations and stops anyone adding your tweets in future. You can opt back in any time.</p><span class="dbtn">opt out…</span></div>
+    </div>
+    <div class="tabbar"><span>home</span><span>search</span><span>＋ add</span><span class="on">me</span></div></div>
+    <div class="cap">Me (translator): select and remove entries, restore removed ones, or opt out the whole account. Signed in with X, recognised automatically.</div>
+  </div>
+</div>
+</div>

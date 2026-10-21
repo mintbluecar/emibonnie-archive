@@ -60,7 +60,8 @@ One translator's translation of one clip, or one moment. It has these fields, wh
 |---|---|---|
 | Date | tweet's posted date, editable | date the moment happened if known, otherwise post date |
 | Artist(s) | derived from mapped speakers, editable | the known people in the entry |
-| Type | submitter picks from a list the owner manages | e.g. show / interview, fan meet / fan day, live |
+| Kind | submitter, suggested | **part of an event** or **shared story** (see below) |
+| Type | submitter picks from a list the owner manages | e.g. show / interview, fan meet / fan day, live, **shared story** |
 | Client / Media | submitter, optional, list the owner manages | e.g. EFM Station |
 | Keyword | parsed from tweet (the all-caps title line), editable | e.g. "EMIBONNIE AT EFM", "ANY LOVE EMIBONNIE SESSION D1" |
 | Hashtag(s) | parsed from tweet, minus ignored hashtags | e.g. #EmiBonniexFANDOMLIVE |
@@ -77,12 +78,31 @@ One translator's translation of one clip, or one moment. It has these fields, wh
 
 ### Event
 
-A group of translations from the same occasion (a fan meeting, a show appearance, a livestream). It's identified by **keyword and/or hashtag**. Translations from different translators that share the event's keyword or hashtag land on the same event page automatically.
+A group of translations from the same occasion (a fan meeting, a show appearance, a livestream). Translations from different translators about the same occasion land on the same event page automatically. An event is matched in one of two ways:
 
-- An event has a display name (defaults to the keyword), a date, keyword(s), hashtag(s), a type, and an optional client/media.
-- **Ignored hashtags:** the owner keeps a list of general hashtags (e.g. #EmiBonnie) that are never used for grouping.
-- **Unsorted:** a translation that doesn't match any event (e.g. a personal livestream with no hashtag) goes to an Unsorted list. The owner files it into an existing event or creates a new one, e.g. "bonnie personal live, 9 Oct 2026". The owner can also move any translation to a different event.
-- If a tweet's keyword or hashtag doesn't match an existing event, a new event is created automatically and flagged for the owner to look over.
+1. **Keyword and/or event hashtag.** Used for organised events, e.g. "EMIBONNIE ANY HAPPY FAMILY" / #GMMTVFANIVAL2026HappyFamilyxEB.
+2. **Who + where + when.** Used for lives and other occasions with no event hashtag, e.g. `#beonnnie TikTok live [260212]` (`vacantvolcanic/status/2021992269596045801`):
+   - **who** comes from a person hashtag (see Person). #beonnnie → bonnie.
+   - **where** comes from a platform phrase: "TikTok live", "IG live", and similar.
+   - **when** comes from a date in the text, e.g. `[260212]` (YYMMDD) or `12/2`. If there's none, the tweet's post date is used.
+   - The event is named like "bonnie tiktok live · 12 Feb 2026".
+   - A second translation matches it if it has the same person, same platform, and a date **within one day either side**. That covers lives that run past midnight and translations posted the next day. (Approved as fine by the owner.)
+
+Rules:
+- An event has a display name (defaults to the keyword, or who + where for lives), a date, keyword(s), hashtag(s), a type, and an optional client/media.
+- **Ignored hashtags:** the owner keeps a list of general hashtags (e.g. #EmiBonnie, #NamtanFilm) that are never used for grouping.
+- **Choosing a different event:** in the add flow, tapping the event opens a picker. It has a search box, then suggested events from nearby dates with the current match ticked, then a **"＋ this is a separate event"** button. That button creates a new event even when one matched (e.g. bonnie went live twice on one day). Same-named events are told apart by start time if the tweet gives one, otherwise by a number: "bonnie tiktok live · 12 Feb 2026 (2)".
+- **Creating an event:** when a translation starts a new event, the submitter sets its details (name, date, type, client/media, keywords/hashtags) right there in the add flow. **Once saved, only the owner can edit the event** (owner's decision). Anyone else who spots a mistake uses **Report** on the event page, which lands in the owner's reports list.
+- **Unsorted:** a translation that's neither matched to an event nor marked a shared story goes to an Unsorted list for the owner to file. The owner can also move any translation to a different event.
+- New events are flagged in the owner's admin so they can be looked over.
+
+### Shared story
+
+A translation that **isn't tied to an event**: someone else talking about emi and/or bonnie. For example, michirujjang on the Starlympics (`vacantvolcanic/status/2003413749940834557`). The translator calls these "shared stories".
+
+- The add flow asks "part of an event, or a shared story?" It suggests "shared story" when no event hashtag, keyword, or live pattern is found.
+- A shared story records **who's sharing** (a person; an IG-like hashtag such as #michirujjang is suggested as a new person) and **who it's about** (people).
+- "Shared story" is a **type**, so it shows up as an option in the type filter. It is **not a home tab** (owner's decision: a tab would make it too prominent). Shared stories appear in search results, on the shared-story type filter, and on the pages of everyone involved. They never appear on the events timeline.
 
 ### Person
 
@@ -96,8 +116,9 @@ A known personality: emi, bonnie, leo (a host), and others as they appear.
 - **(my call)** Someone with no Instagram account can't be added as a known person by submitters. They're mapped to a generic role, and the owner can create them by hand with a placeholder key.
 - **(my call)** IG handles can change. The owner can edit a person's handle. Existing translations stay linked, because links are by internal person ID, not by handle.
 - The owner can edit people and merge duplicates.
+- **Person hashtags are their IG handles** (owner's information): #beonnnie means @beonnnie, which is bonnie. The site recognises a person from a hashtag that matches their stored IG handle. The owner can add extra hashtags to a person if a fandom tag differs from the handle. Person hashtags identify **who** (for lives, shared stories and tagging). They never create or match an event by themselves.
 
-**Generic roles** cover people who don't need telling apart: Host, Fan, Speaker. They have a neutral style and no person page.
+**Generic roles** cover people who don't need telling apart: host, fan, speaker. They have a neutral style and no person page. A translator's own emoji is kept for a generic role (e.g. 🌧️ shown as "speaker"), since generic roles have no standard emoji. 🗣️ is pre-mapped to **crowd reaction**, and 💬 (chat/comments) is suggested as **fan**.
 
 ### Speaker mapping
 
@@ -136,6 +157,15 @@ Tested examples (2026-10-21):
 - `vacantvolcanic/status/2030321729902641632`: a long post with a 2½-min clip.
 - `vacantvolcanic/status/2110438810274414709`: a long post that quotes the same translator's earlier clip.
 - `danaNYB/status/2108748780564816034` and `SugarHoneyz13/status/2108532547101856124`: two translators covering the same event with the same keyword and hashtag. Both clips were posted by other accounts.
+- `vacantvolcanic/status/2021992269596045801`: a TikTok live with no event hashtag (who + where + when).
+- `vacantvolcanic/status/2003413749940834557`: a shared story. The clip is from @nxris_s.
+
+**"Clip by"** is always shown, even when the clip's source is the translator (owner's decision). It names the account X reports the video came from. X only gives one level, so if that account had itself reposted the video, we can't see further back. The submitter can correct it.
+
+**The add flow, in three steps** (mockups `add-flow-v1.html`, `add-flow-live.html`, `add-flow-separate.html`, `shared-stories-v2.html`):
+1. **Paste a link.** Shows "adding as @handle". Explains what happens for duplicates and opted-out translators.
+2. **Check the details.** Tweet preview with clip thumbnail. "Part of an event / shared story" choice. Event box: the match ("✓ matches N"), or a new event with its details editable inline, or the event picker. Hashtags, type, client/media (optional), clip by, "follows on from" (quoted post, with an offer to add it too), "＋ add follow-up tweet" for threads. For shared stories: who's sharing and who it's about.
+3. **Who's speaking?** Each marker with a dropdown. Remembered and default answers are pre-filled and labelled "remembered". The dropdown has known people (with IG handles) and a search box, then "＋ add a new person" (asks for IG handle), then the generic roles. Save stays disabled until every marker is mapped ("N left to map").
 
 ## Bulk import (launch content)
 
@@ -173,29 +203,71 @@ Both imports:
   - **Undo (my call):** a translator can restore entries they removed, or opt back in, since the data was never deleted.
   - The owner's **hide** works the same way, but only the owner can undo it.
 - **Owner:** a single admin, set by X user ID in config.
-- **Editing (my call):** a submitter can edit their own entries. A translator can edit the details of their own translations (speaker map, type, event, order) but not the translation text, which stays verbatim. The owner can edit everything. Every edit is logged (who, when, before/after), so a wrong change can be undone.
+- **Editing (my call):** a submitter can edit their own entries (this can move an entry to a different event, but never changes an event's own details; only the owner can do that). A translator can edit the details of their own translations (speaker map, type, event, order) but not the translation text, which stays verbatim. The owner can edit everything. Every edit is logged (who, when, before/after), so a wrong change can be undone.
 - **"Added by" (my call):** shows the submitter's X handle. Google-only users choose a public display name when they first submit. Names and emails from Google are never shown publicly, and emails are never exported.
 - **Blocking:** the owner can block a user. Their submissions are hidden and they can't submit again.
 - **Approval switch:** a site setting "new submissions need approval". It's **off** at launch (entries go live immediately). When it's on, new entries wait in the owner's review list.
 - If X sign-in fails at the step where the site asks X who the user is, the site shows a clear message, and the owner sees an alert in the admin page.
 
+## Visual design
+
+Approved with the owner on 2026-10-21 using mockups. The mockups are kept in `docs/superpowers/specs/mockups/` (static HTML; open in a browser). They are the reference for the look. Where a later mockup changes an earlier one, the later one wins, and the text below is the source of truth. Known superseded bits: the left phone in `shared-stories-v2.html` shows home tabs, which were dropped; shared story is a type filter instead.
+
+- **Style:** "soft pastel on paper".
+  - Background: warm paper `#f6efe3`. Cards: `#fffdf8`, rounded (about 16px), with a soft bottom shadow line `#eadfce`. Ink: `#2b2233`. Muted text: `#8a7f8f`.
+  - Fonts: Nunito for Latin text, IBM Plex Sans Thai for Thai.
+  - Month headings and section labels are small, bold, lowercase, and purple.
+  - A dark theme is expected too, derived from the same tokens (builder's choice of exact values).
+- **Brand:**
+  - The emibonnie logo (`mockups/logo.png`, supplied by the owner) sits next to the wordmark **"emibonnie archive"**. "emibonnie" uses a gradient of the logo's colours: orange `#ff6a2b` → pink `#e03a85`.
+  - The tagline "fan translations, kept" carries a small **FAN-MADE** badge, so the site is never mistaken for an official one.
+  - Primary buttons use the same orange→pink gradient.
+- **People colours:** emi orange `#ff8a3d`, bonnie **purple** `#9b6cff`. Bonnie stays purple even though the logo uses pink (owner's decision). Speaker bubbles use a light tint of the person's colour, and their name in a darker shade.
+- **Bottom tab bar (phone):** home · search · ＋ add · me. On web these sit in a top bar, with "sign in with X".
+
 ## Pages
 
-The approved mockups (phone and web) are in `.superpowers/brainstorm/` during brainstorming. That folder is not committed, so the descriptions below are the source of truth.
-
-- **Home: events timeline.** Events newest first, grouped by month. Each event shows its name, date, hashtag, and number of translations. Search is one tap away (🔍). Web uses the same layout, wider.
-- **Search.** A search box with filters for person, event, translator, type, and date range. Results show a short excerpt of the matching text with the match highlighted.
-- **Event page.** Name, date, keyword, hashtag, type, client/media, number of translations, and translators. Filter by person and translator. The list is in event order (the order things happened), with a toggle for newest first.
-- **Translation page.**
-  - **Web:** the video is on the left and stays fixed while the right column scrolls. **Phone:** the video is pinned to the top while the text scrolls underneath.
-  - Then the date, translator, "clip by" credit, tags (people, type, client, keyword, hashtag), and the speaker bubbles.
-  - At the bottom: original tweet link, original media link, "follows on from" / "next" links, added by, Copy link, and Report.
+- **Home: events timeline** (`screens-v2.html`, header as in `search-v2.html`).
+  - Logo, wordmark and FAN-MADE badge at the top. Then a search box with a **filter icon** (three stacked lines, not the word "filters").
+  - Below that, events newest first, grouped by month. Each card shows the event name, date, hashtag, and a translation count.
+  - **No tabs.** Home lists events only.
+- **Search** (`search-v2.html`).
+  - Opening search (from the tab bar or the home box) focuses the box with the keyboard up. Before typing, it shows recent searches and quick chips for people and types.
+  - **Filter icon:** shows a small count badge when filters are on, and opens a sheet with:
+    - **who's in it:** people chips, with an "any of / all of" switch.
+    - **type** chips, including shared story.
+    - **event, translator, client/media, date** dropdowns.
+    - An apply button showing the live result count ("show 3 translations").
+  - Active filters show as removable chips under the box, plus "clear all".
+  - Results show the event and date, then the matching lines with the match highlighted, then people and translator.
+  - Filters work with an empty search box, for browsing.
+  - **Scoped search:** searching from a person, translator or event page opens the same screen with that filter already applied as a removable chip. Searching from the tab bar or home starts unfiltered.
+- **Event page** (`screens-v2.html`).
+  - Name, date, and translation and translator counts. Tag pills for hashtag and type. Filter chips for people and translator.
+  - Entries show their opening lines, with standard speaker emoji, as a preview (no titles), plus people emoji, translator, a clip marker, and "follows on" where relevant.
+  - Entries are in event order, with a toggle for newest first. There's a Report link for the event.
+- **Translation page** (`screens-v2.html`).
+  - **Phone:** the clip is pinned at the top, and below it scroll the credits ("tl @translator · clip by @source · date"), the cast list, and the bubbles.
+  - **Web:** the clip stays in view on the left, with "‹ previous in event / next in event ›" under it, while the right column scrolls through the credits, tag pills, cast list and bubbles.
+  - At the bottom: original tweet link, original media link, follows-on links, added by, Copy link, and Report.
   - **If the tweet is deleted:** the video area is replaced by "Original tweet is no longer available. Translation kept below."
-- **Person page.** The person's emoji, colour, and name, with their translations grouped by event.
-- **Translator page.** The translator's handle (as last seen) and their translations. Shows "opted out" if they have.
-- **Add page.** Paste a link → review the pre-filled details → map speakers → save.
-- **Me page.** My submissions. For translators, also: my translations, remove, opt out.
-- **Admin pages.** Import (Notion CSV, bulk paste, progress), needs speakers, check these, Unsorted, recently added, reports, events (merge, rename, reorder entries), people (edit, merge), ignored hashtags, Type and Client/Media lists, blocked users, approval switch, and the X sign-in health alert.
+- **Person page** (`people-me-v1.html`).
+  - A header in the person's colour, with emoji, lowercase name, IG handle, and counts (translations, events, shared stories).
+  - Translations grouped by event, with shared stories included. Views: by event / all, newest / "with…" (narrows to moments that also include another person).
+- **Translator page** (`people-me-v1.html`).
+  - X handle (as last seen), a link to the profile, and totals. Translations by event.
+  - If the translator has opted out, the page only says "this translator has opted out".
+- **Add page:** see "Intake" above.
+- **Me page** (`people-me-v1.html`).
+  - Everyone: "added by me".
+  - Translators also get a ✓ translator badge and "my translations". They can multi-select and "remove from archive". Removed entries stay listed, faded, with "restore".
+  - A red **opt out** box explains the effect, and that they can opt back in.
+- **Admin** (web, owner only; `admin-import-v1.html`).
+  - **Sidebar:** import, needs speakers, check these, unsorted, reports, events, people, ignored hashtags, users & blocks, settings (approval switch, X sign-in health alert, Type and Client/Media lists).
+  - **Import is three stages:**
+    1. **Sources.** Notion CSV drop, showing how each column was matched, with Name shown as ignored. A paste box that highlights the tweet links it finds, with counts for already in Notion, already archived, and opted out. A tweet total and a time estimate.
+    2. **Fetch.** A progress bar and time remaining. Counts for fetched, deleted (kept from Notion text / lost), "don't look like translations" (goes to check these), and failed (with retry). Safe to close the page.
+    3. **Map speakers.** Translators are listed with how many markers are left to map. For the selected translator, a table shows each marker, how many entries use it, an example line, and a "who is it?" dropdown. A rare or inconsistent marker gets a "may be different people" warning with per-entry review. Buttons: "publish ready ones" / "publish all".
 
 ## Video player
 

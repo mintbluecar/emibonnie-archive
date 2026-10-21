@@ -1,0 +1,123 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>add-flow-v1</title><style>body{margin:24px;background:#f3eee6;font-family:system-ui,sans-serif}.cards{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}.subtitle{opacity:.7}</style>
+<h2>Adding a translation</h2>
+<p class="subtitle">Three steps on phone, using @vacantvolcanic's Moonshadow post. Remembered answers are pre-filled; only 🌧️ needs a decision.</p>
+
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  .s{--bg:#f6efe3;--card:#fffdf8;--ink:#2b2233;--mute:#8a7f8f;--line:#eadfce;--emi:#ff8a3d;--bon:#9b6cff;--leo:#2fa89a;--ok:#2f9a5b;
+     font-family:Nunito,'IBM Plex Sans Thai',sans-serif;color:var(--ink)}
+  .row3{display:flex;gap:26px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+  .cap{font-size:12px;opacity:.7;text-align:center;margin-top:8px;max-width:300px}
+  .ph{width:300px;height:620px;border-radius:26px;overflow:hidden;box-shadow:0 6px 24px #0003;position:relative;background:var(--bg)}
+  .in{padding:14px 14px 70px;height:100%;box-sizing:border-box;overflow:hidden}
+  .grad{background:linear-gradient(90deg,#ff6a2b,#e03a85);-webkit-background-clip:text;color:transparent}
+  .steps{display:flex;gap:4px;margin-bottom:12px}
+  .steps span{flex:1;height:4px;border-radius:4px;background:var(--line)}
+  .steps span.on{background:linear-gradient(90deg,#ff6a2b,#e03a85)}
+  .h{font-weight:800;font-size:17px;margin-bottom:2px}
+  .p{font-size:12px;color:var(--mute);margin-bottom:12px;line-height:1.4}
+  .who{display:flex;align-items:center;gap:6px;font-size:11.5px;background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:7px 10px;margin-bottom:14px}
+  .who .dot{width:20px;height:20px;border-radius:50%;background:#1d9bf033;display:flex;align-items:center;justify-content:center;font-size:11px}
+  .inp{background:var(--card);border:1.5px solid var(--bon);border-radius:14px;padding:10px 12px;font-size:12px;word-break:break-all}
+  .btn{margin-top:12px;text-align:center;background:linear-gradient(90deg,#ff6a2b,#e03a85);color:#fff;font-weight:800;border-radius:14px;padding:10px;font-size:13px}
+  .btn.ghost{background:none;color:var(--mute);border:1.5px solid var(--line)}
+  .note{font-size:11px;color:var(--mute);margin-top:10px;line-height:1.45}
+  .card{background:var(--card);border-radius:16px;padding:10px 12px;margin-bottom:8px;box-shadow:0 2px 0 var(--line)}
+  .tw{display:flex;gap:8px}
+  .thumb{width:70px;height:48px;border-radius:8px;background:#1d1822;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;flex:none}
+  .tw .t{font-size:11.5px;line-height:1.4}
+  .tw .t b{display:block;font-size:11px}
+  .fld{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:7px 0;border-top:1px solid var(--line)}
+  .fld:first-child{border-top:none}
+  .fld .k{color:var(--mute)}
+  .fld .v{font-weight:700;text-align:right}
+  .ok{color:var(--ok);font-size:11px;font-weight:800}
+  .new{color:#d4651c;font-size:11px;font-weight:800}
+  .pill{display:inline-block;font-size:10.5px;border-radius:999px;padding:1px 8px;border:1.5px solid var(--line);margin-left:3px}
+  .mk{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+  .mk:first-child{border-top:none}
+  .mk .src{font-size:20px;width:28px;text-align:center}
+  .mk .arrow{color:var(--mute);font-size:12px}
+  .mk .pick{flex:1;display:flex;justify-content:space-between;align-items:center;border:1.5px solid var(--line);border-radius:12px;padding:6px 9px;font-size:12px;background:var(--bg)}
+  .mk .pick.need{border-color:#ff8a3d;background:#ff8a3d14}
+  .mk .ex{font-size:10.5px;color:var(--mute);margin:-4px 0 0 36px;padding-bottom:6px}
+  .mk .n{font-size:10px;color:var(--mute)}
+  .rem{font-size:9.5px;color:var(--ok);font-weight:800;margin-left:4px}
+  .dd{position:absolute;left:14px;right:14px;bottom:70px;background:var(--card);border-radius:16px;box-shadow:0 10px 30px #0004;padding:8px;font-size:12px}
+  .dd .q{border:1.5px solid var(--line);border-radius:10px;padding:6px 9px;color:var(--mute);margin-bottom:6px}
+  .dd .g{font-size:10px;font-weight:800;color:var(--mute);margin:6px 4px 3px}
+  .dd .o{padding:6px 8px;border-radius:8px;display:flex;justify-content:space-between}
+  .dd .o:hover,.dd .o.hl{background:#9b6cff14}
+  .dd .o small{color:var(--mute)}
+  .foot{position:absolute;left:14px;right:14px;bottom:14px}
+</style>
+
+<div class="s">
+<div class="row3">
+
+  <!-- STEP 1 -->
+  <div>
+    <div class="ph"><div class="in">
+      <div class="steps"><span class="on"></span><span></span><span></span></div>
+      <div class="h">add a translation</div>
+      <div class="p">Paste the link to a translator's tweet. We'll fill in the rest.</div>
+      <div class="who"><span class="dot">𝕏</span>adding as <b>@mintbluetoyota</b></div>
+      <div class="inp">https://x.com/vacantvolcanic/status/2110438810274414709</div>
+      <div class="btn">next</div>
+      <div class="note">Part of a thread? You can add the follow-up tweets on the next step.<br><br>Already archived → we'll take you to it.<br>Translator opted out → we'll let you know it can't be added.</div>
+    </div></div>
+    <div class="cap">1 · Paste a link</div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div>
+    <div class="ph"><div class="in">
+      <div class="steps"><span class="on"></span><span class="on"></span><span></span></div>
+      <div class="h">check the details</div>
+      <div class="card"><div class="tw"><div class="thumb">▶ 2:31</div><div class="t"><b>@vacantvolcanic · 14 Oct 2026</b>LOVE TO THE MOON AND KEY #MoonshadowSeriesFinalEP 🦁: What impressed you abt this scene?…</div></div></div>
+      <div class="card">
+        <div class="fld"><span class="k">event</span><span class="v">LOVE TO THE MOON AND KEY <span class="ok">✓ matches 11</span></span></div>
+        <div class="fld"><span class="k">hashtags</span><span class="v"><span class="pill">#MoonshadowSeriesFinalEP</span><span class="pill">#fonkanittha</span></span></div>
+        <div class="fld"><span class="k">type</span><span class="v">show / interview ▾</span></div>
+        <div class="fld"><span class="k">client / media</span><span class="v" style="color:var(--mute);font-weight:400">optional ▾</span></div>
+        <div class="fld"><span class="k">clip by</span><span class="v">@vacantvolcanic</span></div>
+        <div class="fld"><span class="k">follows on from</span><span class="v">quoted post <span class="ok">✓ add too</span></span></div>
+        <div class="fld"><span class="k">thread</span><span class="v" style="color:var(--bon)">＋ add follow-up tweet</span></div>
+      </div>
+      <div class="foot"><div class="btn">next: speakers</div></div>
+    </div></div>
+    <div class="cap">2 · Check what was filled in. Anything wrong is one tap to change.</div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div>
+    <div class="ph"><div class="in">
+      <div class="steps"><span class="on"></span><span class="on"></span><span class="on"></span></div>
+      <div class="h">who's speaking?</div>
+      <div class="p">We found 5 speaker markers. Remembered ones are filled in from @vacantvolcanic's past posts.</div>
+      <div class="card">
+        <div class="mk"><span class="src">🐰</span><span class="arrow">→</span><span class="pick">💜 bonnie <span class="rem">remembered</span><span>▾</span></span></div>
+        <div class="mk"><span class="src">🦊</span><span class="arrow">→</span><span class="pick">🧡 emi <span class="rem">remembered</span><span>▾</span></span></div>
+        <div class="mk"><span class="src">🦁</span><span class="arrow">→</span><span class="pick">🦁 leo <span class="rem">remembered</span><span>▾</span></span></div>
+        <div class="mk"><span class="src">🌧️</span><span class="arrow">→</span><span class="pick need">choose… <span>▾</span></span></div>
+        <div class="mk"><span class="src">🗣️</span><span class="arrow">→</span><span class="pick">crowd reaction <span>▾</span></span></div>
+      </div>
+    </div>
+    <div class="dd">
+      <div class="q">🔍 search people</div>
+      <div class="g">known people</div>
+      <div class="o"><span>🧡 emi</span><small>@emiamily</small></div>
+      <div class="o"><span>💜 bonnie</span><small>@beonnnie</small></div>
+      <div class="o"><span>🦁 leo</span><small>@…</small></div>
+      <div class="g">not listed</div>
+      <div class="o hl"><span>＋ add a new person</span><small>needs their IG</small></div>
+      <div class="g">generic</div>
+      <div class="o"><span>host</span><span>fan</span><span>speaker</span></div>
+    </div>
+    <div class="foot"><div class="btn" style="opacity:.5">save · 1 left to map</div></div>
+    </div>
+    <div class="cap">3 · Map speakers. 🌧️ is new, so its dropdown is open: known people, add a new person (by IG handle), or a generic role.</div>
+  </div>
+</div>
+</div>
