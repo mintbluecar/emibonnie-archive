@@ -105,6 +105,8 @@ export default [
     rules: {
       'max-lines': 'off',
       'max-lines-per-function': 'off',
+      complexity: 'off',
+      'max-params': 'off',
     },
   },
   {

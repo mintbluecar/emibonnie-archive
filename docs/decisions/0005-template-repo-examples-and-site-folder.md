@@ -6,7 +6,7 @@ The engine is meant to be reused by other fans ("copy the project as a template,
 
 ## Decision
 
-The reusable unit is a template git repository. Everything a fandom owner edits lives in `site/`, which this repo gitignores. A fictional example site (`examples/solluna/`) ships instead, and `npm run init-site` copies it into `site/` for a new archive. Tests use synthetic fixtures, never real translation text. Each real archive (e.g. `my-archive`) is its own repo created from the template, adding `fan-archive` as an `upstream` remote to pull engine updates.
+The reusable unit is a template git repository. Everything a fandom owner edits lives in `site/`, which this repo gitignores. A fictional example site (`examples/solluna/`) ships instead, and `npm run init-site` copies it into `site/` for a new archive. Tests use synthetic fixtures, never real translation text. Each real archive is its own repo created from the template, adding `fan-archive` as an `upstream` remote to pull engine updates.
 
 ## Consequences
 
