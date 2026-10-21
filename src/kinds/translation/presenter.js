@@ -7,7 +7,7 @@
 import { splitLines } from '../../domain/lines.js';
 import { parseHeader } from '../../domain/header.js';
 import { LIVE_PATTERNS } from '../../domain/constants.js';
-import { resolveMedia, hasVideo, clipByOf } from './media.js';
+import { resolveMedia, hasVideo, clipByOf, publicSources } from './media.js';
 
 /** @typedef {import('../../http/contracts.js').BubbleVM} BubbleVM */
 /** @typedef {import('../../http/contracts.js').CastVM} CastVM */
@@ -101,11 +101,12 @@ function previewLines(details, ctx) {
  * @returns {Preview}
  */
 function preview(card, details, ctx) {
+  const sources = publicSources(details.sources);
   const sourceId = card.sourceId;
   const followsOn = card.followsOn;
   return {
     kind: KIND, sourceId, url: ctx.urlFor(KIND, sourceId), lines: previewLines(details, ctx), people: ctx.chips(card.people),
-    accountHandle: card.account?.handle ?? null, hasVideo: hasVideo(resolveMedia(details.sources)),
+    accountHandle: card.account?.handle ?? null, hasVideo: hasVideo(resolveMedia(sources)),
     followsOnFrom: followsOn ? { sourceId: followsOn.sourceId, url: ctx.urlFor(followsOn.kind, followsOn.sourceId) } : null,
   };
 }
@@ -141,13 +142,14 @@ function castOf(details, ctx) {
  */
 function detail(card, details, ctx) {
   const handle = card.account?.handle ?? null;
+  const sources = publicSources(details.sources);
   return {
     bubbles: bubblesOf(details, ctx),
     cast: castOf(details, ctx),
     original: details.body,
-    credits: { account: card.account, clipBy: clipByOf(details.sources, handle), postedAt: card.postedAt, occurredOn: card.occurredOn },
-    sources: details.sources.map((s) => ({ role: /** @type {string} */ (s.role), url: /** @type {string} */ (s.url), status: /** @type {any} */ (s.status) })),
-    media: resolveMedia(details.sources),
+    credits: { account: card.account, clipBy: clipByOf(sources, handle), postedAt: card.postedAt, occurredOn: card.occurredOn },
+    sources: sources.map((s) => ({ role: /** @type {string} */ (s.role), url: /** @type {string} */ (s.url), status: /** @type {any} */ (s.status) })),
+    media: resolveMedia(sources),
   };
 }
 

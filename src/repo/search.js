@@ -11,6 +11,7 @@
  * does, or one of its (non-ignored) tags' `norm`, its event's name, a
  * person's name on it, or its translator's handle contains `q`. Ordering:
  * the kind's `rank` (best first), then newest, then id -- always total.
+ * `accountHandle` also matches a handle the account held before a change.
  */
 import { visibleItem } from './visibility.js';
 import { EVENT_NOT_DELETED } from './items.js';
@@ -53,7 +54,8 @@ const SIMPLE_FILTERS = [
   ['categories', (ph) => `i.category_id = any(${ph}::int[])`],
   ['placements', (ph) => `i.placement = any(${ph}::text[])`],
   ['eventSlug', (ph) => `exists (select 1 from events es where es.id = i.event_id and es.slug = ${ph})`],
-  ['accountHandle', (ph) => `exists (select 1 from accounts ah where ah.id = i.credited_account_id and lower(ah.handle) = lower(${ph}))`],
+  ['accountHandle', (ph) => `exists (select 1 from accounts ah where ah.id = i.credited_account_id
+    and (lower(ah.handle) = lower(${ph}::text) or ah.meta->'previousHandles' ? lower(${ph}::text)))`],
   ['clientId', (ph) => `i.client_id = ${ph}`],
   ['from', (ph) => `i.occurred_on >= ${ph}::date`],
   ['to', (ph) => `i.occurred_on <= ${ph}::date`],

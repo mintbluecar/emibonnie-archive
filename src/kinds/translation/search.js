@@ -5,7 +5,7 @@
  * interpolate nothing but their placeholder index: the value itself is
  * always bound. `textClause` matches any part's body against an `ilike`
  * pattern (served by the `translation_parts_body_trgm` index); `rank` is
- * the best-matching part's `similarity` to the raw query.
+ * the best-matching part's `word_similarity` to the raw query.
  */
 
 const MAX_MATCH_LINES = 3;
@@ -28,9 +28,14 @@ function textClause(patternIndex) {
   return `i.id in (select tp.item_id from translation_parts tp where tp.body ilike ${placeholder(patternIndex)})`;
 }
 
-/** @param {number} queryIndex the bound raw query */
+/**
+ * `word_similarity(q, body)`: how well q matches the best-matching extent
+ * of a part (1 for a whole-word match), so a long translation isn't
+ * scored down for its length the way `similarity` would.
+ * @param {number} queryIndex the bound raw query
+ */
 function rank(queryIndex) {
-  return `(select max(similarity(tp.body, ${placeholder(queryIndex)})) from translation_parts tp where tp.item_id = i.id)`;
+  return `(select max(word_similarity(${placeholder(queryIndex)}, tp.body)) from translation_parts tp where tp.item_id = i.id)`;
 }
 
 /**

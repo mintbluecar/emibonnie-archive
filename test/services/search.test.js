@@ -7,6 +7,8 @@ import { search } from '../../src/services/search.js';
 import { searchSql } from '../../src/repo/search.js';
 import { kindsRegistry } from '../../src/kinds/_registry.js';
 import { BadRequest } from '../../src/sources/errors.js';
+import { upsertAccount } from '../../src/repo/accounts.js';
+import { addParts } from '../../src/kinds/translation/repo.js';
 
 /** @type {any} */
 let deps;
@@ -52,11 +54,37 @@ test('the text clause can use the trigram index (EXPLAIN)', async () => {
   assert.match(plan, /translation_parts_body_trgm/, plan);
 });
 
-test('ranking: the best-matching part wins, ties fall back to newest then id', async () => {
-  const { results } = await search(deps, { q: 'everyone' });
-  assert.ok(results.length >= 3);
-  const again = await search(deps, { q: 'everyone' });
-  assert.deepEqual(again.results.map((r) => r.sourceId), results.map((r) => r.sourceId), 'a stable order');
+test('ranking: equal rank orders newer posted_at first, then id desc', async () => {
+  const aId = await itemIdOf(deps.db, IDS.EVENT_A);
+  const bId = await itemIdOf(deps.db, IDS.EVENT_B);
+  const [{ posted_at: original }] = await rows(deps.db, 'select posted_at from items where id = $1', [aId]);
+  // every "everyone" match is a whole word: all rank 1, so the order is posted_at desc, id desc
+  const expected = await rows(deps.db, `select s.external_id from items i join item_sources s on s.item_id = i.id and s.role = 'primary'
+    where i.id in (select item_id from translation_parts where body ilike '%everyone%') order by i.posted_at desc, i.id desc`);
+  assert.deepEqual((await search(deps, { q: 'everyone' })).results.map((r) => r.sourceId), expected.map((r) => r.external_id));
+
+  await deps.db.transaction((/** @type {any} */ tx) => tx.query('update items set posted_at = (select posted_at from items where id = $2) where id = $1', [aId, bId]), SYSTEM);
+  try {
+    const order = (await search(deps, { q: 'everyone' })).results.map((r) => r.sourceId);
+    assert.ok(bId > aId);
+    assert.ok(order.indexOf(IDS.EVENT_B) === order.indexOf(IDS.EVENT_A) - 1, 'same posted_at: higher id first');
+  } finally {
+    await deps.db.transaction((/** @type {any} */ tx) => tx.query('update items set posted_at = $2 where id = $1', [aId, original]), SYSTEM);
+  }
+});
+
+test('ranking: the best-matching part decides, ahead of recency', async () => {
+  const threadId = await itemIdOf(deps.db, IDS.THREAD);
+  await deps.db.transaction((/** @type {any} */ tx) => addParts(tx, threadId, [{ sourceId: null, body: 'so many hugs tonight' }]), SYSTEM);
+  try {
+    // THREAD is newer than LONG, but "hugs" only partly matches the word "hug": LONG (whole word) ranks first
+    assert.deepEqual(await ids({ q: 'hug' }), [IDS.LONG, IDS.THREAD]);
+    await deps.db.transaction((/** @type {any} */ tx) => addParts(tx, threadId, [{ sourceId: null, body: 'one last hug' }]), SYSTEM);
+    // now THREAD's best part is a whole-word match too: equal rank, so the newer THREAD comes first
+    assert.deepEqual(await ids({ q: 'hug' }), [IDS.THREAD, IDS.LONG]);
+  } finally {
+    await deps.db.transaction((/** @type {any} */ tx) => tx.query('delete from translation_parts where item_id = $1 and position >= 2', [threadId]), SYSTEM);
+  }
 });
 
 test('no q: every visible item, newest first', async () => {
@@ -83,11 +111,22 @@ test('placements: shared story and posts', async () => {
 test('filters: event, account, dates, categories, kinds; limit 0 gives the count only', async () => {
   assert.deepEqual((await ids({ eventSlug: 'solluna-happy-day-2026-10-19' })).sort(), [IDS.EVENT_A, IDS.EVENT_B].sort());
   assert.deepEqual(await ids({ accountHandle: 'TL_GAMMA' }), [IDS.EVENT_B]);
+  assert.equal((await search(deps, { categories: [32767], clientId: 32767 })).count, 0, 'the smallint maximum is accepted');
   assert.deepEqual(await ids({ from: '2026-03-01', to: '2026-03-01' }), [IDS.JOINT_LIVE]);
   assert.equal((await search(deps, { categories: [1] })).count, 0);
   assert.equal((await search(deps, { kinds: ['translation'] })).count, 9);
   assert.deepEqual(await search(deps, { q: 'hug', limit: 0 }), { count: 1, results: [] });
   assert.equal((await search(deps, { limit: 2, offset: 1 })).results.length, 2);
+});
+
+test('accountHandle also matches a handle the account held before a change', async () => {
+  await deps.db.transaction((/** @type {any} */ tx) => upsertAccount(tx, { platform: 'x', externalId: '9003', handle: 'gamma_renamed' }), SYSTEM);
+  try {
+    assert.deepEqual(await ids({ accountHandle: 'tl_gamma' }), [IDS.EVENT_B]);
+    assert.deepEqual(await ids({ accountHandle: 'Gamma_Renamed' }), [IDS.EVENT_B]);
+  } finally {
+    await deps.db.transaction((/** @type {any} */ tx) => upsertAccount(tx, { platform: 'x', externalId: '9003', handle: 'tl_gamma' }), SYSTEM);
+  }
 });
 
 test('tags, event names, people names and translator handles match too', async () => {
@@ -102,6 +141,10 @@ test('bad input throws BadRequest', async () => {
     { limit: 51 }, { limit: Number.NaN }, { people: ['x'] }, { peopleMode: 'some' }, { placements: ['nope'] },
     { kinds: ['nope'] }, { from: '2026-13-45' }, { categories: [-1] }, { clientId: 'one' },
     { people: Array.from({ length: 51 }, (_, i) => i + 1) },
+    { categories: [32768] }, { categories: [2 ** 31] }, { clientId: 32768 }, { clientId: '99999999999' },
+    { people: [Number.MAX_SAFE_INTEGER + 2] },
+    { q: 'hu\u0000g' }, { q: 'hug\u0007' }, { q: 'line\nbreak' }, { q: 'tab\there' }, { q: 'del\u007f' },
+    { eventSlug: 'a\u0000b' }, { accountHandle: 'tl_\u001fgamma' }, { from: '2026-01-01\u0000' },
   ];
   for (const params of bad) {
     await assert.rejects(search(deps, params), BadRequest, JSON.stringify(params));

@@ -26,6 +26,14 @@ const LIMIT_MAX = 50;
 const OFFSET_MAX = 1000;
 const LIST_MAX = 50;
 const TEXT_MAX = 200;
+/** C0 control characters (NUL included) and DEL: never valid in a query or a text filter. */
+const CONTROL = {
+  /** @param {string} text */
+  test: (text) => [...text].some((ch) => { const code = ch.codePointAt(0) ?? 0; return code < 0x20 || code === 0x7f; }),
+};
+/** The largest id each filter's column can hold (`bigint` ids stay within JS's safe integers). */
+const SMALLINT_MAX = 32767;
+const BIGINT_ID_MAX = Number.MAX_SAFE_INTEGER;
 const DATE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 
 /** @param {unknown} value */
@@ -45,7 +53,7 @@ function integer(name, value, max, fallback) {
 /** @param {unknown} q @returns {string|null} */
 function queryOf(q) {
   if (absent(q)) return null;
-  if (typeof q !== 'string') throw new BadRequest('q must be text');
+  if (typeof q !== 'string' || CONTROL.test(q)) throw new BadRequest('q must be text without control characters');
   const text = q.normalize('NFC').trim();
   const length = [...text].length;
   if (length < Q_MIN || length > Q_MAX) throw new BadRequest(`q must be ${Q_MIN} to ${Q_MAX} characters`);
@@ -66,7 +74,7 @@ function listOf(name, value, each) {
 /** @param {string} name @param {unknown} value @param {(s: string) => boolean} [ok] @returns {string|undefined} */
 function textOf(name, value, ok = () => true) {
   if (absent(value)) return undefined;
-  if (typeof value !== 'string' || value.length > TEXT_MAX || !ok(value)) throw new BadRequest(`${name} is not valid`);
+  if (typeof value !== 'string' || value.length > TEXT_MAX || CONTROL.test(value) || !ok(value)) throw new BadRequest(`${name} is not valid`);
   return value;
 }
 
@@ -76,9 +84,12 @@ const oneOf = (name, allowed) => (item) => {
   return item;
 };
 
-/** @param {string} name @returns {(item: unknown) => number} */
-const id = (name) => (item) => {
-  const n = integer(name, item, Number.MAX_SAFE_INTEGER);
+/**
+ * A positive id that fits its column (`max`: the column type's largest value).
+ * @param {string} name @param {number} max @returns {(item: unknown) => number}
+ */
+const id = (name, max) => (item) => {
+  const n = integer(name, item, max);
   if (n < 1) throw new BadRequest(`${name} must hold positive ids`);
   return n;
 };
@@ -91,13 +102,13 @@ function filtersOf(params) {
   const peopleMode = params.peopleMode ?? 'any';
   if (peopleMode !== 'any' && peopleMode !== 'all') throw new BadRequest('peopleMode must be any or all');
   return {
-    people: listOf('people', params.people, id('people')),
+    people: listOf('people', params.people, id('people', BIGINT_ID_MAX)),
     peopleMode,
-    categories: listOf('categories', params.categories, id('categories')),
+    categories: listOf('categories', params.categories, id('categories', SMALLINT_MAX)),
     placements: listOf('placements', params.placements, oneOf('placements', PLACEMENTS)),
     eventSlug: textOf('eventSlug', params.eventSlug),
     accountHandle: textOf('accountHandle', params.accountHandle)?.replace(/^@/, ''),
-    clientId: absent(params.clientId) ? undefined : id('clientId')(params.clientId),
+    clientId: absent(params.clientId) ? undefined : id('clientId', SMALLINT_MAX)(params.clientId),
     from: textOf('from', params.from, isDate),
     to: textOf('to', params.to, isDate),
   };

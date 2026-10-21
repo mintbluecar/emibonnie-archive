@@ -12,6 +12,17 @@
 /** @typedef {import('../../http/contracts.js').ImagesVM} ImagesVM */
 /** @typedef {Record<string, any>} SourceRow */
 
+/**
+ * The sources public output may show: every source whose account opted
+ * out is dropped (its clip, pictures or quoted post with it), whatever its
+ * role. The one place the translation kind redacts opted-out accounts.
+ * @param {SourceRow[]} sources
+ * @returns {SourceRow[]}
+ */
+export function publicSources(sources) {
+  return sources.filter((s) => s.accountOptedOut !== true);
+}
+
 /** @param {any} video @returns {VideoVM|null} */
 function videoOf(video) {
   if (!video || !Array.isArray(video.variants) || video.variants.length === 0) return null;

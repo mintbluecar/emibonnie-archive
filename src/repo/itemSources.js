@@ -70,7 +70,9 @@ export async function listSources(db, itemId) {
 /**
  * Every source of each item, grouped by item id, in `(position, id)` order,
  * each with its account's current handle (`accountHandle`; null when there's
- * no account or it has opted out).
+ * no account or it has opted out) and `accountOptedOut`. Public output must
+ * drop a source whose account opted out (the translation kind does so in
+ * `publicSources`, src/kinds/translation/media.js).
  * @param {Tx} db
  * @param {number[]} itemIds
  * @returns {Promise<Map<number, Record<string, unknown>[]>>}
@@ -79,7 +81,8 @@ export async function listSourcesFor(db, itemIds) {
   const { rows } = await db.query(
     `select s.id, s.item_id, s.kind, s.platform, s.external_id, s.url, s.role, s.position, s.account_id, s.start_seconds, s.media,
        s.editable_until, s.edit_finalized_at, s.last_refreshed_at, s.status,
-       case when a.opted_out_at is null then a.handle end as account_handle
+       case when a.opted_out_at is null then a.handle end as account_handle,
+       coalesce(a.opted_out_at is not null, false) as account_opted_out
      from item_sources s left join accounts a on a.id = s.account_id
      where s.item_id = any($1::bigint[]) order by s.item_id, s.position, s.id`,
     [itemIds],

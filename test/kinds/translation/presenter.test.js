@@ -153,6 +153,45 @@ test('search.matchLines returns the verbatim lines containing q (case-insensitiv
 
 test('search.textClause and rank only interpolate their placeholder index', () => {
   assert.match(translation.search.textClause(3), /\$3\b/);
-  assert.match(translation.search.rank(4), /similarity\(.*\$4\)/);
+  assert.match(translation.search.rank(4), /word_similarity\(\$4, tp\.body\)/);
   assert.throws(() => translation.search.textClause(/** @type {any} */ ('1; drop table items')), /index/);
+});
+
+/** @param {string} handle @param {boolean} out */
+async function setOptedOut(handle, out) {
+  await deps.db.transaction((/** @type {any} */ tx) => tx.query(
+    `update accounts set opted_out_at = ${out ? 'now()' : 'null'} where platform = 'x' and handle = $1`, [handle],
+  ), SYSTEM);
+}
+
+test('an opted-out clipper vanishes from the item: no handle, no clip, media null', async () => {
+  await setOptedOut('clipper_one', true);
+  try {
+    const view = await detailOf(IDS.EVENT_A);
+    const json = JSON.stringify(view);
+    assert.ok(!json.includes('clipper_one'), json);
+    assert.ok(!json.includes('video.twimg.com'), 'no media URL');
+    assert.ok(!json.includes('1800000000000000001'), 'no media source id');
+    assert.equal(view.media, null);
+    assert.equal(view.credits.clipBy, null);
+    assert.deepEqual(view.sources.map((/** @type {any} */ s) => s.role), ['primary']);
+    assert.equal((await previewOf(IDS.EVENT_A)).hasVideo, false);
+    assert.ok(view.bubbles.length > 0, 'the translation itself stays');
+  } finally {
+    await setOptedOut('clipper_one', false);
+  }
+});
+
+test('an opted-out quoted author vanishes: no quote card, no handle anywhere', async () => {
+  await setOptedOut('solsunny_x', true);
+  try {
+    const view = await detailOf(IDS.POST);
+    const json = JSON.stringify(view);
+    assert.equal(view.media, null);
+    assert.ok(!json.includes('solsunny_x'), json);
+    assert.ok(!json.includes('คิดถึงเธอ'), 'no quoted text');
+    assert.ok(!JSON.stringify(await previewOf(IDS.POST)).includes('solsunny_x'));
+  } finally {
+    await setOptedOut('solsunny_x', false);
+  }
 });
