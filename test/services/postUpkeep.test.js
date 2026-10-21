@@ -1,0 +1,107 @@
+// @ts-check
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { IDS } from '../helpers/fixtures.js';
+import { ingestDeps, ingest, rows, count, patchedFetch, SYSTEM } from '../helpers/ingest.js';
+import { refreshEdits, checkFollowUps } from '../../src/services/postUpkeep.js';
+import { touchRefresh } from '../../src/repo/sourceEdits.js';
+
+const EDITED_TEXT = "☀️: can't wait to see everyone at the fanmeet next weekend!! (venue changed)";
+
+/** Serves EDITED_NEW with a newer wording. */
+function editedAgain() {
+  return patchedFetch((kind, id, json) => {
+    if (id !== IDS.EDITED_NEW) return json;
+    if (kind === 'syn') return { ...json, text: EDITED_TEXT };
+    if (kind === 'fx') return { ...json, status: { ...json.status, text: EDITED_TEXT } };
+    return json;
+  });
+}
+
+/** @param {any} db @param {number} itemId */
+async function primaryEditState(db, itemId) {
+  const [row] = await rows(db, "select edit_finalized_at from item_sources where item_id = $1 and role = 'primary'", [itemId]);
+  return row.edit_finalized_at;
+}
+
+test('refreshEdits: takes an edit during the window, finalizes after it, then never fetches again', async () => {
+  const deps = await ingestDeps();
+  try {
+    const { itemId } = await ingest(deps, IDS.EDITED_NEW);
+    const id = /** @type {number} */ (itemId);
+    const oldBody = (await rows(deps.db, 'select body from translation_parts where item_id = $1 and position = 0', [id]))[0].body;
+    const { fetchImpl, calls } = editedAgain();
+
+    const during = { ...deps, fetchImpl, now: () => new Date('2026-10-13T13:00:00.000Z') };
+    assert.deepEqual(await refreshEdits(during, id, SYSTEM), { updated: 1, editableUntil: '2026-10-14T00:00:00.000Z' });
+    const [part] = await rows(deps.db, 'select body from translation_parts where item_id = $1 and position = 0', [id]);
+    assert.equal(part.body, EDITED_TEXT);
+    const audits = await rows(deps.db, "select changes from audit_log where table_name = 'translation_parts' and action = 'update'");
+    assert.deepEqual(audits.map((a) => a.changes.body), [oldBody]);
+    assert.equal(await primaryEditState(deps.db, id), null, 'still inside the window');
+
+    const after = { ...deps, fetchImpl, now: () => new Date('2026-10-21T00:00:00.000Z') };
+    assert.deepEqual(await refreshEdits(after, id, SYSTEM), { updated: 0, editableUntil: null });
+    assert.notEqual(await primaryEditState(deps.db, id), null, 'finalized once the window closed');
+
+    const fetchedBefore = calls[IDS.EDITED_NEW];
+    assert.deepEqual(await refreshEdits(after, id, SYSTEM), { updated: 0, editableUntil: null });
+    assert.equal(calls[IDS.EDITED_NEW], fetchedBefore, 'a finalized post is not fetched again');
+  } finally {
+    await deps.db.end();
+  }
+});
+
+test('refreshEdits records new version ids as aliases', async () => {
+  const deps = await ingestDeps();
+  try {
+    const { itemId } = await ingest(deps, IDS.EDITED_NEW);
+    const NEWER = '1900000000000000017';
+    const { fetchImpl } = patchedFetch((kind, id, json) => (kind === 'syn' && id === IDS.EDITED_NEW
+      ? { ...json, edit_control: { ...json.edit_control, edit_tweet_ids: [IDS.EDITED_OLD, IDS.EDITED_NEW, NEWER] }, isStaleEdit: false }
+      : json));
+    await refreshEdits({ ...deps, fetchImpl }, /** @type {number} */ (itemId), SYSTEM);
+    assert.equal(await count(deps.db, 'select count(*)::int as n from source_aliases where external_id = $1', [NEWER]), 1);
+  } finally {
+    await deps.db.end();
+  }
+});
+
+test('checkFollowUps appends a new same-author follow-up once', async () => {
+  const deps = await ingestDeps();
+  try {
+    const { itemId } = await ingest(deps, IDS.THREAD);
+    const id = /** @type {number} */ (itemId);
+    assert.deepEqual(await checkFollowUps(deps, id, SYSTEM), { added: 0 });
+
+    const reply = { id: IDS.THREAD_REPLY, text: 'One more: the lanterns were handmade too.', author: { screen_name: 'tl_beta', id: '9002' },
+      created_at: 'Tue Oct 20 12:00:00 +0000 2026', replying_to: { screen_name: 'tl_beta', status: IDS.THREAD_FOLLOWUP } };
+    const { fetchImpl } = patchedFetch((kind, fid, json) => (kind === 'thread' && fid === IDS.THREAD ? { ...json, thread: [...json.thread, reply] } : json));
+    const later = { ...deps, fetchImpl };
+    assert.deepEqual(await checkFollowUps(later, id, SYSTEM), { added: 1 });
+    assert.deepEqual(await checkFollowUps(later, id, SYSTEM), { added: 0 });
+    const parts = await rows(deps.db, 'select position, body from translation_parts where item_id = $1 order by position', [id]);
+    assert.deepEqual(parts.map((p) => p.position), [0, 1, 2]);
+    assert.equal(parts[2].body, reply.text);
+  } finally {
+    await deps.db.end();
+  }
+});
+
+test('touchRefresh allows one refresh per item per 60 seconds', async () => {
+  const deps = await ingestDeps();
+  try {
+    const { itemId } = await ingest(deps, IDS.THREAD);
+    const id = /** @type {number} */ (itemId);
+    const at = (/** @type {number} */ seconds) => new Date(Date.parse('2026-10-21T00:00:00.000Z') + seconds * 1000);
+    const touch = (/** @type {Date} */ now) => deps.db.transaction((tx) => touchRefresh(tx, id, now), SYSTEM);
+    assert.equal(await touch(at(0)), true);
+    assert.equal(await touch(at(30)), false);
+    assert.equal(await touch(at(61)), true);
+    const stamped = await rows(deps.db, "select last_refreshed_at from item_sources where item_id = $1 and role in ('primary', 'follow_up')", [id]);
+    assert.ok(stamped.every((r) => new Date(r.last_refreshed_at).toISOString() === at(61).toISOString()));
+    assert.equal(await deps.db.transaction((tx) => touchRefresh(tx, 999999, at(0)), SYSTEM), false);
+  } finally {
+    await deps.db.end();
+  }
+});

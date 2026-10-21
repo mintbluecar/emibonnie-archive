@@ -110,6 +110,7 @@ function buildTweet(spec) {
     quoted = null,
     editControl = null,
     isStaleEdit = false,
+    replyTo = null,
   } = spec;
 
   const hasMedia = mediaDetails.length > 0;
@@ -169,7 +170,7 @@ function buildTweet(spec) {
       is_note_tweet: Boolean(noteText),
       community_note: null,
       lang,
-      replying_to: null,
+      replying_to: replyTo,
       media: hasMedia ? { all: [], videos: [], photos: [] } : {},
       provider: 'twitter',
       reposted_by: null,
@@ -252,6 +253,8 @@ function buildLong() {
     quoted,
   });
   write(DIR, IDS.LONG, pair);
+  // the quoted teaser on its own, so a test can archive it before LONG (follows-on)
+  write(DIR, IDS.LONG_QUOTED, quoted);
 }
 
 function buildEventA() {
@@ -447,6 +450,31 @@ function buildThread() {
   writeFileSync(path.join(DIR, `${IDS.THREAD}.thread.json`), `${JSON.stringify(threadData, null, 1)}\n`);
 }
 
+/**
+ * Replies posted on their own after `THREAD` was archived: a new
+ * same-author one (`THREAD_REPLY`, to the follow-up) and one by another
+ * account (`THREAD_OTHER`). Neither is in `THREAD`'s thread file.
+ */
+function buildReplies() {
+  const reply = buildTweet({
+    id: IDS.THREAD_REPLY,
+    author: AUTHORS.beta,
+    text: 'One more: the lanterns were handmade too, which is why they took so long.',
+    createdAtIso: '2026-10-20T12:00:00.000Z',
+    replyTo: { screen_name: AUTHORS.beta.handle, status: IDS.THREAD_FOLLOWUP },
+  });
+  write(DIR, IDS.THREAD_REPLY, reply);
+
+  const other = buildTweet({
+    id: IDS.THREAD_OTHER,
+    author: AUTHORS.gamma,
+    text: 'omg this is so cute',
+    createdAtIso: '2026-10-20T11:10:00.000Z',
+    replyTo: { screen_name: AUTHORS.beta.handle, status: IDS.THREAD_FOLLOWUP },
+  });
+  write(DIR, IDS.THREAD_OTHER, other);
+}
+
 function buildEdited() {
   const editControl = {
     edit_tweet_ids: [IDS.EDITED_OLD, IDS.EDITED_NEW],
@@ -491,6 +519,7 @@ export const IDS = {
   THREAD: '1900000000000000011',
   THREAD_FOLLOWUP: '1900000000000000012',
   THREAD_OTHER: '1900000000000000013',
+  THREAD_REPLY: '1900000000000000014',
   EDITED_OLD: '1900000000000000015',
   EDITED_NEW: '1900000000000000016',
 };
@@ -506,6 +535,7 @@ export function build() {
   buildPost();
   buildPhoto();
   buildThread();
+  buildReplies();
   buildEdited();
 }
 

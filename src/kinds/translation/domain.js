@@ -25,10 +25,16 @@ import { matchEvent, proposeEvent, peopleForTags } from '../../domain/events.js'
  *   text: string,
  *   header: Header,
  *   speakers: SpeakerMap,
+ *   markers: import('../../domain/lines.js').Marker[],
+ *   memory: SpeakerMap,
  *   sharedStory: SharedStory|null,
  * }} TranslationDraft
  *   `tweet` is the fetched source (sources, media, follow-ups and quote
  *   are persisted from it); `text` is the main text actually used.
+ *   `markers` are the markers used across the text and its follow-ups;
+ *   `memory` is what to remember for the credited account (what was
+ *   remembered, overlaid with what the submitter chose -- never the
+ *   site's defaults, so a changed default isn't shadowed later).
  * @typedef {{placement: import('../../domain/constants.js').Placement, eventId: number|null,
  *   proposal: EventProposal|null, authorIds: number[]}} Placing
  */
@@ -185,5 +191,7 @@ export function draftTranslation(tweet, ctx) {
     people: itemPeopleOf(placing, sharedStory, presentIds),
     ...sourceFieldsOf(tweet, ctx.overrides),
   };
-  return { common, missing: missingMarkers(markers, speakers), suggestions: match.suggestions, tweet, text, header, speakers, sharedStory };
+  const memory = { ...ctx.remembered, ...ctx.chosen };
+  const missing = missingMarkers(markers, speakers);
+  return { common, missing, suggestions: match.suggestions, tweet, text, header, speakers, markers, memory, sharedStory };
 }

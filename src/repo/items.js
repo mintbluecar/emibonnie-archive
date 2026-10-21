@@ -28,7 +28,9 @@ import { visibleItem } from './visibility.js';
 
 /**
  * Resolves through `source_aliases` too, so any version id of an edited
- * post (a Twitter edit, say) counts as the same source.
+ * post (a Twitter edit, say) counts as the same source. Only primary and
+ * follow-up sources count: a post that is merely an item's media or quoted
+ * original (which another translator may translate too) is not archived.
  * @param {Tx} db
  * @param {string} kind
  * @param {string} platform
@@ -40,7 +42,7 @@ export async function sourceState(db, kind, platform, externalId) {
     `select i.deleted_at, i.review_state, (${visibleItem('i')}) as visible
      from items i
      join item_sources s on s.item_id = i.id and s.kind = $1
-     where s.platform = $2
+     where s.platform = $2 and s.role in ('primary', 'follow_up')
        and (s.external_id = $3 or s.id in (select source_id from source_aliases where platform = $2 and external_id = $3))
      order by (${visibleItem('i')}) desc, i.id
      limit 1`,

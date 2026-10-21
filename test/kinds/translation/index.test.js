@@ -8,6 +8,7 @@ test('the translation kind: name, table, url prefix', () => {
   assert.equal(translation.name, 'translation');
   assert.equal(translation.table, 'translations');
   assert.equal(translation.urlPrefix, '/t/');
+  assert.equal(translation.platform, 'x');
 });
 
 test('matchesUrl returns the tweet id, or null', () => {
@@ -25,9 +26,8 @@ test('followUpOf: a reply gives the candidate parent ref; otherwise null', () =>
   assert.equal(translation.followUpOf?.({ replyToId: null }), null);
 });
 
-test('persist, loadDetails, present and search are stubs until Tasks 10-11', async () => {
-  await assert.rejects(() => translation.persist(/** @type {any} */ ({}), {}, {}), /not implemented/);
-  await assert.rejects(() => translation.loadDetails(/** @type {any} */ ({}), []), /not implemented/);
+test('present and search are stubs until Task 11 (persist and loadDetails: test/services/ingest.test.js)', () => {
+  assert.equal(typeof translation.appendFollowUp, 'function');
   assert.throws(() => translation.present.preview({}, {}, {}), /not implemented/);
   assert.throws(() => translation.search.textClause(1), /not implemented/);
 });

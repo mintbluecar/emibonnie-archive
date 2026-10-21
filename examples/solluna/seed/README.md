@@ -4,5 +4,10 @@ Optional, local-development-only. A real archive can put synthetic sample
 data here to load with `npm run seed-dev`, so a fresh checkout has
 something to browse without any real content.
 
-This example ships no seed data: `npm run init-site` copies this folder as
-an empty placeholder, and `seed-dev` is a no-op until something is added.
+- `maps.json` — `{ createPeople: [...], tweets: { "<id>": { chosen, overrides } } }`.
+  People in `chosen` are referenced by IG handle (`{ "person": "<ig>" }`) or
+  by role (`{ "role": "fan" }`). Only the posts listed under `tweets` are
+  ingested, in the order they're listed.
+- `tweets/` — the posts, served offline as `<id>.syn.json`, `<id>.fx.json`
+  and `<id>.thread.json` (synthetic copies of the engine's test fixtures;
+  every id, handle and line is invented).

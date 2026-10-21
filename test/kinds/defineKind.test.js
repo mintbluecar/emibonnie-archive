@@ -8,6 +8,7 @@ function spec() {
     name: 'demo_kind',
     table: 'demos',
     urlPrefix: '/d/',
+    platform: 'x',
     matchesUrl: () => null,
     fetchSource: async () => ({}),
     draft: () => ({ common: {}, missing: [] }),
@@ -44,9 +45,16 @@ for (const name of ['Translation', '1kind', 'kind-x', '', '_x']) {
   });
 }
 
-test('followUpOf is optional, but must be a function when given', () => {
-  assert.doesNotThrow(() => defineKind({ ...spec(), followUpOf: () => null }));
-  assert.throws(() => defineKind(/** @type {any} */ ({ ...spec(), followUpOf: 'nope' })), /followUpOf/);
+test('followUpOf is optional, but must be a function when given, with appendFollowUp beside it', () => {
+  const appendFollowUp = async () => {};
+  assert.doesNotThrow(() => defineKind({ ...spec(), followUpOf: () => null, appendFollowUp }));
+  assert.throws(() => defineKind(/** @type {any} */ ({ ...spec(), followUpOf: 'nope', appendFollowUp })), /followUpOf/);
+  assert.throws(() => defineKind({ ...spec(), followUpOf: () => null }), /appendFollowUp/);
+});
+
+test('rejects a missing or malformed platform', () => {
+  assert.throws(() => defineKind(/** @type {any} */ ({ ...spec(), platform: undefined })), /platform/);
+  assert.throws(() => defineKind({ ...spec(), platform: 'X!' }), /platform/);
 });
 
 test('rejects a urlPrefix that is not /x/', () => {

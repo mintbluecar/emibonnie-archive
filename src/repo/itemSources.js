@@ -20,6 +20,7 @@ import { camelRow, camelRows } from './rows.js';
  * @property {number} [accountId]
  * @property {number} [startSeconds]
  * @property {unknown} [media]
+ * @property {string|null} [editableUntil] the platform's edit window (ISO), for posts that can be edited
  */
 
 /**
@@ -35,12 +36,14 @@ export async function addSources(tx, itemId, kind, sources) {
   for (const source of sources) {
     const {
       platform, externalId = null, url, role = 'primary', position = 0,
-      accountId = null, startSeconds = null, media = null,
+      accountId = null, startSeconds = null, media = null, editableUntil = null,
     } = source;
     const { rows } = await tx.query(
-      `insert into item_sources (item_id, kind, platform, external_id, url, role, position, account_id, start_seconds, media)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb) returning id`,
-      [itemId, kind, platform, externalId, url, role, position, accountId, startSeconds, media === null ? null : JSON.stringify(media)],
+      `insert into item_sources (item_id, kind, platform, external_id, url, role, position, account_id, start_seconds, media,
+         editable_until)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11) returning id`,
+      [itemId, kind, platform, externalId, url, role, position, accountId, startSeconds,
+        media === null ? null : JSON.stringify(media), editableUntil],
     );
     ids.push(rows[0].id);
   }
@@ -60,13 +63,30 @@ export async function primarySource(db, itemId) {
 
 /** @param {Tx} db @param {number} itemId @returns {Promise<Record<string, unknown>[]>} */
 export async function listSources(db, itemId) {
+  return (await listSourcesFor(db, [itemId])).get(itemId) ?? [];
+}
+
+/**
+ * Every source of each item, grouped by item id, in `(position, id)` order.
+ * @param {Tx} db
+ * @param {number[]} itemIds
+ * @returns {Promise<Map<number, Record<string, unknown>[]>>}
+ */
+export async function listSourcesFor(db, itemIds) {
   const { rows } = await db.query(
     `select id, item_id, kind, platform, external_id, url, role, position, account_id, start_seconds, media,
        editable_until, edit_finalized_at, last_refreshed_at, status
-     from item_sources where item_id = $1 order by position, id`,
-    [itemId],
+     from item_sources where item_id = any($1::bigint[]) order by item_id, position, id`,
+    [itemIds],
   );
-  return camelRows(rows);
+  /** @type {Map<number, Record<string, unknown>[]>} */
+  const byItem = new Map();
+  for (const row of camelRows(rows)) {
+    const list = byItem.get(/** @type {number} */ (row.itemId)) ?? [];
+    list.push(row);
+    byItem.set(/** @type {number} */ (row.itemId), list);
+  }
+  return byItem;
 }
 
 /**
@@ -94,4 +114,44 @@ export async function touchCheck(db, sourceId) {
      on conflict (source_id) do update set checked_at = now(), consecutive_failures = 0`,
     [sourceId],
   );
+}
+
+/**
+ * The item that archives `externalId` as its primary or a follow-up
+ * source (directly or through `source_aliases`), for one kind. Media and
+ * quoted sources never count: two translators may translate the same
+ * original post. A visible owner wins over a hidden one, then the oldest.
+ * @param {Tx} db
+ * @param {{ kind: string, platform: string, externalId: string, roles?: string[] }} ref
+ * @returns {Promise<{ itemId: number, sourceId: number, role: string, accountExternalId: string|null }|null>}
+ */
+export async function findSourceOwner(db, { kind, platform, externalId, roles = ['primary', 'follow_up'] }) {
+  const { rows } = await db.query(
+    `select s.item_id, s.id as source_id, s.role, a.external_id as account_external_id
+     from item_sources s
+     join items i on i.id = s.item_id
+     left join accounts a on a.id = i.credited_account_id
+     where s.kind = $1 and s.platform = $2 and s.role = any($4::text[])
+       and (s.external_id = $3 or s.id in (select source_id from source_aliases where platform = $2 and external_id = $3))
+     order by (i.deleted_at is null and i.review_state = 'published') desc, i.id
+     limit 1`,
+    [kind, platform, externalId, roles],
+  );
+  return rows[0] ? /** @type {any} */ (camelRow(rows[0])) : null;
+}
+
+/**
+ * The next free `position` for a new source of `role` on an item (follow-ups
+ * are numbered 1..n after the primary's 0).
+ * @param {Tx} db
+ * @param {number} itemId
+ * @param {string} role
+ * @returns {Promise<number>}
+ */
+export async function nextPosition(db, itemId, role) {
+  const { rows } = await db.query(
+    'select coalesce(max(position), 0) + 1 as next from item_sources where item_id = $1 and role = $2',
+    [itemId, role],
+  );
+  return rows[0].next;
 }

@@ -60,3 +60,18 @@ export async function setIgnoredIfMissing(tx, list) {
     );
   }
 }
+
+/**
+ * Ensures each tag and links it to the item. Idempotent.
+ * @param {Tx} tx
+ * @param {number} itemId
+ * @param {{ kind: 'hashtag'|'keyword', display: string }[]} items
+ * @returns {Promise<number[]>} the tag ids
+ */
+export async function tagItem(tx, itemId, items) {
+  const tagIds = await ensureTags(tx, items);
+  for (const tagId of new Set(tagIds)) {
+    await tx.query('insert into item_tags (item_id, tag_id) values ($1, $2) on conflict (item_id, tag_id) do nothing', [itemId, tagId]);
+  }
+  return tagIds;
+}

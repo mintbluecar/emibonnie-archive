@@ -6,6 +6,14 @@
  * `draft.common` and `draft.missing` from a draft; everything else on a
  * draft is the kind's own business, handed back to its `persist`.
  *
+ * `platform` is the `platforms` code of the sources `matchesUrl` finds
+ * (ingest checks a pasted id against what is archived before fetching).
+ *
+ * `followUpOf(input)` (optional) names the post a fetched input continues;
+ * ingest attaches the input to the archived item owning that post, when
+ * it's by the same credited account, through `appendFollowUp` (required
+ * whenever `followUpOf` is given).
+ *
  * @typedef {import('../domain/constants.js').Placement} Placement
  * @typedef {import('../domain/events.js').Event} Event
  * @typedef {import('../domain/events.js').EventPerson} EventPerson
@@ -23,9 +31,12 @@
  *   categoryName?: string,
  *   clientName?: string,
  *   text?: string,
+ *   occurredOn?: string,
  * }} DraftOverrides
  *   What the submitter changed in the add flow. `text` is text typed in by
  *   hand (it replaces the source's text and marks it `textEnteredManually`).
+ *   `occurredOn` (`YYYY-MM-DD`) is read by ingest, not by `draft`: it
+ *   supplies the date when the source gives none.
  *
  * @typedef {{
  *   people: EventPerson[],
@@ -62,14 +73,19 @@
  * @typedef {{marker: string, count: number}} MissingMarker
  * @typedef {{common: DraftCommon, missing: MissingMarker[], suggestions?: Event[]}} Draft
  *
+ * @typedef {{status: 'live'|'deleted'|'unavailable'}} SourceInput
+ *   What `fetchSource` returns: the kind's own input for `draft`, with at
+ *   least a `status` ingest can read.
  * @typedef {any} Db
  * @typedef {{
  *   name: string,
  *   table: string,
  *   urlPrefix: string,
+ *   platform: string,
  *   matchesUrl(url: string): string|null,
- *   fetchSource(deps: any, sourceId: string): Promise<unknown>,
+ *   fetchSource(deps: any, sourceId: string): Promise<SourceInput>,
  *   followUpOf?: (input: any) => SourceRef|null,
+ *   appendFollowUp?: (tx: Db, args: { itemId: number, accountId: number|null, input: any }) => Promise<void>,
  *   draft(input: any, ctx: DraftContext): Draft,
  *   persist(tx: Db, draft: any, meta: object): Promise<number>,
  *   loadDetails(db: Db, itemIds: number[]): Promise<Map<number, object>>,
@@ -84,16 +100,33 @@ const REQUIRED_FUNCTIONS = ['matchesUrl', 'fetchSource', 'draft', 'persist', 'lo
 const REQUIRED_GROUPS = { present: ['preview', 'detail'], search: ['textClause', 'matchLines'] };
 
 /**
+ * Each string field of the spec, the pattern it must match, and the problem when it doesn't.
+ * @type {[string, RegExp, string][]}
+ */
+const STRING_FIELDS = [
+  ['name', NAME, 'name must match ^[a-z][a-z0-9_]*$'],
+  ['table', NAME, 'table must match ^[a-z][a-z0-9_]*$'],
+  ['urlPrefix', URL_PREFIX, 'urlPrefix must look like /x/'],
+  ['platform', NAME, 'platform must be a platforms code'],
+];
+
+/**
+ * @param {any} spec
+ * @returns {string[]}
+ */
+function followUpProblems(spec) {
+  if (spec.followUpOf === undefined) return [];
+  if (typeof spec.followUpOf !== 'function') return ['followUpOf must be a function when given'];
+  return typeof spec.appendFollowUp === 'function' ? [] : ['appendFollowUp must be a function when followUpOf is given'];
+}
+
+/**
  * @param {any} spec
  * @returns {string[]}
  */
 function shapeProblems(spec) {
-  const problems = [];
-  if (typeof spec.name !== 'string' || !NAME.test(spec.name)) problems.push('name must match ^[a-z][a-z0-9_]*$');
-  if (typeof spec.table !== 'string' || !NAME.test(spec.table)) problems.push('table must match ^[a-z][a-z0-9_]*$');
-  if (typeof spec.urlPrefix !== 'string' || !URL_PREFIX.test(spec.urlPrefix)) problems.push('urlPrefix must look like /x/');
-  if (spec.followUpOf !== undefined && typeof spec.followUpOf !== 'function') problems.push('followUpOf must be a function when given');
-  return problems;
+  const bad = STRING_FIELDS.filter(([key, pattern]) => typeof spec[key] !== 'string' || !pattern.test(spec[key]));
+  return [...bad.map(([, , problem]) => problem), ...followUpProblems(spec)];
 }
 
 /**

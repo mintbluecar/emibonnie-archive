@@ -1,0 +1,131 @@
+{
+ "__typename": "Tweet",
+ "favorite_count": 42,
+ "lang": "en",
+ "possibly_sensitive": false,
+ "created_at": "2026-10-18T10:15:00.000Z",
+ "display_text_range": [
+  0,
+  365
+ ],
+ "entities": {
+  "hashtags": [
+   {
+    "indices": [
+     20,
+     36
+    ],
+    "text": "SolLunaStarfest"
+   }
+  ],
+  "media": [
+   {
+    "indices": [
+     365,
+     402
+    ],
+    "display": "pic.x.com/1900000000000000001media",
+    "original": "https://t.co/1900000000000000001media",
+    "url": "https://t.co/1900000000000000001media",
+    "expanded_url": "https://x.com/tl_alpha/status/1900000000000000001/video/1"
+   }
+  ]
+ },
+ "id_str": "1900000000000000001",
+ "text": "SOLLUNA AT STARFEST\n#SolLunaStarfest #fancamclip\n\n🦁: Can you tell everyone what it felt like when the lights went down for the countdown?\n🌧️: Honestly, the second the countdown started, the whole arena got so loud, and then it dropped into almost total silence right when the two of them turned to look at each other. I have never felt a crowd change like that so https://t.co/1900000000000000001media",
+ "user": {
+  "id_str": "9001",
+  "name": "alpha clips",
+  "screen_name": "tl_alpha"
+ },
+ "mediaDetails": [
+  {
+   "type": "video",
+   "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/1900000000000000001v/thumb.jpg",
+   "original_info": {
+    "width": 1080,
+    "height": 1920
+   },
+   "video_info": {
+    "duration_millis": 42000,
+    "variants": [
+     {
+      "content_type": "application/x-mpegURL",
+      "url": "https://video.twimg.com/amplify_video/1900000000000000001v/pl/playlist.m3u8"
+     },
+     {
+      "bitrate": 632000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/1900000000000000001v/vid/avc1/632000.mp4"
+     },
+     {
+      "bitrate": 950000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/1900000000000000001v/vid/avc1/950000.mp4"
+     },
+     {
+      "bitrate": 2176000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/1900000000000000001v/vid/avc1/2176000.mp4"
+     },
+     {
+      "bitrate": 10368000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/1900000000000000001v/vid/avc1/10368000.mp4"
+     },
+     {
+      "bitrate": 100000,
+      "content_type": "video/mp4",
+      "url": "https://cdn.badhost.example/1900000000000000001v/low.mp4"
+     }
+    ]
+   }
+  }
+ ],
+ "photos": [],
+ "video": null,
+ "conversation_count": 1,
+ "news_action_type": "conversation",
+ "isEdited": false,
+ "isStaleEdit": false,
+ "note_tweet": {
+  "id": "note_1900000000000000001"
+ },
+ "quoted_tweet": {
+  "__typename": "Tweet",
+  "favorite_count": 42,
+  "lang": "en",
+  "possibly_sensitive": false,
+  "created_at": "2026-10-17T09:00:00.000Z",
+  "display_text_range": [
+   0,
+   67
+  ],
+  "entities": {
+   "hashtags": [
+    {
+     "indices": [
+      -1,
+      15
+     ],
+     "text": "SolLunaStarfest"
+    }
+   ],
+   "media": []
+  },
+  "id_str": "1900000000000000000",
+  "text": "SOLLUNA AT STARFEST - full clip incoming soon, stay tuned everyone.",
+  "user": {
+   "id_str": "9001",
+   "name": "alpha clips",
+   "screen_name": "tl_alpha"
+  },
+  "mediaDetails": [],
+  "photos": [],
+  "video": null,
+  "conversation_count": 1,
+  "news_action_type": "conversation",
+  "isEdited": false,
+  "isStaleEdit": false
+ }
+}

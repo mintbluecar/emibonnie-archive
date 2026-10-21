@@ -105,3 +105,32 @@ export async function getAccountByHandle(db, platform, handle) {
   return rows[0] ? /** @type {Account} */ (camelRow(rows[0])) : null;
 }
 
+
+/**
+ * What intake needs to know about an account before writing anything:
+ * whether it opted out, and which user (if any) it belongs to. Looks up by
+ * `(platform, external_id)` when given, else by handle. With an external
+ * id, the handle fallback only finds a handle-only row -- the row
+ * `upsertAccount` would adopt -- never another account's old handle.
+ * @param {Tx} db
+ * @param {{ platform: string, externalId?: string|null, handle?: string|null }} ref
+ * @returns {Promise<{ id: number, optedOut: boolean, userId: string|null }|null>}
+ */
+export async function accountState(db, { platform, externalId, handle }) {
+  const byExternal = externalId
+    ? await db.query('select id, opted_out_at, user_id from accounts where platform = $1 and external_id = $2', [platform, externalId])
+    : { rows: [] };
+  const found = byExternal.rows[0] ?? (handle ? await findByHandleRow(db, { platform, handle, handleOnly: Boolean(externalId) }) : null);
+  return found ? { id: found.id, optedOut: found.opted_out_at !== null, userId: found.user_id } : null;
+}
+
+/** @param {Tx} db @param {{ platform: string, handle: string, handleOnly: boolean }} ref */
+async function findByHandleRow(db, { platform, handle, handleOnly }) {
+  const { rows } = await db.query(
+    `select id, opted_out_at, user_id from accounts where platform = $1 and lower(handle) = lower($2) and deleted_at is null
+       and (not $3 or external_id is null)
+     order by (external_id is null) asc, updated_at desc limit 1`,
+    [platform, handle, handleOnly],
+  );
+  return rows[0] ?? null;
+}
