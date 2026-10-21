@@ -710,6 +710,9 @@ create table import_rows (id bigint generated always as identity primary key, jo
   state text not null default 'queued' check (state in ('queued','fetched','needs_speakers','check','published','skipped','failed')),
   item_id bigint references items(id), error text, created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
   unique (job_id, platform, external_id));
+-- simple fixed-window rate limits (Plan 1: edit-refresh button; Plan 2 reuses for sign-in and writes)
+create table rate_limits (bucket text not null, window_start timestamptz not null, count int not null default 0,
+  primary key (bucket, window_start));
 create table audit_log (id bigint generated always as identity primary key, table_name text not null, row_key text not null,
   action text not null check (action in ('insert','update','delete')), actor text not null, at timestamptz not null default now(), changes jsonb);
 create index audit_log_row on audit_log (table_name, row_key);
@@ -926,8 +929,12 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
   - **Edits:**
     - Ingest stores `editable_until` on each tweet source, plus a `source_aliases` row for every `versionIds` entry.
     - Ingesting `EDITED_OLD` archives `…016`, and a later paste of `…015` returns `duplicate`.
-    - **`finalizeEdits(deps, itemId, { actor }) → { updated: number }`:** for each tweet source whose `editable_until < now` and `edit_finalized_at is null`, re-fetch once. If the text changed, update that part's body (audited). Record any new version IDs as aliases, and set `edit_finalized_at`. A second run does nothing. A test fixture where the final text differs gives `updated: 1`, and the audit log holds the old body.
-    - `pendingEditItems(db, now, limit) → itemId[]` serves the daily sweep in Plan 3.
+    - **`refreshEdits(deps, itemId, { actor }) → { updated: number, editableUntil: string|null }`:**
+      - For each tweet source with `edit_finalized_at is null`, re-fetch it. If the text changed, update that part's body (audited), and record new version IDs as aliases.
+      - When `editable_until < now`, set `edit_finalized_at`.
+      - It works **during** the window (the manual button) and **after** it (the final check). A finalized source isn't fetched again.
+      - A test fixture where the text differs gives `updated: 1`, and the audit log holds the old body. Running it again after finalizing does nothing.
+    - There's **no daily sweep** (owner's decision).
   - **`checkFollowUps(deps, itemId, { actor }) → { added: number }`:** re-runs `fetchThread` for the primary source and adds missing same-author follow-ups as parts and sources. A second run adds 0. (Plan 2 puts this behind a button; there's no automatic checking.)
   - **Seeding:** `seedDev` on the example site prints `seeded 9`.
 - [ ] **Step 2: Run the tests. Expected: FAIL.** Then implement. **Run the tests. Expected: PASS.** Commit: `"Translation kind persistence; generic ingest; add and seed-dev CLIs"`
@@ -1012,7 +1019,17 @@ Expand `<common columns>` to `created_at timestamptz not null default now(), upd
   - **Routes.** Each module is `export const route = { method, path, cache, run }`. Each `run` is under 30 lines and calls services only. Paths:
     - `GET /api/home`
     - `GET /api/event/:slug`
-    - `GET /api/item/:kind/:sourceId` (404 when the kind is unknown). If the item has a source whose edit window has passed and isn't finalized, the route schedules `finalizeEdits` **in the background** with `waitUntil` (from `@vercel/functions`; the dev server's shim awaits it after responding) and actor `'system'`. The response isn't delayed, and the CDN cache isn't bypassed.
+    - `GET /api/item/:kind/:sourceId` (404 when the kind is unknown).
+      - If the item has a source whose edit window has passed and isn't finalized, the route schedules `refreshEdits` **in the background** with `waitUntil` (from `@vercel/functions`; the dev server's shim awaits it after responding) and actor `'system'`. The response isn't delayed.
+      - The response includes `editOpenUntil` (the latest unfinalized `editable_until`, or null), which the page uses to show the button.
+    - **`POST /api/item/:kind/:sourceId/refresh`:** the "check for update" button. It needs no sign-in, and runs the Origin check.
+      - **Rate limited** by `src/http/rateLimit.js` `hit(db, bucket, { limit, windowSeconds }) → { ok, retryAfter }`, using the `rate_limits` table:
+        - per item: `item:<id>`, 1 per 60 s
+        - per visitor: `ip:<sha256(ip + daily salt from settings)>`, 20 per hour. Raw IPs are never stored.
+      - Over the limit, it returns 429 with `Retry-After`.
+      - Returns 409 `{ error: 'edit_window_closed' }` when every source is finalized. Otherwise it runs `refreshEdits` with actor `'system'` and returns `{ updated, editOpenUntil }` with `no-store`.
+      - Old `rate_limits` rows (windows older than a day) are deleted opportunistically, 1% of the time.
+    - Tests: the 2nd refresh within 60 s returns 429; a finalized item returns 409; a foreign Origin returns 403; the hashed IP never appears in the database as a raw IP.
     - `GET /api/search`
     - `GET /api/filters`
     - `GET /api/person/:ig`

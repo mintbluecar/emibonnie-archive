@@ -185,6 +185,9 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
       - pills, then cast, then bubbles
     - **Footer:** original tweet, original media, follows on, added by, Copy link, Report.
     - **"Show original":** a `<details>` element with the escaped verbatim text.
+    - **"Check for update" button:** shown only while `editOpenUntil` is in the future, with copy like `t('item.checkUpdate')` and "editable until 4:12 pm" (via `timePair`).
+      - It POSTs to `/api/item/:kind/:sourceId/refresh`, then re-renders the bubbles if `updated > 0`.
+      - On 429 it shows `t('item.tryLater')` and disables the button for `Retry-After` seconds. On 409 the button disappears.
 - [ ] **Step 1: Write the failing tests:**
   - **pickVariant:** a small screen gets 632k; a large one gets 2176k.
   - **render:** a 720×1280 clip renders a full-screen button and a `data-aspect="0.5625"` attribute.
