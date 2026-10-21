@@ -244,7 +244,7 @@ Both imports:
 - **Sign in with Google** is a backup, so the site stays usable if X sign-in breaks.
 - **Translator recognition is automatic:** if a signed-in user's X ID matches a translator ID on archived entries, they're that translator. No claim step. (Google-only users can't act as a translator.)
 - **Translator powers:** remove any of their own entries; opt out entirely.
-  - **Remove** (owner's decision): the entry disappears from the site, including search, event pages, and public outputs, and that tweet can't be submitted again. The data is kept privately, not deleted, and stays in the private backup marked as removed.
+  - **Remove** (owner's decision): the entry disappears from the site, including search, event pages, and public outputs, and that tweet can't be submitted again. The data is kept privately (soft delete), not deleted. Backups age out within 35 days (see Backups).
   - **Opt out:** applies to the whole account. Every entry by that translator disappears from the site the same way, and nothing they posted can be added again by anyone, through submission, bulk paste, or Notion import. Submitters get a clear message. Imports skip those tweets and list them as skipped.
   - **Undo (my call):** a translator can restore entries they removed, or opt back in, since the data was never deleted.
   - The owner's **hide** works the same way, but only the owner can undo it.
@@ -346,10 +346,20 @@ These choices are mine. They follow the owner's other fan projects (plain JS, Ve
 | Database | Neon Postgres (free plan, **signed up with Neon directly**, not via the Vercel Marketplace, which moves billing to Vercel) | Full-text + trigram search for Thai (`pg_trgm` 1.6 supported). Free: 1 GB per project, 100 compute-hours a month, no card. Sleeps after 5 min idle, so expect a slower first query after a quiet spell. No documented deletion of inactive free projects. | Supabase: pauses free projects after a week without activity. GitHub-as-DB: submitters would need GitHub accounts |
 | Auth | Better Auth (MIT, self-hosted in the app) | One library for X + Google, stored in our own DB, no per-user fees | Hand-rolled OAuth |
 | Tweet data | X syndication + FxTwitter, server-side, cached | Free. Long-post text. Detects deletions. | Paid X API ($0.005 per post read) |
-| Scheduled and long jobs | GitHub Actions (private repo, free org: 2,000 min a month; it stops at the limit, with no charge, when no card is on file) | Daily tweet health check, nightly backup, bulk import runs. Expected about 300 to 450 min a month plus imports | Vercel Cron: once a day at most, and functions are capped at 5 min |
-| Backup | Nightly export of public archive data (translations, credits, links, events, people) to JSON in a **private** `mintbluecar` repo | Survives the site or database dying | Provider-only backups |
+| Scheduled and long jobs | GitHub Actions (private repo, free org: 2,000 min a month; it stops at the limit, with no charge, when no card is on file) | Tweet health check (rotating: new items daily, older ones in rotation), weekly backup dump, bulk import runs. Kept well under the limit by rotation; the earlier 300 to 450 min estimate only held for small archives | Vercel Cron: once a day at most, and functions are capped at 5 min |
+| Backup | **Weekly compressed `pg_dump` uploaded as a GitHub Actions artifact with 35-day retention** (owner's decision, 2026-10-21) | No growth (artifacts auto-expire, about 5 copies kept), no extra service, about 1 Actions minute a week, fits the free 500 MB artifact storage | A JSON export committed to a git repo: rejected, because it grows without limit and git isn't for data dumps. Neon's 6-hour restore alone: too short |
 
-**Backup and removals (my call):** the backup repo is **private**, because removed and opted-out entries are kept in it, marked as removed. A public repo would keep them reachable. Submitter account details (emails, sign-in tokens) are never exported.
+**Backups (owner's decision):**
+- **Layers of protection:**
+  - **Everyday mistakes:** soft delete plus the audit log.
+  - **The last 6 hours:** Neon's point-in-time restore.
+  - **Losing the database or the account:** a weekly dump.
+- **The dump:**
+  - A GitHub Actions workflow runs `pg_dump --format=custom` against the database, compresses it, and uploads it as a workflow artifact with `retention-days: 35`, from the site's **private** repo.
+  - It excludes sessions and auth tokens.
+  - Removed and opted-out content is gone from every backup within 35 days.
+- **Restore:** `npm run restore <file>` restores into an empty database. The restore steps are documented and tested once a year.
+- **If backup can't be on:** if a site's repo is public, artifacts are visible to anyone with read access, so backups stay off there and the docs say so.
 
 **Deploying (my call):** Vercel Hobby can't connect to repos owned by a GitHub organisation, so pushes to `main` deploy through a GitHub Actions workflow using the Vercel CLI (`vercel deploy --prebuilt --prod`) and a Vercel token stored as a repo secret. Pull requests get preview deploys the same way. Checking that this works is one of the first build steps.
 
