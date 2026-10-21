@@ -253,8 +253,8 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
 
 **Owner steps.** Pause here and ask the owner to do these using their **fan accounts**, following the spec's identity checklist (fan email signup, no "Continue with GitHub", no card). Confirm each one before continuing.
 1. **Neon:** create a project at neon.com, region **AWS Singapore**, autoscaling max **0.25 CU**. Copy the connection string.
-2. **Vercel:** create a Hobby project, without Git and with a neutral name, then run `vercel link` in `fan-archive/`. Create a token.
-3. **GitHub:** create the private repo `mintbluecar/fan-archive` and add the `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` secrets. Ask before pushing anything.
+2. **Vercel (owner decision, 2026-10-21: manual CLI deploys from the owner's machine, with no Actions deploy and no token):** use the already-logged-in fan Vercel CLI. The executor runs `vercel link --yes --project fan-archive-spike` in `fan-archive/`, which creates the project.
+3. **GitHub:** the private repo `mintbluecar/fan-archive` already exists (created 2026-10-21). Ask before pushing anything.
 
 - [ ] **Step 1: Video.** `scripts/spikes/video.mjs <syn.json path>`:
   - Pick the smallest mp4 from `../emibonnie-archive/test/fixtures/tweets/2030321729902641632.syn.json`.
@@ -270,10 +270,10 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
   - `select '2026-02-12'::date` comes back as a string when the date parser is registered (Task 7 registers it; here, just record what the raw value is).
   - `select set_config('app.actor','x',true)` inside a transaction, and confirm `current_setting('app.actor', true)` returns `''` afterwards on the same session.
   - **If Thai produces no trigrams**, record it, and switch search to a `pg_trgm`-independent fallback: an indexed lowercase `body` with `ilike` and a sequential scan. Mark it as a known limit in `docs/spikes.md` and tell the owner.
-- [ ] **Step 3: Deploy hello-world.**
-  - Write a minimal `.github/workflows/spike-deploy.yml`: `vercel pull`, `vercel build --prod`, `vercel deploy --prebuilt --prod`, with a `public/index.html` saying "spike".
-  - **Ask the owner** before pushing. On a yes, push the branch and confirm the URL serves "spike" from region `sin1`: the `x-vercel-id` response header contains `sin1`.
-  - Then delete the workflow and `index.html`.
+- [ ] **Step 3: Deploy hello-world (manual CLI).**
+  - In a temp folder, create a `public/index.html` saying "spike" and a `vercel.json` with `"regions":["sin1"]`. Run `vercel deploy` (preview, not `--prod`). This is a deploy to the owner's Vercel account, so **ask the owner first**.
+  - Confirm the URL serves "spike" and that the `x-vercel-id` response header contains `sin1`. Record the result, then remove the spike deployment with `vercel remove fan-archive-spike --yes` (after asking).
+  - No GitHub push is needed for this check.
 - [ ] **Step 4: Commit:** `git add -A && git commit -m "Spikes: video playback, Thai trigrams, PGlite parity, deploy path"`
 
 ---

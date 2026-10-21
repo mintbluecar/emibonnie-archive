@@ -393,7 +393,16 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
 
 ### Task 10: Launch emibonnie (needs the owner)
 
-**Work in `emibonnie-archive/`. Files:** create `.github/workflows/deploy.yml` (from `docs/deploy-workflow.example.yml`) and `site/docs/deploy.md` (owner steps, plus an incident runbook: a leaked secret, and a takedown).
+**Work in `emibonnie-archive/`. Files:** create `scripts/deploy.sh` and `site/docs/deploy.md` (owner steps, plus an incident runbook: a leaked secret, and a takedown).
+
+**Owner decision (2026-10-21): emibonnie deploys manually** with the fan Vercel CLI on the owner's machine, with no GitHub Actions deploy and no Vercel token. `scripts/deploy.sh [--prod]` runs, stopping at the first failure:
+1. `npm ci`
+2. `npm run build`, `npm run check`, `npm test`
+3. `npm run doctor`
+4. **`npm run migrate`** against `DATABASE_URL` (prod) or `DATABASE_URL_PREVIEW`
+5. `vercel deploy` (with `--prod` when asked)
+
+CI (tests only) still runs on GitHub.
 
 **Owner steps.** Pause here. The owner does these in their **fan accounts**, following the spec's identity checklist. Confirm each step before continuing.
 1. **Neon:**
@@ -401,16 +410,13 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
    - Create a `preview` branch.
    - Copy both connection strings.
    - Create a least-privilege app role, with no `UPDATE` or `DELETE` on `audit_log`.
-2. **Vercel:**
-   - Create a Hobby project with a neutral name, without Git.
-   - Run `vercel link` in `emibonnie-archive/`, then create a token.
-   - Production env: `DATABASE_URL`. Preview env: `DATABASE_URL_PREVIEW` only.
+2. **Vercel:** the executor runs `vercel link --yes --project emibonnie-archive` with the logged-in fan CLI. The owner adds env vars in the Vercel dashboard: Production `DATABASE_URL`, Preview `DATABASE_URL_PREVIEW` only.
 3. **GitHub:**
    - Create the private repos `mintbluecar/fan-archive` (if not created in the 1a spike) and `mintbluecar/emibonnie-archive`.
-   - Add the secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `DATABASE_URL` and `DATABASE_URL_PREVIEW` to `emibonnie-archive`.
+   - No deploy secrets are needed on GitHub (manual deploys). CI runs tests only.
 4. **2FA:** confirm it's on for X, Google, GitHub, Vercel and Neon.
 
-- [ ] **Step 1: Write `deploy.yml` and `site/docs/deploy.md`.**
+- [ ] **Step 1: Write `scripts/deploy.sh` and `site/docs/deploy.md`.**
 - [ ] **Step 2: Database.**
   - Run `DATABASE_URL=… npm run setup`. **Expected:** the engine migration applied, then `seeded 2 people`.
   - Run `DATABASE_URL=… npm run seed-dev`. This loads the 6 real tweets through the same maps, offline from the seed files. **Expected:** `seeded 6`.
