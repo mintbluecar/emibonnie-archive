@@ -378,8 +378,9 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
   - **Identity:** name "emibonnie archive", wordmark `{accent:'emibonnie', rest:'archive'}`, tagline "fan translations, kept".
   - **Settings:** `lowercaseNames: true`, `sourceLanguage: 'th'`, `timezone: 'Asia/Bangkok'`, `region: 'sin1'`, `ownerXUserId: '1957464086339534848'`, `contactUrl` from the owner.
   - **featuredPeople:**
-    - `{igHandle:'emiamily', displayName:'emi', emoji:'🧡', colour:'#ff8a3d'}`
-    - `{igHandle:'beonnnie', displayName:'bonnie', emoji:'💜', colour:'#9b6cff'}`
+    - `{igHandle:'emiamily', displayName:'emi', emoji:'🧡', colour:'#ff8a3d', otherAccounts:[{platform:'x', handle:'emiamily'}]}`
+    - `{igHandle:'beonnnie', displayName:'bonnie', emoji:'💜', colour:'#9b6cff', otherAccounts:[{platform:'x', handle:'beonnnie'}]}`
+    - Both X handles were confirmed by the owner on 2026-10-21. They are used to recognise their own posts.
     - If validation flags either colour's contrast, darken that colour's **text shade** in `theme.css` and keep the brand colour. Record this in the commit message.
   - **defaultMarkers:** `{'💜':beonnnie, '🧡':emiamily, '🗣️':role crowd, '💬':role fan}`.
   - **ignoredHashtags:** `['emibonnie','namtanfilm']`.
