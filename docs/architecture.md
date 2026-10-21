@@ -56,7 +56,13 @@ site/                    a site's own folder (gitignored in the template); examp
    - Use expand/contract: never drop or rename in the same release that adds the replacement.
 7. **Parameterised SQL only.** The actor is set with `set_config('app.actor', $1, true)`.
 8. **Type-checked JS.** Every file starts with `// @ts-check`. `npm run check` runs tsc, eslint, and the cycle check.
-9. **Database conventions:** ADR 0006 (Task 7).
+9. **Database conventions** ([ADR 0006](decisions/0006-data-model-conventions.md)):
+   - Entity tables share `id` (identity), `created_at/by`, `updated_at/by`, `deleted_at/by` and `meta`; join tables carry `created_at/by` only.
+   - Soft delete only (erasure scripts and join-table rewrites excepted).
+   - Writes go through `db.transaction(fn, { actor })`; triggers stamp the actor and write a diff-only `audit_log`, and refuse writes with no actor.
+   - `meta` is display-only; growing value sets are text-coded lookup rows, closed sets are checks.
+   - Slugs are unique forever; other unique keys are partial on `deleted_at is null`.
+   - Moments are `timestamptz`, days are `date` in the site's time zone, read back as `'YYYY-MM-DD'`.
 10. **Naming:**
     - Files are `camelCase.js`. Functions are verbs. Pure transforms are named after what they return.
     - SQL is `snake_case`. Repos map rows to camelCase.
@@ -77,7 +83,7 @@ src/services/{ingest,search,hubs,seedFromSite}.js
 src/kinds/translation/{index,domain,repo,presenter,search,copy.json}.js  src/kinds/_registry.js (GENERATED)  src/kinds/defineKind.js
 src/repo/{visibility,rows,people,accounts,events,tags,lookups,settings,items,itemPeople,itemSources,itemLinks,speakerMemory}.js
 src/sources/{index,url,normalize,fetchTweet,syndication,fx,offlineFetch}.js
-src/db/{client,migrate}.js  src/db/migrations/001_initial.sql
+src/db/{client,pglite,common,migrate}.js  src/db/migrations/001_initial.sql
 src/site/{schema,loadSite,copy,copyDefaults.json,generated.js (GENERATED)}
 src/domain/{constants,dates,lines,header,speakers,events,text}.js
 test/…  (mirrors src)  test/fixtures/{tweets (synthetic), site-alt, site-badcopy}

@@ -83,6 +83,22 @@ export default [
     },
   },
   {
+    files: ['src/db/**/*.js'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/repo/**', '**/services/**', '**/sources/**', '**/http/**', '**/routes/**', '**/kinds/**'],
+              message: 'src/db may not import repo, services, sources, http, routes or kinds.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['src/services/**/*.js'],
     rules: {
       'no-restricted-imports': [
