@@ -371,7 +371,7 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
 **Work in `emibonnie-archive/`.**
 
 **Owner input needed.** Ask before starting, and use the answers:
-1. **emibonnie's public contact URL** (`contactUrl`). Suggest the fan X account's profile, or a Google Form owned by the fan account. Never an email address.
+1. **emibonnie's public contact URL** (`contactUrl`): **`https://x.com/mintbluetoyota`** (the owner's fan X profile, given on 2026-10-21).
 2. **Who made the emibonnie logo**, so the about page credits it correctly.
 
 - [ ] **Step 1: Bring in the engine.**
@@ -381,7 +381,7 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
   - Check `git config user.email`. **Expected:** `bluerotcar@gmail.com`.
 - [ ] **Step 2: `site/` values from the spec.**
   - **Identity:** name "emibonnie archive", wordmark `{accent:'emibonnie', rest:'archive'}`, tagline "fan translations, kept".
-  - **Settings:** `lowercaseNames: true`, `sourceLanguage: 'th'`, `timezone: 'Asia/Bangkok'`, `region: 'sin1'`, `ownerXUserId: '1957464086339534848'`, `contactUrl` from the owner.
+  - **Settings:** `lowercaseNames: true`, `sourceLanguage: 'th'`, `timezone: 'Asia/Bangkok'`, `region: 'sin1'`, `ownerXUserId: '1957464086339534848'`, `contactUrl: 'https://x.com/mintbluetoyota'`.
   - **featuredPeople:**
     - `{igHandle:'emiamily', displayName:'emi', emoji:'🧡', colour:'#ff8a3d', otherAccounts:[{platform:'x', handle:'emiamily'}]}`
     - `{igHandle:'beonnnie', displayName:'bonnie', emoji:'💜', colour:'#9b6cff', otherAccounts:[{platform:'x', handle:'beonnnie'}]}`
