@@ -15,6 +15,19 @@ One translator keeps a detailed Notion database of their own work. It's thorough
 
 The archive is a website, friendly on mobile and on desktop, that keeps the translations permanently with correct credit and makes them easy to browse and search.
 
+## Long-term vision (owner's, 2026-10-21)
+
+Translations are the **immediate need** and the only thing this version builds. In the long run, the archive becomes a full history of the pair, modelled on the owner's private Telegram channel. Its topics map to the archive like this:
+- **projects:** series and campaigns, e.g. MOONSHADOW, LOVE OF…
+- **songs:** lyrics as Thai / romanisation / English triplets, plus audio
+- **people pages:** emi, bonnie
+- **milestones:** "notes to self"
+- **media:** photos and videos from events, linked or embedded, not copied
+- **YouTube videos and interviews**
+- **translations**
+
+So the design is built around **hubs** (people, events, later projects) with **item kinds** attached. A translation is the first item kind. New kinds are added through one recipe without reworking existing ones. A Telegram export could later become another import source.
+
 ## Goals
 
 1. **Preserve.** Once a translation is archived, its text and credits survive even if the tweet is deleted or the account is suspended.
@@ -24,7 +37,7 @@ The archive is a website, friendly on mobile and on desktop, that keeps the tran
 5. **Watch while reading.** The clip plays in a player that stays in view while the translation scrolls.
 6. **Respect translators.** Credit is always shown. Translators can remove their entries or opt out entirely.
 7. **Near-zero running cost.** The site runs on free tiers.
-8. **Reusable by other fandoms** (owner's dream). Anyone who wants a translation archive for their favourite pair or group can copy the project as a template, fill in one `site/` folder, and deploy their own. They can keep pulling in improvements without conflicts. emibonnie is the first site built on it.
+8. **Reusable by other fandoms** (owner's dream). Anyone who wants an archive for their favourite pair or group can copy the project as a template, fill in one `site/` folder, and deploy their own. They can keep pulling in improvements without conflicts. emibonnie is the first site built on it.
 
 ## Non-goals (this version)
 
@@ -54,7 +67,16 @@ The archive is a website, friendly on mobile and on desktop, that keeps the tran
 
 ## Core concepts
 
-### Translation (one archived entry)
+### Items and item kinds
+
+Everything archived is an **item** of some **kind**. This version has one kind: `translation`.
+- **Fields every item shares:** the event it belongs to (or none), placement (`event` / `shared_story` / `unsorted`), date, people, the credited X account (the translator, for translations), source link and ID, source status (live / deleted / unavailable), added by, how it was added, removal fields, and order within the event.
+- **Kind-specific fields** live in that kind's own table (e.g. `translations`: text, speaker map, keyword, follow-ups, clip source).
+- **Remove and opt-out work on the shared fields,** so they cover every future kind automatically. A translator who opts out has every item credited to them removed, whatever its kind.
+- **Event, person and search pages show items in per-kind sections.** This version has only the translations section. A new kind adds a section.
+- **Projects** (a series or campaign that groups events) are a later hub, added as their own table that events point to.
+
+### Translation (the first item kind)
 
 **Entries have no title** (owner's decision). A tweet stands for itself. Wherever entries are listed (event pages, search, person pages), each one shows the opening lines of its translation text, with speaker emoji, as its preview.
 
@@ -344,7 +366,7 @@ Other fans start their own archive by copying a template repo, filling in `site/
   7. pull updates
 
   `site/README.md` documents every setting.
-- **Repos (my call, confirm):** the engine is developed in a template repo, `mintbluecar/fan-translation-archive`. emibonnie is its own repo, `mintbluecar/emibonnie-archive`, created from the template with emibonnie's `site/` and real data, and it pulls engine updates from upstream. The template can go public when the owner chooses. It contains nothing personal or fandom-specific.
+- **Repos (my call, confirm):** the engine is developed in a template repo, `mintbluecar/fan-archive` (named broadly, since translations are only the first item kind). emibonnie is its own repo, `mintbluecar/emibonnie-archive`, created from the template with emibonnie's `site/` and real data, and it pulls engine updates from upstream. The template can go public when the owner chooses. It contains nothing personal or fandom-specific.
 - **Languages:** the source language is a setting (Thai for emibonnie). Search already works for scripts without spaces (Thai, Chinese, Japanese) and for Korean, through trigram matching. Header parsing (all-caps keywords, `[YYMMDD]` and `d/m` dates, live platforms) is language-neutral. Extra platforms can be added in `site.json`.
 
 ## Later (designed around, not built)
