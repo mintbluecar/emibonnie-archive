@@ -14,6 +14,7 @@ import { formatName } from '../site/loadSite.js';
 /** @typedef {import('../kinds/defineKind.js').Kind} Kind */
 /** @typedef {import('../repo/cards.js').Card} Card */
 /** @typedef {import('../http/contracts.js').Preview} Preview */
+/** @typedef {import('../http/contracts.js').KindPreview} KindPreview */
 /** @typedef {import('../http/contracts.js').PersonChip} PersonChip */
 /** @typedef {import('../http/contracts.js').EventRef} EventRef */
 /** @typedef {import('../kinds/defineKind.js').PresentContext} PresentContext */
@@ -77,7 +78,8 @@ export async function detailsFor(deps, cards) {
 }
 
 /**
- * The previews of the visible items among `itemIds`, in that order.
+ * The previews of the visible items among `itemIds`, in that order: each
+ * kind's own preview plus the shared `occurredOn` and `placement`.
  * Hidden ids and items of unknown kinds are left out.
  * @param {ViewDeps} deps
  * @param {number[]} itemIds
@@ -93,6 +95,7 @@ export async function previewsFor(deps, itemIds, ctx) {
     .filter((card) => kinds[card.kind] && details.has(card.id))
     .map((card) => {
       const entry = details.get(card.id);
-      return { card, details: entry, preview: /** @type {Preview} */ (kinds[card.kind].present.preview(card, entry, ctx)) };
+      const own = /** @type {KindPreview} */ (kinds[card.kind].present.preview(card, entry, ctx));
+      return { card, details: entry, preview: { ...own, occurredOn: card.occurredOn, placement: card.placement } };
     });
 }

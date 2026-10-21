@@ -29,11 +29,15 @@
  * @typedef {{
  *   kind: string, sourceId: string, url: string, lines: BubbleVM[], people: PersonChip[],
  *   accountHandle: string|null, hasVideo: boolean, followsOnFrom: ItemLink|null,
- * }} Preview
- *   An item in a list: its opening lines (the first 2 speech bubbles, or
- *   failing that the first 2 plain lines that aren't header). `hasVideo`:
- *   the item's media (MediaVM) is, or quotes, a clip that is still live.
- *   `followsOnFrom`: the visible item this one follows on from.
+ * }} KindPreview
+ *   What a kind's `present.preview` returns: its opening lines (the first
+ *   2 speech bubbles, or failing that the first 2 plain lines that aren't
+ *   header). `hasVideo`: the item's media (MediaVM) is, or quotes, a clip
+ *   that is still live. `followsOnFrom`: the visible item this one follows on from.
+ * @typedef {KindPreview & { occurredOn: string, placement: import('../domain/constants.js').Placement }} Preview
+ *   An item in a list: the kind's preview plus the shared fields every
+ *   kind has (added by src/services/cards.js): the date it happened on
+ *   and its placement.
  *
  * @typedef {{ url: string, width: number, height: number }} ImageVM
  * @typedef {{ bitrate: number, url: string }} VariantVM
@@ -60,11 +64,20 @@
  *   `original` is the verbatim text (every part, joined by a blank line).
  *   `clipBy`: the clip/picture account, when it isn't the translator.
  *
+ * @typedef {{ kind: 'handle', handle: string } | { kind: 'name', name: string } | { kind: 'fan' }} AddedByVM
+ *   Who added an item: an X user's handle, else the display name they
+ *   chose, else (a deleted user, an opted-out X account, no name) `fan`,
+ *   which the page shows as copy `item.addedByFan` ("a fan"). Never an
+ *   id or an email.
  * @typedef {DetailVM & {
- *   kind: string, sourceId: string, url: string, event: EventRef|null, people: PersonChip[],
+ *   kind: string, sourceId: string, url: string, placement: Preview['placement'], event: EventRef|null, people: PersonChip[],
+ *   tags: { keyword: string|null, hashtags: string[] }, category: string|null, addedBy: AddedByVM|null,
  *   followsOnFrom: ItemLink|null, prev: ItemLink|null, next: ItemLink|null,
  * }} ItemView
- *   `prev`/`next`: the visible neighbours in the item's event.
+ *   `prev`/`next`: the visible neighbours in the item's event. `tags`: the
+ *   item's keyword and hashtags as first written (ignored hashtags left
+ *   out). `category`: its type's name. `addedBy`: null for the engine's
+ *   own writes (seeds, imports run as `system`).
  *
  * @typedef {{ slug: string, name: string, occurredOn: string, hashtag: string|null, counts: Record<string, number> }} HomeEvent
  *   `counts`: visible items per kind (kinds with none are left out).
@@ -76,10 +89,14 @@
  *   Sections come in registry order; kinds with no items are left out.
  *
  * @typedef {{
- *   event: { slug: string, name: string, occurredOn: string, hashtags: string[], keywords: string[] },
- *   accountCount: number, people: PersonChip[], sections: Section[],
+ *   event: { slug: string, name: string, occurredOn: string, hashtags: string[], keywords: string[],
+ *     type: string|null, client: string|null },
+ *   accountCount: number, counts: Record<string, number>, people: PersonChip[], sections: Section[],
  * }} EventView
- *   Items in event order (oldest first).
+ *   Items in event order (oldest first). `type`: the event's category
+ *   name; `client`: its client/media name. `counts`: visible items per
+ *   kind (a count query, so never capped by a section's page size; kinds
+ *   with none are left out).
  *
  * @typedef {{
  *   person: PersonChip & { featured: boolean }, counts: { items: number, events: number, sharedStories: number },

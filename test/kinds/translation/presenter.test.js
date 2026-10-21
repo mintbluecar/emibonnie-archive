@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { IDS } from '../../helpers/fixtures.js';
 import { seededDeps, itemIdOf, SYSTEM } from '../../helpers/ingest.js';
-import { itemView } from '../../../src/services/hubs.js';
+import { itemView } from '../../../src/services/itemView.js';
 import { previewsFor, presenterContext } from '../../../src/services/cards.js';
 import { addParts } from '../../../src/kinds/translation/repo.js';
 import translation from '../../../src/kinds/translation/index.js';

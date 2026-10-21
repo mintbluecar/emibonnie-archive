@@ -13,7 +13,7 @@ import { findVisibleItemId } from '../repo/cards.js';
 import { touchRefresh, unfinalizedSources } from '../repo/sourceEdits.js';
 import { Conflict } from '../domain/errors.js';
 import { kindsOf } from './cards.js';
-import { itemView } from './hubs.js';
+import { itemView } from './itemView.js';
 import { refreshEdits } from './postUpkeep.js';
 
 /** @typedef {import('./cards.js').ViewDeps & { fetchImpl: typeof fetch, now?: () => Date }} ItemDeps */

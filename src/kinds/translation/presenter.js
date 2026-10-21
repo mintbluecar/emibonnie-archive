@@ -11,7 +11,7 @@ import { resolveMedia, hasVideo, clipByOf, publicSources } from './media.js';
 
 /** @typedef {import('../../http/contracts.js').BubbleVM} BubbleVM */
 /** @typedef {import('../../http/contracts.js').CastVM} CastVM */
-/** @typedef {import('../../http/contracts.js').Preview} Preview */
+/** @typedef {import('../../http/contracts.js').KindPreview} KindPreview */
 /** @typedef {import('../../http/contracts.js').DetailVM} DetailVM */
 /** @typedef {import('../../http/contracts.js').PersonChip} PersonChip */
 /** @typedef {import('../../domain/lines.js').Line} Line */
@@ -98,7 +98,7 @@ function previewLines(details, ctx) {
  * @param {Card} card
  * @param {TranslationDetails} details
  * @param {PresentContext} ctx
- * @returns {Preview}
+ * @returns {KindPreview}
  */
 function preview(card, details, ctx) {
   const sources = publicSources(details.sources);

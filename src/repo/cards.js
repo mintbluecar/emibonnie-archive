@@ -11,7 +11,7 @@ import { EVENT_NOT_DELETED } from './items.js';
 /** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
 /**
  * @typedef {{
- *   id: number, kind: string, placement: string, sourceId: string,
+ *   id: number, kind: string, placement: import('../domain/constants.js').Placement, sourceId: string,
  *   occurredOn: string, postedAt: string|null,
  *   account: { handle: string, displayName: string|null }|null,
  *   event: { id: number, slug: string, name: string, occurredOn: string }|null,
@@ -85,4 +85,43 @@ export async function findVisibleItemId(db, { kind, platform, externalId }) {
     [kind, platform, externalId],
   );
   return rows[0]?.id ?? null;
+}
+
+/**
+ * @typedef {{
+ *   keyword: string|null, hashtags: string[], category: string|null,
+ *   submitter: { role: string, deleted: boolean, name: string|null, onX: boolean, xHandle: string|null }|null,
+ * }} ItemExtras
+ *   An item page's own fields: its tags as first written (`tags.display`;
+ *   ignored hashtags left out), its category's name, and who submitted it.
+ *   `submitter.xHandle` is null when their X account opted out.
+ */
+
+const EXTRAS_SQL = `
+  select
+    (select t.display from item_tags it join tags t on t.id = it.tag_id
+       where it.item_id = i.id and t.kind = 'keyword' order by t.id limit 1) as keyword,
+    coalesce((select array_agg(t.display order by t.id) from item_tags it join tags t on t.id = it.tag_id
+       where it.item_id = i.id and t.kind = 'hashtag' and not t.ignored), '{}') as hashtags,
+    (select c.name from categories c where c.id = i.category_id and c.deleted_at is null) as category,
+    u.id is not null as has_user, u.role as user_role, u.deleted_at is not null as user_deleted, u.display_name as user_name,
+    exists (select 1 from accounts ux where ux.user_id = u.id and ux.platform = 'x' and ux.deleted_at is null) as on_x,
+    (select ux.handle from accounts ux where ux.user_id = u.id and ux.platform = 'x' and ux.deleted_at is null
+       and ux.opted_out_at is null order by ux.id limit 1) as x_handle
+  from items i left join users u on u.id = i.created_by
+  where i.id = $1`;
+
+/**
+ * @param {Tx} db
+ * @param {number} itemId an id already resolved through the visibility rule
+ * @returns {Promise<ItemExtras|null>}
+ */
+export async function loadItemExtras(db, itemId) {
+  const { rows } = await db.query(EXTRAS_SQL, [itemId]);
+  const row = rows[0];
+  if (!row) return null;
+  const submitter = row.has_user
+    ? { role: row.user_role, deleted: row.user_deleted, name: row.user_name, onX: row.on_x, xHandle: row.x_handle }
+    : null;
+  return { keyword: row.keyword, hashtags: row.hashtags, category: row.category, submitter };
 }

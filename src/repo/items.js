@@ -185,6 +185,24 @@ export async function listVisibleItemIds(db, filters = {}) {
   return rows.map((r) => ({ id: r.id, kind: r.kind }));
 }
 
+/**
+ * How many visible items match `filters` (the same ones `listVisibleItemIds`
+ * takes), per kind -- the one count every hub page's totals come from.
+ * Kinds with none are left out.
+ * @param {Tx} db
+ * @param {{ eventId?: number, personId?: number, accountId?: number, kind?: string, placement?: string }} [filters]
+ * @returns {Promise<Record<string, number>>}
+ */
+export async function countVisibleItemsByKind(db, filters = {}) {
+  const { conditions, personClause, params } = buildFilterClauses(filters);
+  const { rows } = await db.query(
+    `select i.kind, count(*)::int as n from items i where ${conditions.join(' and ')} ${personClause}
+     group by i.kind order by i.kind`,
+    params,
+  );
+  return Object.fromEntries(rows.map((r) => [r.kind, r.n]));
+}
+
 /** @param {Tx} db @returns {Promise<{ eventId: number, count: number }[]>} */
 export async function countsByEvent(db) {
   const { rows } = await db.query(

@@ -1,31 +1,26 @@
 // @ts-check
 /**
  * The hub views (src/http/contracts.js): home, event, person, translator
- * account, the search filter options, and one item's page. Visible
+ * account and the search filter options (one item's page: itemView.js). Visible
  * items and events only; per-kind sections in registry order, with empty
  * kinds left out. Never names a kind.
  */
-import { listVisibleItemIds, neighbours } from '../repo/items.js';
+import { countVisibleItemsByKind, listVisibleItemIds } from '../repo/items.js';
 import { listVisibleEvents, getVisibleEventBySlug } from '../repo/events.js';
 import { getPersonByHandle, listPeople } from '../repo/people.js';
 import { findAccountForView } from '../repo/accounts.js';
 import { listCategories } from '../repo/lookups.js';
-import { countsByEventKind, eventCrowd, personCounts, visibleAccountHandles } from '../repo/hubQueries.js';
-import { findVisibleItemId, loadCards } from '../repo/cards.js';
+import { countsByEventKind, eventCrowd, eventLabels, personCounts, visibleAccountHandles } from '../repo/hubQueries.js';
 import { formatName } from '../site/loadSite.js';
-import { kindsOf, chipOf, eventRefOf, presenterContext, previewsFor, detailsFor } from './cards.js';
+import { kindsOf, chipOf, eventRefOf, presenterContext, previewsFor } from './cards.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
-/** @typedef {import('../http/contracts.js').Preview} Preview */
-/** @typedef {import('../http/contracts.js').DetailVM} DetailVM */
 /** @typedef {import('../http/contracts.js').HomeView} HomeView */
 /** @typedef {import('../http/contracts.js').EventView} EventView */
 /** @typedef {import('../http/contracts.js').PersonView} PersonView */
 /** @typedef {import('../http/contracts.js').AccountView} AccountView */
 /** @typedef {import('../http/contracts.js').OptedOutAccountView} OptedOutAccountView */
 /** @typedef {import('../http/contracts.js').FilterOptions} FilterOptions */
-/** @typedef {import('../http/contracts.js').ItemView} ItemView */
-/** @typedef {import('../http/contracts.js').ItemLink} ItemLink */
 
 const RECENT_EVENTS = 200;
 const PAGE_ITEMS = 200;
@@ -69,12 +64,16 @@ async function sectionsOf(deps, filters, withEvent) {
 export async function eventView(deps, slug) {
   const event = await getVisibleEventBySlug(deps.db, slug);
   if (!event) return null;
-  const [crowd, people] = await Promise.all([eventCrowd(deps.db, event.id), listPeople(deps.db)]);
+  const [crowd, people, labels, counts] = await Promise.all([
+    eventCrowd(deps.db, event.id), listPeople(deps.db), eventLabels(deps.db, event.id), countVisibleItemsByKind(deps.db, { eventId: event.id }),
+  ]);
   const format = (/** @type {string} */ name) => formatName(deps.site, name);
   const byId = new Map(people.map((p) => [p.id, p]));
+  const { name, occurredOn, hashtags, keywords } = event;
   return {
-    event: { slug: event.slug, name: event.name, occurredOn: event.occurredOn, hashtags: event.hashtags, keywords: event.keywords },
+    event: { slug: event.slug, name, occurredOn, hashtags, keywords, type: labels.type, client: labels.client },
     accountCount: crowd.accountCount,
+    counts,
     people: crowd.personIds.map((id) => byId.get(id)).filter((p) => p !== undefined).map((p) => chipOf(p, format)),
     sections: await sectionsOf(deps, { eventId: event.id, order: 'asc' }, false),
   };
@@ -136,37 +135,5 @@ export async function filterOptions(deps) {
     categories,
     events: events.map((e) => ({ slug: e.slug, name: e.name })),
     accounts,
-  };
-}
-
-/** @param {ViewDeps} deps @param {number|null} itemId @returns {Promise<ItemLink|null>} */
-async function linkTo(deps, itemId) {
-  if (itemId === null) return null;
-  const card = (await loadCards(deps.db, [itemId])).get(itemId);
-  const kind = card ? kindsOf(deps)[card.kind] : undefined;
-  return card && kind ? { sourceId: card.sourceId, url: `${kind.urlPrefix}${card.sourceId}` } : null;
-}
-
-/**
- * One visible item's page: its kind's detail, with the shared header
- * fields and its neighbours in its event. Null for an unknown kind, an
- * unknown id or a hidden item.
- * @param {ViewDeps} deps @param {string} kindName @param {string} sourceId
- * @returns {Promise<ItemView|null>}
- */
-export async function itemView(deps, kindName, sourceId) {
-  const kind = Object.hasOwn(kindsOf(deps), kindName) ? kindsOf(deps)[kindName] : undefined;
-  if (!kind) return null;
-  const id = await findVisibleItemId(deps.db, { kind: kind.name, platform: kind.platform, externalId: sourceId });
-  const card = id === null ? undefined : (await loadCards(deps.db, [id])).get(id);
-  const details = card ? (await detailsFor(deps, [card])).get(card.id) : undefined;
-  if (!card || !details) return null;
-  const ctx = await presenterContext(deps);
-  const preview = /** @type {Preview} */ (kind.present.preview(card, details, ctx));
-  const detail = /** @type {DetailVM} */ (kind.present.detail(card, details, ctx));
-  const { prev, next } = card.event ? await neighbours(deps.db, card.id) : { prev: null, next: null };
-  return {
-    ...detail, kind: kind.name, sourceId: card.sourceId, url: preview.url, event: eventRefOf(card.event), people: preview.people,
-    followsOnFrom: preview.followsOnFrom, prev: await linkTo(deps, prev), next: await linkTo(deps, next),
   };
 }

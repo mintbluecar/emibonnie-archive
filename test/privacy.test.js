@@ -21,6 +21,8 @@ const BANNED = [
   'tl_gamma', 'clipper_one',
   IDS.EVENT_B, 'I have something to tell you', 'always you <b>&amp;</b> me', 'always you \\u003cb\\u003e',
   IDS.EDITED_OLD, IDS.EDITED_NEW, 'fanmeet',
+  // submitters of visible items: user ids, and the name of one who deleted their account
+  'member-b', 'member-c', 'member-d', 'gone reader',
 ];
 const OPTED_OUT = ['tl_gamma', 'clipper_one'];
 
@@ -34,7 +36,28 @@ before(async () => {
     await tx.query("update accounts set opted_out_at = now() where handle = any($1)", [OPTED_OUT]);
     await tx.query("update users set blocked_at = now() where id = 'member-b'");
   }, SYSTEM);
+  await setSubmitters();
 });
+
+/**
+ * Two visible items get submitters whose names must not show: member-c,
+ * whose X account is the opted-out clipper_one, and member-d, a deleted
+ * user. `created_by` never changes after an insert (the `set_common`
+ * trigger), so the trigger is switched off for this one test-only rewrite.
+ */
+async function setSubmitters() {
+  await deps.db.transaction(async (/** @type {any} */ tx) => {
+    await tx.query("insert into users (id, display_name) values ('member-c', 'c'), ('member-d', 'gone reader')");
+    await tx.query("update users set deleted_at = now() where id = 'member-d'");
+    await tx.query("update accounts set user_id = 'member-c' where handle = 'clipper_one'");
+    await tx.query('alter table items disable trigger items_set_common');
+    await tx.query("update items set created_by = 'member-c' where id = (select item_id from item_sources where role = 'primary' and external_id = $1)", [IDS.LONG]);
+    await tx.query("update items set created_by = 'member-d' where id = (select item_id from item_sources where role = 'primary' and external_id = $1)", [IDS.EVENT_A]);
+    await tx.query('alter table items enable trigger items_set_common');
+  }, SYSTEM);
+  const added = (await rows(deps.db, "select count(*)::int as n from items where created_by in ('member-c', 'member-d')"))[0].n;
+  assert.equal(added, 2);
+}
 after(async () => { await deps.db.end(); });
 
 /** Representative calls covering every route, built from what the database holds (hidden rows included). */
@@ -88,6 +111,15 @@ test('privacy sweep: no route leaks an opted-out account, a removed post or a bl
   }
   assert.deepEqual(leaks, []);
   assert.deepEqual(routes.filter((r) => !covered.has(r)).map((r) => `${r.method} ${r.path}`), [], 'every registered route was called');
+});
+
+test('a visible item shows its submitter only as the public form', async () => {
+  const api = apiFor(deps);
+  const long = JSON.parse((await api.call('GET', `/api/item/translation/${IDS.LONG}`)).text);
+  const a = JSON.parse((await api.call('GET', `/api/item/translation/${IDS.EVENT_A}`)).text);
+  await api.settle();
+  assert.deepEqual(long.addedBy, { kind: 'fan' }, 'an opted-out X account reads as a fan');
+  assert.deepEqual(a.addedBy, { kind: 'fan' }, 'a deleted user reads as a fan');
 });
 
 test('the hidden items answer exactly like missing ones', async () => {

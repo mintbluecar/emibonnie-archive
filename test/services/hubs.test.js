@@ -2,8 +2,10 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { IDS } from '../helpers/fixtures.js';
-import { seededDeps, itemIdOf, SYSTEM } from '../helpers/ingest.js';
-import { homeView, eventView, personView, accountView, filterOptions, itemView } from '../../src/services/hubs.js';
+import { seededDeps, itemIdOf, ingest, SYSTEM } from '../helpers/ingest.js';
+import { homeView, eventView, personView, accountView, filterOptions } from '../../src/services/hubs.js';
+import { itemView, addedByOf } from '../../src/services/itemView.js';
+import { search } from '../../src/services/search.js';
 import { upsertAccount } from '../../src/repo/accounts.js';
 
 /** @type {any} */
@@ -139,4 +141,89 @@ test('followsOnFrom names the visible item this one follows on from', async () =
       await tx.query('delete from item_links where from_item_id = $1', [longId]);
     }, SYSTEM);
   }
+});
+
+test('previews carry the shared occurredOn and placement; search results too', async () => {
+  const view = /** @type {any} */ (await eventView(deps, 'solluna-happy-day-2026-10-19'));
+  const first = view.sections[0].items[0];
+  assert.equal(first.occurredOn, '2026-10-19');
+  assert.equal(first.placement, 'event');
+  const person = /** @type {any} */ (await personView(deps, 'solsunny'));
+  const post = person.sections[0].items.find((/** @type {any} */ i) => i.sourceId === IDS.POST);
+  assert.equal(post.placement, 'post');
+  const { results } = await search(deps, { kinds: ['translation'], placements: ['shared_story'] });
+  assert.ok(results.length > 0);
+  for (const r of results) {
+    assert.equal(r.placement, 'shared_story');
+    assert.match(r.occurredOn, /^\d{4}-\d{2}-\d{2}$/);
+  }
+});
+
+test('eventView: type and client names, and visible counts per kind from a count query', async () => {
+  const slug = 'solluna-happy-day-2026-10-19';
+  const plain = /** @type {any} */ (await eventView(deps, slug));
+  assert.equal(plain.event.type, null);
+  assert.equal(plain.event.client, null);
+  assert.deepEqual(plain.counts, { translation: 2 });
+  await deps.db.transaction(async (/** @type {any} */ tx) => {
+    const category = (await tx.query("select id from categories where name = 'live'")).rows[0].id;
+    const client = (await tx.query("insert into clients (name) values ('Some Channel') returning id")).rows[0].id;
+    await tx.query('update events set category_id = $1, client_id = $2 where slug = $3', [category, client, slug]);
+  }, SYSTEM);
+  const id = await itemIdOf(deps.db, IDS.EVENT_B);
+  await deps.db.transaction((/** @type {any} */ tx) => tx.query("update items set review_state = 'pending' where id = $1", [id]), SYSTEM);
+  try {
+    const view = /** @type {any} */ (await eventView(deps, slug));
+    assert.equal(view.event.type, 'live');
+    assert.equal(view.event.client, 'Some Channel');
+    assert.deepEqual(view.counts, { translation: 1 }, 'a pending item is not counted');
+  } finally {
+    await deps.db.transaction(async (/** @type {any} */ tx) => {
+      await tx.query("update items set review_state = 'published' where id = $1", [id]);
+      await tx.query('update events set category_id = null, client_id = null where slug = $1', [slug]);
+    }, SYSTEM);
+  }
+});
+
+test('itemView: placement, tags as first written, category name, and addedBy null for system writes', async () => {
+  const id = await itemIdOf(deps.db, IDS.EVENT_A);
+  const plain = /** @type {any} */ (await itemView(deps, 'translation', IDS.EVENT_A));
+  assert.equal(plain.placement, 'event');
+  assert.deepEqual(plain.tags, { keyword: 'SOLLUNA HAPPY DAY', hashtags: ['SLHappyDay2026'] });
+  assert.equal(plain.category, null);
+  assert.equal(plain.addedBy, null);
+  await deps.db.transaction((/** @type {any} */ tx) => tx.query("update items set category_id = (select id from categories where name = 'live') where id = $1", [id]), SYSTEM);
+  try {
+    assert.equal((/** @type {any} */ (await itemView(deps, 'translation', IDS.EVENT_A))).category, 'live');
+  } finally {
+    await deps.db.transaction((/** @type {any} */ tx) => tx.query('update items set category_id = null where id = $1', [id]), SYSTEM);
+  }
+});
+
+test('itemView addedBy: an X user\'s handle, "a fan" once opted out or deleted, else the chosen display name; never an id', async () => {
+  await deps.db.transaction(async (/** @type {any} */ tx) => {
+    await tx.query("insert into users (id, display_name) values ('member-added', 'kind reader')");
+    await tx.query("insert into accounts (platform, handle, user_id) values ('x', 'submitter_x', 'member-added')");
+  }, SYSTEM);
+  assert.equal((await ingest(deps, IDS.EDITED_OLD, { actor: 'member-added' })).status, 'added');
+  const addedBy = async () => (/** @type {any} */ (await itemView(deps, 'translation', IDS.EDITED_NEW))).addedBy;
+  const set = (/** @type {string} */ sql) => deps.db.transaction((/** @type {any} */ tx) => tx.query(sql), SYSTEM);
+  assert.deepEqual(await addedBy(), { kind: 'handle', handle: 'submitter_x' });
+  assert.ok(!JSON.stringify(await itemView(deps, 'translation', IDS.EDITED_NEW)).includes('member-added'));
+  await set("update accounts set opted_out_at = now() where handle = 'submitter_x'");
+  assert.deepEqual(await addedBy(), { kind: 'fan' });
+  await set("update accounts set deleted_at = now() where handle = 'submitter_x'");
+  assert.deepEqual(await addedBy(), { kind: 'name', name: 'kind reader' });
+  await set("update users set deleted_at = now() where id = 'member-added'");
+  assert.deepEqual(await addedBy(), { kind: 'fan' });
+});
+
+test('addedByOf: the public form of a submitter', () => {
+  const base = { role: 'member', deleted: false, name: 'n', onX: false, xHandle: null };
+  assert.equal(addedByOf(null), null);
+  assert.equal(addedByOf({ ...base, role: 'system' }), null);
+  assert.deepEqual(addedByOf({ ...base, name: '  ' }), { kind: 'fan' });
+  assert.deepEqual(addedByOf({ ...base, name: null }), { kind: 'fan' });
+  assert.deepEqual(addedByOf({ ...base, onX: true, xHandle: 'h' }), { kind: 'handle', handle: 'h' });
+  assert.deepEqual(addedByOf({ ...base, deleted: true, onX: true, xHandle: 'h' }), { kind: 'fan' });
 });

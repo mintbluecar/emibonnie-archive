@@ -42,6 +42,22 @@ export async function eventCrowd(db, eventId) {
 }
 
 /**
+ * An event's category (its type) and client/media names, each null when unset or deleted.
+ * @param {Tx} db
+ * @param {number} eventId
+ * @returns {Promise<{ type: string|null, client: string|null }>}
+ */
+export async function eventLabels(db, eventId) {
+  const { rows } = await db.query(
+    `select (select c.name from categories c where c.id = e.category_id and c.deleted_at is null) as type,
+       (select cl.name from clients cl where cl.id = e.client_id and cl.deleted_at is null) as client
+     from events e where e.id = $1`,
+    [eventId],
+  );
+  return { type: rows[0]?.type ?? null, client: rows[0]?.client ?? null };
+}
+
+/**
  * Counts each item once, whatever roles the person has on it.
  * @param {Tx} db
  * @param {number} personId
