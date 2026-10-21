@@ -1,0 +1,47 @@
+{
+ "status": {
+  "type": "status",
+  "url": "https://x.com/tl_gamma/status/1900000000000000003",
+  "id": "1900000000000000003",
+  "text": "SOLLUNA HAPPY DAY\n#SLHappyDay2026 #SolLuna\n\n☀️: Everyone, thank you so much for celebrating with us today.\n☀️: Luna, I have something to tell you.\n🌙: What is it?\n☀️: it's always you <b>&amp;</b> me, right?\n🌙: Always, no matter what.",
+  "raw_text": {
+   "text": "SOLLUNA HAPPY DAY\n#SLHappyDay2026 #SolLuna\n\n☀️: Everyone, thank you so much for celebrating with us today.\n☀️: Luna, I have something to tell you.\n🌙: What is it?\n☀️: it's always you <b>&amp;</b> me, right?\n🌙: Always, no matter what.",
+   "display_text_range": [
+    0,
+    234
+   ],
+   "facets": []
+  },
+  "author": {
+   "screen_name": "tl_gamma",
+   "url": "https://x.com/tl_gamma",
+   "id": "9003",
+   "name": "gamma live"
+  },
+  "replies": 0,
+  "reposts": 0,
+  "likes": 42,
+  "bookmarks": 0,
+  "quotes": 0,
+  "embed_card": "tweet",
+  "created_at": "Mon Oct 19 08:05:00 +0000 2026",
+  "created_timestamp": 1792397100,
+  "possibly_sensitive": false,
+  "views": 100,
+  "is_note_tweet": false,
+  "community_note": null,
+  "lang": "en",
+  "replying_to": null,
+  "media": {},
+  "provider": "twitter",
+  "reposted_by": null
+ },
+ "thread": null,
+ "code": 200,
+ "author": {
+  "screen_name": "tl_gamma",
+  "url": "https://x.com/tl_gamma",
+  "id": "9003",
+  "name": "gamma live"
+ }
+}

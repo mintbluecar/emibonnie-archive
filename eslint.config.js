@@ -101,7 +101,23 @@ export default [
     },
   },
   {
-    files: ['test/**/*.js'],
+    files: ['src/sources/**/*.js'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/repo/**', '**/services/**', '**/http/**', '**/routes/**', '**/kinds/**'],
+              message: 'src/sources may not import repo, services, http, routes or kinds.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['test/**/*.js', 'test/**/*.mjs'],
     rules: {
       'max-lines': 'off',
       'max-lines-per-function': 'off',

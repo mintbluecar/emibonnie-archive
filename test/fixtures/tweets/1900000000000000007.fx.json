@@ -1,0 +1,47 @@
+{
+ "status": {
+  "type": "status",
+  "url": "https://x.com/tl_beta/status/1900000000000000007",
+  "id": "1900000000000000007",
+  "text": "#solsunny #lunamoon IG live [260301]\n\n☀️: hi everyone, thanks for tuning in\n🌙: hi hi!!\n☀️: we're both here today\n🌙: love you all, thank you for watching",
+  "raw_text": {
+   "text": "#solsunny #lunamoon IG live [260301]\n\n☀️: hi everyone, thanks for tuning in\n🌙: hi hi!!\n☀️: we're both here today\n🌙: love you all, thank you for watching",
+   "display_text_range": [
+    0,
+    154
+   ],
+   "facets": []
+  },
+  "author": {
+   "screen_name": "tl_beta",
+   "url": "https://x.com/tl_beta",
+   "id": "9002",
+   "name": "beta subs"
+  },
+  "replies": 0,
+  "reposts": 0,
+  "likes": 42,
+  "bookmarks": 0,
+  "quotes": 0,
+  "embed_card": "tweet",
+  "created_at": "Sun Mar 01 14:00:00 +0000 2026",
+  "created_timestamp": 1772373600,
+  "possibly_sensitive": false,
+  "views": 100,
+  "is_note_tweet": false,
+  "community_note": null,
+  "lang": "en",
+  "replying_to": null,
+  "media": {},
+  "provider": "twitter",
+  "reposted_by": null
+ },
+ "thread": null,
+ "code": 200,
+ "author": {
+  "screen_name": "tl_beta",
+  "url": "https://x.com/tl_beta",
+  "id": "9002",
+  "name": "beta subs"
+ }
+}

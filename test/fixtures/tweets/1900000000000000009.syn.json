@@ -1,0 +1,73 @@
+{
+ "__typename": "Tweet",
+ "favorite_count": 42,
+ "lang": "en",
+ "possibly_sensitive": false,
+ "created_at": "2026-10-20T10:00:00.000Z",
+ "display_text_range": [
+  0,
+  95
+ ],
+ "entities": {
+  "hashtags": [
+   {
+    "indices": [
+     0,
+     9
+    ],
+    "text": "solsunny"
+   }
+  ],
+  "media": [
+   {
+    "indices": [
+     95,
+     132
+    ],
+    "display": "pic.x.com/1900000000000000009media",
+    "original": "https://t.co/1900000000000000009media",
+    "url": "https://t.co/1900000000000000009media",
+    "expanded_url": "https://x.com/tl_alpha/status/1900000000000000009/video/1"
+   }
+  ]
+ },
+ "id_str": "1900000000000000009",
+ "text": "#solsunny\n\n☀️: look at these two shots from earlier today\n☀️: so happy with how they turned out https://t.co/1900000000000000009media",
+ "user": {
+  "id_str": "9001",
+  "name": "alpha clips",
+  "screen_name": "tl_alpha"
+ },
+ "mediaDetails": [
+  {
+   "type": "photo",
+   "media_url_https": "https://pbs.twimg.com/media/1900000000000000009p1.jpg",
+   "original_info": {
+    "width": 1080,
+    "height": 1350
+   }
+  },
+  {
+   "type": "photo",
+   "media_url_https": "https://pbs.twimg.com/media/1900000000000000009p2.jpg",
+   "original_info": {
+    "width": 1080,
+    "height": 1350
+   }
+  },
+  {
+   "type": "photo",
+   "media_url_https": "https://cdn.badhost.example/media/1900000000000000009p3.jpg",
+   "original_info": {
+    "width": 800,
+    "height": 800
+   }
+  }
+ ],
+ "photos": [],
+ "video": null,
+ "conversation_count": 1,
+ "news_action_type": "conversation",
+ "isEdited": false,
+ "isStaleEdit": false
+}
