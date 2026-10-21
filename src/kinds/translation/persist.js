@@ -7,7 +7,7 @@
  */
 import { addSources, findSourceOwner, nextPosition } from '../../repo/itemSources.js';
 import { addAliases } from '../../repo/sourceEdits.js';
-import { getAccountByHandle, upsertAccount } from '../../repo/accounts.js';
+import { upsertAccount } from '../../repo/accounts.js';
 import { tagItem } from '../../repo/tags.js';
 import { link } from '../../repo/itemLinks.js';
 import { remember } from '../../repo/speakerMemory.js';
@@ -16,7 +16,11 @@ import { addParts, insertTranslation, setSpeakers } from './repo.js';
 /** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
 /** @typedef {import('./domain.js').TranslationDraft} TranslationDraft */
 /** @typedef {import('../../sources/normalize.js').Tweet} Tweet */
-/** @typedef {{ id: string, text: string, editableUntil: string|null }} PostPart */
+/**
+ * @typedef {{ id: string, text: string, editableUntil: string|null, versionIds?: string[] }} PostPart
+ *   `versionIds`: every id the post has had (an edited post's earlier
+ *   versions); each becomes an alias of its source, as does `id`.
+ */
 
 const KIND = 'translation';
 const STATUS_ID = /\/status\/(\d{1,20})/u;
@@ -42,7 +46,7 @@ export async function appendPosts(tx, { itemId, accountId, handle, posts }) {
       platform: 'x', externalId: post.id, url: statusUrl(handle, post.id), role: 'follow_up', position,
       accountId: accountId ?? undefined, editableUntil: post.editableUntil,
     }]);
-    await addAliases(tx, { sourceId, platform: 'x', ids: [post.id] });
+    await addAliases(tx, { sourceId, platform: 'x', ids: [post.id, ...(post.versionIds ?? [])] });
     await addParts(tx, itemId, [{ sourceId, body: post.text }]);
     position += 1;
   }
@@ -65,16 +69,16 @@ async function addMainPost(tx, { itemId, accountId, draft }) {
 
 /**
  * The account a clip or picture is credited to: the clipper named in the
- * media link (matched by handle, else added handle-only), or the
- * translator when it's their own upload.
+ * media link, or the translator when it's their own upload. The clipper is
+ * known only by handle, so only a handle-only account is matched (else one
+ * is added): never an account that merely held that handle before.
  * @param {Tx} tx
  * @param {{ tweet: Tweet, accountId: number }} input
  */
 async function mediaAccountOf(tx, { tweet, accountId }) {
   const handle = tweet.clipSource?.handle;
   if (!handle || handle.toLowerCase() === tweet.authorHandle?.toLowerCase()) return accountId;
-  const known = await getAccountByHandle(tx, 'x', handle);
-  return known ? known.id : upsertAccount(tx, { platform: 'x', handle });
+  return upsertAccount(tx, { platform: 'x', handle });
 }
 
 /**
@@ -170,6 +174,6 @@ export async function persistTranslation(tx, draft, { itemId, accountId }) {
  * @returns {Promise<void>}
  */
 export async function appendFollowUp(tx, { itemId, accountId, input }) {
-  const post = { id: input.id, text: input.text, editableUntil: input.edit.editableUntil };
+  const post = { id: input.id, text: input.text, editableUntil: input.edit.editableUntil, versionIds: input.edit.versionIds };
   await appendPosts(tx, { itemId, accountId, handle: input.authorHandle, posts: [post] });
 }

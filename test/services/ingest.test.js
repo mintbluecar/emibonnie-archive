@@ -2,9 +2,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { IDS } from '../helpers/fixtures.js';
-import { ingestDeps, ingest, ingestLong, rows, count, SYSTEM, HOST } from '../helpers/ingest.js';
+import { ingestDeps, ingest, ingestLong, rows, count, patchedFetch, SYSTEM, HOST } from '../helpers/ingest.js';
+import { usingPostgres } from '../helpers/db.js';
+import { runAdd } from '../../scripts/add.js';
 import { kindsRegistry } from '../../src/kinds/_registry.js';
-import { createPeople } from '../../src/services/intakeRefs.js';
+import { createPeople, resolveSpeakerRefs } from '../../src/services/intakeRefs.js';
 import { sourceState } from '../../src/repo/items.js';
 import { set as setSetting } from '../../src/repo/settings.js';
 import { runSeedDev } from '../../scripts/seedDev.js';
@@ -86,16 +88,18 @@ test('JOINT_LIVE creates an event with two live people', async () => {
   }
 });
 
-test('SHARED with 🪇 as a speaker is a shared story with no event, and only sharing/about people', async () => {
+test('SHARED, with its sharer known: starguest is sharing, the mapped 🪇 speaker is about, no event', async () => {
   const deps = await ingestDeps();
   try {
-    const result = await ingest(deps, IDS.SHARED, { chosen: { '🪇': { role: 'speaker' } } });
+    await createPeople(deps, [{ igHandle: 'starguest', displayName: 'star guest', emoji: '⭐', colour: '#aa8800' }], SYSTEM);
+    const chosen = await resolveSpeakerRefs(deps.db, { '🪇': { person: 'lunamoon' } });
+    const result = await ingest(deps, IDS.SHARED, { chosen, overrides: { placement: 'shared_story' } });
     assert.equal(result.status, 'added');
     const [item] = await rows(deps.db, 'select placement, event_id from items where id = $1', [result.itemId]);
-    assert.equal(item.placement, 'shared_story');
-    assert.equal(item.event_id, null);
-    const roles = await rows(deps.db, 'select role from item_people where item_id = $1', [result.itemId]);
-    assert.ok(roles.every((r) => r.role === 'sharing' || r.role === 'about'));
+    assert.deepEqual(item, { placement: 'shared_story', event_id: null });
+    const people = await rows(deps.db, `select p.display_name, ip.role from item_people ip join people p on p.id = ip.person_id
+      where ip.item_id = $1 order by ip.role`, [result.itemId]);
+    assert.deepEqual(people, [{ display_name: 'luna', role: 'about' }, { display_name: 'star guest', role: 'sharing' }]);
   } finally {
     await deps.db.end();
   }
@@ -323,6 +327,123 @@ test('seed-dev ingests the 9 listed posts of the example site', async () => {
     const results = await runSeedDev({ siteDir: 'examples/solluna', db: deps.db, log: (line) => lines.push(line) });
     assert.equal(results.length, 9);
     assert.ok(lines.includes('seeded 9'), lines.join('\n'));
+  } finally {
+    await deps.db.end();
+  }
+});
+
+test('a reply to a removed or pending item is refused with that state, and adds nothing', async () => {
+  const deps = await ingestDeps();
+  try {
+    const thread = await ingest(deps, IDS.THREAD);
+    const partCount = () => count(deps.db, 'select count(*)::int as n from translation_parts where item_id = $1', [thread.itemId]);
+    await deps.db.transaction((tx) => tx.query("update items set review_state = 'pending' where id = $1", [thread.itemId]), SYSTEM);
+    assert.deepEqual(await ingest(deps, IDS.THREAD_REPLY), { status: 'pending', sourceId: IDS.THREAD_REPLY, itemId: thread.itemId });
+    await deps.db.transaction((tx) => tx.query("update items set review_state = 'published', deleted_at = now(), deleted_reason = 'removed_by_account' where id = $1", [thread.itemId]), SYSTEM);
+    assert.deepEqual(await ingest(deps, IDS.THREAD_REPLY), { status: 'removed', sourceId: IDS.THREAD_REPLY, itemId: thread.itemId });
+    assert.equal(await partCount(), 2);
+    assert.equal(await count(deps.db, 'select count(*)::int as n from items'), 1);
+  } finally {
+    await deps.db.end();
+  }
+});
+
+test('an attached reply aliases every version id it has had', async () => {
+  const OLDER = '1900000000000000019';
+  const { fetchImpl } = patchedFetch((kind, id, json) => (kind === 'syn' && id === IDS.THREAD_REPLY
+    ? { ...json, edit_control: { edit_tweet_ids: [OLDER, IDS.THREAD_REPLY], editable_until_msecs: String(Date.parse('2026-10-20T13:00:00Z')) } }
+    : json));
+  const deps = await ingestDeps({ fetchImpl });
+  try {
+    const thread = await ingest(deps, IDS.THREAD);
+    assert.equal((await ingest(deps, IDS.THREAD_REPLY)).status, 'attached');
+    assert.deepEqual(await ingest(deps, OLDER), { status: 'attached', sourceId: OLDER, itemId: thread.itemId });
+  } finally {
+    await deps.db.end();
+  }
+});
+
+test('the same post ingested twice, the second write losing the race (interleaved, so it runs on PGlite too), is a duplicate', async () => {
+  const deps = await ingestDeps();
+  try {
+    /** @type {Promise<any>|null} */
+    let rival = null;
+    const real = deps.fetchImpl;
+    const racing = {
+      ...deps,
+      fetchImpl: /** @type {typeof fetch} */ (async (input, init) => {
+        // the first fetch happens after this ingest's own "already archived?" check: the rival commits now
+        rival ??= ingest(deps, IDS.EVENT_B);
+        await rival;
+        return real(input, init);
+      }),
+    };
+    const loser = await ingest(racing, IDS.EVENT_B);
+    const winner = await rival;
+    assert.equal(winner.status, 'added');
+    assert.deepEqual(loser, { status: 'duplicate', sourceId: IDS.EVENT_B, itemId: winner.itemId });
+    assert.equal(await count(deps.db, 'select count(*)::int as n from items'), 1);
+  } finally {
+    await deps.db.end();
+  }
+});
+
+test('two concurrent ingests of the same post: one added, one duplicate (Postgres only; PGlite runs the interleaved test above)', { skip: !usingPostgres && 'PGlite has one connection, so writes cannot truly race' }, async () => {
+  const deps = await ingestDeps();
+  try {
+    const results = await Promise.all([ingest(deps, IDS.EVENT_B), ingest(deps, IDS.EVENT_B)]);
+    const statuses = results.map((r) => r.status).sort();
+    assert.deepEqual(statuses, ['added', 'duplicate']);
+    assert.equal(results[0].itemId, results[1].itemId);
+    assert.equal(await count(deps.db, 'select count(*)::int as n from items'), 1);
+  } finally {
+    await deps.db.end();
+  }
+});
+
+test('a clip is credited to a handle-only account, never to an account that used to hold the handle', async () => {
+  const deps = await ingestDeps();
+  try {
+    await deps.db.transaction((tx) => tx.query("insert into accounts (platform, external_id, handle) values ('x', '7777', 'clipper_one')"), SYSTEM);
+    const { itemId } = await ingest(deps, IDS.EVENT_A);
+    const [media] = await rows(deps.db, `select a.external_id, a.handle from item_sources s join accounts a on a.id = s.account_id
+      where s.item_id = $1 and s.role = 'media'`, [itemId]);
+    assert.deepEqual(media, { external_id: null, handle: 'clipper_one' });
+  } finally {
+    await deps.db.end();
+  }
+});
+
+test('a source with no credited handle is refused, not credited to a made-up account', async () => {
+  const deps = await ingestDeps();
+  try {
+    const nameless = {
+      ...translation,
+      draft: (/** @type {any} */ input, /** @type {any} */ ctx) => {
+        const draft = translation.draft(input, ctx);
+        return { ...draft, common: { ...draft.common, credited: { ...draft.common.credited, handle: null } } };
+      },
+    };
+    await assert.rejects(ingest({ ...deps, kinds: { translation: nameless } }, IDS.EVENT_B), /no handle/);
+    assert.equal(await count(deps.db, 'select count(*)::int as n from items'), 0);
+    assert.equal(await count(deps.db, "select count(*)::int as n from accounts where handle = 'unknown'"), 0);
+  } finally {
+    await deps.db.end();
+  }
+});
+
+test('scripts/add.js exits 2 on needs_speakers and lists the missing markers (offline)', async () => {
+  const deps = await ingestDeps();
+  try {
+    /** @type {string[]} */
+    const lines = [];
+    const code = await runAdd({ args: [`https://x.com/tl_alpha/status/${IDS.LONG}`, '--map', '🌧️=fan'], deps, log: (l) => lines.push(l) });
+    assert.equal(code, 2);
+    assert.equal(lines[0], `needs_speakers ${IDS.LONG}`);
+    assert.deepEqual(lines.slice(1).map((l) => l.trim().split(' ')[1]), ['🦁', '🐶', '🐱']);
+    assert.equal(await count(deps.db, 'select count(*)::int as n from items'), 0);
+    const added = await runAdd({ args: [IDS.EVENT_B], deps, log: () => {} });
+    assert.equal(added, 0);
   } finally {
     await deps.db.end();
   }

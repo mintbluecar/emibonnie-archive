@@ -8,6 +8,7 @@
  * `touchCheck` writes it on every call without touching `item_sources`.
  */
 import { camelRow, camelRows } from './rows.js';
+import { visibleItem } from './visibility.js';
 
 /** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
 /**
@@ -118,26 +119,33 @@ export async function touchCheck(db, sourceId) {
 
 /**
  * The item that archives `externalId` as its primary or a follow-up
- * source (directly or through `source_aliases`), for one kind. Media and
- * quoted sources never count: two translators may translate the same
- * original post. A visible owner wins over a hidden one, then the oldest.
+ * source (directly or through `source_aliases`), for one kind, and that
+ * item's state as `sourceState` reports it. Media and quoted sources never
+ * count: two translators may translate the same original post. Ordered
+ * exactly like `sourceState` (a visible owner wins, then the oldest), so
+ * the state and the item id always describe the same item.
  * @param {Tx} db
  * @param {{ kind: string, platform: string, externalId: string, roles?: string[] }} ref
- * @returns {Promise<{ itemId: number, sourceId: number, role: string, accountExternalId: string|null }|null>}
+ * @returns {Promise<{ itemId: number, sourceId: number, role: string, accountExternalId: string|null,
+ *   state: 'visible'|'pending'|'removed' }|null>}
  */
 export async function findSourceOwner(db, { kind, platform, externalId, roles = ['primary', 'follow_up'] }) {
   const { rows } = await db.query(
-    `select s.item_id, s.id as source_id, s.role, a.external_id as account_external_id
+    `select s.item_id, s.id as source_id, s.role, a.external_id as account_external_id,
+       (${visibleItem('i')}) as visible, (i.deleted_at is null and i.review_state = 'pending') as pending
      from item_sources s
      join items i on i.id = s.item_id
      left join accounts a on a.id = i.credited_account_id
      where s.kind = $1 and s.platform = $2 and s.role = any($4::text[])
        and (s.external_id = $3 or s.id in (select source_id from source_aliases where platform = $2 and external_id = $3))
-     order by (i.deleted_at is null and i.review_state = 'published') desc, i.id
+     order by (${visibleItem('i')}) desc, i.id
      limit 1`,
     [kind, platform, externalId, roles],
   );
-  return rows[0] ? /** @type {any} */ (camelRow(rows[0])) : null;
+  const row = rows[0];
+  if (!row) return null;
+  const state = row.visible ? 'visible' : row.pending ? 'pending' : 'removed';
+  return { itemId: row.item_id, sourceId: row.source_id, role: row.role, accountExternalId: row.account_external_id, state };
 }
 
 /**

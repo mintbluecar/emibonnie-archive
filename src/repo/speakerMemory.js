@@ -37,6 +37,11 @@ export async function remember(tx, accountId, map) {
   for (const [marker, speaker] of Object.entries(map)) {
     const personId = 'person' in speaker ? speaker.person : null;
     const role = 'role' in speaker ? speaker.role : null;
-    await tx.query('insert into speaker_memory (account_id, marker, person_id, role) values ($1, $2, $3, $4)', [accountId, marker, personId, role]);
+    // another submit for the same account may be writing concurrently: the later one wins, without failing
+    await tx.query(
+      `insert into speaker_memory (account_id, marker, person_id, role) values ($1, $2, $3, $4)
+       on conflict (account_id, marker) do update set person_id = excluded.person_id, role = excluded.role, updated_at = now()`,
+      [accountId, marker, personId, role],
+    );
   }
 }

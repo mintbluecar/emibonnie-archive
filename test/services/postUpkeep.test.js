@@ -67,7 +67,7 @@ test('refreshEdits records new version ids as aliases', async () => {
   }
 });
 
-test('checkFollowUps appends a new same-author follow-up once', async () => {
+test('checkFollowUps appends a new same-author follow-up once, with its own post text', async () => {
   const deps = await ingestDeps();
   try {
     const { itemId } = await ingest(deps, IDS.THREAD);
@@ -82,7 +82,7 @@ test('checkFollowUps appends a new same-author follow-up once', async () => {
     assert.deepEqual(await checkFollowUps(later, id, SYSTEM), { added: 0 });
     const parts = await rows(deps.db, 'select position, body from translation_parts where item_id = $1 order by position', [id]);
     assert.deepEqual(parts.map((p) => p.position), [0, 1, 2]);
-    assert.equal(parts[2].body, reply.text);
+    assert.equal(parts[2].body, 'One more: the lanterns were handmade too, which is why they took so long.', "the post's own text, not the thread's");
   } finally {
     await deps.db.end();
   }
@@ -101,6 +101,56 @@ test('touchRefresh allows one refresh per item per 60 seconds', async () => {
     const stamped = await rows(deps.db, "select last_refreshed_at from item_sources where item_id = $1 and role in ('primary', 'follow_up')", [id]);
     assert.ok(stamped.every((r) => new Date(r.last_refreshed_at).toISOString() === at(61).toISOString()));
     assert.equal(await deps.db.transaction((tx) => touchRefresh(tx, 999999, at(0)), SYSTEM), false);
+  } finally {
+    await deps.db.end();
+  }
+});
+
+test('checkFollowUps does not re-add a follow-up whose new (edited) id is already an alias', async () => {
+  const deps = await ingestDeps();
+  try {
+    const { itemId } = await ingest(deps, IDS.THREAD);
+    const id = /** @type {number} */ (itemId);
+    const EDITED_ID = '1900000000000000018';
+    await deps.db.transaction((tx) => tx.query(
+      `insert into source_aliases (platform, external_id, source_id)
+       select 'x', $1, id from item_sources where item_id = $2 and external_id = $3`,
+      [EDITED_ID, id, IDS.THREAD_FOLLOWUP],
+    ), SYSTEM);
+    const { fetchImpl } = patchedFetch((kind, fid, json) => (kind === 'thread' && fid === IDS.THREAD
+      ? { ...json, thread: json.thread.map((/** @type {any} */ t) => (t.id === IDS.THREAD_FOLLOWUP ? { ...t, id: EDITED_ID } : t)) }
+      : json));
+    assert.deepEqual(await checkFollowUps({ ...deps, fetchImpl }, id, SYSTEM), { added: 0 });
+    assert.equal(await count(deps.db, 'select count(*)::int as n from translation_parts where item_id = $1', [id]), 2);
+  } finally {
+    await deps.db.end();
+  }
+});
+
+test('an allowed touchRefresh writes no audit_log rows', async () => {
+  const deps = await ingestDeps();
+  try {
+    const { itemId } = await ingest(deps, IDS.THREAD);
+    const before = await count(deps.db, 'select count(*)::int as n from audit_log');
+    assert.equal(await deps.db.transaction((tx) => touchRefresh(tx, /** @type {number} */ (itemId), new Date()), SYSTEM), true);
+    assert.equal(await count(deps.db, 'select count(*)::int as n from audit_log'), before);
+  } finally {
+    await deps.db.end();
+  }
+});
+
+test('follow-up text comes from its own post fetch, so the thread endpoint rendering it differently is never an edit', async () => {
+  const { fetchImpl } = patchedFetch((kind, fid, json) => (kind === 'thread' && fid === IDS.THREAD
+    ? { ...json, thread: json.thread.map((/** @type {any} */ t) => (t.id === IDS.THREAD_FOLLOWUP ? { ...t, text: `${t.text} https://t.co/abc123` } : t)) }
+    : json));
+  const deps = await ingestDeps({ fetchImpl });
+  try {
+    const { itemId } = await ingest(deps, IDS.THREAD);
+    const id = /** @type {number} */ (itemId);
+    const [part] = await rows(deps.db, 'select body from translation_parts where item_id = $1 and position = 1', [id]);
+    assert.equal(part.body, 'The list in the pic: lavender tea, honey cookies, paper lanterns, and a handwritten note.');
+    assert.equal((await refreshEdits(deps, id, SYSTEM)).updated, 0);
+    assert.equal(await count(deps.db, "select count(*)::int as n from audit_log where table_name = 'translation_parts' and action = 'update'"), 0);
   } finally {
     await deps.db.end();
   }

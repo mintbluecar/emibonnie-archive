@@ -55,25 +55,38 @@ async function overridesOf(db, values) {
   };
 }
 
-/** @param {import('../src/services/ingest.js').IngestResult} result */
-function report(result) {
-  console.log([result.status, result.sourceId, result.itemId ? `item ${result.itemId}` : ''].filter(Boolean).join(' '));
-  for (const m of /** @type {{marker: string, count: number}[]} */ (result.missing ?? [])) console.log(`  missing ${m.marker} (${m.count} lines)`);
-  if (result.status === 'needs_date') console.log('  no date found: pass --date YYYY-MM-DD');
-  if (result.status === 'needs_speakers' || result.status === 'needs_date') process.exitCode = 2;
+/**
+ * @param {import('../src/services/ingest.js').IngestResult} result
+ * @param {(line: string) => void} log
+ * @returns {number} the exit code
+ */
+function report(result, log) {
+  log([result.status, result.sourceId, result.itemId ? `item ${result.itemId}` : ''].filter(Boolean).join(' '));
+  for (const m of /** @type {{marker: string, count: number}[]} */ (result.missing ?? [])) log(`  missing ${m.marker} (${m.count} lines)`);
+  if (result.status === 'needs_date') log('  no date found: pass --date YYYY-MM-DD');
+  return result.status === 'needs_speakers' || result.status === 'needs_date' ? 2 : 0;
+}
+
+/**
+ * Runs the command against given deps (tests pass an offline `fetchImpl`).
+ * @param {{ args: string[], deps: import('../src/services/ingest.js').IngestDeps, log?: (line: string) => void }} options
+ * @returns {Promise<number>} the exit code
+ */
+export async function runAdd({ args, deps, log = console.log }) {
+  const { values, positionals } = parseArgs({ args, options: OPTIONS, allowPositionals: true });
+  if (positionals.length !== 1) throw new Error('usage: npm run add -- <url|id> [options]');
+  await createPeople(deps, (values['create-person'] ?? []).map(personSpec), SYSTEM);
+  const chosen = await resolveSpeakerRefs(deps.db, speakerRefs(values.map ?? []));
+  const overrides = await overridesOf(deps.db, values);
+  const result = await ingestItem(deps, { kind: values.kind ?? 'translation', input: positionals[0], chosen, overrides, addedVia: 'cli', ...SYSTEM });
+  return report(result, log);
 }
 
 async function main() {
-  const { values, positionals } = parseArgs({ options: OPTIONS, allowPositionals: true });
-  if (positionals.length !== 1) throw new Error('usage: npm run add -- <url|id> [options]');
   const site = loadSite(process.env.SITE_DIR ?? 'site');
   const db = createDb({ url: process.env.DATABASE_URL, dir: process.env.PGLITE_DIR });
   try {
-    const deps = { db, site, fetchImpl: fetch };
-    await createPeople(deps, (values['create-person'] ?? []).map(personSpec), SYSTEM);
-    const chosen = await resolveSpeakerRefs(db, speakerRefs(values.map ?? []));
-    const overrides = await overridesOf(db, values);
-    report(await ingestItem(deps, { kind: values.kind ?? 'translation', input: positionals[0], chosen, overrides, addedVia: 'cli', ...SYSTEM }));
+    process.exitCode = await runAdd({ args: process.argv.slice(2), deps: { db, site, fetchImpl: fetch } });
   } finally {
     await db.end();
   }

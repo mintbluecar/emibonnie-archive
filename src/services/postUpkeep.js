@@ -9,14 +9,15 @@
  *   part; the audit log keeps the old body), and finalizes a post once its
  *   window has closed, so it's never fetched again.
  * - `checkFollowUps` re-reads the primary post's thread and appends any
- *   same-author follow-ups not archived yet.
+ *   same-author follow-ups no item archives yet.
  */
 import { fetchTweet } from '../sources/fetchTweet.js';
 import { fetchThread } from '../sources/thread.js';
-import { listSources, primarySource } from '../repo/itemSources.js';
+import { findSourceOwner, primarySource } from '../repo/itemSources.js';
 import { addAliases, unfinalizedSources, updateEditState } from '../repo/sourceEdits.js';
 import { isTextEnteredManually, updatePartBody } from '../kinds/translation/repo.js';
 import { appendPosts } from '../kinds/translation/persist.js';
+import { asFetched } from '../kinds/translation/source.js';
 
 /** @typedef {import('../db/common.js').Db} Db */
 /** @typedef {import('../db/common.js').Tx} Tx */
@@ -93,6 +94,19 @@ export async function refreshEdits(deps, itemId, { actor }) {
 }
 
 /**
+ * The thread's follow-ups no item archives yet (aliases included, so an
+ * edited follow-up's new id isn't added twice), each read through its own
+ * post fetch like at intake.
+ * @param {UpkeepDeps} deps
+ * @param {{ kind: string, followUps: import('../sources/normalize.js').FollowUp[] }} input
+ */
+async function newPosts(deps, { kind, followUps }) {
+  const owners = await Promise.all(followUps.map((post) => findSourceOwner(deps.db, { kind, platform: 'x', externalId: post.id })));
+  const missing = followUps.filter((_, i) => owners[i] === null);
+  return Promise.all(missing.map((post) => asFetched(deps, post)));
+}
+
+/**
  * @param {UpkeepDeps} deps
  * @param {number} itemId
  * @param {{ actor: string }} options
@@ -101,8 +115,7 @@ export async function refreshEdits(deps, itemId, { actor }) {
 export async function checkFollowUps(deps, itemId, { actor }) {
   const primary = /** @type {any} */ (await primarySource(deps.db, itemId));
   if (!primary || primary.platform !== 'x' || !primary.externalId) return { added: 0 };
-  const known = new Set((await listSources(deps.db, itemId)).map((s) => s.externalId));
-  const posts = (await fetchThread(deps, primary.externalId)).filter((post) => !known.has(post.id));
+  const posts = await newPosts(deps, { kind: primary.kind, followUps: await fetchThread(deps, primary.externalId) });
   if (posts.length === 0) return { added: 0 };
   const handle = HANDLE_IN_URL.exec(primary.url)?.[1] ?? null;
   const added = await deps.db.transaction(

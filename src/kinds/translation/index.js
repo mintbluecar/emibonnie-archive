@@ -1,7 +1,7 @@
 // @ts-check
 import { defineKind, notImplemented } from '../defineKind.js';
 import { draftTranslation } from './domain.js';
-import { fetchTweet } from '../../sources/fetchTweet.js';
+import { fetchTranslationSource } from './source.js';
 import { parseTweetId } from '../../sources/url.js';
 import { appendFollowUp, persistTranslation } from './persist.js';
 import { loadDetails } from './repo.js';
@@ -22,7 +22,7 @@ export default defineKind({
   urlPrefix: '/t/',
   platform: 'x',
   matchesUrl: parseTweetId,
-  fetchSource: fetchTweet,
+  fetchSource: fetchTranslationSource,
   followUpOf,
   appendFollowUp,
   draft: draftTranslation,

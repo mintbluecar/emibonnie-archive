@@ -464,7 +464,8 @@ $$;
 
 -- AFTER INSERT/UPDATE/DELETE: one audit_log row per changed row, keyed by the column named in the
 -- trigger's argument (default 'id'; child tables pass their parent's key). Updates store only the
--- changed columns' old values (ignoring updated_at/updated_by) and are skipped when nothing changed.
+-- changed columns' old values (ignoring updated_at/updated_by, and item_sources.last_refreshed_at, the
+-- refresh button's throttle stamp) and are skipped when nothing else changed.
 -- SECURITY DEFINER so the app role needs no write access to audit_log; search_path is pinned, and
 -- audit_log is addressed in the audited table's own schema.
 create function write_audit() returns trigger
@@ -485,7 +486,7 @@ begin
     row_data := to_jsonb(new);
     select jsonb_object_agg(o.key, o.value) into diff
     from jsonb_each(to_jsonb(old)) as o
-    where o.key not in ('updated_at', 'updated_by')
+    where o.key not in ('updated_at', 'updated_by', 'last_refreshed_at')
       and o.value is distinct from row_data -> o.key;
     if diff is null then
       return null;

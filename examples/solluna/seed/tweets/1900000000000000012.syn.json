@@ -1,0 +1,29 @@
+{
+ "__typename": "Tweet",
+ "favorite_count": 42,
+ "lang": "en",
+ "possibly_sensitive": false,
+ "created_at": "2026-10-20T11:05:00.000Z",
+ "display_text_range": [
+  0,
+  89
+ ],
+ "entities": {
+  "hashtags": [],
+  "media": []
+ },
+ "id_str": "1900000000000000012",
+ "text": "The list in the pic: lavender tea, honey cookies, paper lanterns, and a handwritten note.",
+ "user": {
+  "id_str": "9002",
+  "name": "beta subs",
+  "screen_name": "tl_beta"
+ },
+ "mediaDetails": [],
+ "photos": [],
+ "video": null,
+ "conversation_count": 1,
+ "news_action_type": "conversation",
+ "isEdited": false,
+ "isStaleEdit": false
+}

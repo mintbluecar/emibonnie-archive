@@ -17,7 +17,6 @@
  */
 import { kindsRegistry } from '../kinds/_registry.js';
 import { BadRequest } from '../sources/errors.js';
-import { sourceState } from '../repo/items.js';
 import { findSourceOwner } from '../repo/itemSources.js';
 import { accountState } from '../repo/accounts.js';
 import { recall } from '../repo/speakerMemory.js';
@@ -53,22 +52,24 @@ function kindNamed(deps, name) {
 }
 
 /**
- * Step 1 (and 3's re-check): what's already archived under `ref`.
+ * Step 1 (and 3's re-check): what's already archived under `ref`, read in
+ * one query so the state and the item id come from the same item.
  * @param {Run} run
  * @param {SourceRef} ref
  * @returns {Promise<IngestResult|null>}
  */
 async function knownSource({ deps, kind, sourceId }, ref) {
-  const state = await sourceState(deps.db, kind.name, ref.platform, ref.externalId);
-  if (state === 'none') return null;
-  const owner = await findSourceOwner(deps.db, { kind: kind.name, ...ref });
-  if (state === 'visible' && owner?.role === 'follow_up') return { status: 'attached', sourceId, itemId: owner.itemId };
-  return { status: STATE_STATUS[state], sourceId, ...(owner ? { itemId: owner.itemId } : {}) };
+  const owner = await findSourceOwner(deps.db, { kind: kind.name, platform: ref.platform, externalId: ref.externalId });
+  if (!owner) return null;
+  const status = owner.state === 'visible' && owner.role === 'follow_up' ? 'attached' : STATE_STATUS[owner.state];
+  return { status, sourceId, itemId: owner.itemId };
 }
 
 /**
  * Step 4: the input continues an archived item by the same credited
- * account, so it becomes that item's next part.
+ * account, so it becomes that item's next part. A hidden owner (removed or
+ * awaiting review) is reported as such, and nothing is written: a removed
+ * translation must not come back through a reply.
  * @param {Run} run
  * @param {{ input: any, credited: Draft['common']['credited'], accountId: number|null }} found
  * @returns {Promise<IngestResult|null>}
@@ -78,6 +79,7 @@ async function attachIfFollowUp({ deps, request, kind, sourceId }, { input, cred
   if (!parent || !kind.appendFollowUp || !credited.externalId) return null;
   const owner = await findSourceOwner(deps.db, { kind: kind.name, ...parent });
   if (!owner || owner.accountExternalId !== credited.externalId) return null;
+  if (owner.state !== 'visible') return { status: STATE_STATUS[owner.state], sourceId, itemId: owner.itemId };
   const append = /** @type {NonNullable<Kind['appendFollowUp']>} */ (kind.appendFollowUp);
   await deps.db.transaction((tx) => append(tx, { itemId: owner.itemId, accountId, input }), { actor: request.actor });
   return { status: 'attached', sourceId, itemId: owner.itemId };
@@ -96,20 +98,34 @@ function readiness({ deps, request, sourceId }, draft) {
   return { refusal: null, occurredOn };
 }
 
+/** @param {any} err */
+function isPrimaryRace(err) {
+  return err?.code === '23505' && String(err.constraint ?? err.message).includes('item_sources_primary_per_kind');
+}
+
 /**
- * Step 6.
+ * Step 6. Another ingest of the same post may commit between step 1 and
+ * this write; the primary-source unique index then rejects this one, and
+ * the winner is reported as a duplicate.
  * @param {Run} run
  * @param {{ draft: Draft, occurredOn: string, creditedUserId: string|null }} ready
  * @returns {Promise<IngestResult>}
  */
-async function write({ deps, request, kind, sourceId }, { draft, occurredOn, creditedUserId }) {
+async function write(run, { draft, occurredOn, creditedUserId }) {
+  const { deps, request, kind, sourceId } = run;
   const { actor, addedVia } = request;
-  const written = await deps.db.transaction(
-    (tx) => writeItem(tx, { kind, draft, occurredOn, addedVia, actor, creditedUserId }),
-    { actor },
-  );
-  const status = written.reviewState === 'pending' ? 'pending' : 'added';
-  return { status, sourceId, itemId: written.itemId, eventId: written.eventId };
+  try {
+    const written = await deps.db.transaction(
+      (tx) => writeItem(tx, { kind, draft, occurredOn, addedVia, actor, creditedUserId }),
+      { actor },
+    );
+    const status = written.reviewState === 'pending' ? 'pending' : 'added';
+    return { status, sourceId, itemId: written.itemId, eventId: written.eventId };
+  } catch (err) {
+    const winner = isPrimaryRace(err) ? await knownSource(run, draft.common.primary) : null;
+    if (!winner) throw err;
+    return { status: 'duplicate', sourceId, itemId: winner.itemId };
+  }
 }
 
 /**

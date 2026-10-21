@@ -21,12 +21,16 @@ import { get as getSetting } from '../repo/settings.js';
  *   creditedUserId: string|null }} WriteRequest
  */
 
-/** @param {Tx} tx @param {DraftCommon['credited']} credited */
+/**
+ * Throws when the source names no handle: an item is never credited to a
+ * made-up account.
+ * @param {Tx} tx
+ * @param {DraftCommon['credited']} credited
+ */
 function upsertCredited(tx, credited) {
   const { platform, externalId, handle, displayName } = credited;
-  return upsertAccount(tx, {
-    platform, externalId: externalId ?? undefined, handle: handle ?? externalId ?? 'unknown', displayName: displayName ?? undefined,
-  });
+  if (!handle) throw new Error(`ingest: the credited ${platform} account has no handle (external id ${externalId ?? 'none'})`);
+  return upsertAccount(tx, { platform, externalId: externalId ?? undefined, handle, displayName: displayName ?? undefined });
 }
 
 /**

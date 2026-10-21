@@ -448,6 +448,13 @@ function buildThread() {
     code: 200,
   };
   writeFileSync(path.join(DIR, `${IDS.THREAD}.thread.json`), `${JSON.stringify(threadData, null, 1)}\n`);
+
+  // the follow-up's own post, which intake reads its text from (the same path refreshEdits uses)
+  const followUp = items[1];
+  write(DIR, IDS.THREAD_FOLLOWUP, buildTweet({
+    id: followUp.id, author: AUTHORS.beta, text: followUp.text, createdAtIso: followUp.iso,
+    replyTo: { screen_name: AUTHORS.beta.handle, status: IDS.THREAD },
+  }));
 }
 
 /**

@@ -39,8 +39,13 @@ async function upsertByExternalId(tx, { platform, externalId, handle, displayNam
   );
   if (adopted.rows[0]) return adopted.rows[0].id;
 
+  // A concurrent first sighting of the same account may insert in between: the conflict clause waits
+  // for it and updates that row instead of failing on accounts_external.
   const inserted = await tx.query(
-    'insert into accounts (platform, external_id, handle, display_name) values ($1, $2, $3, $4) returning id',
+    `insert into accounts (platform, external_id, handle, display_name) values ($1, $2, $3, $4)
+     on conflict (platform, external_id) where external_id is not null
+     do update set handle = excluded.handle, display_name = coalesce(excluded.display_name, accounts.display_name)
+     returning id`,
     [platform, externalId, handle, displayName ?? null],
   );
   return inserted.rows[0].id;
@@ -62,7 +67,10 @@ async function upsertHandleOnly(tx, { platform, handle, displayName }) {
   if (found.rows[0]) return found.rows[0].id;
 
   const inserted = await tx.query(
-    'insert into accounts (platform, handle, display_name) values ($1, $2, $3) returning id',
+    `insert into accounts (platform, handle, display_name) values ($1, $2, $3)
+     on conflict (platform, lower(handle)) where external_id is null and deleted_at is null
+     do update set display_name = coalesce(excluded.display_name, accounts.display_name)
+     returning id`,
     [platform, handle, displayName ?? null],
   );
   return inserted.rows[0].id;
