@@ -85,10 +85,15 @@ A group of translations from the same occasion (a fan meeting, a show appearance
 
 ### Person
 
-A known personality: Emi, Bonnie, Leo (a host), and others as they appear. Each person has a name, one **standard emoji**, one **colour**, and their own page listing translations they appear in.
+A known personality: Emi, Bonnie, Leo (a host), and others as they appear.
 
+- **Identity is the Instagram handle** (owner's decision). It's the unique key for a person. Emoji are not unique, since there won't be enough of them as the cast grows, and display names can collide.
+- Each person has an IG handle (unique), a **display name**, a **standard emoji**, a **colour**, and their own page listing translations they appear in. Emoji and colour may repeat across people. The display name and IG handle are always shown next to them, so people stay distinguishable.
 - Emi: 🧡, orange. Bonnie: 💜, purple. These two are fixed.
-- Other people are given an emoji and colour when they're added (by a submitter or by the owner). The owner can edit these and merge duplicates.
+- "Add a new person" asks for the IG handle first. If it already exists, the submitter is pointed to that person instead, which prevents duplicates. Then it asks for display name, emoji, and colour, with suggestions.
+- **(my call)** Someone with no Instagram account can't be added as a known person by submitters. They're mapped to a generic role, and the owner can create them by hand with a placeholder key.
+- **(my call)** IG handles can change. The owner can edit a person's handle. Existing translations stay linked, because links are by internal person ID, not by handle.
+- The owner can edit people and merge duplicates.
 
 **Generic roles** cover people who don't need telling apart: Host, Fan, Speaker. They have a neutral style and no person page.
 
