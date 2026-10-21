@@ -164,7 +164,9 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
 **Interfaces:**
 - Produces:
   - `videoPlayer.pickVariant(variants, isSmall)`: the smallest variant when `isSmall`. Otherwise the largest at or below 2,200,000 bps, or the smallest if none qualifies.
-  - `videoPlayer.render({ variants })`: `<video controls playsinline preload="metadata" referrerpolicy="no-referrer">`.
+  - `videoPlayer.render({ variants, width, height })`: `<video controls playsinline preload="metadata" referrerpolicy="no-referrer">` inside a `.vid` box.
+    - **Vertical clips (owner's decision, option A):** on phones the `.vid` box is capped at `max-height: 40svh`. The video uses `object-fit: contain` (letterboxed on a dark background), and the box gets `aspect-ratio` from `width/height`, set in `bind()` via `style.setProperty` for CSP. A **⤢ full screen** button calls `video.requestFullscreen()`, falling back to `webkitEnterFullscreen()` on iOS.
+    - On web, the video fits its column, with `max-height: calc(100svh - header)`.
   - `videoPlayer.bind(el, { kind, sourceId, initial })`:
     - Start from the stored variants in the item response.
     - On an `error` event, refetch `/api/video/:kind/:sourceId` once.
@@ -179,6 +181,7 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
     - **"Show original":** a `<details>` element with the escaped verbatim text.
 - [ ] **Step 1: Write the failing tests:**
   - **pickVariant:** a small screen gets 632k; a large one gets 2176k.
+  - **render:** a 720×1280 clip renders a full-screen button and a `data-aspect="0.5625"` attribute.
   - **bind:** a fake `fetch` returns 404 after a simulated `error` event, and the element ends up containing the `sourceGone` copy.
 - [ ] **Step 2: FAIL** → implement → **PASS.** Browser check: the video stays pinned while the `LONG` text scrolls, at 390px and 1280px. Commit: `"Translation page with stored-variant video player"`
 
@@ -275,6 +278,7 @@ test('labels', () => { assert.equal(monthLabel('2026-10'), 'october 2026'); asse
     - axe finds no `serious` or `critical` violations.
   - **Extra checks on the item page:**
     - The `.vid` stays at `top: 0` after scrolling 2,000px.
+    - For the **vertical** `LIVE` clip at 390×844, the `.vid` box is at most 40% of the viewport height (≤ 338px), and the first bubble is visible without scrolling.
     - The `LONG` 🐱 line shows `🌙 luna`.
   - **Extra check on search:** opening the filter sheet and pressing Escape returns focus to the filter icon.
 - [ ] **Step 2: Run `npm run e2e`. Expected: PASS.** Fix any issues inside the task that owns the code (the fixes are part of this task). Add an `e2e` job to CI using the same SHA-pinned actions. Commit: `"Playwright smoke and axe checks at phone and desktop widths"`

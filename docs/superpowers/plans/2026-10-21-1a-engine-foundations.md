@@ -369,7 +369,7 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
 
 **Interfaces:**
 - Produces:
-  - `Tweet` typedef (in `normalize.js`): `{ id, status, authorId, authorHandle, authorName, createdAt, text, textSource, video: {variants, durationMs}|null, clipSource: {handle,url}|null, quotedId, replyToId }`.
+  - `Tweet` typedef (in `normalize.js`): `{ id, status, authorId, authorHandle, authorName, createdAt, text, textSource, video: {variants, durationMs, width, height}|null, clipSource: {handle,url}|null, quotedId, replyToId }`.
   - `parseTweetId(input) → string|null`. It accepts x.com, twitter.com and mobile URLs, `?s=` query strings, `/video/1` suffixes, and bare IDs. It returns the ID only if it matches `^\d{1,20}$`.
   - `extractTweetIds(text) → string[]` returns unique IDs, in order.
   - `SOURCES = [{ name, fetch(deps, id) → object|null }]` lists syndication and fx. Each source uses `redirect:'error'` and `AbortSignal.timeout(3000)`, and returns `null` on any failure.
@@ -384,6 +384,7 @@ Purpose: prove the riskiest assumptions **before** building on them. Record the 
     - `quotedId` is set.
     - A variant on a non-twimg host is dropped.
   - **`EVENT_A` clip source:** `clipSource` is `clipper_one`.
+  - **Video shape:** `video.width`/`height` come from `mediaDetails[0].original_info`. Make the `LIVE` fixture's video **vertical** (720×1280), and assert that it reads back as such.
   - **`LIVE` source:** the text comes from syndication.
   - **Missing tweets:** `TOMB` is `deleted`, and nothing at all from either source is `unavailable`.
   - **Failures and fetch safety:**
