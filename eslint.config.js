@@ -23,6 +23,11 @@ const domainRestrictedPatterns = {
   message: 'src/domain is pure: no I/O, no clock, no imports from other layers.',
 };
 
+const kindDomainSiblingPattern = {
+  regex: '^(\\./|\\.\\./[^/]+/)(repo|presenter|search|index)(\\.js)?$',
+  message: "src/kinds/<kind>/domain.js is pure: it may not import the kind's repo, presenter, search or index.",
+};
+
 const baseRules = {
   'max-lines': ['error', { max: 200, skipBlankLines: true, skipComments: true }],
   'max-lines-per-function': ['error', { max: 50, skipBlankLines: true, skipComments: true }],
@@ -47,9 +52,18 @@ export default [
     },
   },
   {
-    files: ['src/domain/**/*.js', 'src/kinds/*/domain.js'],
+    files: ['src/domain/**/*.js'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [domainRestrictedPatterns] }],
+    },
+  },
+  {
+    // A kind's domain.js follows the domain rules, and the dir globs above
+    // can't see a relative import of its own siblings (./repo.js), so those
+    // are blocked by name too (and the same files of any other kind).
+    files: ['src/kinds/*/domain.js'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [domainRestrictedPatterns, kindDomainSiblingPattern] }],
     },
   },
   {
