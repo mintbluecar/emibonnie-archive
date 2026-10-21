@@ -83,7 +83,8 @@ site/                 the ONLY folder an archive owner edits
 8. **Parameterised SQL only.**
 9. **Escape at the edge.** Components and sections escape every interpolated value with `esc()`. HTML strings are built only in `components/` and `sections/`.
 10. **Type-checked JS.** `// @ts-check` in every file. `npm run check` runs `tsc --noEmit` plus ESLint, and must pass before each commit.
-11. **Naming.**
+11. **Database conventions** (Task 9, ADR 0006): every entity table has bookkeeping columns and soft delete; the audit log is automatic; `meta` jsonb is for display-only extras; repeated values are lookups or tags; relations are join tables.
+12. **Naming.**
     - Files are `camelCase.js`. Functions are verbs, and pure transforms are named for their output.
     - SQL is `snake_case`, and repos map rows to camelCase at the boundary.
 
@@ -94,13 +95,14 @@ site/                 the ONLY folder an archive owner edits
 | A JSON endpoint | `api/<name>.js`: `run` + `default handler(run)` | `npm run new endpoint <name>` |
 | A page | `public/<name>.html` + `public/js/pages/<name>.js` (`start()`) + rewrite in `vercel.json` | `npm run new page <name>` |
 | A UI piece | `public/js/components/<name>.js` (`render`, optional `bind`) | `npm run new component <name>` |
-| A table/column | `src/db/migrations/NNN_<desc>.sql` | `npm run new migration <desc>` |
+| A table/column | `src/db/migrations/NNN_<desc>.sql`. **First ask:** is it display-only? Then use `meta` (no migration). New entity tables copy the common columns and get added to the trigger list. | `npm run new migration <desc>` |
 | Queries for a table group | `src/repo/<name>.js` | `npm run new repo <name>` |
 | Orchestration | `src/services/<name>.js` | `npm run new service <name>` |
 | A pure rule/parser | `src/domain/<name>.js` | `npm run new domain <name>` |
 | **A new item kind** (photo, youtube, lyrics, milestone…) | migration (kind table) + `src/repo/<kind>s.js` + `src/domain/<kind>.js` + `public/js/sections/<kind>.js` + one line in `SECTIONS` + one line in `KINDS` (`src/domain/kinds.js`) | `npm run new kind <name>` |
 | A tweet source | `src/tweets/sources/<name>.js` + register in `sources/index.js` | recipe |
-| A live platform, role, or engine constant | `src/domain/constants.js` (or `site.json` `extraPlatforms` for one site only) | recipe |
+| A platform, category, or client | insert a row (data, not schema): `platforms`, or through `lookups.ensureCategory/ensureClient` | recipe |
+| A live platform pattern, role, or engine constant | `src/domain/constants.js` (or `site.json` `extraPlatforms` for one site only) | recipe |
 | A site setting | `src/site/schema.js` (with a default, or a clear setup error) + `site/README.md` + `CHANGELOG.md` | recipe |
 | A background job (Plan 3) | `jobs/<name>.js` (`run(deps)`) + workflow | recipe added in Plan 3 |
 
@@ -488,79 +490,218 @@ test('formatName', () => assert.equal(formatName({ lowercaseNames: true }, 'Sol'
 
 ### Task 9: Database, repositories, and seeding from the site
 
-**Files:** Create `src/db/client.js`, `src/db/migrate.js`, `src/db/migrations/001_initial.sql`, `src/repo/{visibility,rows,people,accounts,events,items,translations,speakerMemory,settings}.js`, `src/services/seedFromSite.js`, `scripts/setup.js`, `test/helpers/db.js`, `test/repo/*.test.js`, `test/services/seedFromSite.test.js`. Modify `src/deps.js` (add `db`).
+Read `docs/decisions/0006-data-model-conventions.md` (written in Step 1) before anything else. The schema is designed to need **few future migrations**:
+- Every entity table carries the same bookkeeping columns.
+- Small display-only extras go in `meta`.
+- Many-to-many relations are normalised into join tables.
+- Repeated strings become lookup rows.
+- Things already known to be coming (projects, reports, the edit log, users, review state, other platforms) have their tables now.
+
+**Files:** Create `docs/decisions/0006-data-model-conventions.md`, `src/db/client.js`, `src/db/migrate.js`, `src/db/migrations/001_initial.sql`, `src/repo/{visibility,rows,people,accounts,events,tags,lookups,items,itemPeople,itemSources,translations,speakers,speakerMemory}.js`, `src/services/seedFromSite.js`, `scripts/setup.js`, `test/helpers/db.js`, `test/db/*.test.js`, `test/repo/*.test.js`, `test/services/seedFromSite.test.js`. Modify `src/deps.js` (add `db`), `docs/architecture.md` (add a "Database conventions" section linking the ADR).
+
+**Database conventions** (the ADR's content; also add them as rule 11 in `docs/architecture.md`):
+1. **Every entity table** has `id bigint generated always as identity primary key` (lookup tables use `smallint`), plus `created_at`, `updated_at`, `created_by`, `updated_by`, `deleted_at`, `deleted_by` and `meta jsonb not null default '{}'`.
+   - `updated_at` is maintained by one shared trigger.
+   - `created_by`/`updated_by`/`deleted_by` reference `users(id)`.
+   - Join tables carry only `created_at` and `created_by`.
+2. **Soft delete only.** Rows are never hard-deleted by the app. "Gone" means `deleted_at is not null`, with a `deleted_reason` where it matters (items).
+3. **Audit log, automatic.** One generic trigger writes every insert, update and soft delete on entity tables to `audit_log`, including the actor from `current_setting('app.actor', true)`. `db.transaction(fn, { actor })` sets `set local app.actor`. Nobody writes audit rows by hand. This is the Plan 2 edit log for free.
+4. **`meta` is for display-only extras** (a venue's address, a lyric's composer). Anything filtered, joined, sorted, searched or unique gets a real column, added by a migration. The recipe in `CONTRIBUTING.md` explains the choice.
+5. **Normalise repeated values.** Platforms, item kinds, categories (types) and clients are lookup rows referenced by id. Tags (hashtags and keywords) are stored once and joined. Accounts are stored once and referenced.
+6. **Relations are join tables, not arrays or JSON:** people on items, tags on items and events, sources on items, links between items, and translation speakers.
+7. **Lookups are extended by inserting rows** (a new platform or category is data, not schema). New item kinds still need a migration for their own table.
+8. **Timestamps are `timestamptz`.** Calendar days are `date`. All text is UTF-8, stored verbatim.
 
 **Interfaces:**
 - Produces:
-  - `createDb({ url?, dir? }) → Db`, where `Db = { query(sql, params?) → Promise<{rows}>, transaction(fn) }`. Neon `Pool` when `url` is given; otherwise PGlite (`dir` persistent, or in-memory), with `pg_trgm` (`@electric-sql/pglite/contrib/pg_trgm`).
-  - `migrate(db, { dir }) → string[]`: uses a `schema_migrations` table and applies new `NNN_*.sql` files in order, one transaction each. The CLI prints the applied names, or `up to date`.
-  - `visibleItem(alias='i')` gives the SQL: `${alias}.removed_at is null and not exists (select 1 from accounts a where a.x_user_id = ${alias}.account_id and a.opted_out_at is not null)`. Used by **every** read that returns items or counts.
-  - **Repos** (`db` first, camelCase out):
-    - `people`: `listPeople`, `addPerson({igHandle, displayName, emoji, colour}, {lowercaseNames})`, `upsertFeatured(person)`, `getPersonByHandle`.
-    - `accounts`: `upsertAccount({xUserId, handle, displayName})`, `getAccount`, `getAccountByHandle`.
-    - `events`: `listEvents`, `createEvent(proposal, createdBy)`, `getEventBySlug`, `listEventsWithCounts` (visible items only, count > 0).
-    - `items` (shared across kinds): `itemState(sourceId) → 'none'|'visible'|'removed'`, `insertItem(row) → id`, `neighbours(item)`, `listVisibleItems({eventId?, personId?, accountId?, kind?})`.
-    - `translations` (kind table): `insertTranslation(itemId, row)`, `getVisibleTranslation(sourceId)`, `listVisibleTranslations(filter)` (joins `items`).
-    - `speakerMemory`: `recall(accountId)`, `remember(accountId, map)`.
-    - `settings`: `ignoredHashtags()`, `setIgnoredHashtags(tags)`, `types()`, `setTypes(types)`.
-  - `seedFromSite(deps) → { people: number, hashtags: number, types: number }`. It upserts featured people by IG handle (marked `featured`; emoji, colour and name updated from the site), replaces the ignored hashtags with the site's, and adds missing types. It's idempotent.
-  - `scripts/setup.js`: `loadSite` (prints errors and exits 1 if invalid), then `migrate`, then `seedFromSite`, then prints a summary. `deps.db` = `createDb({ url: process.env.DATABASE_URL, dir: process.env.PGLITE_DIR })`, created once per process.
+  - `createDb({ url?, dir? }) → Db`, where `Db = { query(sql, params?), transaction(fn: (tx: Db) => Promise<T>, { actor }) }`. Neon `Pool` when `url` is given; otherwise PGlite (`dir`, or in-memory) with `pg_trgm` (`@electric-sql/pglite/contrib/pg_trgm`).
+  - `migrate(db, { dir }) → string[]`: uses `schema_migrations` and applies new `NNN_*.sql` files in order, one transaction each.
+  - `visibleItem(alias='i')` is the SQL: `${alias}.deleted_at is null and ${alias}.review_state = 'published' and not exists (select 1 from accounts a where a.id = ${alias}.credited_account_id and a.opted_out_at is not null)`. Used by **every** read that returns items or counts.
+  - **Repos** (`db` first; domain shapes out, so the domain types from Tasks 5–8 don't change):
+    - `people`:
+      - `listPeople()` → `Person[]`, where `igHandle` comes from the linked Instagram account and `extraHashtags` from `person_aliases`.
+      - `addPerson({igHandle, displayName, emoji, colour}, {lowercaseNames, actor})`: creates the person and their Instagram account in one transaction.
+      - `upsertFeatured(fp, {actor})` and `getPersonByHandle(ig)`.
+    - `accounts`: `upsertAccount({platform, externalId, handle, displayName}, {actor}) → id` (matched by platform + external ID, or by platform + lowercase handle when there's no external ID), `getAccount(id)`, `getAccountByHandle(platform, handle)`.
+    - `events`: `listEvents()` (with tags as `keywords`/`hashtags`), `createEvent(proposal, {actor}) → Event`, `getEventBySlug`, `listEventsWithCounts()`.
+    - `tags`: `ensureTags([{kind:'hashtag'|'keyword', text}]) → ids` (dedupes on `(kind, norm)`), `ignoredHashtags()`, `setIgnored(texts)`.
+    - `lookups`: `idOf(table, code) → number` (cached per `Db`), `ensureCategory(name)`, `ensureClient(name)`, `categories()`.
+    - `items`: `itemState({platform, externalId}) → 'none'|'visible'|'removed'`, `insertItem(row, {actor}) → id`, `neighbours(itemId)`, `listVisibleItems({eventId?, personId?, accountId?, kind?})`.
+    - `itemPeople`: `setItemPeople(itemId, [{personId, role}])`.
+    - `itemSources`: `addSources(itemId, [{platform, externalId, url, role, position, accountId, startSeconds}])`.
+    - `translations`: `insertTranslation(itemId, {body, textEnteredManually})`, `getVisibleTranslation({platform:'x', externalId})`, `listVisibleTranslations(filter)`.
+    - `speakers`: `setSpeakers(itemId, SpeakerMap)` and `getSpeakers(itemId) → SpeakerMap` (converts rows to and from the domain `SpeakerMap`).
+    - `speakerMemory`: `recall(accountId) → SpeakerMap` and `remember(accountId, SpeakerMap)`.
+  - `seedFromSite(deps) → { people, hashtags, categories }`. It upserts featured people (with their Instagram accounts), sets the ignored hashtags, and ensures the site's types exist as categories. It's idempotent, and its actor is `'system'`.
+  - `scripts/setup.js`: `loadSite` (exits 1 with errors), then `migrate`, then `seedFromSite`, then a summary.
 
-  **`001_initial.sql`** (no fandom data; later plans and kinds add `002_…`):
+  **`001_initial.sql`.** No fandom data. Write it with a helper block at the top that defines the two triggers, then apply `updated_at` and audit triggers to every entity table at the bottom (a `do $$ … foreach … $$` loop over the entity table names, so new tables only need adding to that list).
 
 ```sql
 create extension if not exists pg_trgm;
+
+-- shared triggers
+create function set_updated_at() returns trigger language plpgsql as $$
+begin new.updated_at := now(); return new; end $$;
+create table audit_log (
+  id bigint generated always as identity primary key, table_name text not null, row_id bigint, row_key text,
+  action text not null check (action in ('insert','update','delete')), actor text, at timestamptz not null default now(),
+  before jsonb, after jsonb);
+create index audit_log_row on audit_log (table_name, row_id);
+create function write_audit() returns trigger language plpgsql as $$
+begin
+  insert into audit_log (table_name, row_id, action, actor, before, after)
+  values (tg_table_name, coalesce((to_jsonb(new)->>'id')::bigint, (to_jsonb(old)->>'id')::bigint),
+          lower(tg_op), current_setting('app.actor', true),
+          case when tg_op <> 'INSERT' then to_jsonb(old) end, case when tg_op <> 'DELETE' then to_jsonb(new) end);
+  return coalesce(new, old);
+end $$;
+
+-- users (Plan 2 links auth users here; 'system' does CLI/jobs)
+create table users (
+  id text primary key, display_name text, role text not null default 'member' check (role in ('owner','member','system')),
+  blocked_at timestamptz, meta jsonb not null default '{}',
+  created_at timestamptz not null default now(), updated_at timestamptz not null default now(), deleted_at timestamptz);
+insert into users (id, display_name, role) values ('system', 'system', 'system');
+
+-- lookups (extend by inserting rows)
+create table platforms (id smallint primary key, code text unique not null);
+insert into platforms values (1,'x'),(2,'instagram'),(3,'tiktok'),(4,'youtube'),(5,'weverse'),(6,'telegram');
+create table item_kinds (id smallint primary key, code text unique not null);
+insert into item_kinds values (1,'translation');
+create table categories (id smallint generated always as identity primary key, name text unique not null,
+  created_at timestamptz not null default now(), deleted_at timestamptz);
+create table clients (id smallint generated always as identity primary key, name text unique not null,
+  created_at timestamptz not null default now(), deleted_at timestamptz);
+
+-- macro for the common columns (written out in each table):
+--   created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
+--   created_by text references users(id), updated_by text references users(id),
+--   deleted_at timestamptz, deleted_by text references users(id), meta jsonb not null default '{}'
+
 create table people (
-  id serial primary key, ig_handle text unique not null check (ig_handle = lower(ig_handle)),
-  display_name text not null, emoji text not null, colour text not null,
-  extra_hashtags text[] not null default '{}', featured boolean not null default false);
-create table accounts (x_user_id text primary key, handle text not null, display_name text, opted_out_at timestamptz);
+  id bigint generated always as identity primary key,
+  display_name text not null, emoji text not null, colour text not null check (colour ~ '^#[0-9a-f]{6}$'),
+  featured boolean not null default false, /* common columns */ ...);
+create table person_aliases (person_id bigint not null references people(id), alias text primary key check (alias = lower(alias)),
+  created_at timestamptz not null default now(), created_by text references users(id));
+
+create table accounts (
+  id bigint generated always as identity primary key,
+  platform_id smallint not null references platforms(id), external_id text, handle text not null, display_name text,
+  person_id bigint references people(id), opted_out_at timestamptz, /* common columns */ ...);
+create unique index accounts_platform_external on accounts (platform_id, external_id) where external_id is not null;
+create unique index accounts_platform_handle on accounts (platform_id, lower(handle)) where external_id is null and deleted_at is null;
+create index accounts_person on accounts (person_id);
+
+create table projects (
+  id bigint generated always as identity primary key, slug text unique not null, name text not null,
+  starts_on date, ends_on date, category_id smallint references categories(id), /* common columns */ ...);
+
 create table events (
-  id serial primary key, slug text unique not null, name text not null, date date not null,
-  type text, client_media text, keywords text[] not null default '{}', hashtags text[] not null default '{}',
-  live_person_id int references people(id), live_platform text,
-  created_by text not null, created_at timestamptz not null default now(), needs_review boolean not null default true);
+  id bigint generated always as identity primary key, slug text unique not null, name text not null, occurred_on date not null,
+  project_id bigint references projects(id), category_id smallint references categories(id), client_id smallint references clients(id),
+  live_person_id bigint references people(id), live_platform_id smallint references platforms(id),
+  needs_review boolean not null default true, /* common columns */ ...);
+create index events_occurred on events (occurred_on desc) where deleted_at is null;
+
+create table tags (
+  id bigint generated always as identity primary key, kind text not null check (kind in ('hashtag','keyword')),
+  display text not null, norm text not null, ignored boolean not null default false,
+  created_at timestamptz not null default now(), unique (kind, norm));
+create table event_tags (event_id bigint not null references events(id), tag_id bigint not null references tags(id),
+  created_at timestamptz not null default now(), primary key (event_id, tag_id));
+create index event_tags_tag on event_tags (tag_id);
+
 create table items (
-  id serial primary key, kind text not null, source_id text unique not null, source_url text not null,
-  account_id text references accounts(x_user_id),
+  id bigint generated always as identity primary key,
+  kind_id smallint not null references item_kinds(id),
   placement text not null check (placement in ('event','shared_story','unsorted')),
-  event_id int references events(id), type text, client_media text, posted_at timestamptz not null,
-  person_ids int[] not null default '{}', sharing_person_id int references people(id), about_person_ids int[] not null default '{}',
-  added_by text not null, added_via text not null check (added_via in ('submit','notion','paste','cli')),
-  source_status text not null default 'live' check (source_status in ('live','deleted','unavailable')),
-  status_checked_at timestamptz, removed_by text check (removed_by in ('account','owner')), removed_at timestamptz,
-  event_order int, created_at timestamptz not null default now());
-create index items_event on items (event_id);
-create index items_people on items using gin (person_ids);
-create index items_kind on items (kind);
+  event_id bigint references events(id), category_id smallint references categories(id), client_id smallint references clients(id),
+  credited_account_id bigint references accounts(id), occurred_on date, posted_at timestamptz,
+  added_via text not null check (added_via in ('submit','notion','paste','cli','telegram')),
+  review_state text not null default 'published' check (review_state in ('pending','published','rejected')),
+  sort_key double precision, deleted_reason text check (deleted_reason in ('removed_by_account','hidden_by_owner','duplicate','spam')),
+  /* common columns */ ...);
+create index items_event on items (event_id, sort_key) where deleted_at is null;
+create index items_account on items (credited_account_id);
+create index items_posted on items (posted_at desc) where deleted_at is null;
+
+create table item_people (item_id bigint not null references items(id), person_id bigint not null references people(id),
+  role text not null check (role in ('present','sharing','about')), created_at timestamptz not null default now(),
+  primary key (item_id, person_id, role));
+create index item_people_person on item_people (person_id);
+create table item_tags (item_id bigint not null references items(id), tag_id bigint not null references tags(id),
+  created_at timestamptz not null default now(), primary key (item_id, tag_id));
+create index item_tags_tag on item_tags (tag_id);
+create table item_sources (
+  id bigint generated always as identity primary key, item_id bigint not null references items(id),
+  platform_id smallint not null references platforms(id), external_id text, url text not null,
+  role text not null check (role in ('primary','follow_up','media','quoted','full_video')),
+  position smallint not null default 0, account_id bigint references accounts(id), start_seconds int,
+  status text not null default 'live' check (status in ('live','deleted','unavailable')), checked_at timestamptz,
+  created_at timestamptz not null default now());
+create unique index item_sources_primary on item_sources (platform_id, external_id) where role = 'primary';
+create index item_sources_item on item_sources (item_id);
+create table item_links (from_item_id bigint not null references items(id), to_item_id bigint not null references items(id),
+  relation text not null check (relation in ('follows_on')), created_at timestamptz not null default now(),
+  primary key (from_item_id, to_item_id, relation));
+
 create table translations (
-  item_id int primary key references items(id) on delete cascade,
-  text text not null, keyword text, hashtags text[] not null default '{}', follow_up_ids text[] not null default '{}',
-  clip_source_handle text, clip_source_url text, follows_on_from text, full_video_url text, full_video_start int,
-  speaker_map jsonb not null default '{}', text_entered_manually boolean not null default false,
-  search tsvector generated always as (to_tsvector('simple', coalesce(keyword,'') || ' ' || text)) stored);
-create index translations_trgm on translations using gin (text gin_trgm_ops);
-create index translations_search on translations using gin (search);
-create table speaker_memory (account_id text not null references accounts(x_user_id), marker text not null,
-  mapping jsonb not null, primary key (account_id, marker));
-create table ignored_hashtags (tag text primary key check (tag = lower(tag)));
-create table types (name text primary key);
+  item_id bigint primary key references items(id), body text not null, text_entered_manually boolean not null default false);
+create index translations_body_trgm on translations using gin (body gin_trgm_ops);
+create table translation_speakers (
+  item_id bigint not null references translations(item_id), marker text not null,
+  person_id bigint references people(id), role text check (role in ('host','fan','speaker','crowd')),
+  check ((person_id is null) <> (role is null)), primary key (item_id, marker));
+create index translation_speakers_person on translation_speakers (person_id);
+create table speaker_memory (
+  account_id bigint not null references accounts(id), marker text not null,
+  person_id bigint references people(id), role text check (role in ('host','fan','speaker','crowd')),
+  check ((person_id is null) <> (role is null)), updated_at timestamptz not null default now(),
+  primary key (account_id, marker));
+
+create table reports (
+  id bigint generated always as identity primary key, target_table text not null, target_id bigint not null,
+  reason text not null, status text not null default 'open' check (status in ('open','resolved','dismissed')),
+  /* common columns */ ...);
+
+-- then: do $$ declare t text; begin foreach t in array array['users','people','accounts','projects','events','items','reports'] loop
+--   execute format('create trigger %I_updated before update on %I for each row execute function set_updated_at()', t, t);
+--   execute format('create trigger %I_audit after insert or update or delete on %I for each row execute function write_audit()', t, t);
+-- end loop; end $$;
 ```
 
-- [ ] **Step 1: Write the failing tests** (`freshDb()` = an in-memory PGlite with migrations applied):
-  - **`migrate`:** applies `['001_initial.sql']` the first time and `[]` the second. A temp dir with `001` + `002` applies both in order; adding `003` applies only that.
-  - **`seedFromSite`:**
-    - Run with the example site, it makes `listPeople` return sol and luna (featured).
-    - Run with the `test/fixtures/site` site afterwards, it updates the colours, adds that site's people, and replaces the ignored hashtags.
-    - Running it twice changes nothing.
-  - **`addPerson`:** `{displayName:'Leo', igHandle:'@Leo_X'}` with `lowercaseNames:true` stores `'leo'`/`'leo_x'`; with `false` it stores `'Leo'`.
-  - **`itemState`:** returns `'none' → 'visible' → 'removed'`.
-  - **Visibility:**
-    - An opted-out account's items are absent from `listVisibleItems` and from the `listEventsWithCounts` counts.
-    - A removed item is absent from `getVisibleTranslation`.
-  - **`remember`/`recall`:** round-trips a map.
-- [ ] **Step 2: FAIL** → **3: implement** → **4: Run `npm test && npm run check`, then `PGLITE_DIR=.devdb npm run setup`.** **Expected:** `migrated 001_initial.sql`, then `seeded 2 people`.
-- [ ] **Step 5: Commit** — `"Migrations, repositories for items and translations, setup from site"`
+  Write out the `/* common columns */ ...` placeholders in full in the real file (the `--` comment above lists them). Join tables, lookups and `translation_speakers` are covered by their parent's audit: the repo touches the parent's `updated_at` in the same transaction. The search index is **trigram only** (no stored tsvector); trigram covers English words and Thai substrings, and it halves the text storage.
+
+- [ ] **Step 1: Write `0006-data-model-conventions.md`** (the 8 conventions above, with the why: fewer migrations, space, other platforms and kinds, a free edit log). Add rule 11 to `docs/architecture.md`.
+- [ ] **Step 2: Write the failing tests** (`freshDb()` = in-memory PGlite with migrations):
+  - **migrate:**
+    - Applies `['001_initial.sql']`, then `[]`.
+    - A temp dir with `001` + `002` applies in order; adding `003` applies only that.
+  - **triggers:**
+    - Updating a person changes `updated_at`.
+    - `db.transaction(fn, {actor:'system'})` that inserts an event writes one `audit_log` row with `action 'insert'` and `actor 'system'`.
+    - A soft delete (`set deleted_at`) writes an `update` row whose `after.deleted_at` is not null.
+  - **seedFromSite:**
+    - The example site yields sol and luna, each with an Instagram account (`listPeople()[0].igHandle === 'solsunny'`).
+    - The second fixture site updates colours, adds its people, and swaps the ignored tags.
+    - Running it twice adds nothing: same row counts in `people`, `accounts` and `tags`.
+  - **people:** `addPerson` with `'@Leo_X'`/`'Leo'` stores alias-free `leo_x` and the name `'leo'` when lowercase. Adding the same IG handle twice throws `duplicate person`.
+  - **accounts:**
+    - Upserting X account `externalId '9001'` twice with different handles gives one row with the new handle.
+    - Instagram accounts without an external ID are matched by lowercase handle.
+  - **tags:** `ensureTags` on `#SLHappyDay2026` and `#slhappyday2026` gives one row. `setIgnored(['solluna'])` makes `ignoredHashtags()` return `['solluna']`.
+  - **items:**
+    - `itemState` goes `'none' → 'visible'` after inserting an item with a primary X source, then `'removed'` after setting `deleted_at` + `deleted_reason 'removed_by_account'`.
+    - Inserting a second item with the same primary source throws.
+  - **visibility:** opted-out accounts' items and `review_state 'pending'` items are absent from `listVisibleItems` and the `listEventsWithCounts` counts.
+  - **speakers:** `setSpeakers(id, {'🐶':{person:1}, '🌧️':{role:'speaker'}})` then `getSpeakers(id)` round-trips. A row with both `person` and `role` set is rejected by the check.
+  - **speakerMemory:** `remember`/`recall` round-trips, and a second `remember` of the same marker overwrites it.
+  - **Space sanity:** after ingest-style inserts of the same hashtag on 3 items, `tags` has 1 row and `item_tags` has 3.
+- [ ] **Step 3: Run `npm test`. Expected: FAIL.** — [ ] **Step 4: Implement**, one repo per file, each under the lint limits.
+- [ ] **Step 5: Run `npm test && npm run check`, then `PGLITE_DIR=.devdb npm run setup`.** **Expected:** `migrated 001_initial.sql`, `seeded 2 people`.
+- [ ] **Step 6: Commit** — `"Data model ADR, audited soft-delete schema, normalised repositories, setup from site"`
 
 ---
 
@@ -577,13 +718,21 @@ create table types (name text primary key);
 ```
 
   **Flow:** small private steps, so the function reads as this list:
-  1. `itemState` → **duplicate** / **removed**.
+  1. `itemState({platform:'x', externalId})` → **duplicate** / **removed**.
   2. `fetchTweet` (unless given a `Tweet`) → **deleted** / **unavailable**.
   3. The account has opted out → **opted_out**.
   4. Load the context (`deps.site`, people, events, ignored hashtags, `recall`), then `draftTranslation`.
   5. Anything missing → **needs_speakers** (with `missing` and `draft`).
   6. Create the event from the proposal if needed.
-  7. `upsertAccount`, then `insertItem(toItemRow(draft, meta))`, then `insertTranslation(itemId, toTranslationRow(draft))`, then `remember`. Steps 6 and 7 run in one `db.transaction`.
+  7. In one `db.transaction(…, { actor: addedBy })`:
+     - `upsertAccount` for the translator (`x`, author ID).
+     - Create the event if needed (tags via `ensureTags`).
+     - `insertItem` (category and client via `lookups`).
+     - `addSources`: primary; follow-ups; media, with the clip-source account upserted by handle; quoted.
+     - `setItemPeople` (`present` for mapped people, plus `sharing`/`about` for shared stories).
+     - Item tags, `insertTranslation({ body: tweet.text })`, `setSpeakers`, `remember`.
+
+     Each mapping lives in a small private `to…Rows(draft)` function.
   8. **added**.
 
   `scripts/add.js <url|id> [--map '🐶=solsunny,🐱=lunamoon,🦁=role:host'] [--shared-story] [--event <slug>] [--new-event]` is argument parsing plus one call, with no logic. On `needs_speakers` it prints each missing marker (count + example) and exits with code 2.
@@ -602,13 +751,15 @@ test('two translators land in one event', async () => {
   await ingestTranslation(deps, EVENT_A, { addedBy: 't', addedVia: 'cli' });
   assert.equal((await ingestTranslation(deps, EVENT_B, { addedBy: 't', addedVia: 'cli' })).status, 'added');
   assert.equal((await deps.db.query('select count(distinct event_id)::int n from items')).rows[0].n, 1);
+  assert.equal((await deps.db.query("select count(*)::int n from tags where norm = '#slhappyday2026'")).rows[0].n, 1);
 });
 ```
 
   Plus:
   - **duplicate**, **removed** and **opted_out** cases.
-  - `SHARED` with `{'🪇':{role:'speaker'}}` stores `placement 'shared_story'`, `event_id null`, and `type 'shared story'`.
-  - A failure inside the transaction (inject a db whose `insertTranslation` throws) leaves no orphan `items` row.
+  - `SHARED` with `{'🪇':{role:'speaker'}}` stores `placement 'shared_story'`, `event_id null`, and category `'shared story'`.
+  - A failure inside the transaction (inject a db whose `insertTranslation` throws) leaves no orphan `items` row and no `audit_log` row.
+  - `EVENT_A` stores a `media` source with account `clipper_one`, and the `audit_log` actor for the new item is `'t'`. Add `'t'` as a user in the test setup.
 - [ ] **Step 2: FAIL** → **3: implement** → **4: PASS** → **5: Commit** — `"Ingest service and owner add CLI"`
 
 ---
@@ -640,8 +791,8 @@ test('two translators land in one event', async () => {
 - Produces: `search(deps, { q='', people=[], peopleMode='any', types=[], kinds=['translation'], eventSlug, accountHandle, clientMedia, from, to, limit=50, offset=0 }) → { count, results: Result[] }`
   - `Result = { kind, sourceId, url, event: {slug,name,date}|null, placement, postedAt, accountHandle, personIds, matchLines }`
   - **Clause builders:** `textClause`, `peopleClause`, `typeClause`, `eventClause`, `accountClause`, `clientClause`, `dateClause` each return `{sql, params}` and are combined by `buildWhere`, which **always** adds `visibleItem('i')`.
-  - **Text matching** (translations): `t.text ilike '%'||$n||'%' or t.search @@ plainto_tsquery('simple',$n)`. Later kinds add their own text clause through their repo, so search stays open for extension.
-  - **People:** `'all'` uses `@>`; `'any'` uses `&&`.
+  - **Text matching** (translations): `t.body ilike '%'||$n||'%'` (served by the trigram index), or a keyword/hashtag tag whose `norm` contains `lower($n)`. Later kinds add their own text clause through their repo, so search stays open for extension.
+  - **People:** `'any'` is `exists (select 1 from item_people ip where ip.item_id = i.id and ip.person_id = any($n))`; `'all'` is `(select count(distinct ip.person_id) from item_people ip where ip.item_id = i.id and ip.person_id = any($n)) = cardinality($n)`.
   - **matchLines:** up to 2 lines containing `q`. With no `q`, the first 2 speech lines.
   - **Count only:** `limit=0`.
 - [ ] **Step 1: Write the failing tests** (seed: all 5 live fixtures ingested with full maps):
@@ -652,6 +803,7 @@ test('two translators land in one event', async () => {
   - `limit 0` returns the count with empty results.
   - Removed and opted-out items never appear.
   - `q:"'; drop table items; --"` gives count 0, and the table still exists.
+  - `review_state 'pending'` items never appear.
 - [ ] **Step 2: FAIL** → **3: implement** → **4: PASS** → **5: Commit** — `"Search service"`
 
 ---
@@ -812,7 +964,7 @@ test('two translators land in one event', async () => {
     - `service`: service + test
     - `domain`: domain module + test
     - `migration`: `<next NNN>_<name>.sql`
-    - **`kind`:** a migration (`<name>s` table with `item_id` primary key referencing `items`), `src/repo/<name>s.js`, `src/domain/<name>.js`, `public/js/sections/<name>.js`, and tests. It prints the two registry lines to add (`KINDS`, `SECTIONS`).
+    - **`kind`:** a migration (inserts the `item_kinds` row and creates a `<name>s` table with `item_id bigint primary key references items(id)`), `src/repo/<name>s.js`, `src/domain/<name>.js`, `public/js/sections/<name>.js`, and tests. It prints the two registry lines to add (`KINDS`, `SECTIONS`).
   - **Name rules:** `name` must match `^[a-z][a-zA-Z0-9]*$`, or `^[a-z0-9_]+$` for migrations. It refuses to overwrite and exits 1 with a message.
   - **Templates** are minimal, passing, rule-following examples: `// @ts-check`, `handler(run)`, `render(props)` with `esc` and `t()`, `deps` first, and green tests. Placeholders are `__name__`/`__Name__`.
 - [ ] **Step 1: Write the failing tests** (in a temp copy of the repo):
@@ -869,7 +1021,7 @@ test('two translators land in one event', async () => {
   - **ownerXUserId:** `'1957464086339534848'` (the owner's fan X account from the sign-in test).
   - **theme.css:** paper `#f6efe3`, card `#fffdf8`, line `#eadfce`, ink `#2b2233`, muted `#8a7f8f`, gradient `#ff6a2b → #e03a85`, Nunito + IBM Plex Sans Thai.
   - **logo.png:** from `docs/superpowers/specs/mockups/logo.png`.
-- [ ] **Step 3: Seed.** Move `test/fixtures/tweets/*.json` to `site/seed/tweets/`. Write `site/seed/maps.json` for the 6 real tweets, using the spec's mappings: @vacantvolcanic 🐰 → beonnnie, 🦊 → emiamily, 🦁 → leo, 🌧️ → role speaker, 🪇 → role speaker; @danaNYB and @SugarHoneyz13 use the defaults. **Leo:** ask the owner for his IG handle. Until then, use `createPeople: [{igHandle:'leo_placeholder', displayName:'leo', emoji:'🦁', colour:'#2fa89a'}]`.
+- [ ] **Step 3: Seed.** Move `test/fixtures/tweets/*.json` to `site/seed/tweets/`. Write `site/seed/maps.json` for the 6 real tweets, using the spec's mappings: @vacantvolcanic 🐰 → beonnnie, 🦊 → emiamily, 🦁 → leo, 🌧️ → role speaker, 🪇 → role speaker; @danaNYB and @SugarHoneyz13 use the defaults. **Leo:** `createPeople: [{igHandle:'leo_saussay', displayName:'leo', emoji:'🦁', colour:'#2fa89a'}]`.
 - [ ] **Step 4: Verify.**
   - `npm run build && npm test && npm run check` pass. **The engine's purity test passes**, because emibonnie's names now appear only inside `site/` and `docs/`; the purity test scans engine folders only.
   - `PGLITE_DIR=.devdb node scripts/seedDev.js` prints `seeded 6`.
@@ -907,6 +1059,7 @@ test('two translators land in one event', async () => {
   - Reusable template (`site/`, setup, copy, purity test, synthetic fixtures, start-your-own guide, upstream updates).
   - Contributor framework (recipes, scaffolder including item kinds, ADRs, PR template, CI).
   - Deploy via Actions, Neon direct, removed/opted-out exclusion.
+- **Data model:** audited soft deletes, `meta`, lookups, tags, join tables, multi-platform accounts and sources, and `projects`, `reports`, `users` and `review_state` all exist from migration 001. Plans 2–3 should need few or no schema migrations: auth tables come from the auth library, plus possibly a jobs table.
 - **Seams for later plans:**
   - `draftTranslation` and `resolveSpeakers` serve the add-flow preview (Plan 2) and the import mapping (Plan 3).
   - `ingestTranslation` is the single write path.

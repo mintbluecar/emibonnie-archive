@@ -76,6 +76,17 @@ Everything archived is an **item** of some **kind**. This version has one kind: 
 - **Event, person and search pages show items in per-kind sections.** This version has only the translations section. A new kind adds a section.
 - **Projects** (a series or campaign that groups events) are a later hub, added as their own table that events point to.
 
+### Data model principles (owner's request: minimise future schema changes, normalise)
+
+- **Every main table has the same bookkeeping columns:** created/updated time and by whom, soft-delete time and by whom, and a `meta` field for display-only extras. Nothing is hard-deleted.
+- **An automatic audit log** records every change and who made it. This is the edit log.
+- **Repeated values are stored once and referenced:** platforms, categories (types), clients, tags (hashtags and keywords), and accounts.
+- **Relations are join tables:** people on items (with role: present / sharing / about), tags, sources (primary, follow-ups, media/clip source, quoted, full video), links between items (follows on), and translation speakers.
+- **Accounts and sources are multi-platform** (X, Instagram, TikTok, YouTube, Weverse, Telegram). A person's identity is their Instagram account.
+- **Already in place for what's planned:** projects, reports, users, and an approval state on items.
+
+The full schema and conventions are in the implementation plan (Task 9) and ADR 0006.
+
 ### Translation (the first item kind)
 
 **Entries have no title** (owner's decision). A tweet stands for itself. Wherever entries are listed (event pages, search, person pages), each one shows the opening lines of its translation text, with speaker emoji, as its preview.
