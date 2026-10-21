@@ -72,7 +72,7 @@ async function ensurePerson(db, person, lowercaseNames) {
         (tx) =>
           addPerson(
             tx,
-            { igHandle: person.igHandle, displayName: person.displayName, emoji: person.emoji, colour: person.colour },
+            { igHandle: person.igHandle, displayName: person.displayName, emoji: person.emoji, colour: person.colour, featured: true },
             { lowercaseNames },
           ).then((created) => created.id),
         SYSTEM,

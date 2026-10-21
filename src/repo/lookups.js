@@ -7,13 +7,17 @@
 
 /** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
 
+/** The only table names ever interpolated into this file's SQL. */
+const LOOKUP_TABLES = new Set(['categories', 'clients']);
+
 /**
  * @param {Tx} tx
  * @param {'categories'|'clients'} table
  * @param {string} name
  * @returns {Promise<number>}
  */
-async function ensureLookup(tx, table, name) {
+export async function ensureLookup(tx, table, name) {
+  if (!LOOKUP_TABLES.has(table)) throw new Error(`ensureLookup: unknown table '${table}'`);
   const { rows } = await tx.query(
     `select id, deleted_at from ${table} where lower(name) = lower($1) order by (deleted_at is null) desc, id desc limit 1`,
     [name],

@@ -30,6 +30,7 @@ test('seedFromSite seeds the example site: people, otherAccounts, timezone, igno
   for (const fp of site.featuredPeople) {
     const found = people.find((p) => p.igHandle === fp.igHandle);
     assert.ok(found, `expected a person for ${fp.igHandle}`);
+    assert.equal(found.featured, true, `expected ${fp.igHandle} to be seeded as featured: true`);
   }
 
   const withOtherAccount = site.featuredPeople.find((fp) => (fp.otherAccounts ?? []).length > 0);

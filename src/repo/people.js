@@ -3,10 +3,6 @@
  * people: the owner's known people. `igHandle` comes from a person's
  * Instagram identity account (`accounts.is_identity`); `extraHashtags`
  * from their aliases (`person_aliases`).
- *
- * `addPerson` is used only to create a *featured* person today (there is
- * no other kind of person yet in Plan 1a), so it always sets
- * `people.featured = true`.
  */
 import { cleanDisplayName, norm } from '../domain/text.js';
 import { camelRow } from './rows.js';
@@ -52,13 +48,17 @@ export async function getPersonByHandle(db, igHandle) {
 
 /**
  * Creates a person plus an Instagram identity account. Throws `duplicate
- * person` when the handle already identifies someone.
+ * person` when the handle already identifies someone. If a handle-only,
+ * unlinked Instagram account already has this handle (e.g. from a post
+ * that mentioned it before the person was known), it's adopted as the
+ * identity account instead of inserting a second row for the same handle
+ * (`accounts_handle_only` is unique on `(platform, lower(handle))`).
  * @param {Tx} tx
- * @param {{ igHandle: string, displayName: string, emoji: string, colour: string }} input
+ * @param {{ igHandle: string, displayName: string, emoji: string, colour: string, featured?: boolean }} input
  * @param {{ lowercaseNames?: boolean }} [options]
  * @returns {Promise<Person>}
  */
-export async function addPerson(tx, { igHandle, displayName, emoji, colour }, { lowercaseNames = false } = {}) {
+export async function addPerson(tx, { igHandle, displayName, emoji, colour, featured = false }, { lowercaseNames = false } = {}) {
   const handle = norm(igHandle.replace(/^@/, ''));
   const already = await getAccountByHandle(tx, 'instagram', handle);
   if (already?.personId) throw new Error(`duplicate person: @${handle} already identifies someone`);
@@ -66,14 +66,18 @@ export async function addPerson(tx, { igHandle, displayName, emoji, colour }, { 
   const cleaned = cleanDisplayName(displayName);
   const name = lowercaseNames ? cleaned.toLowerCase() : cleaned;
   const { rows } = await tx.query(
-    'insert into people (display_name, emoji, colour, featured) values ($1, $2, $3, true) returning id',
-    [name, emoji, colour],
+    'insert into people (display_name, emoji, colour, featured) values ($1, $2, $3, $4) returning id',
+    [name, emoji, colour, featured],
   );
   const personId = rows[0].id;
-  await tx.query(
-    "insert into accounts (platform, handle, person_id, is_identity) values ('instagram', $1, $2, true)",
-    [handle, personId],
-  );
+  if (already) {
+    await tx.query('update accounts set person_id = $1, is_identity = true where id = $2', [personId, already.id]);
+  } else {
+    await tx.query(
+      "insert into accounts (platform, handle, person_id, is_identity) values ('instagram', $1, $2, true)",
+      [handle, personId],
+    );
+  }
   const [person] = await selectPeople(tx, handle);
   return person;
 }

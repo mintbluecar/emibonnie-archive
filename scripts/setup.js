@@ -11,6 +11,8 @@ import { createDb } from '../src/db/client.js';
 import { migrate } from '../src/db/migrate.js';
 import { loadSite } from '../src/site/loadSite.js';
 import { seedFromSite } from '../src/services/seedFromSite.js';
+import { listItemKindCodes } from '../src/repo/kinds.js';
+import { grantAppRole } from '../src/repo/roles.js';
 import { kindsRegistry } from '../src/kinds/_registry.js';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -33,8 +35,8 @@ export function missingKinds(registryCodes, dbCodes) {
  * @returns {Promise<void>}
  */
 async function assertKindsMatchDb(db, registryCodes) {
-  const { rows } = await db.query('select code from item_kinds');
-  const missing = missingKinds(registryCodes, rows.map((row) => row.code));
+  const dbCodes = await listItemKindCodes(db);
+  const missing = missingKinds(registryCodes, dbCodes);
   if (missing.length > 0) {
     throw new Error(
       `item_kinds is missing a row for: ${missing.join(', ')} -- ` +
@@ -54,7 +56,7 @@ async function grantAppRoleIfConfigured(db, log) {
     log('hint: set APP_DB_ROLE=<role> to grant it write access on this schema after migrating');
     return;
   }
-  await db.transaction((tx) => tx.query('select grant_app_role($1::regrole)', [role]), { actor: 'system' });
+  await db.transaction((tx) => grantAppRole(tx, role), { actor: 'system' });
   log(`granted the app role to ${role}`);
 }
 

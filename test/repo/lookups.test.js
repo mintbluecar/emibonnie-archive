@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { freshDb } from '../helpers/db.js';
-import { ensureCategory, ensureClient, listCategories } from '../../src/repo/lookups.js';
+import { ensureCategory, ensureClient, ensureLookup, listCategories } from '../../src/repo/lookups.js';
 
 /** @type {Awaited<ReturnType<typeof freshDb>>} */
 let db;
@@ -33,6 +33,10 @@ test('ensureClient restores a soft-deleted row before inserting a new one', asyn
   await db.query('update clients set deleted_at = now() where id = $1', [id]);
   const restoredId = await db.transaction((tx) => ensureClient(tx, 'ACME'), system);
   assert.equal(restoredId, id);
+});
+
+test("ensureLookup rejects any table name outside its allowlist (e.g. 'people')", async () => {
+  await assert.rejects(db.transaction((tx) => ensureLookup(tx, 'people', 'x'), system), /unknown table 'people'/);
 });
 
 test('listCategories excludes soft-deleted rows', async () => {
