@@ -4,6 +4,8 @@ import { after, before, test } from 'node:test';
 import { IDS } from '../helpers/fixtures.js';
 import { ingestDeps, ingest, patchedFetch, rows, SYSTEM } from '../helpers/ingest.js';
 import { apiFor } from '../helpers/api.js';
+import { kindsRegistry } from '../../src/kinds/_registry.js';
+import { itemPage, refreshItem } from '../../src/services/itemPage.js';
 
 /** Inside EDITED_NEW's edit window (it closes 2026-10-14T00:00Z). */
 const DURING = new Date('2026-10-13T13:00:00.000Z');
@@ -78,4 +80,22 @@ test('a finalized item returns 409 edit_window_closed', async () => {
   assert.equal(res.headers.get('cache-control'), 'no-store');
   assert.deepEqual(JSON.parse(res.text), { error: 'edit_window_closed' });
   assert.equal(calls[IDS.EDITED_NEW], fetched);
+});
+
+test('a kind without refresh: the item page never schedules one, and the refresh route is a 404', async () => {
+  const { refresh, ...rest } = kindsRegistry.translation;
+  assert.equal(typeof refresh, 'function', 'the translation kind defines refresh');
+  const noRefresh = { ...deps, kinds: { translation: Object.freeze(rest) } };
+  await deps.db.transaction((/** @type {any} */ tx) => tx.query('update item_sources set edit_finalized_at = null where item_id = $1', [itemId]), SYSTEM);
+  clock = new Date('2026-10-21T00:00:00.000Z').getTime();
+  const fetched = calls[IDS.EDITED_NEW];
+  const page = await itemPage(noRefresh, 'translation', IDS.EDITED_NEW);
+  assert.ok(page);
+  assert.equal(page.refresh, null);
+  assert.equal(page.view.editOpenUntil, null);
+  assert.ok((await itemPage(deps, 'translation', IDS.EDITED_NEW))?.refresh, 'with refresh, the elapsed window schedules one');
+  assert.equal(await refreshItem(noRefresh, 'translation', IDS.EDITED_NEW), null);
+  const api = apiFor(noRefresh);
+  assert.equal((await api.call('POST', PATH)).status, 404);
+  assert.equal(calls[IDS.EDITED_NEW], fetched, 'nothing fetched');
 });

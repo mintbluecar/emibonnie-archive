@@ -14,6 +14,16 @@
  * it's by the same credited account, through `appendFollowUp` (required
  * whenever `followUpOf` is given).
  *
+ * Optional upkeep, for kinds whose sources can change after intake
+ * (generic code calls each only when the kind defines it):
+ * - `refresh(deps, itemId, { actor })` re-reads the item's sources whose
+ *   edit window isn't finalized, takes any edit, and finalizes a source
+ *   once its window has closed (or it's gone for good). The item page
+ *   schedules it once a window has elapsed; the refresh route is a 404
+ *   for a kind without it.
+ * - `checkFollowUps(deps, itemId, { actor })` appends the item's later
+ *   same-author follow-ups no item archives yet.
+ *
  * @typedef {import('../domain/constants.js').Placement} Placement
  * @typedef {import('../domain/events.js').Event} Event
  * @typedef {import('../domain/events.js').EventPerson} EventPerson
@@ -77,6 +87,7 @@
  *   What `fetchSource` returns: the kind's own input for `draft`, with at
  *   least a `status` ingest can read.
  * @typedef {any} Db
+ * @typedef {{ db: Db, fetchImpl: typeof fetch, now?: () => Date }} UpkeepDeps
  * @typedef {{
  *   people: Map<number, import('../repo/people.js').Person>,
  *   formatName: (name: string) => string,
@@ -100,6 +111,8 @@
  *   loadDetails(db: Db, itemIds: number[]): Promise<Map<number, object>>,
  *   present: { preview(item: any, details: any, ctx: any): object, detail(item: any, details: any, ctx: any): object },
  *   search: { textClause(paramIndex: number): string, rank(paramIndex: number): string, matchLines(details: any, q: string): string[] },
+ *   refresh?: (deps: UpkeepDeps, itemId: number, options: { actor: string }) => Promise<{ updated: number, editableUntil: string|null }>,
+ *   checkFollowUps?: (deps: UpkeepDeps, itemId: number, options: { actor: string }) => Promise<{ added: number }>,
  * }} Kind
  *
  * `present.preview(card, details, ctx)` / `present.detail(card, details, ctx)`
@@ -125,6 +138,7 @@ export const RESERVED_URL_PREFIXES = Object.freeze(['/e/', '/p/', '/tl/', '/sear
 const OWNED_URL_PREFIXES = Object.freeze({ '/t/': 'translation' });
 const REQUIRED_FUNCTIONS = ['matchesUrl', 'fetchSource', 'draft', 'persist', 'loadDetails'];
 const REQUIRED_GROUPS = { present: ['preview', 'detail'], search: ['textClause', 'rank', 'matchLines'] };
+const OPTIONAL_FUNCTIONS = ['refresh', 'checkFollowUps'];
 
 /**
  * Each string field of the spec, the pattern it must match, and the problem when it doesn't.
@@ -136,6 +150,15 @@ const STRING_FIELDS = [
   ['urlPrefix', URL_PREFIX, 'urlPrefix must look like /x/'],
   ['platform', NAME, 'platform must be a platforms code'],
 ];
+
+/**
+ * @param {any} spec
+ * @returns {string[]}
+ */
+function optionalProblems(spec) {
+  return OPTIONAL_FUNCTIONS.filter((key) => spec[key] !== undefined && typeof spec[key] !== 'function')
+    .map((key) => `${key} must be a function when given`);
+}
 
 /**
  * @param {any} spec
@@ -153,7 +176,7 @@ function followUpProblems(spec) {
  */
 function shapeProblems(spec) {
   const bad = STRING_FIELDS.filter(([key, pattern]) => typeof spec[key] !== 'string' || !pattern.test(spec[key]));
-  return [...bad.map(([, , problem]) => problem), ...prefixProblems(spec), ...followUpProblems(spec)];
+  return [...bad.map(([, , problem]) => problem), ...prefixProblems(spec), ...followUpProblems(spec), ...optionalProblems(spec)];
 }
 
 /**

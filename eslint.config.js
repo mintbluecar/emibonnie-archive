@@ -28,6 +28,15 @@ const kindDomainSiblingPattern = {
   message: "src/kinds/<kind>/domain.js is pure: it may not import the kind's repo, presenter, search or index.",
 };
 
+/**
+ * Services never name a kind (rule 3 and "Kinds are plugins"): from
+ * src/kinds they may import only the registry and the contract.
+ */
+const servicesKindsPattern = {
+  regex: '(^|/)kinds/(?!(_registry|defineKind)\\.js$)',
+  message: 'src/services may import from src/kinds only _registry.js and defineKind.js: talk to a kind through the Kind contract.',
+};
+
 const baseRules = {
   'max-lines': ['error', { max: 200, skipBlankLines: true, skipComments: true }],
   'max-lines-per-function': ['error', { max: 50, skipBlankLines: true, skipComments: true }],
@@ -109,6 +118,7 @@ export default [
               group: ['**/http/**', '**/routes/**'],
               message: 'src/services may not import http or routes.',
             },
+            servicesKindsPattern,
           ],
         },
       ],

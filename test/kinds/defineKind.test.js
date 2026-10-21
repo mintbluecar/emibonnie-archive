@@ -74,3 +74,12 @@ test('rejects a reserved urlPrefix, and /t/ for any kind but translation', () =>
   assert.equal(defineKind({ ...spec(), name: 'translation', urlPrefix: '/t/' }).urlPrefix, '/t/');
   assert.throws(() => defineKind({ ...spec(), name: 'translation', urlPrefix: '/e/' }), /reserved/);
 });
+
+test('refresh and checkFollowUps are optional, but must be functions when given', () => {
+  const kind = defineKind(spec());
+  assert.equal(kind.refresh, undefined);
+  assert.equal(kind.checkFollowUps, undefined);
+  assert.doesNotThrow(() => defineKind({ ...spec(), refresh: async () => ({ updated: 0, editableUntil: null }), checkFollowUps: async () => ({ added: 0 }) }));
+  assert.throws(() => defineKind(/** @type {any} */ ({ ...spec(), refresh: 'nope' })), /refresh must be a function/);
+  assert.throws(() => defineKind(/** @type {any} */ ({ ...spec(), checkFollowUps: {} })), /checkFollowUps must be a function/);
+});

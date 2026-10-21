@@ -1,8 +1,10 @@
 // @ts-check
 /**
- * Owner-decided upkeep of an archived translation's X posts, each run on
- * demand (a button, or the item route once an edit window has closed) --
- * there's no daily sweep:
+ * The translation kind's optional upkeep methods (the Kind contract's
+ * `refresh` and `checkFollowUps`, src/kinds/defineKind.js): owner-decided
+ * upkeep of an archived translation's X posts, each run on demand (a
+ * button, or the item route once an edit window has closed) -- there's no
+ * daily sweep:
  *
  * - `refreshEdits` re-fetches every post whose edit window isn't finalized,
  *   takes an edited text into its part (the only path allowed to rewrite a
@@ -11,17 +13,17 @@
  * - `checkFollowUps` re-reads the primary post's thread and appends any
  *   same-author follow-ups no item archives yet.
  */
-import { fetchTweet } from '../sources/fetchTweet.js';
-import { fetchThread } from '../sources/thread.js';
-import { findSourceOwner, primarySource } from '../repo/itemSources.js';
-import { addAliases, unfinalizedSources, updateEditState } from '../repo/sourceEdits.js';
-import { isTextEnteredManually, updatePartBody } from '../kinds/translation/repo.js';
-import { appendPosts } from '../kinds/translation/persist.js';
-import { asFetched } from '../kinds/translation/source.js';
+import { fetchTweet } from '../../sources/fetchTweet.js';
+import { fetchThread } from '../../sources/thread.js';
+import { findSourceOwner, primarySource } from '../../repo/itemSources.js';
+import { addAliases, unfinalizedSources, updateEditState } from '../../repo/sourceEdits.js';
+import { isTextEnteredManually, updatePartBody } from './repo.js';
+import { appendPosts } from './persist.js';
+import { asFetched } from './source.js';
 
-/** @typedef {import('../db/common.js').Db} Db */
-/** @typedef {import('../db/common.js').Tx} Tx */
-/** @typedef {import('../sources/normalize.js').Tweet} Tweet */
+/** @typedef {import('../../db/common.js').Db} Db */
+/** @typedef {import('../../db/common.js').Tx} Tx */
+/** @typedef {import('../../sources/normalize.js').Tweet} Tweet */
 /** @typedef {{ db: Db, fetchImpl: typeof fetch, now?: () => Date }} UpkeepDeps */
 /** @typedef {Awaited<ReturnType<typeof unfinalizedSources>>[number]} OpenSource */
 
@@ -98,7 +100,7 @@ export async function refreshEdits(deps, itemId, { actor }) {
  * edited follow-up's new id isn't added twice), each read through its own
  * post fetch like at intake.
  * @param {UpkeepDeps} deps
- * @param {{ kind: string, followUps: import('../sources/normalize.js').FollowUp[] }} input
+ * @param {{ kind: string, followUps: import('../../sources/normalize.js').FollowUp[] }} input
  */
 async function newPosts(deps, { kind, followUps }) {
   const owners = await Promise.all(followUps.map((post) => findSourceOwner(deps.db, { kind, platform: 'x', externalId: post.id })));

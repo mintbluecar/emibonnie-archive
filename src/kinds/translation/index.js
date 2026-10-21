@@ -7,6 +7,7 @@ import { appendFollowUp, persistTranslation } from './persist.js';
 import { loadDetails } from './repo.js';
 import { present } from './presenter.js';
 import { search } from './search.js';
+import { refreshEdits, checkFollowUps } from './upkeep.js';
 
 /**
  * A reply is a candidate follow-up of the tweet it replies to. Whether
@@ -31,4 +32,6 @@ export default defineKind({
   loadDetails,
   present,
   search,
+  refresh: refreshEdits,
+  checkFollowUps,
 });

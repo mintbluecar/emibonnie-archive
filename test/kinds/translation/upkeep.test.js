@@ -1,10 +1,10 @@
 // @ts-check
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { IDS } from '../helpers/fixtures.js';
-import { ingestDeps, ingest, rows, count, patchedFetch, SYSTEM } from '../helpers/ingest.js';
-import { refreshEdits, checkFollowUps } from '../../src/services/postUpkeep.js';
-import { touchRefresh } from '../../src/repo/sourceEdits.js';
+import { IDS } from '../../helpers/fixtures.js';
+import { ingestDeps, ingest, rows, count, patchedFetch, SYSTEM } from '../../helpers/ingest.js';
+import { refreshEdits, checkFollowUps } from '../../../src/kinds/translation/upkeep.js';
+import { touchRefresh } from '../../../src/repo/sourceEdits.js';
 
 const EDITED_TEXT = "☀️: can't wait to see everyone at the fanmeet next weekend!! (venue changed)";
 
