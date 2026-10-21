@@ -266,7 +266,7 @@ Approved with the owner on 2026-10-21 using mockups. The mockups are kept in `do
 - **Me page** (`people-me-v1.html`).
   - Everyone: "added by me".
   - Translators also get a ✓ translator badge and "my translations". They can multi-select and "remove from archive". Removed entries stay listed, faded, with "restore".
-  - A **solid red "opt out"** box explains the effect, and that they can opt back in. (The label is just "opt out", in red everywhere it appears.)
+  - A **solid red "opt out"** box explains the effect in "removes" wording ("Removes all N of your translations and stops anyone adding your tweets in future. You can opt back in any time."). Its button is full width and reads **"yes, i would like to opt out"**. The label is just "opt out", in red everywhere it appears. User-facing copy says "remove", never "hide", for translators.
 - **Admin** (web, owner only; `admin-import-v1.html`).
   - **Sidebar:** import, needs speakers, check these, unsorted, reports, events, people, ignored hashtags, users & blocks, settings (approval switch, X sign-in health alert, Type and Client/Media lists).
   - **Import is three stages:**
