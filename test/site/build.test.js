@@ -1,7 +1,7 @@
 // @ts-check
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdtempSync, rmSync, readFileSync, existsSync, cpSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync, existsSync, cpSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
@@ -18,6 +18,19 @@ import { runBuild } from '../../scripts/build.js';
 import { loadSite } from '../../src/site/loadSite.js';
 
 const TOKENS_CSS = readFileSync('src/styles/tokens.css', 'utf8');
+
+/**
+ * A temp repo root with a real copy of `src/` and `examples/solluna/`
+ * (as `site/`), so `runBuild` can run end to end without touching this
+ * checkout. Caller must `rmSync(repoRoot, { recursive: true, force: true })`.
+ * @returns {{ repoRoot: string, siteDir: string }}
+ */
+function makeBuildRepoRoot() {
+  const repoRoot = mkdtempSync(path.join(tmpdir(), 'fan-archive-build-'));
+  cpSync('src', path.join(repoRoot, 'src'), { recursive: true });
+  cpSync('examples/solluna', path.join(repoRoot, 'site'), { recursive: true });
+  return { repoRoot, siteDir: path.join(repoRoot, 'site') };
+}
 
 test('findMissingCssTokens: fails when engine CSS uses var(--missing)', () => {
   const missing = findMissingCssTokens(
@@ -75,12 +88,9 @@ test('buildVercelConfig: region, security headers (Referrer-Policy: no-referrer)
 });
 
 test('runBuild: builds examples/solluna end to end into a temp repo root', async () => {
-  const repoRoot = mkdtempSync(path.join(tmpdir(), 'fan-archive-build-'));
+  const { repoRoot, siteDir } = makeBuildRepoRoot();
   try {
-    cpSync('src', path.join(repoRoot, 'src'), { recursive: true });
-    cpSync('examples/solluna', path.join(repoRoot, 'site'), { recursive: true });
-
-    await runBuild({ repoRoot, siteDir: path.join(repoRoot, 'site') });
+    await runBuild({ repoRoot, siteDir });
 
     assert.ok(existsSync(path.join(repoRoot, 'src/site/generated.js')));
     assert.ok(existsSync(path.join(repoRoot, 'src/kinds/_registry.js')));
@@ -101,15 +111,34 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
 });
 
 test('runBuild: fails when site.json is invalid', async () => {
-  const repoRoot = mkdtempSync(path.join(tmpdir(), 'fan-archive-build-'));
+  const { repoRoot, siteDir } = makeBuildRepoRoot();
   try {
-    cpSync('src', path.join(repoRoot, 'src'), { recursive: true });
-    cpSync('examples/solluna', path.join(repoRoot, 'site'), { recursive: true });
-    await import('node:fs').then(({ writeFileSync }) =>
-      writeFileSync(path.join(repoRoot, 'site/site.json'), JSON.stringify({ name: 'x' })),
-    );
+    writeFileSync(path.join(siteDir, 'site.json'), JSON.stringify({ name: 'x' }));
 
-    await assert.rejects(() => runBuild({ repoRoot, siteDir: path.join(repoRoot, 'site') }));
+    await assert.rejects(() => runBuild({ repoRoot, siteDir }));
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test('runBuild: fails end to end when engine CSS uses var(--missing)', async () => {
+  const { repoRoot, siteDir } = makeBuildRepoRoot();
+  try {
+    writeFileSync(path.join(repoRoot, 'src/styles/broken.css'), '.x { color: var(--missing); }');
+
+    await assert.rejects(() => runBuild({ repoRoot, siteDir }), /undefined token\(s\): --missing/);
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test("runBuild: fails end to end when code uses t('nope.key')", async () => {
+  const { repoRoot, siteDir } = makeBuildRepoRoot();
+  try {
+    mkdirSync(path.join(repoRoot, 'src/routes'), { recursive: true });
+    writeFileSync(path.join(repoRoot, 'src/routes/broken.js'), "export const x = t('nope.key');");
+
+    await assert.rejects(() => runBuild({ repoRoot, siteDir }), /undefined copy key\(s\): nope\.key/);
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }

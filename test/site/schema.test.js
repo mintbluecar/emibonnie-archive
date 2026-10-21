@@ -16,6 +16,31 @@ test('validateSite: the example site (examples/solluna) validates', () => {
   assert.equal(result.site.name, 'solluna archive');
   assert.equal(result.site.featuredPeople.length, 2);
   assert.equal(result.site.region, 'sin1');
+  assert.deepEqual(result.site.featuredPeople[0].otherAccounts, [{ platform: 'x', handle: 'solsunny_x' }]);
+  assert.deepEqual(result.site.featuredPeople[1].otherAccounts, []);
+});
+
+test('validateSite: a featured person\'s otherAccounts handle is normalised (@ stripped, lowercased)', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  raw.featuredPeople[0].otherAccounts = [{ platform: 'instagram', handle: '@SolSunny_IG' }];
+  const result = validateSite(raw);
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.deepEqual(result.site.featuredPeople[0].otherAccounts, [
+    { platform: 'instagram', handle: 'solsunny_ig' },
+  ]);
+});
+
+test('validateSite: errors name the field for a bad otherAccounts platform', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  raw.featuredPeople[0].otherAccounts = [
+    { platform: 'x', handle: 'solsunny_x' },
+    { platform: 'myspace', handle: 'solsunny' },
+  ];
+  const result = validateSite(raw);
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.ok(result.errors.some((e) => e.startsWith('featuredPeople[0].otherAccounts[1].platform:')));
 });
 
 test('validateSite: a second fixture site validates', () => {

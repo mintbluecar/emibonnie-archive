@@ -3,6 +3,7 @@ import { ROLES } from '../domain/constants.js';
 import { contrastRatio, DEFAULT_CARD_COLOUR, DARK_CARD_COLOUR, ALLOWED_REGIONS } from './contrast.js';
 
 const COLOUR_RE = /^#[0-9a-f]{6}$/i;
+const ALLOWED_PLATFORMS = ['x', 'instagram', 'tiktok', 'youtube', 'weverse', 'telegram'];
 
 /**
  * Pushes an error onto `errors` when `value` isn't a non-empty string.
@@ -187,10 +188,72 @@ function asStringOr(value, fallback) {
 
 /**
  * @param {string[]} errors
+ * @param {string} path
+ * @param {unknown} value
+ * @returns {string}
+ */
+function checkPlatform(errors, path, value) {
+  if (typeof value !== 'string' || !ALLOWED_PLATFORMS.includes(value)) {
+    errors.push(`${path}: must be one of ${ALLOWED_PLATFORMS.join(', ')}`);
+    return '';
+  }
+  return value;
+}
+
+/**
+ * Strips a leading `@` and lowercases, so `@SolSunny_X` and `solsunny_x`
+ * validate the same.
+ * @param {string[]} errors
+ * @param {string} path
+ * @param {unknown} value
+ * @returns {string}
+ */
+function checkHandle(errors, path, value) {
+  const normalised = typeof value === 'string' ? value.replace(/^@/, '').toLowerCase() : '';
+  if (normalised.length === 0) {
+    errors.push(`${path}: required, must be a non-empty handle`);
+    return '';
+  }
+  return normalised;
+}
+
+/**
+ * @param {string[]} errors
+ * @param {any} account
+ * @param {number} personIndex
+ * @param {number} index
+ * @returns {{ platform: string, handle: string }}
+ */
+function checkOneOtherAccount(errors, account, personIndex, index) {
+  const base = `featuredPeople[${personIndex}].otherAccounts[${index}]`;
+  return {
+    platform: checkPlatform(errors, `${base}.platform`, account?.platform),
+    handle: checkHandle(errors, `${base}.handle`, account?.handle),
+  };
+}
+
+/**
+ * @param {string[]} errors
+ * @param {any} person
+ * @param {number} personIndex
+ * @returns {{ platform: string, handle: string }[]}
+ */
+function checkOtherAccounts(errors, person, personIndex) {
+  const value = person?.otherAccounts;
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    errors.push(`featuredPeople[${personIndex}].otherAccounts: must be an array`);
+    return [];
+  }
+  return value.map((account, index) => checkOneOtherAccount(errors, account, personIndex, index));
+}
+
+/**
+ * @param {string[]} errors
  * @param {any} person
  * @param {number} index
  * @param {Set<string>} seenHandles
- * @returns {{ igHandle: string, displayName: string, emoji: string, colour: string }}
+ * @returns {{ igHandle: string, displayName: string, emoji: string, colour: string, otherAccounts: { platform: string, handle: string }[] }}
  */
 export function checkOneFeaturedPerson(errors, person, index, seenHandles) {
   const base = `featuredPeople[${index}]`;
@@ -208,6 +271,7 @@ export function checkOneFeaturedPerson(errors, person, index, seenHandles) {
     displayName: asStringOr(displayName, ''),
     emoji: asStringOr(emoji, ''),
     colour: colour ?? '#000000',
+    otherAccounts: checkOtherAccounts(errors, person, index),
   };
 }
 

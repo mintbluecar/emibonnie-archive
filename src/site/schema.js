@@ -15,7 +15,11 @@ import {
 
 export { contrastRatio, DEFAULT_CARD_COLOUR, DARK_CARD_COLOUR, ALLOWED_REGIONS } from './contrast.js';
 
-/** @typedef {{ igHandle: string, displayName: string, emoji: string, colour: string }} FeaturedPerson */
+/** @typedef {{ platform: string, handle: string }} OtherAccount */
+/**
+ * @typedef {{ igHandle: string, displayName: string, emoji: string, colour: string,
+ *   otherAccounts: OtherAccount[] }} FeaturedPerson
+ */
 /** @typedef {{ code: string, platformCode: string, pattern: string }} LivePattern */
 /**
  * @typedef {{ name: string, wordmark: { accent: string, rest: string }, tagline: string, ownerXUserId: string,

@@ -2,8 +2,12 @@
 
 A real archive's configuration lives in `site/` (gitignored in this
 template). `npm run init-site` copies the template's fictional example,
-`examples/solluna/`, into `site/` to start one. This doc describes every
-field, generated from `src/site/schema.js` and `src/site/fieldValidators.js`
+`examples/solluna/`, into `site/` to start one. It finds the example at
+runtime rather than naming it in engine code: the single folder under
+`examples/`, or the one passed as `npm run init-site -- --example <name>`
+when there's more than one. If there are several and none is named, it
+refuses with a hint listing them. This doc describes every field,
+generated from `src/site/schema.js` and `src/site/fieldValidators.js`
 (the source of truth -- validation errors always name the exact field
 path).
 
@@ -35,6 +39,14 @@ path).
 | `displayName` | string | Shown next to their emoji everywhere. |
 | `emoji` | string | Their standard emoji. |
 | `colour` | `#rrggbb` | Must reach a contrast ratio of at least 3:1 (WCAG relative luminance) against both the light card colour (`#fffdf8`) and the engine's dark-mode card colour (`src/styles/tokens.css`'s dark `--color-card`). |
+| `otherAccounts` | `OtherAccount[]` | Optional, default `[]`. This person's other platform accounts -- what the owner's "post" placement recognises their own social posts through (a later ruling). |
+
+### `OtherAccount`
+
+| Field | Type | Notes |
+|---|---|---|
+| `platform` | string | One of `x`, `instagram`, `tiktok`, `youtube`, `weverse`, `telegram`. |
+| `handle` | string | Normalised: a leading `@` is stripped and it's lowercased, so `"@SolSunny_X"` and `"solsunny_x"` validate the same. Must be non-empty after that. |
 
 ### `defaultMarkers` entries
 
