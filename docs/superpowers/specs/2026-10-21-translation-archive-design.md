@@ -83,7 +83,13 @@ Everything archived is an **item** of some **kind**. This version has one kind: 
 - **Repeated values are stored once and referenced:** platforms, categories (types), clients, tags (hashtags and keywords), and accounts.
 - **Relations are join tables:** people on items (with role: present / sharing / about), tags, sources (primary, follow-ups, media/clip source, quoted, full video), links between items (follows on), and translation speakers.
 - **Accounts and sources are multi-platform** (X, Instagram, TikTok, YouTube, Weverse, Telegram). A person's identity is their Instagram account.
-- **Already in place for what's planned:** projects, reports, users, and an approval state on items.
+- **Already in place for what's planned:** projects, reports, users, runtime settings, the import queue, and an approval state on items.
+- **Expert review fixes:**
+  - **Audit log:** it stores only what changed. It also covers the linked tables, so speaker and people edits can be undone, and it refuses writes with no known actor.
+  - **Dates** are always read back as plain `YYYY-MM-DD`.
+  - **Integrity checks:** "placed in an event" requires an event; one primary source per item; one identity account per person.
+  - **Joint lives:** handled through an event–people link.
+  - **Lists that will grow** (source roles, how an item was added, removal reasons) are small lookup tables, so new values need no migration.
 
 The full schema and conventions are in the implementation plan (Task 9) and ADR 0006.
 
@@ -148,7 +154,7 @@ A translation that **isn't tied to an event**: someone else talking about emi an
 
 - The add flow asks "part of an event, or a shared story?" It suggests "shared story" when no event hashtag, keyword, or live pattern is found.
 - A shared story records **who's sharing** (a person; an IG-like hashtag such as #michirujjang is suggested as a new person) and **who it's about** (people).
-- "Shared story" is a **type**, so it shows up as an option in the type filter. It is **not a home tab** (owner's decision: a tab would make it too prominent). Shared stories appear in search results, on the shared-story type filter, and on the pages of everyone involved. They never appear on the events timeline.
+- "Shared story" shows up as an option in the type filter. Underneath, it's the item's **placement** (`shared_story`), not a stored type, so there's one source of truth (expert review). It is **not a home tab** (owner's decision: a tab would make it too prominent). Shared stories appear in search results, on the shared-story type filter, and on the pages of everyone involved. They never appear on the events timeline.
 
 ### Person
 
@@ -192,7 +198,7 @@ The **chosen style is chat bubbles, everyone on the left in one column**, with a
 2. The server fetches the tweet from two free, unofficial sources:
    - **X syndication** (`cdn.syndication.twimg.com/tweet-result`, the endpoint used by Vercel's react-tweet). It confirms the tweet exists, detects deleted tweets (`TweetTombstone`), and returns the author ID, handle, created date, media details (including video variants and the original clip's URL via `expanded_url`), the quoted tweet, and the parent tweet for replies. **It cuts off long posts** (when `note_tweet` is present).
    - **FxTwitter** (`api.fxtwitter.com/2/status/{id}`). It returns the **full text of long posts**. Tested at 2,502 characters.
-   - Rule: the text comes from FxTwitter whenever the post is long or the two sources disagree. Everything else comes from syndication. If both fail, the submitter can paste the text by hand. A manually entered entry is marked as such.
+   - Rule: the text comes from FxTwitter whenever the post is long or the two sources disagree. Everything else comes from syndication. If both fail, the submitter can paste the text by hand. A manually entered entry is marked as such and **held for owner approval** unless the translator entered it themselves. Credit only ever goes to an author ID returned by a source, never to a handle typed by a submitter (security review).
 3. **Duplicates:** if the tweet ID is already archived, the submitter is sent to the existing entry.
 4. **Quotes:** if the tweet quotes another tweet by the same translator, the site offers to archive that one too and link it as "follows on from". If it quotes someone else's tweet that holds the clip, that becomes Original media.
 5. **Threads** (follow-up replies by the same translator, for extra context or overflow text): the free sources show a reply's parent but not its children. The submitter can paste any follow-up tweet links, and the site appends their text to the same entry, in order. If the pasted tweet is itself a reply in the translator's own thread, the site walks up through the parents and offers to include them.
@@ -238,11 +244,11 @@ Both imports:
 
 ## Sign-in and roles
 
-- **Sign in with X** for everyone (OAuth 2.0 with PKCE, scopes `users.read tweet.read`). After sign-in, one call to `GET /2/users/me` gets the user's numeric ID and handle.
+- **Sign in with X** for everyone (OAuth 2.0 with PKCE, scopes `users.read tweet.read` **only**). Better Auth's X provider asks for `offline.access users.email` by default, so the defaults must be overridden and a test must check the requested scopes. After sign-in, one call to `GET /2/users/me` gets the user's numeric ID and handle. No email or profile image is stored for X users.
   - Tested 2026-10-21 on an X developer app with **zero credit**: sign-in and `/2/users/me` both succeeded. The rate limit is 75 per 15 minutes per user. X's pricing page lists user lookups at $0.010, so this may start being charged or refused in future. Pre-paid credit means the worst case is failure, not a bill.
   - **Store the numeric X user ID**, not the handle, because handles change.
 - **Sign in with Google** is a backup, so the site stays usable if X sign-in breaks.
-- **Translator recognition is automatic:** if a signed-in user's X ID matches a translator ID on archived entries, they're that translator. No claim step. (Google-only users can't act as a translator.)
+- **Translator recognition is automatic:** if a signed-in user's X ID matches a translator ID on archived entries, they're that translator. No claim step. (Google-only users can't act as a translator.) Recognition and the owner check use only the numeric X ID from the sign-in record, never a handle. Accounts known only by handle (clip sources, Notion rows) never give anyone powers. Google display names are cleaned up (no leading `@`, no invisible characters) and shown differently from X handles, so nobody can pass as a translator.
 - **Translator powers:** remove any of their own entries; opt out entirely.
   - **Remove** (owner's decision): the entry disappears from the site, including search, event pages, and public outputs, and that tweet can't be submitted again. The data is kept privately (soft delete), not deleted. Backups age out within 35 days (see Backups).
   - **Opt out:** applies to the whole account. Every entry by that translator disappears from the site the same way, and nothing they posted can be added again by anyone, through submission, bulk paste, or Notion import. Submitters get a clear message. Imports skip those tweets and list them as skipped.
@@ -254,6 +260,7 @@ Both imports:
 - **Blocking:** the owner can block a user. Their submissions are hidden and they can't submit again.
 - **Approval switch:** a site setting "new submissions need approval". It's **off** at launch (entries go live immediately). When it's on, new entries wait in the owner's review list.
 - If X sign-in fails at the step where the site asks X who the user is, the site shows a clear message, and the owner sees an alert in the admin page.
+- **Delete my account** (security review): anyone can delete their own account from "me". It removes their sign-in records and shows their past "added by" as "a fan". The owner has a script for full erasure on request, covering items, the audit log, and (by expiry) backups.
 
 ## Visual design
 
@@ -323,17 +330,74 @@ Approved with the owner on 2026-10-21 using mockups. The mockups are kept in `do
 ## Video player
 
 - It plays the clip from X's own servers (the `video.twimg.com` MP4 URLs from the syndication media variants), in the site's own player, so it can be pinned. It picks a small variant on phones. Video files are never stored or re-hosted.
-- The video URLs are fetched fresh when the page loads (or cached briefly), not stored permanently, since they can change.
+- **Video links are stored at intake** and refreshed by the health check. The page only asks X again when playback fails (cost review: fewer calls, less risk of being blocked). Only `video.twimg.com` URLs are ever served. The player sends no referrer.
+- The clip plays only while its tweet is live. The official X embed stays available as a switchable fallback.
 - **Early check for the builder:** confirm that X's video URLs play when embedded on another site (no hotlink blocking or expiring signatures). **Fallback** if they don't: show X's standard tweet embed in the video area, unpinned on phone.
 
 ## Tweet health check
 
-A scheduled **GitHub Actions** job (daily) re-checks archived tweets through syndication and updates Tweet status. Deleted or unavailable tweets switch the translation page to the "no longer available" state. Archived text is never touched.
+A scheduled job re-checks archived tweets through syndication and updates their status. Deleted or unavailable tweets switch the translation page to the "no longer available" state. Archived text is never touched.
+- **Rotating, so it scales** (cost review): tweets added in the last 30 days are checked daily, and 1/30 of the rest each day. At 10k+ items, a full daily check would use most of the free Actions minutes.
+- It runs as a **daily Vercel Cron batch** (≤ 300 s, no Actions minutes), with Actions as the fallback.
+- **It writes nothing when nothing changed.** Check timestamps live outside audited tables, so the audit log doesn't fill the database.
+
+## Deleted tweets (owner's decision, option 3: keep, and tell the translator)
+
+- When a translator's tweet is deleted, the translation **stays archived and visible** (the archive's purpose). The health check also **flags it for the owner** in an admin "deleted at source" list, with the translator's handle.
+- The owner contacts the translator and asks whether to keep it. If they say no, the owner removes it (or the translator does it themselves from "me").
+- Background (security review): X's developer policy asks for content deleted on X to be removed within 24 hours. It's written for content obtained through the X API. The archive gets tweet text from the free unofficial sources, and uses the API only for sign-in. The owner accepts the remaining risk. Translators keep full control through remove and opt-out.
 
 ## Search
 
-- Postgres full-text search on the English text, plus trigram (`pg_trgm`) matching so that Thai, which has no spaces between words, and partial words still match.
+- Trigram (`pg_trgm`) matching on the translation text, so that both English and Thai (which has no spaces between words) and partial words match. There's no separate full-text copy, to save space. Builders must confirm that Thai text produces trigrams on both Neon and PGlite.
+- Queries are 2–100 characters, with a capped page offset (protects the database from abuse). Results have an explicit order.
 - Search covers: translation text, Keyword, hashtags, event names, people names, and translator handles.
+
+## Trust, safety and privacy (security review, 2026-10-21)
+
+**Pages and wording:**
+- **`/about`:** what the site is, credits policy, and "unofficial, not affiliated with the artists or their agency". The FAN-MADE badge stays.
+- **`/takedown`:** who can ask, what to send, and that the response is "hide first, review second".
+- **`/privacy`:** who runs it (the fan contact), what's collected and why, third parties (Vercel, Neon, GitHub, X video), retention, public vs private, translator remove/opt-out, account deletion and erasure, contact. No sale and no ads.
+- A footer on every page links all three.
+- The logo's origin is credited, and it's never used in a way that suggests an official site.
+
+**Translators:** before launch, the owner contacts each translator with what's archived and how to opt out. The Notion permission is kept in writing, privately.
+
+**Personal data, kept minimal:**
+- No email or profile image for X users.
+- Sign-in sessions last 7 days.
+- No request headers in error logs, and Better Auth telemetry stays off.
+- The audit log and reports are pruned after 12–24 months.
+- Public: entries, handles, "added by" names. Everything else is private.
+
+**Security basics:**
+- Narrow X scopes.
+- Database-backed rate limits on sign-in and on every write endpoint.
+- Writes are POST-only, with an Origin check.
+- Search bounds (see Search).
+- Every link put on a page is checked (https, allowed hosts).
+- Tweet fetching accepts only numeric IDs and refuses redirects.
+
+**Headers:**
+- A strict Content Security Policy (self, video.twimg.com for media, pbs.twimg.com for images), `frame-ancestors 'none'`, strict referrer policy, nosniff, HSTS.
+- Fonts are self-hosted, so visitors' IP addresses aren't sent to Google.
+
+**Accounts and operations:**
+- 2FA (authenticator app or passkey) on every fan account: X, Google, GitHub, Vercel, Neon, registrar.
+- The owner can sign out all their sessions.
+- The app's database role can't edit or delete audit rows.
+- GitHub Actions are pinned to exact versions with read-only default permissions.
+- Preview deploys use a separate Neon branch, never production.
+- A short incident runbook (leaked secret, takedown) lives in the site's deploy docs.
+
+**Identity separation checklist:**
+- Sign up for Vercel and Neon with the fan email, not "Continue with GitHub".
+- Use a neutral Vercel project slug.
+- The Google consent screen's support and developer emails are the fan Gmail.
+- Check the X app's authorize screen shows only fan-side names and links.
+- The domain is registered with the fan email, with registrant data redacted.
+- One fan contact address is used on every public page.
 
 ## Technical setup
 
@@ -363,6 +427,15 @@ These choices are mine. They follow the owner's other fan projects (plain JS, Ve
 
 **Deploying (my call):** Vercel Hobby can't connect to repos owned by a GitHub organisation, so pushes to `main` deploy through a GitHub Actions workflow using the Vercel CLI (`vercel deploy --prebuilt --prod`) and a Vercel token stored as a repo secret. Pull requests get preview deploys the same way. Checking that this works is one of the first build steps.
 
+**Hosting settings (cost review, 2026-10-21):**
+- **Caching:** every public read sends CDN cache headers (`s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400`), so pages keep working while Neon sleeps or is suspended, and a viral day doesn't wake the database for every visitor.
+- **Bundling:** front-end files are bundled into a few hashed files cached for a year (esbuild, at build time only), so a viral day doesn't exhaust Vercel's 1M monthly requests and trigger its 30-day pause.
+- **Neon:** autoscaling is capped at 0.25 CU.
+- **Region:** emibonnie runs in **Singapore**: Vercel `sin1` plus Neon AWS Singapore.
+- **`robots.txt`** blocks `/api/` and `/search`.
+- **One router function** handles every endpoint, staying within Hobby's function-count limits.
+- **Handlers are written in the standard web style,** and routes come from one table, so moving to **Cloudflare (the documented plan B: a free tier that resets daily, $5/month paid)** stays cheap.
+
 **Free-tier check (2026-10-21, official pricing pages):** Vercel Hobby is free and allows non-commercial use. Over-limit usage pauses the feature, with no bill. Neon Free, Better Auth (the framework; only their hosted dashboard is paid), Google sign-in (basic scopes; the app must be set to "In Production" to avoid the 100-user testing cap), and GitHub Actions are all $0. Sign in with X was tested working on a zero-credit app.
 
 **Unofficial sources are fragile.** Both tweet sources are undocumented or third-party and can break when X changes things. Intake must fail gracefully: it falls back to the other source, then to manual text entry. The owner gets an alert when one source has been failing.
@@ -383,6 +456,18 @@ Other fans start their own archive by copying a template repo, filling in `site/
   - `logo.png`.
   - `copy.json`: every piece of user-facing wording (tagline, buttons, empty states, opt-out text), so a fandom can change the tone or translate the interface. The engine ships English defaults, and `copy.json` overrides them.
   - `seed/` (optional): tweets to load for local development.
+- **Where the example lives** (architecture review): the template never commits a `site/` folder. Its example pair lives in `examples/solluna/`, and `npm run init-site` copies it into `site/` for a new archive. The engine reads `SITE_DIR` (default `site`). Setting docs live in `docs/site-settings.md`. This keeps `git pull upstream` conflict-free.
+- **Defaults the engine provides:** the engine ships default theme tokens and default wording. A site's `theme.css` and `copy.json` only override them, so new engine tokens never break an older site.
+- **Releases and upgrades:**
+  - The engine is versioned with semver tags, and sites pull a tagged release.
+  - Each release lists its upgrade steps in `CHANGELOG.md`.
+  - **`npm run doctor`** checks a site's setup: Node version, settings, pending migrations, missing tokens or copy, env vars, engine version.
+  - Deploys run database migrations automatically before going live.
+  - Engine migrations and a site's own migrations are numbered separately so they can't collide.
+- **Licence:** **MIT** for the engine (owner's decision). A site's `site/` content isn't covered.
+- **Two deploy paths** documented: Vercel's Git integration for fans whose repo is on a personal account (simplest), and the GitHub Actions + token path for org repos (emibonnie's case).
+- **The "never add a card" rule:** never add a card to GitHub or X. Without one, limits stop usage instead of billing.
+- **Also documented:** a "what happens at each limit" table, and a region choice step.
 - **Setup:** `npm run setup` validates `site.json` (clear errors for missing or invalid fields), runs migrations, and seeds featured people, ignored hashtags and types from it. It's safe to rerun after editing `site.json`. Featured people are seeded from settings, not hardcoded in migrations.
 - **Updates:** an archive owner adds the template as an `upstream` remote and runs `git pull upstream main`. Because they only change `site/`, this doesn't conflict. Engine changes that need a site change (a new required setting) must ship with a default or a clear setup error, plus a note in `CHANGELOG.md`.
 - **Sample data:** the template's `site/` holds a fictional example pair, and its tests use **synthetic tweet fixtures**: real tweet structure, made-up handles and text, including a long post, a Thai line, a live header, a shared story, a clip from another account, and a deleted tweet. Real translators' tweets are never in the template. emibonnie's real example tweets live only in emibonnie's own `site/seed/`.
