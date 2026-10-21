@@ -37,3 +37,25 @@ test('dev server: rewrites, api dispatch, 404', async () => {
   assert.equal((await fetch(base + '/nope.html')).status, 404);
   srv.close();
 });
+
+test('dev server: waitUntil (from @vercel/functions) runs after the response, and the server awaits it', async () => {
+  const { waitUntil } = await import('@vercel/functions');
+  /** @type {(v?: unknown) => void} */
+  let release = () => {};
+  const gate = new Promise((resolve) => { release = resolve; });
+  let done = false;
+  const handle = async (/** @type {Request} */ req) => {
+    waitUntil(gate.then(() => { done = true; }));
+    return Response.json({ origin: new URL(req.url).origin });
+  };
+  const srv = createServer({ root: 'test/fixtures/static', handle });
+  const base = await listen(srv);
+  const settled = new Promise((resolve) => srv.once('waitUntilSettled', resolve));
+  const res = await fetch(base + '/api/bg');
+  assert.deepEqual(await res.json(), { origin: base }, 'the request URL keeps the Host, so same-origin checks work');
+  assert.equal(done, false, 'the response did not wait for the background work');
+  release();
+  await settled;
+  assert.equal(done, true);
+  srv.close();
+});

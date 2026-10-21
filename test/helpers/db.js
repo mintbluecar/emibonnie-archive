@@ -8,8 +8,27 @@
  */
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { neonConfig } from '@neondatabase/serverless';
 import { createDb } from '../../src/db/client.js';
 import { migrate } from '../../src/db/migrate.js';
+
+/**
+ * CI's plain `postgres:17` service speaks no WebSocket, which the Neon
+ * driver needs, so CI runs Neon's `wsproxy` next to it and names it in
+ * `TEST_WS_PROXY` (`host:port`). The driver then talks plain `ws:` to the
+ * proxy, which forwards to Postgres on the private service network
+ * (@neondatabase/serverless CONFIG.md: `wsProxy`, `useSecureWebSocket`,
+ * `pipelineConnect`, `forceDisablePgSSL`). Unset (a Neon database), the
+ * driver's defaults apply.
+ */
+if (process.env.TEST_WS_PROXY) {
+  const proxy = process.env.TEST_WS_PROXY;
+  neonConfig.wsProxy = () => `${proxy}/v1`;
+  neonConfig.useSecureWebSocket = false;
+  neonConfig.pipelineConnect = false;
+  neonConfig.pipelineTLS = false;
+  neonConfig.forceDisablePgSSL = true;
+}
 
 export const ENGINE_MIGRATIONS = fileURLToPath(new URL('../../src/db/migrations/', import.meta.url));
 

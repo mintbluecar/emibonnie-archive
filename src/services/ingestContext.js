@@ -9,7 +9,7 @@ import { ignoredHashtags } from '../repo/tags.js';
 import { LIVE_PATTERNS } from '../domain/constants.js';
 import { localDate } from '../domain/dates.js';
 import { formatName } from '../site/loadSite.js';
-import { BadRequest } from '../sources/errors.js';
+import { BadRequest } from '../domain/errors.js';
 
 /** @typedef {import('../kinds/defineKind.js').DraftContext} DraftContext */
 /** @typedef {import('../kinds/defineKind.js').DraftCommon} DraftCommon */

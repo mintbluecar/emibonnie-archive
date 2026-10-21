@@ -4,7 +4,22 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { matchRoute } from '../src/http/router.js';
+
+/**
+ * The dev stand-in for Vercel's request context, which `waitUntil` from
+ * `@vercel/functions` reads (`globalThis[Symbol.for('@vercel/request-context')].get()`).
+ * Each API request gets its own `waitUntil` collector; the server awaits
+ * the collected work after the response is sent.
+ */
+const REQUEST_CONTEXT = Symbol.for('@vercel/request-context');
+/** @type {AsyncLocalStorage<{ waitUntil: (promise: Promise<unknown>) => void }>} */
+const requestContext = new AsyncLocalStorage();
+
+function installRequestContext() {
+  /** @type {any} */ (globalThis)[REQUEST_CONTEXT] ??= { get: () => requestContext.getStore() ?? {} };
+}
 
 /** @type {Record<string, string>} */
 const MIME_TYPES = {
@@ -74,15 +89,6 @@ async function sendWebResponse(response, res) {
 }
 
 /**
- * @param {Rewrite} rewrite
- * @param {string} pathname
- * @returns {boolean}
- */
-function matchesRewrite(rewrite, pathname) {
-  return matchRoute([{ method: 'GET', path: rewrite.source }], 'GET', pathname) !== null;
-}
-
-/**
  * Resolves `pathname` to a file under `root`, refusing to escape it.
  * @param {string} root
  * @param {string} pathname
@@ -97,14 +103,18 @@ function resolveStaticPath(root, pathname) {
 }
 
 /**
- * Applies the first matching rewrite to `pathname`, if any.
+ * Applies the first matching rewrite to `pathname`, if any, filling the
+ * destination's `:param`s from the match (as Vercel does).
  * @param {Rewrite[]} rewrites
  * @param {string} pathname
  * @returns {string}
  */
 function applyRewrites(rewrites, pathname) {
-  const hit = rewrites.find((rewrite) => matchesRewrite(rewrite, pathname));
-  return hit ? hit.destination : pathname;
+  for (const rewrite of rewrites) {
+    const hit = matchRoute([{ method: 'GET', path: rewrite.source }], 'GET', pathname);
+    if (hit) return rewrite.destination.replace(/:([A-Za-z_]\w*)/g, (whole, name) => (Object.hasOwn(hit.params, name) ? encodeURIComponent(hit.params[name]) : whole));
+  }
+  return pathname;
 }
 
 /**
@@ -138,34 +148,48 @@ async function serveStatic(root, pathname, res) {
  * @returns {import('node:http').Server}
  */
 export function createServer({ root, rewrites = [], handle }) {
-  return http.createServer(async (req, res) => {
+  installRequestContext();
+  /** @type {import('node:http').Server} */
+  const server = http.createServer(async (req, res) => {
     try {
-      const url = new URL(req.url ?? '/', 'http://localhost');
-      if (url.pathname.startsWith('/api/')) {
-        const response = await handle(toWebRequest(req, url));
-        await sendWebResponse(response, res);
+      // The Host header keeps the port, so the request URL's origin is the browser's (the Origin check).
+      const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+      const target = url.pathname.startsWith('/api/') ? url : new URL(applyRewrites(rewrites, url.pathname), url);
+      if (target.pathname.startsWith('/api/')) {
+        await serveApi(handle, toWebRequest(req, target), res).then((results) => server.emit('waitUntilSettled', results));
         return;
       }
 
-      await serveStatic(root, applyRewrites(rewrites, url.pathname), res);
+      await serveStatic(root, target.pathname, res);
     } catch (/** @type {any} */ err) {
       res.statusCode = err && err.code === 'ENOENT' ? 404 : 500;
       res.end(res.statusCode === 404 ? 'Not Found' : 'Internal Server Error');
     }
   });
+  return server;
 }
 
 /**
- * @returns {Promise<Response>} a placeholder 404; real routing (`api/[...route].js`'s
- * handler) lands in a later task.
+ * Sends `handle`'s response, then awaits whatever it passed to `waitUntil`.
+ * @param {ApiHandler} handle
+ * @param {Request} request
+ * @param {import('node:http').ServerResponse} res
+ * @returns {Promise<PromiseSettledResult<unknown>[]>}
  */
-async function notImplemented() {
-  return new Response('Not Found', { status: 404 });
+async function serveApi(handle, request, res) {
+  /** @type {Promise<unknown>[]} */
+  const tasks = [];
+  await requestContext.run({ waitUntil: (promise) => { tasks.push(promise); } }, async () => {
+    await sendWebResponse(await handle(request), res);
+  });
+  return Promise.allSettled(tasks);
 }
 
 async function main() {
   const port = Number(process.env.PORT ?? 3000);
-  const srv = createServer({ root: 'public', rewrites: [], handle: notImplemented });
+  const { default: api } = await import('../api/[...route].js');
+  const vercel = JSON.parse(await readFile('vercel.json', 'utf8'));
+  const srv = createServer({ root: 'public', rewrites: vercel.rewrites ?? [], handle: (request) => api.fetch(request) });
   srv.listen(port, () => {
     console.log(`dev server listening on http://localhost:${port}`);
   });

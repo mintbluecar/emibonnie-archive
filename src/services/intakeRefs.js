@@ -7,7 +7,7 @@
 import { addPerson, getPersonByHandle } from '../repo/people.js';
 import { getEventBySlug } from '../repo/events.js';
 import { ROLES } from '../domain/constants.js';
-import { BadRequest } from '../sources/errors.js';
+import { BadRequest } from '../domain/errors.js';
 
 /** @typedef {import('../db/common.js').Db} Db */
 /** @typedef {import('../domain/speakers.js').SpeakerMap} SpeakerMap */

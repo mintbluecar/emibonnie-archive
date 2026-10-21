@@ -3,6 +3,11 @@
     "sin1"
   ],
   "buildCommand": "npm run build",
+  "functions": {
+    "api/*.js": {
+      "includeFiles": "public/{item,event}.html"
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",
@@ -24,6 +29,16 @@
           "value": "max-age=63072000; includeSubDomains; preload"
         }
       ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/e/:slug",
+      "destination": "/api/meta/e/:slug"
+    },
+    {
+      "source": "/t/:id",
+      "destination": "/api/meta/t/:id"
     }
   ]
 }

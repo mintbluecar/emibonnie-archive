@@ -26,13 +26,15 @@ export const SECURITY_HEADERS = [
  * it, with no runtime `fs` reads in functions.
  * @param {import('../src/site/schema.js').Site} site
  * @param {Record<string, string>} copy
+ * @param {{ logo: string|null }} [assets] public paths of the site's copied assets (the logo, for link previews)
  * @returns {string}
  */
-export function buildGeneratedSiteModule(site, copy) {
+export function buildGeneratedSiteModule(site, copy, assets = { logo: null }) {
   return (
     `${GENERATED_HEADER}// @ts-check\n` +
     `export const site = ${JSON.stringify(site, null, 2)};\n\n` +
-    `export const copy = ${JSON.stringify(copy, null, 2)};\n`
+    `export const copy = ${JSON.stringify(copy, null, 2)};\n\n` +
+    `/** @type {{ logo: string|null }} */\nexport const assets = ${JSON.stringify(assets)};\n`
   );
 }
 
@@ -80,19 +82,28 @@ export function buildKindsRegistryModule(kindNames) {
 }
 
 /**
- * `vercel.json`'s content: region, security headers, build command, and
- * any page rewrites (Plan 1b; empty for now).
+ * The one function (`api/[...route].js`), bundled with the built pages its
+ * link-preview meta routes read. The key is a glob, so `api/*.js` rather
+ * than the literal name, whose brackets a glob reads as a character class.
+ */
+export const FUNCTIONS = { 'api/*.js': { includeFiles: 'public/{item,event}.html' } };
+
+/**
+ * `vercel.json`'s content: region, security headers, build command, the
+ * function's bundled pages, and the rewrites (the route table's meta
+ * rewrites, then any `src/pages.js` page rewrites from Plan 1b).
  * @param {import('../src/site/schema.js').Site} site
- * @param {{ source: string, destination: string }[]} pageRewrites
+ * @param {{ source: string, destination: string }[]} rewrites
  * @returns {object}
  */
-export function buildVercelConfig(site, pageRewrites = []) {
+export function buildVercelConfig(site, rewrites = []) {
   /** @type {any} */
   const config = {
     regions: [site.region],
     buildCommand: 'npm run build',
+    functions: FUNCTIONS,
     headers: [{ source: '/(.*)', headers: SECURITY_HEADERS }],
   };
-  if (pageRewrites.length > 0) config.rewrites = pageRewrites;
+  if (rewrites.length > 0) config.rewrites = rewrites;
   return config;
 }

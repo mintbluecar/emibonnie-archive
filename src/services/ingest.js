@@ -16,7 +16,7 @@
  *   6. write everything in one transaction: added, or pending.
  */
 import { kindsRegistry } from '../kinds/_registry.js';
-import { BadRequest } from '../sources/errors.js';
+import { BadRequest } from '../domain/errors.js';
 import { findSourceOwner } from '../repo/itemSources.js';
 import { accountState } from '../repo/accounts.js';
 import { recall } from '../repo/speakerMemory.js';

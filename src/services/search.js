@@ -5,7 +5,7 @@
  * requested kinds, and presents the page of results with each one's event
  * and matching lines. Never names a kind.
  */
-import { BadRequest } from '../sources/errors.js';
+import { BadRequest } from '../domain/errors.js';
 import { PLACEMENTS } from '../domain/constants.js';
 import { searchItems } from '../repo/search.js';
 import { kindsOf, eventRefOf, presenterContext, previewsFor } from './cards.js';

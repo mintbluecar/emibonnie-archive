@@ -108,10 +108,22 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
 
     const vercelJson = JSON.parse(readFileSync(path.join(repoRoot, 'vercel.json'), 'utf8'));
     assert.deepEqual(vercelJson.regions, ['sin1']);
+    // a rewrite for each page route: the item pages (one per kind's urlPrefix) and the event page
+    assert.deepEqual(vercelJson.rewrites, [
+      { source: '/e/:slug', destination: '/api/meta/e/:slug' },
+      { source: '/t/:id', destination: '/api/meta/t/:id' },
+    ]);
+    const headers = vercelJson.headers[0].headers;
+    assert.match(headers.find((/** @type {any} */ h) => h.key === 'Content-Security-Policy').value, /frame-ancestors 'none'/);
+    assert.equal(headers.find((/** @type {any} */ h) => h.key === 'Referrer-Policy').value, 'no-referrer');
+    assert.ok(headers.some((/** @type {any} */ h) => h.key === 'Strict-Transport-Security'));
+    assert.ok(headers.some((/** @type {any} */ h) => h.key === 'X-Content-Type-Options'));
+    assert.deepEqual(vercelJson.functions, { 'api/*.js': { includeFiles: 'public/{item,event}.html' } });
 
     const generated = readFileSync(path.join(repoRoot, 'src/site/generated.js'), 'utf8');
     assert.ok(generated.includes('export const site ='));
     assert.ok(generated.includes('export const copy ='));
+    assert.ok(generated.includes('export const assets = {"logo":"/site/logo.svg"}'));
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }

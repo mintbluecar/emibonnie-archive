@@ -65,6 +65,7 @@ async function readPageRewrites(repoRoot) {
  * `repoRoot`.
  * @param {string} siteDir
  * @param {string} outDir
+ * @returns {{ logo: string|null }} the public path of the copied logo, if any
  */
 function copySiteAssets(siteDir, outDir) {
   const themeSrc = path.join(siteDir, 'theme.css');
@@ -74,9 +75,20 @@ function copySiteAssets(siteDir, outDir) {
     const logoSrc = path.join(siteDir, `logo.${ext}`);
     if (existsSync(logoSrc)) {
       cpSync(logoSrc, path.join(outDir, `logo.${ext}`));
-      break;
+      return { logo: `/site/logo.${ext}` };
     }
   }
+  return { logo: null };
+}
+
+/**
+ * The route table's meta rewrites. Imported from this engine checkout
+ * (so its dependencies resolve here) after the kinds registry is written.
+ * @returns {Promise<{ source: string, destination: string }[]>}
+ */
+async function readRouteRewrites() {
+  const mod = await import(new URL('../src/routes/index.js', import.meta.url).href);
+  return mod.rewrites;
 }
 
 /**
@@ -103,8 +115,6 @@ export async function runBuild(options = {}) {
     throw new Error(`build failed: code uses undefined copy key(s): ${missingCopyKeys.join(', ')}`);
   }
 
-  writeFileSync(path.join(repoRoot, 'src/site/generated.js'), buildGeneratedSiteModule(site, copy));
-
   const kindsDir = path.join(repoRoot, 'src/kinds');
   mkdirSync(kindsDir, { recursive: true });
   writeFileSync(path.join(kindsDir, '_registry.js'), buildKindsRegistryModule(listKindFolders(kindsDir)));
@@ -113,9 +123,12 @@ export async function runBuild(options = {}) {
   mkdirSync(publicSiteDir, { recursive: true });
   writeFileSync(path.join(publicSiteDir, 'site.js'), buildPublicSiteModule(site));
   writeFileSync(path.join(publicSiteDir, 'tokens.css'), tokensCss);
-  copySiteAssets(siteDir, publicSiteDir);
+  const assets = copySiteAssets(siteDir, publicSiteDir);
 
-  const vercelConfig = buildVercelConfig(site, await readPageRewrites(repoRoot));
+  writeFileSync(path.join(repoRoot, 'src/site/generated.js'), buildGeneratedSiteModule(site, copy, assets));
+
+  const rewrites = [...(await readRouteRewrites()), ...(await readPageRewrites(repoRoot))];
+  const vercelConfig = buildVercelConfig(site, rewrites);
   writeFileSync(path.join(repoRoot, 'vercel.json'), `${JSON.stringify(vercelConfig, null, 2)}\n`);
 }
 
