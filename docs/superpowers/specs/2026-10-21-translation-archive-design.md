@@ -258,10 +258,15 @@ Approved with the owner on 2026-10-21 using mockups. The mockups are kept in `do
   - X handle (as last seen), a link to the profile, and totals. Translations by event.
   - If the translator has opted out, the page only says "this translator has opted out".
 - **Add page:** see "Intake" above.
+- **Sign in** (`translator-signin-v2.html`).
+  - Tapping "me" or "＋ add" while signed out shows the logo, wordmark and FAN-MADE badge, a black **"sign in with X"** button first, and **"sign in with Google"** below it.
+  - A short note says what's kept: X account number and handle (or a chosen display name for Google). Email is never shown and passwords are never seen. The site can't post or read DMs.
+  - X's own approval screen asks for read access only (`users.read tweet.read`).
+  - **First sign-in as a translator:** a one-time welcome ("hi @handle", "✓ recognised as a translator", totals for translations, events and shared stories). Options: see my translations, remove a translation, add a translation, and **opt out** as a **solid red bar**. Afterwards, "me" opens straight to their translations.
 - **Me page** (`people-me-v1.html`).
   - Everyone: "added by me".
   - Translators also get a ✓ translator badge and "my translations". They can multi-select and "remove from archive". Removed entries stay listed, faded, with "restore".
-  - A red **opt out** box explains the effect, and that they can opt back in.
+  - A **solid red "opt out"** box explains the effect, and that they can opt back in. (The label is just "opt out", in red everywhere it appears.)
 - **Admin** (web, owner only; `admin-import-v1.html`).
   - **Sidebar:** import, needs speakers, check these, unsorted, reports, events, people, ignored hashtags, users & blocks, settings (approval switch, X sign-in health alert, Type and Client/Media lists).
   - **Import is three stages:**

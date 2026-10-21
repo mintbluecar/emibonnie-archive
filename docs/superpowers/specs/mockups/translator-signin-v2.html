@@ -1,0 +1,109 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>translator-signin-v2</title><style>body{margin:24px;background:#f3eee6;font-family:system-ui,sans-serif}.cards{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}.subtitle{opacity:.7}</style>
+<h2>A translator signs in</h2>
+<p class="subtitle">@vacantvolcanic signing in for the first time. 1 → sign in, 2 → X's approval screen (X's own page, simplified), 3 → recognised as a translator. Counts are made up.</p>
+
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  .s{--bg:#f6efe3;--card:#fffdf8;--ink:#2b2233;--mute:#8a7f8f;--line:#eadfce;--emi:#ff8a3d;--bon:#9b6cff;--ok:#2f9a5b;--bad:#c8433a;
+     font-family:Nunito,'IBM Plex Sans Thai',sans-serif;color:var(--ink)}
+  .row3{display:flex;gap:26px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+  .cap{font-size:12px;opacity:.7;text-align:center;margin-top:8px;max-width:300px}
+  .ph{width:300px;height:620px;border-radius:26px;overflow:hidden;box-shadow:0 6px 24px #0003;position:relative;background:var(--bg)}
+  .in{padding:14px 14px 70px;height:100%;box-sizing:border-box;overflow:hidden}
+  .grad{background:linear-gradient(90deg,#ff6a2b,#e03a85);-webkit-background-clip:text;color:transparent}
+  .tabbar{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;padding:10px 0 14px;font-size:11px;background:var(--card);border-top:1px solid var(--line);color:var(--mute)}
+  .tabbar .on{color:var(--bon);font-weight:800}
+  .center{text-align:center}
+  .logo{width:64px;height:64px;margin:36px auto 6px;display:block}
+  .wm{font-weight:800;font-size:20px}
+  .fan{display:inline-block;font-size:9.5px;font-weight:800;border:1.5px solid var(--line);border-radius:999px;padding:1px 7px;color:var(--mute);background:var(--card)}
+  .p{font-size:12px;color:var(--mute);line-height:1.5;margin:10px 6px 18px}
+  .xbtn{display:flex;align-items:center;justify-content:center;gap:8px;background:#0f0f0f;color:#fff;font-weight:800;border-radius:14px;padding:11px;font-size:13px;margin-bottom:8px}
+  .gbtn{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--card);border:1.5px solid var(--line);color:var(--ink);font-weight:700;border-radius:14px;padding:10px;font-size:12.5px}
+  .small{font-size:10.5px;color:var(--mute);line-height:1.45;margin-top:14px;text-align:left}
+  .small b{color:var(--ink)}
+  /* X screen */
+  .x{background:#000;color:#e7e9ea;font-family:-apple-system,system-ui,sans-serif}
+  .x .in{padding:20px 18px}
+  .x .xl{font-size:26px;font-weight:800;text-align:center;margin:10px 0 18px}
+  .x h3{font-size:17px;margin:0 0 10px}
+  .x .app{display:flex;gap:10px;align-items:center;border:1px solid #2f3336;border-radius:12px;padding:10px;margin-bottom:14px}
+  .x .app img{width:34px;height:34px;border-radius:8px;background:#fffdf8}
+  .x .app small{color:#71767b;display:block;font-size:11px}
+  .x ul{font-size:12px;color:#c9cdd0;padding-left:18px;line-height:1.7;margin:0 0 14px}
+  .x .no{font-size:12px;color:#71767b;margin-bottom:18px;line-height:1.5}
+  .x .ok{background:#eff3f4;color:#0f1419;border-radius:999px;text-align:center;font-weight:800;padding:10px;font-size:13px;margin-bottom:8px}
+  .x .cn{border:1px solid #536471;border-radius:999px;text-align:center;font-weight:700;padding:9px;font-size:13px}
+  /* welcome */
+  .hello{background:linear-gradient(160deg,#ff6a2b1f,#e03a851a);border-radius:20px;padding:16px;margin:4px 0 12px;text-align:center}
+  .hello .big{font-size:30px}
+  .hello .t{font-weight:800;font-size:17px;margin-top:4px}
+  .hello .t2{font-size:12px;color:var(--mute);margin-top:4px;line-height:1.45}
+  .badge{display:inline-block;font-size:10px;font-weight:800;border-radius:999px;padding:2px 8px;background:#2f9a5b1f;color:var(--ok);margin-top:6px}
+  .stats{display:flex;justify-content:center;gap:18px;font-size:11px;color:var(--mute);margin-top:10px}
+  .stats b{display:block;font-size:16px;color:var(--ink)}
+  .opt{background:var(--card);border-radius:14px;padding:10px 12px;margin-bottom:7px;box-shadow:0 2px 0 var(--line);display:flex;justify-content:space-between;align-items:center;font-size:12.5px}
+  .opt small{display:block;font-size:10.5px;color:var(--mute);font-weight:400;margin-top:1px}
+  .opt b{font-weight:800}
+  .opt .go{color:var(--mute)}
+  .opt.red{background:var(--bad);box-shadow:0 2px 0 #9c2f27;color:#fff}
+  .opt.red b{color:#fff}
+  .opt.red small,.opt.red .go{color:#ffe3e0}
+  .note{font-size:10.5px;color:var(--mute);line-height:1.45;margin-top:8px}
+</style>
+
+<div class="s">
+<div class="row3">
+
+  <!-- 1 SIGN IN -->
+  <div>
+    <div class="ph"><div class="in center">
+      <img class="logo" src="logo.png" alt="">
+      <div class="wm"><span class="grad">emibonnie</span> archive</div>
+      <div style="margin-top:6px"><span class="fan">FAN-MADE</span></div>
+      <div class="p">Sign in to add translations.<br>Translators: sign in with X to manage your own work.</div>
+      <div class="xbtn">𝕏 &nbsp;sign in with X</div>
+      <div class="gbtn"><span style="font-weight:800;color:#4285f4">G</span> sign in with Google</div>
+      <div class="small"><b>What we keep:</b> your X account number and handle (or your Google display name you choose). Never your email publicly, never your password. We can't post or read DMs.</div>
+    </div>
+    <div class="tabbar"><span>home</span><span>search</span><span>＋ add</span><span class="on">me</span></div></div>
+    <div class="cap">1 · Tapping "me" (or "＋ add") when signed out. X is first; Google is the backup and can't be used to manage translations.</div>
+  </div>
+
+  <!-- 2 X AUTHORIZE -->
+  <div>
+    <div class="ph x"><div class="in">
+      <div class="xl">𝕏</div>
+      <h3>emibonnie archive wants to access your X account</h3>
+      <div class="app"><img src="logo.png" alt=""><div>emibonnie archive<small>fan translation archive</small></div></div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:4px">This app will be able to:</div>
+      <ul><li>See your profile (name, handle, picture)</li><li>See posts you can see</li></ul>
+      <div class="no">It won't be able to post, follow, see your DMs, or see your email or password.</div>
+      <div class="ok">Authorize app</div>
+      <div class="cn">Cancel</div>
+    </div></div>
+    <div class="cap">2 · X's own approval page (simplified; X controls this screen). Only read access is asked for.</div>
+  </div>
+
+  <!-- 3 WELCOME -->
+  <div>
+    <div class="ph"><div class="in">
+      <div class="hello">
+        <div class="big">👋</div>
+        <div class="t">hi @vacantvolcanic</div>
+        <div class="t2">You're credited as the translator on work in this archive. Thank you for translating 🧡💜</div>
+        <span class="badge">✓ recognised as a translator</span>
+        <div class="stats"><span><b>298</b>translations</span><span><b>61</b>events</span><span><b>9</b>shared stories</span></div>
+      </div>
+      <div class="opt"><div><b>see my translations</b><small>everything credited to you</small></div><span class="go">›</span></div>
+      <div class="opt"><div><b>remove a translation</b><small>hide one from the archive; you can restore it</small></div><span class="go">›</span></div>
+      <div class="opt"><div><b>add a translation</b><small>paste one of your tweets</small></div><span class="go">›</span></div>
+      <div class="opt red"><div><b>opt out</b><small>hide all your work and stop future adds</small></div><span class="go">›</span></div>
+      <div class="note">This welcome shows once. After that, "me" opens straight to your translations.</div>
+    </div>
+    <div class="tabbar"><span>home</span><span>search</span><span>＋ add</span><span class="on">me</span></div></div>
+    <div class="cap">3 · Back on the site: recognised automatically from their X account, no claim step. First time only, a welcome with their totals and what they can do.</div>
+  </div>
+</div>
+</div>
