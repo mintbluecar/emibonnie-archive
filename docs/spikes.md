@@ -9,13 +9,14 @@ spike.
 
 ## Step 1: Video
 
-Script: `scripts/spikes/video.mjs <syn.json path>`. Picks the smallest mp4
-variant (by bitrate) out of a real example tweet fixture's
-`mediaDetails[].video_info.variants`, then range-requests it from
+A throwaway script (not kept in the repo) picked the smallest mp4
+variant (by bitrate) out of a real clip tweet's
+`mediaDetails[].video_info.variants`, then range-requested it from
 `video.twimg.com`.
 
-Fixture used: `../my-archive/test/fixtures/tweets/1900000000000000001.syn.json`
-(read-only; its text was never copied). Smallest mp4 variant: bitrate 632000.
+Fixture used: one real clip tweet's syndication JSON from a private site
+checkout outside this repo (read-only; its id, author and text are not
+reproduced here). Smallest mp4 variant: bitrate 632000.
 
 Two requests were made, both with `Range: bytes=0-1023`:
 
@@ -49,7 +50,7 @@ pointed at the same mp4 URL) was written, served successfully by
 
 ## Step 2: Thai trigrams and PGlite/Neon parity
 
-Script: `scripts/spikes/db.mjs`. Runs five probes against an in-memory
+A throwaway script (not kept in the repo) ran five probes against an in-memory
 PGlite instance (with the `pg_trgm` contrib extension) and, when
 `DATABASE_URL` is set, against the same probes on Neon (Postgres 17.11, the
 dev project's pooled `-pooler` endpoint in `ap-southeast-1`/AWS Singapore,
