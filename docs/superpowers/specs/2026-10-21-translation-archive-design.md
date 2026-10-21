@@ -156,6 +156,13 @@ A translation that **isn't tied to an event**: someone else talking about emi an
 - A shared story records **who's sharing** (a person; an IG-like hashtag such as #michirujjang is suggested as a new person) and **who it's about** (people).
 - "Shared story" shows up as an option in the type filter. Underneath, it's the item's **placement** (`shared_story`), not a stored type, so there's one source of truth (expert review). It is **not a home tab** (owner's decision: a tab would make it too prominent). Shared stories appear in search results, on the shared-story type filter, and on the pages of everyone involved. They never appear on the events timeline.
 
+### Posts (owner's decision, 2026-10-21)
+
+A translation of something **the people themselves posted**: emi's own tweet, bonnie's IG story, a handwritten note they shared. It's a fourth placement, alongside event, shared story and unsorted.
+- **The add flow suggests "post"** when the translated content comes from a known person's own account (the quoted tweet, or the clip/picture source, belongs to an account linked to that person) and there's no event keyword, event hashtag or live pattern. The submitter can change it.
+- **The person is recorded as the post's author** (`item_people` role `author`). Posts show on that person's page and as a **"posts"** option in the type filter. They never appear on the events timeline.
+- **A known person's other accounts** (e.g. their X handle) can be listed in settings, so posts can be recognised. Matching by handle is only used for this suggestion and never grants anyone powers.
+
 ### Person
 
 A known personality: emi, bonnie, leo (a host), and others as they appear.
@@ -303,6 +310,10 @@ Approved with the owner on 2026-10-21 using mockups. The mockups are kept in `do
   - **Phone:** the clip is pinned at the top, and below it scroll the credits ("tl @translator · clip by @source · date"), the cast list, and the bubbles.
   - **Web:** the clip stays in view on the left, with "‹ previous in event / next in event ›" under it, while the right column scrolls through the credits, tag pills, cast list and bubbles.
   - At the bottom: original tweet link, original media link, follows-on links, added by, Copy link, and Report.
+  - **What sits in the pinned area depends on the source** (owner's decision, 2026-10-21). The engine detects which it is from the tweet, so nobody has to choose:
+    - **A clip:** the video player.
+    - **Pictures** (photo posts, IG story screenshots, handwritten notes): the image(s) from `pbs.twimg.com`, never copied, in the same capped area. Swipeable when there are several; tap to zoom full screen.
+    - **A text post** (e.g. emi's own tweet in Thai): a quote card with the author's name, handle and the original text, in the same pinned spot, with the translation below.
   - **Vertical clips (owner's decision, option A):** the pinned video area on a phone never takes more than about **40% of the screen height**. A clip of any shape is fitted inside it (letterboxed: a vertical 9:16 clip shows narrower and centred, with dark sides), and a **⤢ full screen** button opens it full screen. The clip's shape comes from the source's width and height, so the box is sized before it loads. On web, the clip fits its own column's height. (Mockup: `vertical-video.html`, option A.)
   - **If the tweet is deleted:** the video area is replaced by "Original tweet is no longer available. Translation kept below."
 - **Person page** (`people-me-v1.html`).
