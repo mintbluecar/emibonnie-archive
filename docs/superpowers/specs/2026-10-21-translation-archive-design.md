@@ -213,6 +213,8 @@ The **chosen style is chat bubbles, everyone on the left in one column**, with a
 
 - Each line that starts with a speaker marker becomes a bubble. The bubble shows the person's **standard emoji** (not the translator's), their name, and a tint in their colour.
 - When the same speaker has several lines in a row, the emoji and name show only on the first bubble.
+- **Several generic speakers of the same role** (e.g. 👦🏻 and 👩🏻 both mapped to host) each keep the translator's own emoji, so they read "👦🏻 host" and "👩🏻 host". No numbering is added.
+- **Joint lines (owner's decision, 2026-10-22):** a line whose marker is two or more markers run together (e.g. `👩🏻👦🏻: 😆`, both hosts reacting at once) renders as **one shared bubble** showing each speaker's emoji and their names joined with " & " (e.g. "host & host", "emi & bonnie"), in a neutral style. Each component marker is mapped on its own like any other marker, so a joint line needs no extra question and no extra storage. A combined marker whose parts aren't all recognised markers stays a plain line.
 - Crowd reactions (🗣️) render as small inline notes between bubbles.
 - Lines without a marker (headers, context like "[After 'Number One Girl'…]", and footnotes marked * / **) render as plain text in place. Footnotes go at the end.
 - A "show original" toggle shows the verbatim tweet text.
