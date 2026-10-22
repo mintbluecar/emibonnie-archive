@@ -218,5 +218,6 @@ test('video (Task 9b): before play, the poster and a centred play button, no nat
   await play.click();
   await expect(play).toHaveCount(0);
   expect(await video.evaluate((el) => /** @type {HTMLVideoElement} */ (el).controls)).toBe(true);
+  await expect(video).toBeFocused();
   await expect(page.locator('.c-video__full')).toBeVisible();
 });

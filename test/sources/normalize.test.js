@@ -88,4 +88,5 @@ test('video poster (Task 9b): the clip\'s own still (mediaDetails media_url_http
   };
   assert.equal(withHost('https://evil.example/thumb.jpg'), null);
   assert.equal(withHost(undefined), null);
+  assert.equal(withHost('http://pbs.twimg.com/amplify_video_thumb/1/img/a.jpg'), null, 'https only (fix round 1, M2)');
 });

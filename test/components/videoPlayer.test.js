@@ -164,6 +164,12 @@ test('bind: a second error, after the refetch succeeded but the swapped-in varia
   }
 });
 
+test('render (fix round 1, M2): a poster that isn\'t https on pbs.twimg.com is dropped', () => {
+  for (const poster of ['http://pbs.twimg.com/a.jpg', 'https://evil.example/a.jpg', 'javascript:alert(1)']) {
+    assert.ok(!String(render({ variants: VARIANTS, width: 1280, height: 720, poster })).includes('poster='), poster);
+  }
+});
+
 test('render (Task 9b): before play, a dark box with the poster (when there is one) and a centred play button; no native controls yet', () => {
   const markup = String(render({ variants: VARIANTS, width: 1280, height: 720, poster: 'https://pbs.twimg.com/amplify_video_thumb/1/img/a.jpg' }));
   assert.match(markup, /<video class="c-video__el"[^>]*poster="https:\/\/pbs\.twimg\.com\/amplify_video_thumb\/1\/img\/a\.jpg"/);
@@ -182,8 +188,11 @@ test('bind (Task 9b): pressing play shows the native controls, removes the play 
     const video = /** @type {any} */ (root.querySelector('video'));
     let played = 0;
     video.play = () => { played += 1; return Promise.resolve(); };
+    let focused = 0;
+    video.focus = () => { focused += 1; };
     /** @type {any} */ (root.querySelector('.c-video__play')).click();
     assert.equal(video.controls, true);
+    assert.equal(focused, 1, 'focus moves to the video, since the focused play button is gone (fix round 1, M1)');
     assert.equal(root.querySelector('.c-video__play'), null);
     assert.equal(played, 1);
   } finally {

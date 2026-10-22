@@ -66,6 +66,21 @@ function numberOr(obj, key) {
   return obj?.[key] ?? 0;
 }
 
+/**
+ * A clip's still, kept only as an https URL on X's image host (fix round
+ * 1, M2), the same host CSP's img-src allows.
+ * @param {unknown} url @returns {string|null}
+ */
+function posterOf(url) {
+  if (typeof url !== 'string') return null;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && parsed.hostname === IMAGE_HOST ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 /** @param {any[]|undefined} mediaDetails */
 function findVideoDetail(mediaDetails) {
   return (mediaDetails ?? []).find((media) => media.type === 'video') ?? null;
@@ -93,7 +108,7 @@ function videoFrom(mediaDetails) {
     durationMs: numberOr(entry.video_info, 'duration_millis'),
     width: numberOr(entry.original_info, 'width'),
     height: numberOr(entry.original_info, 'height'),
-    poster: hostnameOf(entry.media_url_https ?? '') === IMAGE_HOST ? entry.media_url_https : null,
+    poster: posterOf(entry.media_url_https),
   };
 }
 

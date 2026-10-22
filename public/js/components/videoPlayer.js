@@ -23,6 +23,9 @@ import { mount, on } from '../core/dom.js';
 import { getJson, ApiError } from '../core/api.js';
 import { t } from '../core/site.js';
 
+/** A poster is shown only from X's image host, over https (fix round 1, M2; normalize.js keeps no other). */
+const POSTER_URL = /^https:\/\/pbs\.twimg\.com\//;
+
 /** Variants at or below this bitrate (bps) qualify for the "large screen" pick. */
 const LARGE_SCREEN_BITRATE_CAP = 2_200_000;
 
@@ -72,7 +75,7 @@ export function render({ variants, width, height, poster = null }) {
   const aspect = height > 0 ? width / height : 1;
   return html`
     <div class="c-video" data-aspect="${aspect}">
-      <video class="c-video__el" playsinline preload="metadata" width="${width}" height="${height}" ${best ? html`src="${best.url}"` : ''} ${poster ? html`poster="${poster}"` : ''}></video>
+      <video class="c-video__el" playsinline preload="metadata" width="${width}" height="${height}" ${best ? html`src="${best.url}"` : ''} ${poster && POSTER_URL.test(poster) ? html`poster="${poster}"` : ''}></video>
       ${playButton()}
       ${fullScreenButton()}
     </div>
@@ -169,6 +172,9 @@ export function bind(el, target) {
   on(el, '.c-video__play', 'click', () => {
     const current = /** @type {any} */ (el.querySelector('.c-video__el'));
     showControls(el);
+    // The focused play button is gone: hand focus to the video, now that
+    // its controls make it focusable (fix round 1, M1).
+    current?.focus?.();
     current?.play?.()?.catch?.(() => {});
   });
   on(el, '.c-video__full', 'click', () => {
