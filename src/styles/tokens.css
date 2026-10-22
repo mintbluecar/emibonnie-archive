@@ -23,6 +23,13 @@
   --radius-card: 16px;
   --font-latin: 'Nunito', sans-serif;
   --font-script: 'IBM Plex Sans Thai', sans-serif;
+  /* Per-person/per-item accent, set per element by a component's `bind()`
+     (`el.style.setProperty('--c', …)`, from that element's own `data-c`
+     attribute -- see docs/superpowers/plans/2026-10-21-1b-pages-and-launch.md,
+     "Additional constraints" → CSP compatibility). This default (same as
+     `--color-ink-muted`) only shows before JS runs or for an element with
+     no colour of its own. */
+  --c: var(--color-ink-muted);
 }
 
 @media (prefers-color-scheme: dark) {

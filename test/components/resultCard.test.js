@@ -1,0 +1,41 @@
+// @ts-check
+import '../helpers/siteFixture.js';
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+// Dynamic import: see test/components/header.test.js for why.
+const { render } = await import('../../public/js/components/resultCard.js');
+
+/** @typedef {import('../../src/http/contracts.js').SearchResult} SearchResult */
+
+/** @returns {SearchResult} */
+function baseResult(matchLines) {
+  return {
+    kind: 'translation', sourceId: '1', url: '/t/1', lines: [], people: [], accountHandle: null, hasVideo: false,
+    followsOnFrom: null, occurredOn: '2026-10-14', placement: 'post', event: null, matchLines,
+  };
+}
+
+test('resultCard: q matched against raw text gives exactly one <mark>, and the "&" stays escaped outside it', () => {
+  const markup = String(render({ result: baseResult(['a & amp']), q: 'amp' }));
+  const marks = markup.match(/<mark>/g) ?? [];
+  assert.equal(marks.length, 1);
+  assert.match(markup, /<mark>amp<\/mark>/);
+  assert.match(markup, /a &amp; <mark>amp<\/mark>/);
+  assert.ok(!/<mark>[^<]*&amp;/.test(markup), 'no mark wraps the escaped entity');
+});
+
+test('resultCard: matching is case-insensitive', () => {
+  const markup = String(render({ result: baseResult(['We HUG all the time']), q: 'hug' }));
+  assert.match(markup, /<mark>HUG<\/mark>/);
+});
+
+test('resultCard: a q that contains regex metacharacters is matched literally', () => {
+  const markup = String(render({ result: baseResult(['a (test) line']), q: '(test)' }));
+  assert.match(markup, /<mark>\(test\)<\/mark>/);
+});
+
+test('resultCard: no q means no highlighting, text still escaped', () => {
+  const markup = String(render({ result: baseResult(['<b>raw</b>']), q: '' }));
+  assert.ok(!markup.includes('<mark>'));
+  assert.match(markup, /&lt;b&gt;raw&lt;\/b&gt;/);
+});

@@ -72,6 +72,12 @@ test('buildPublicSiteModule: excludes ownerXUserId', () => {
   assert.ok(source.includes('"name": "solluna archive"'));
 });
 
+test('buildPublicSiteModule: carries the site logo path (Plan 1b Task 2: header.js reads site.logo), null by default', () => {
+  const site = loadSite('examples/solluna');
+  assert.ok(buildPublicSiteModule(site).includes('"logo": null'));
+  assert.ok(buildPublicSiteModule(site, {}, { logo: '/site/logo.svg' }).includes('"logo": "/site/logo.svg"'));
+});
+
 test('buildKindsRegistryModule: an empty kind list is a valid, empty registry', () => {
   const source = buildKindsRegistryModule([]);
   assert.ok(source.includes('export const kindsRegistry = {\n\n};'));
@@ -105,7 +111,12 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
 
     assert.ok(existsSync(path.join(repoRoot, 'src/site/generated.js')));
     assert.ok(existsSync(path.join(repoRoot, 'src/kinds/_registry.js')));
+    assert.ok(existsSync(path.join(repoRoot, 'public/js/kinds/_registry.js')));
     assert.ok(existsSync(path.join(repoRoot, 'public/site/site.js')));
+    assert.ok(
+      readFileSync(path.join(repoRoot, 'public/site/site.js'), 'utf8').includes('"logo": "/site/logo.svg"'),
+      'the public site module carries the copied logo path too, not just src/site/generated.js',
+    );
     assert.ok(existsSync(path.join(repoRoot, 'public/site/tokens.css')));
     assert.ok(existsSync(path.join(repoRoot, 'public/site/theme.css')));
     assert.ok(existsSync(path.join(repoRoot, 'public/site/logo.svg')));

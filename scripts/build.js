@@ -10,6 +10,7 @@ import {
   buildPublicSiteModule,
   listKindFolders,
   buildKindsRegistryModule,
+  buildFrontendKindsRegistryModule,
   buildVercelConfig,
 } from './buildOutputs.js';
 import { runBundling } from './buildBundle.js';
@@ -38,7 +39,9 @@ function collectEngineCssSources(repoRoot) {
  * @returns {{ path: string, text: string }[]}
  */
 function collectEngineJsSources(repoRoot) {
-  const generated = new Set(['src/site/generated.js', 'src/kinds/_registry.js'].map((p) => path.join(repoRoot, p)));
+  const generated = new Set(
+    ['src/site/generated.js', 'src/kinds/_registry.js', 'public/js/kinds/_registry.js'].map((p) => path.join(repoRoot, p)),
+  );
   const sources = [
     ...walkFiles(path.join(repoRoot, 'src'), '.js'),
     ...walkFiles(path.join(repoRoot, 'api'), '.js'),
@@ -132,11 +135,15 @@ export async function runBuild(options = {}) {
   mkdirSync(kindsDir, { recursive: true });
   writeFileSync(path.join(kindsDir, '_registry.js'), buildKindsRegistryModule(listKindFolders(kindsDir)));
 
+  const feKindsDir = path.join(repoRoot, 'public/js/kinds');
+  mkdirSync(feKindsDir, { recursive: true });
+  writeFileSync(path.join(feKindsDir, '_registry.js'), buildFrontendKindsRegistryModule(listKindFolders(feKindsDir)));
+
   const publicSiteDir = path.join(repoRoot, 'public/site');
   mkdirSync(publicSiteDir, { recursive: true });
-  writeFileSync(path.join(publicSiteDir, 'site.js'), buildPublicSiteModule(site, copy));
-  writeFileSync(path.join(publicSiteDir, 'tokens.css'), tokensCss);
   const assets = copySiteAssets(siteDir, publicSiteDir);
+  writeFileSync(path.join(publicSiteDir, 'site.js'), buildPublicSiteModule(site, copy, assets));
+  writeFileSync(path.join(publicSiteDir, 'tokens.css'), tokensCss);
   copyRobots(repoRoot);
 
   writeFileSync(path.join(repoRoot, 'src/site/generated.js'), buildGeneratedSiteModule(site, copy, assets));

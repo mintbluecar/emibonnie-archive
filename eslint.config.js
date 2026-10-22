@@ -187,6 +187,29 @@ export default [
     },
   },
   {
-    ignores: ['node_modules/**', 'site/', 'public/build/**', 'public/site/**', 'src/site/generated.js', 'src/kinds/_registry.js'],
+    files: ['public/js/components/**/*.js', 'public/js/kinds/**/*.js'],
+    ignores: ['public/js/kinds/_registry.js'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "TemplateLiteral:not(TaggedTemplateExpression > TemplateLiteral.quasi):has(TemplateElement[value.raw=/</])",
+          message:
+            "Plain template literals may not contain '<' here -- use html`…` (public/js/core/html.js), which auto-escapes every " +
+            "interpolation. See docs/superpowers/plans/2026-10-21-1b-pages-and-launch.md, \"Additional constraints\" → Escaping.",
+        },
+      ],
+    },
+  },
+  {
+    ignores: [
+      'node_modules/**',
+      'site/',
+      'public/build/**',
+      'public/site/**',
+      'src/site/generated.js',
+      'src/kinds/_registry.js',
+      'public/js/kinds/_registry.js',
+    ],
   },
 ];

@@ -8,4 +8,5 @@ public/robots.txt
 /site/
 src/site/generated.js
 src/kinds/_registry.js
+public/js/kinds/_registry.js
 .superpowers/

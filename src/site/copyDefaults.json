@@ -20,5 +20,10 @@
   "event.unsorted": "unsorted",
   "event.sharedStory": "shared story",
   "search.empty": "no results",
-  "search.filters": "filters"
+  "search.filters": "filters",
+  "search.placeholder": "search what they said…",
+  "item.translatedBy": "tl",
+  "item.clipBy": "clip by",
+  "item.hasVideo": "video",
+  "item.unknownSpeaker": "unknown speaker"
 }

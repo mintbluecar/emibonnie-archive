@@ -43,15 +43,18 @@ export function buildGeneratedSiteModule(site, copy, assets = { logo: null }) {
 
 /**
  * `public/site/site.js`: the public subset of `site` (without
- * `ownerXUserId`) plus `copy`, so `public/js/core/site.js`'s `t()` has
- * everything it needs from this one module.
+ * `ownerXUserId`) plus `copy` and the site's logo path (if any, copied by
+ * `copySiteAssets()` into this same `public/site/` directory), so
+ * `public/js/core/site.js`'s `t()` and `site` have everything a page or
+ * component needs from this one module.
  * @param {import('../src/site/schema.js').Site} site
  * @param {Record<string, string>} [copy]
+ * @param {{ logo: string|null }} [assets]
  * @returns {string}
  */
-export function buildPublicSiteModule(site, copy = {}) {
+export function buildPublicSiteModule(site, copy = {}, assets = { logo: null }) {
   /** @type {any} */
-  const publicSite = { ...site };
+  const publicSite = { ...site, logo: assets.logo };
   delete publicSite.ownerXUserId;
   return (
     `${GENERATED_HEADER}export const site = ${JSON.stringify(publicSite, null, 2)};\n\n` +
@@ -86,6 +89,40 @@ export function buildKindsRegistryModule(kindNames) {
     `${GENERATED_HEADER}// @ts-check\n${imports.length > 0 ? `${imports.join('\n')}\n\n` : ''}` +
     `/** @type {Record<string, Readonly<import('./defineKind.js').Kind>>} */\n` +
     `export const kindsRegistry = {\n${entries.join('\n')}\n};\n`
+  );
+}
+
+/**
+ * `public/js/kinds/_registry.js` (Plan 1b Task 2): a static import of
+ * each `public/js/kinds/<kind>/{section,detail}.js` pair, sorted, plus
+ * `renderSections()`, the one generic helper every hub page uses to turn
+ * API `Section`s into markup. A section whose `kind` this build has no
+ * front-end for (e.g. a kind scaffolded after this bundle was built) is
+ * silently skipped, never thrown on -- a rolling deploy, or a kind with
+ * server support but no UI yet, must not break every hub page.
+ * @param {string[]} kindNames
+ * @returns {string}
+ */
+export function buildFrontendKindsRegistryModule(kindNames) {
+  const imports = kindNames.flatMap((name, i) => [
+    `import * as section${i} from './${name}/section.js';`,
+    `import * as detail${i} from './${name}/detail.js';`,
+  ]);
+  const entries = kindNames.map((name, i) => `  ${JSON.stringify(name)}: { section: section${i}, detail: detail${i} },`);
+  return (
+    `${GENERATED_HEADER}// @ts-check\n${imports.length > 0 ? `${imports.join('\n')}\n\n` : ''}` +
+    `/** @type {Record<string, { section: { render: Function }, detail: { render: Function, bind?: Function } }>} */\n` +
+    `export const KIND_UI = {\n${entries.join('\n')}\n};\n\n` +
+    '/**\n' +
+    ' * Renders every section whose kind this build has UI for, in registry\n' +
+    ' * order; a section for an unknown kind is left out, not thrown on.\n' +
+    " * @param {import('../../../src/http/contracts.js').Section[]} sections\n" +
+    ' * @param {any} ctx\n' +
+    " * @returns {import('../core/html.js').SafeHtml[]}\n" +
+    ' */\n' +
+    'export function renderSections(sections, ctx) {\n' +
+    '  return sections.filter((section) => KIND_UI[section.kind]).map((section) => KIND_UI[section.kind].section.render(section, ctx));\n' +
+    '}\n'
   );
 }
 

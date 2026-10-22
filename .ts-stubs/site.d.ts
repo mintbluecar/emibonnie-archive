@@ -13,6 +13,7 @@ export declare const site: {
   region: string;
   lowercaseNames: boolean;
   contactUrl: string;
+  logo: string | null;
   [key: string]: unknown;
 };
 export declare const copy: Record<string, string>;

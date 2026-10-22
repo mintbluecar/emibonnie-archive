@@ -1,0 +1,49 @@
+// @ts-check
+/**
+ * The phone tab bar / web top nav: home · search · ＋ add · me. Same
+ * markup for both; `src/styles/components/tabBar.css` swaps the layout at
+ * the 860px breakpoint (see docs/.../1b plan, "Additional constraints" →
+ * Layout breakpoint), so there is no JS branch here for "web" vs "phone".
+ */
+import { html } from '../core/html.js';
+import { t } from '../core/site.js';
+
+/** @typedef {'home'|'search'|'add'|'me'} TabKey */
+
+/** @type {{ key: TabKey, href: string }[]} */
+const TABS = [
+  { key: 'home', href: '/' },
+  { key: 'search', href: '/search/' },
+  { key: 'add', href: '/add/' },
+  { key: 'me', href: '/me/' },
+];
+
+/** @param {TabKey} key @returns {string} */
+function labelFor(key) {
+  if (key === 'home') return t('nav.home');
+  if (key === 'search') return t('nav.search');
+  if (key === 'add') return t('nav.add');
+  return t('nav.me');
+}
+
+/**
+ * @param {{ active?: TabKey }} [props]
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+export function render(props = {}) {
+  const { active } = props;
+  return html`
+    <nav class="c-tabbar" aria-label="${t('nav.home')}">
+      ${TABS.map((tab) => {
+        const isActive = tab.key === active;
+        return html`
+          <a
+            class="c-tabbar__item${isActive ? ' c-tabbar__item--on' : ''}"
+            href="${tab.href}"
+            aria-current="${isActive ? 'page' : 'false'}"
+          >${tab.key === 'add' ? html`<span aria-hidden="true">＋</span> ` : ''}${labelFor(tab.key)}</a>
+        `;
+      })}
+    </nav>
+  `;
+}

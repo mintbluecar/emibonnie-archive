@@ -1,0 +1,20 @@
+/* public/js/components/cast.js */
+
+.c-cast {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+
+.c-cast__chip {
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 3px 10px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid var(--c);
+  background: var(--color-card);
+  color: var(--color-ink);
+}
