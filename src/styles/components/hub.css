@@ -1,0 +1,112 @@
+/*
+ * public/js/pages/{person,account}.js and public/js/pages/hubGroups.js:
+ * the layout shared by the person and translator pages -- the
+ * head row, the counts/totals line, the segmented control, each
+ * group's label, and the person page's "with…" picker dialog.
+ */
+
+.c-person__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.c-person__search {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+}
+
+.c-account__head {
+  text-align: center;
+  padding: 16px 0 4px;
+}
+
+.c-account__handle {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.c-account__open-profile {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--gradient-to);
+  margin-top: 4px;
+}
+
+.c-hub__counts {
+  font-size: 11.5px;
+  color: var(--color-ink-muted);
+  text-align: center;
+  margin: 4px 0 10px;
+}
+
+.c-hub__seg {
+  margin-bottom: 12px;
+}
+
+.c-hub-group__label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--gradient-to);
+  text-transform: lowercase;
+  margin: 16px 2px 6px;
+}
+
+.c-hub__picker {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  width: 100%;
+  max-width: none;
+  max-height: 85vh;
+  margin: 0;
+  border: 0;
+  border-radius: 20px 20px 0 0;
+  padding: 16px 16px 24px;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  overflow-y: auto;
+}
+
+.c-hub__picker::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.c-hub__picker-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--color-card);
+}
+
+.c-hub__picker-title {
+  font-size: 15px;
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+
+.c-hub__picker-apply {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px;
+  border-radius: 12px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--gradient-to);
+}

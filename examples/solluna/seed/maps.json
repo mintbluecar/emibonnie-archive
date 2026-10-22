@@ -10,7 +10,8 @@
         "🌧️": { "role": "fan" },
         "🐶": { "person": "solsunny" },
         "🐱": { "person": "lunamoon" }
-      }
+      },
+      "overrides": { "categoryName": "live", "clientName": "Test Media Co" }
     },
     "1900000000000000002": {},
     "1900000000000000003": {},

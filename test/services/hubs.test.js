@@ -111,8 +111,10 @@ test('filterOptions: people, categories, visible events, and only accounts with 
   assert.deepEqual(before.accounts, [{ handle: 'tl_alpha' }, { handle: 'tl_beta' }, { handle: 'tl_gamma' }]);
   assert.equal(before.events.length, 4);
   assert.deepEqual(Object.keys(before.events[0]).sort(), ['name', 'slug']);
-  assert.deepEqual(before.categories, [], 'no visible item has a category yet');
-  assert.deepEqual(before.clients, [], 'no visible item has a client yet');
+  // LONG (task-6-brief.md carried item #2: seed/maps.json overrides its category/client,
+  // so a browser dev-seed can exercise them without relying on the gitignored site/).
+  assert.deepEqual(before.categories.map((c) => c.name), ['live']);
+  assert.deepEqual(before.clients.map((c) => c.name), ['Test Media Co']);
   assert.deepEqual(before.people.map((p) => p.name), ['sol', 'luna', 'host', 'star guest']);
 
   await deps.db.transaction((/** @type {any} */ tx) => tx.query("update accounts set opted_out_at = now() where handle = 'tl_gamma'"), SYSTEM);
@@ -333,7 +335,7 @@ test('filters and person pages only through visible items: a person and category
       await tx.query('alter table items enable trigger items_set_common');
     }, SYSTEM);
     assert.ok((await names()).includes('hidden_only'), 'visible: listed');
-    assert.deepEqual(await categories(), ['backstage']);
+    assert.deepEqual(await categories(), ['live', 'backstage']);
     assert.equal((/** @type {any} */ (await personView(deps, 'hidden_only'))).counts.items, 1);
 
     await set("update items set review_state = 'pending' where id = $1");

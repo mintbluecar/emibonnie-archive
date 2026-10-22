@@ -52,6 +52,26 @@
     {
       "source": "/search",
       "destination": "/search.html"
+    },
+    {
+      "source": "/p/:ig",
+      "destination": "/person.html"
+    },
+    {
+      "source": "/tl/:handle",
+      "destination": "/account.html"
+    },
+    {
+      "source": "/about",
+      "destination": "/about.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/takedown",
+      "destination": "/takedown.html"
     }
   ]
 }

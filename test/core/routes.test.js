@@ -9,7 +9,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { pages } from '../../src/pages.js';
-import { EVENT_PATH_PREFIX, eventHref, slugFromEventPath } from '../../public/js/core/routes.js';
+import {
+  EVENT_PATH_PREFIX, eventHref, slugFromEventPath,
+  PERSON_PATH_PREFIX, personHref, igFromPersonPath,
+  ACCOUNT_PATH_PREFIX, accountHref, accountFromAccountPath,
+} from '../../public/js/core/routes.js';
 
 test('EVENT_PATH_PREFIX matches the /e/:slug page route in src/pages.js', () => {
   const eventPage = pages.find((p) => p.path === '/e/:slug');
@@ -33,4 +37,37 @@ test('slugFromEventPath: reads the slug back out of an event page pathname, else
 
 test('eventHref and slugFromEventPath round-trip', () => {
   assert.equal(slugFromEventPath(eventHref('some-event-2026-01-01')), 'some-event-2026-01-01');
+});
+
+test('PERSON_PATH_PREFIX matches the /p/:ig page route in src/pages.js', () => {
+  const personPage = pages.find((p) => p.path === '/p/:ig');
+  assert.ok(personPage, 'src/pages.js lists a /p/:ig route');
+  assert.ok(personPage?.path.startsWith(PERSON_PATH_PREFIX), `${personPage?.path} should start with ${PERSON_PATH_PREFIX}`);
+  assert.equal(PERSON_PATH_PREFIX, '/p/');
+});
+
+test('ACCOUNT_PATH_PREFIX matches the /tl/:handle page route in src/pages.js', () => {
+  const accountPage = pages.find((p) => p.path === '/tl/:handle');
+  assert.ok(accountPage, 'src/pages.js lists a /tl/:handle route');
+  assert.ok(accountPage?.path.startsWith(ACCOUNT_PATH_PREFIX), `${accountPage?.path} should start with ${ACCOUNT_PATH_PREFIX}`);
+  assert.equal(ACCOUNT_PATH_PREFIX, '/tl/');
+});
+
+test('personHref/igFromPersonPath: builds and parses the person page path, encoding/decoding the handle', () => {
+  assert.equal(personHref('lunamoon'), '/p/lunamoon');
+  assert.equal(personHref('a b'), '/p/a%20b');
+  assert.equal(igFromPersonPath('/p/lunamoon'), 'lunamoon');
+  assert.equal(igFromPersonPath('/p/a%20b'), 'a b');
+  assert.equal(igFromPersonPath('/p/a-ig/extra'), 'a-ig', 'stops at the next /');
+  assert.equal(igFromPersonPath('/tl/tl_alpha'), null);
+  assert.equal(igFromPersonPath('/'), null);
+  assert.equal(igFromPersonPath(personHref('lunamoon')), 'lunamoon');
+});
+
+test('accountHref/accountFromAccountPath: builds and parses the translator page path, encoding/decoding the handle', () => {
+  assert.equal(accountHref('tl_alpha'), '/tl/tl_alpha');
+  assert.equal(accountFromAccountPath('/tl/tl_alpha'), 'tl_alpha');
+  assert.equal(accountFromAccountPath('/tl/tl_alpha/extra'), 'tl_alpha', 'stops at the next /');
+  assert.equal(accountFromAccountPath('/p/lunamoon'), null);
+  assert.equal(accountFromAccountPath(accountHref('tl_alpha')), 'tl_alpha');
 });

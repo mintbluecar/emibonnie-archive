@@ -146,6 +146,11 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
       { source: '/e/:slug', destination: '/api/meta/e/:slug' },
       { source: '/t/:id', destination: '/api/meta/t/:id' },
       { source: '/search', destination: '/search.html' },
+      { source: '/p/:ig', destination: '/person.html' },
+      { source: '/tl/:handle', destination: '/account.html' },
+      { source: '/about', destination: '/about.html' },
+      { source: '/privacy', destination: '/privacy.html' },
+      { source: '/takedown', destination: '/takedown.html' },
     ]);
     const headers = vercelJson.headers[0].headers;
     assert.match(headers.find((/** @type {any} */ h) => h.key === 'Content-Security-Policy').value, /frame-ancestors 'none'/);

@@ -38,6 +38,27 @@ test('dev server: rewrites, api dispatch, 404', async () => {
   srv.close();
 });
 
+test('dev server: an unmatched path serves root/404.html with status 404 (mirrors Vercel\'s own static-output behaviour)', async () => {
+  const handle = async (req) => Response.json({ path: new URL(req.url).pathname });
+  const srv = createServer({ root: 'test/fixtures/static', routes: [], rewrites: [], handle });
+  const base = await listen(srv);
+  const res = await fetch(base + '/no-such-page');
+  assert.equal(res.status, 404);
+  assert.match(await res.text(), /NOT FOUND PAGE/);
+  srv.close();
+});
+
+test('dev server: an unmatched path still 404s with plain text when root has no 404.html', async () => {
+  const handle = async (req) => Response.json({ path: new URL(req.url).pathname });
+  // test/fixtures (not .../static): no 404.html sits here.
+  const srv = createServer({ root: 'test/fixtures', routes: [], rewrites: [], handle });
+  const base = await listen(srv);
+  const res = await fetch(base + '/no-such-page');
+  assert.equal(res.status, 404);
+  assert.equal(await res.text(), 'Not Found');
+  srv.close();
+});
+
 test('dev server: a static page route (no :param) resolves only through an explicit rewrite, same as production -- no extension-guessing fallback (review round 1, C1)', async () => {
   const handle = async (req) => Response.json({ path: new URL(req.url).pathname });
   // No rewrite for /event here: unlike production's vercel.json (which scripts/build.js's

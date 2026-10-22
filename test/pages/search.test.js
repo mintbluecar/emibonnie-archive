@@ -94,16 +94,23 @@ test('bind: removing a type chip refetches without it and updates the URL', asyn
 });
 
 test('bind: repeated commits never pile up duplicate listeners on .c-search (review round 1, self-review bug #2, regression-guarded)', async () => {
-  const { root, urls } = mountedPage({ ...EMPTY_STATE, people: [2] });
+  // 3 distinct active filters, so a still-present active-filter chip can be
+  // clicked 3 times running (task-6-brief.md carried item #1: the previous
+  // version of this test clicked .c-search__clear-all repeatedly, but that
+  // button disappears once there are no filters left -- clicks 2 and 3 landed
+  // on nothing and never exercised the pile-up this test is meant to guard).
+  const { root, urls } = mountedPage({ ...EMPTY_STATE, people: [1, 2], types: ['live'] });
   mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ count: 0, results: [] }), { status: 200 }));
   try {
     for (let i = 0; i < 3; i++) {
-      /** @type {any} */ (root.querySelector('.c-search__clear-all'))?.click();
+      const chip = /** @type {any} */ (root.querySelector('.c-search__active-chip'));
+      assert.ok(chip, `an active-filter chip is still present before click ${i + 1}`);
+      chip.click();
       await flush();
+      // Each click committed exactly once -- a stacked duplicate listener would
+      // fire the handler 2x, 3x, ... on each later click, inflating this past i+1.
+      assert.equal(urls.length, i + 1, `click ${i + 1} committed exactly once, got urls=${JSON.stringify(urls)}`);
     }
-    // Each of the 3 clicks committed exactly once -- a stacked duplicate listener
-    // would have fired the handler 2x, 3x, ... on each later click, inflating this.
-    assert.equal(urls.length, 1, `clicking "clear all" (now a no-op past the first) stayed one commit per click, got urls=${JSON.stringify(urls)}`);
   } finally {
     cleanup();
   }

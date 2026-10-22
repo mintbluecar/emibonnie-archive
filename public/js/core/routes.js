@@ -45,3 +45,33 @@ export function slugFromEventPath(pathname) {
   const match = EVENT_PATH_PATTERN.exec(pathname);
   return match ? decodeURIComponent(match[1]) : null;
 }
+
+/** `src/pages.js`'s `/p/:ig` route prefix (see `EVENT_PATH_PREFIX`'s own doc comment -- same reasoning, same pin in `test/core/routes.test.js`). */
+export const PERSON_PATH_PREFIX = '/p/';
+const PERSON_PATH_PATTERN = new RegExp(`^${escapeRegExp(PERSON_PATH_PREFIX)}([^/]+)`);
+
+/** `src/pages.js`'s `/tl/:handle` route prefix (the translator/"account" page). */
+export const ACCOUNT_PATH_PREFIX = '/tl/';
+const ACCOUNT_PATH_PATTERN = new RegExp(`^${escapeRegExp(ACCOUNT_PATH_PREFIX)}([^/]+)`);
+
+/** `'someone'` -> `'/p/someone'`. @param {string} ig @returns {string} */
+export function personHref(ig) {
+  return `${PERSON_PATH_PREFIX}${encodeURIComponent(ig)}`;
+}
+
+/** The IG handle out of a person page's own pathname, or `null` if it isn't one. @param {string} pathname @returns {string|null} */
+export function igFromPersonPath(pathname) {
+  const match = PERSON_PATH_PATTERN.exec(pathname);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/** `'tl_alpha'` -> `'/tl/tl_alpha'`. @param {string} handle @returns {string} */
+export function accountHref(handle) {
+  return `${ACCOUNT_PATH_PREFIX}${encodeURIComponent(handle)}`;
+}
+
+/** The translator handle out of an account page's own pathname, or `null` if it isn't one. @param {string} pathname @returns {string|null} */
+export function accountFromAccountPath(pathname) {
+  const match = ACCOUNT_PATH_PATTERN.exec(pathname);
+  return match ? decodeURIComponent(match[1]) : null;
+}

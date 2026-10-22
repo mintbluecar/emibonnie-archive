@@ -20,6 +20,7 @@ export const site = {
   timezone: 'Asia/Bangkok',
   lowercaseNames: true,
   logo: null,
+  contactUrl: 'https://example.com/contact',
 };
 
 export const copy = {

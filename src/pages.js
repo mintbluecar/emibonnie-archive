@@ -22,12 +22,15 @@ export const pages = [
   { path: '/', file: 'index.html' },
   { path: '/e/:slug', file: 'event.html', meta: '/meta/e/:slug' },
   { path: '/search', file: 'search.html' },
+  // Task 6: person/translator have no meta route of their own (unlike /e/:slug),
+  // so they rewrite straight to their file, same as a static page -- see
+  // task-6-report.md for why one wasn't added.
+  { path: '/p/:ig', file: 'person.html' },
+  { path: '/tl/:handle', file: 'account.html' },
+  { path: '/about', file: 'about.html' },
+  { path: '/privacy', file: 'privacy.html' },
+  { path: '/takedown', file: 'takedown.html' },
   // Not yet built (later Plan 1b tasks); listed so no kind can claim these prefixes.
-  { path: '/p/:ig', file: null },
-  { path: '/tl/:handle', file: null },
-  { path: '/about', file: null },
-  { path: '/privacy', file: null },
-  { path: '/takedown', file: null },
   { path: '/add', file: null },
   { path: '/me', file: null },
 ];

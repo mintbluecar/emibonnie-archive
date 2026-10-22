@@ -118,12 +118,36 @@ function applyRewrites(rewrites, pathname) {
 }
 
 /**
- * Serves a static file from `root` for `pathname`, or a 404 when it's
- * missing or would escape `root`. No extension-guessing here: a page
- * route like `/search` only resolves through `applyRewrites` (the same
- * `vercel.json` rewrites production uses -- `scripts/build.js`'s
- * `pageRewriteOf` emits one per static page with a `file`, review round
- * 1, C1), so dev and production resolve a URL exactly the same way.
+ * The `root/404.html` body, or plain text when there is none (the repo's
+ * own `test/fixtures/static` has no 404.html, for instance). Mirrors
+ * Vercel's own static-output behaviour: "Emit a 404.html file to your
+ * Output Directory and it will be served as the 404 page when a route
+ * does not match any other static file" (vercel.com/kb/guide/custom-404-page),
+ * so dev matches production for an unmatched path the same way
+ * `serveStatic`'s docstring already says it does for a *matched* one.
+ * @param {string} root
+ * @param {import('node:http').ServerResponse} res
+ * @returns {Promise<void>}
+ */
+async function serveNotFound(root, res) {
+  res.statusCode = 404;
+  try {
+    const body = await readFile(path.join(path.resolve(root), '404.html'));
+    res.setHeader('Content-Type', MIME_TYPES['.html']);
+    res.end(body);
+  } catch {
+    res.end('Not Found');
+  }
+}
+
+/**
+ * Serves a static file from `root` for `pathname`, or `root/404.html`
+ * (else plain text) when it's missing or would escape `root`. No
+ * extension-guessing here: a page route like `/search` only resolves
+ * through `applyRewrites` (the same `vercel.json` rewrites production
+ * uses -- `scripts/build.js`'s `pageRewriteOf` emits one per static page
+ * with a `file`, review round 1, C1), so dev and production resolve a
+ * URL exactly the same way.
  * @param {string} root
  * @param {string} pathname
  * @param {import('node:http').ServerResponse} res
@@ -131,16 +155,18 @@ function applyRewrites(rewrites, pathname) {
  */
 async function serveStatic(root, pathname, res) {
   const filePath = resolveStaticPath(root, pathname);
-  if (!filePath) {
-    res.statusCode = 404;
-    res.end('Not Found');
-    return;
+  if (filePath) {
+    try {
+      const body = await readFile(filePath);
+      res.statusCode = 200;
+      res.setHeader('Content-Type', MIME_TYPES[path.extname(filePath)] ?? 'application/octet-stream');
+      res.end(body);
+      return;
+    } catch (/** @type {any} */ err) {
+      if (!err || err.code !== 'ENOENT') throw err;
+    }
   }
-
-  const body = await readFile(filePath);
-  res.statusCode = 200;
-  res.setHeader('Content-Type', MIME_TYPES[path.extname(filePath)] ?? 'application/octet-stream');
-  res.end(body);
+  await serveNotFound(root, res);
 }
 
 /**
