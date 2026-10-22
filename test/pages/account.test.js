@@ -176,3 +176,9 @@ test('start: redirectTo replaces the page at accountHref(redirectTo)', async () 
     cleanup();
   }
 });
+
+test('composeAccount (Task 9b): entries are compact previews, not full bubbles', () => {
+  const markup = String(composeAccount(ACCOUNT));
+  assert.match(markup, /c-preview-card--compact/);
+  assert.ok(!markup.includes('c-bubbles__bub'));
+});

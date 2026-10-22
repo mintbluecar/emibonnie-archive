@@ -46,3 +46,13 @@ test('bind: delegates to bubbles.bind, colouring the embedded avatar', () => {
   bind(mountPoint);
   assert.equal(coloured.styleProps['--c'], '#b5651d');
 });
+
+test('previewCard (Task 9b): compact shows the opening lines as one clamped run of "emoji text", not full bubbles, and keeps the meta row and the one link', () => {
+  const markup = String(render({ result: baseResult(), compact: true }));
+  assert.match(markup, /class="c-preview-card c-preview-card--compact"/);
+  assert.match(markup, /c-bubbles-compact/);
+  assert.ok(!markup.includes('c-bubbles__bub'));
+  assert.match(markup, /tl @tl_alpha/);
+  assert.equal((markup.match(/<a[\s>]/g) ?? []).length, 1);
+  assert.ok(!String(render({ result: baseResult() })).includes('c-preview-card--compact'), 'full bubbles by default');
+});

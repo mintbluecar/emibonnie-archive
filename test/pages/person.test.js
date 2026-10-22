@@ -243,3 +243,16 @@ test('start: redirectTo replaces the page at personHref(redirectTo)', async () =
     cleanup();
   }
 });
+
+test('composePerson (Task 9b): entries are compact previews in both views, not full bubbles', () => {
+  const markup = String(composePerson(PERSON_GROUPS));
+  assert.match(markup, /c-preview-card--compact/);
+  assert.ok(!markup.includes('c-bubbles__bub'));
+});
+
+test('hubGroups (Task 9b): the flat "all, newest" view is compact too', async () => {
+  const { activeView } = await import('../../public/js/pages/hubGroups.js');
+  const markup = String(activeView('all', PERSON_GROUPS.sections, {}));
+  assert.match(markup, /c-preview-card--compact/);
+  assert.ok(!markup.includes('c-bubbles__bub'));
+});

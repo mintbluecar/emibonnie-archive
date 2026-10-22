@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { FakeEl } from '../helpers/fakeDom.js';
 // Dynamic import: see test/components/header.test.js for why.
-const { render, bind } = await import('../../public/js/components/bubbles.js');
+const { render, renderCompact, bind } = await import('../../public/js/components/bubbles.js');
 
 /** @typedef {import('../../src/http/contracts.js').BubbleVM} BubbleVM */
 
@@ -128,4 +128,28 @@ test('bind: an invalid data-c is never applied, via the shared applyColours() va
   const root = new FakeEl({}, [coloured]);
   bind(root);
   assert.equal(coloured.styleProps['--c'], undefined);
+});
+
+test('renderCompact (Task 9b): one paragraph of "emoji text" runs -- each speaker emoji is an img named for the speaker, a continuation has none, notes are left out, text stays escaped', () => {
+  /** @type {BubbleVM[]} */
+  const bubbles = [
+    { kind: 'speech', emoji: '💜', name: 'luna', colour: '#6a5cd6', text: 'hi <b>', cont: false },
+    { kind: 'speech', emoji: '💜', name: 'luna', colour: '#6a5cd6', text: 'again', cont: true },
+    { kind: 'joint', parts: [{ emoji: '🧡', name: 'sol' }, { emoji: '💜', name: null }], text: 'both', cont: false },
+    { kind: 'plain', text: 'context' },
+    { kind: 'note', mark: '*', text: 'a footnote' },
+  ];
+  const markup = String(renderCompact({ bubbles }));
+  assert.equal(markup.match(/<p class="c-bubbles-compact"/g)?.length, 1);
+  assert.match(markup, /<span class="c-bubbles-compact__who" role="img" aria-label="luna">💜<\/span> hi &lt;b&gt;/);
+  assert.equal(markup.match(/aria-label="luna"/g)?.length, 1, 'the continuation line adds no second emoji');
+  assert.match(markup, /aria-label="sol &amp; unknown speaker">🧡💜<\/span> both/);
+  assert.match(markup, /context/);
+  assert.ok(!markup.includes('a footnote'));
+  assert.ok(!markup.includes('c-bubbles__bub'), 'no full bubbles');
+});
+
+test('renderCompact (Task 9b): an unmapped speaker is named "unknown speaker", same as a full bubble', () => {
+  const markup = String(renderCompact({ bubbles: [{ kind: 'speech', emoji: '🐰', name: null, colour: null, text: 'x', cont: false }] }));
+  assert.match(markup, /aria-label="unknown speaker">🐰/);
 });

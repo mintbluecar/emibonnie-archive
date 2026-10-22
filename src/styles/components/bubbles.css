@@ -106,3 +106,16 @@
   font-size: 11px;
   color: var(--color-ink-muted);
 }
+
+/* bubbles.js's renderCompact(): a hub entry's opening lines as one run of
+   "emoji text", clamped to two lines (Task 9b; mockups/people-me-v1.html). */
+.c-bubbles-compact {
+  font-size: 12.5px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}

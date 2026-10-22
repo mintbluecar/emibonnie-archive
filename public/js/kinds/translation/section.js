@@ -10,12 +10,14 @@ import * as previewCard from '../../components/previewCard.js';
 
 /**
  * @param {import('../../../../src/http/contracts.js').Section} section
+ * @param {{ compact?: boolean }} [ctx] `compact`: the person and translator
+ *   pages show each entry as a compact preview (Task 9b)
  * @returns {import('../../core/html.js').SafeHtml}
  */
-export function render(section) {
+export function render(section, ctx = {}) {
   return html`
     <div class="k-translation-section" data-kind="translation">
-      ${section.items.map((result) => previewCard.render({ result }))}
+      ${section.items.map((result) => previewCard.render({ result, compact: ctx.compact === true }))}
     </div>
   `;
 }

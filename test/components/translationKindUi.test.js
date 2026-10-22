@@ -86,3 +86,9 @@ test('translation detail bind: wires cast/bubbles colours and adds no listener o
   assert.doesNotThrow(() => detail.bind(root));
   assert.deepEqual(listeners, []);
 });
+
+test('translation section (Task 9b): ctx.compact renders compact preview cards (the person and translator pages ask for it)', () => {
+  const sectionVm = { kind: 'translation', total: 1, hasMore: false, items: [preview()] };
+  assert.match(String(section.render(sectionVm, { compact: true })), /c-preview-card--compact/);
+  assert.ok(!String(section.render(sectionVm, {})).includes('c-preview-card--compact'));
+});

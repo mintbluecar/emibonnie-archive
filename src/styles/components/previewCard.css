@@ -13,3 +13,11 @@
   color: var(--color-ink-muted);
   margin-top: 6px;
 }
+
+.c-preview-card--compact {
+  padding: 9px 12px;
+}
+
+.c-preview-card--compact .c-preview-card__meta {
+  margin-top: 4px;
+}

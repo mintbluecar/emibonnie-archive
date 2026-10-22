@@ -13,6 +13,7 @@
  * itself renders, and its own `.c-hub__more` button around a section
  * that `hasMore` (the same "wrap KIND_UI's own render" pattern
  * `event.js`'s `sectionBlock` already uses for its own "more" button).
+ * Both views ask each kind for compact entries (`ctx.compact`, Task 9b).
  */
 import { html } from '../core/html.js';
 import { mount, on } from '../core/dom.js';
@@ -101,7 +102,7 @@ export function byEventView(sections, ctx) {
     const real = isLastOfKind(groups, i) ? sectionOf(sections, g.kind) : undefined;
     return { kind: g.kind, total: real?.total ?? g.items.length, hasMore: real?.hasMore ?? false, items: g.items };
   });
-  const rendered = renderSections(synthetic, ctx);
+  const rendered = renderSections(synthetic, { ...ctx, compact: true });
   return html`${groups.map((group, i) => html`
     <section class="c-hub-group" data-kind="${group.kind}">
       <h2 class="c-hub-group__label">${group.label}</h2>
@@ -113,7 +114,7 @@ export function byEventView(sections, ctx) {
 
 /** The "all, newest" segment: each kind's section, as-is (already newest first), through `renderSections`, with its own "more" button when `hasMore`. @param {DatedSection[]} sections @param {any} ctx @returns {import('../core/html.js').SafeHtml} */
 export function flatView(sections, ctx) {
-  const rendered = renderSections(sections, ctx);
+  const rendered = renderSections(sections, { ...ctx, compact: true });
   return html`${sections.map((section, i) => html`${rendered[i] ?? ''}${section.hasMore ? moreButton(section.kind) : ''}`)}`;
 }
 

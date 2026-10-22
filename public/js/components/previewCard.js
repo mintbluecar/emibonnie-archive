@@ -13,6 +13,10 @@
  * page's own client-side people/translator filter (Plan 1b Task 3) works
  * for any kind's entries without this component or the page knowing
  * which kind it is.
+ *
+ * `compact` (Task 9b: the person and translator pages) shows the same
+ * lines as one clamped run of "emoji text" (`bubbles.renderCompact`)
+ * instead of full bubbles, as in mockups/people-me-v1.html.
  */
 import { html } from '../core/html.js';
 import { t } from '../core/site.js';
@@ -34,20 +38,20 @@ function metaRow(preview) {
 }
 
 /**
- * @param {{ result: import('../../../src/http/contracts.js').Preview }} props
+ * @param {{ result: import('../../../src/http/contracts.js').Preview, compact?: boolean }} props
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function render(props) {
-  const { result } = props;
+  const { result, compact = false } = props;
   const personIds = result.people.map((person) => person.id).join(',');
   return html`
     <a
-      class="c-preview-card"
+      class="c-preview-card${compact ? ' c-preview-card--compact' : ''}"
       href="${result.url}"
       data-person-ids="${personIds}"
       ${result.accountHandle ? html`data-account="${result.accountHandle}"` : ''}
     >
-      ${bubbles.render({ bubbles: result.lines })}
+      ${compact ? bubbles.renderCompact({ bubbles: result.lines }) : bubbles.render({ bubbles: result.lines })}
       ${metaRow(result)}
     </a>
   `;
