@@ -38,6 +38,16 @@ test('dev server: rewrites, api dispatch, 404', async () => {
   srv.close();
 });
 
+test('dev server: a static page route with no extension resolves to <path>.html, with or without a trailing slash (mirrors Vercel\'s default clean-url resolution, scripts/build.js\'s pageRewriteOf)', async () => {
+  const handle = async (req) => Response.json({ path: new URL(req.url).pathname });
+  const srv = createServer({ root: 'test/fixtures/static', routes: [], rewrites: [], handle });
+  const base = await listen(srv);
+  assert.match(await (await fetch(base + '/event')).text(), /EVENT PAGE/, 'no trailing slash');
+  assert.match(await (await fetch(base + '/event/')).text(), /EVENT PAGE/, 'a trailing slash still resolves');
+  assert.equal((await fetch(base + '/nope')).status, 404, 'still 404s when neither the bare path nor <path>.html exists');
+  srv.close();
+});
+
 test('dev server: waitUntil (from @vercel/functions) runs after the response, and the server awaits it', async () => {
   const { waitUntil } = await import('@vercel/functions');
   /** @type {(v?: unknown) => void} */

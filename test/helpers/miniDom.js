@@ -63,7 +63,7 @@ export class MiniElement {
       add: (/** @type {string} */ c) => self.classes.add(c),
       remove: (/** @type {string} */ c) => self.classes.delete(c),
       contains: (/** @type {string} */ c) => self.classes.has(c),
-      toggle: (/** @type {string} */ c, /** @type {boolean} */ [force]) => {
+      toggle: (/** @type {string} */ c, /** @type {boolean|undefined} */ force) => {
         const on = force !== undefined ? force : !self.classes.has(c);
         if (on) self.classes.add(c); else self.classes.delete(c);
         return on;

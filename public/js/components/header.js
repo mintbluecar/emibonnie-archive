@@ -10,11 +10,11 @@ import { html } from '../core/html.js';
 import { site, t } from '../core/site.js';
 
 /**
- * @param {{ compact?: boolean }} [props]
+ * @param {{ compact?: boolean, filterCount?: number }} [props]
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function render(props = {}) {
-  const { compact = false } = props;
+  const { compact = false, filterCount } = props;
   return html`
     <header class="c-header${compact ? ' c-header--compact' : ''}">
       <div class="c-header__row">
@@ -31,10 +31,11 @@ export function render(props = {}) {
       `}
       <div class="c-header__search">
         <input class="c-header__search-box" type="search" placeholder="${t('search.placeholder')}">
-        <button class="c-header__filter-btn" type="button" aria-label="${t('search.filters')}">
+        <button class="c-header__filter-btn" type="button" aria-label="${filterCount ? t('search.filtersActive', { n: filterCount }) : t('search.filters')}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
             <path d="M4 6h16M7 12h10M10 18h4" />
           </svg>
+          ${filterCount ? html`<span class="c-header__filter-count" aria-hidden="true">${filterCount}</span>` : ''}
         </button>
       </div>
     </header>

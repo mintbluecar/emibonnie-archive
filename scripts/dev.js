@@ -95,11 +95,27 @@ async function sendWebResponse(response, res) {
  * @returns {string | null}
  */
 function resolveStaticPath(root, pathname) {
-  const safePathname = pathname === '/' ? '/index.html' : pathname;
   const resolvedRoot = path.resolve(root);
-  const resolvedPath = path.resolve(resolvedRoot, `.${safePathname}`);
+  const resolvedPath = path.resolve(resolvedRoot, `.${pathname}`);
   if (resolvedPath !== resolvedRoot && !resolvedPath.startsWith(resolvedRoot + path.sep)) return null;
   return resolvedPath;
+}
+
+/**
+ * The pathnames to try, in order, for a request -- mirroring Vercel's own
+ * default static-file resolution (scripts/build.js's `pageRewriteOf`:
+ * "a static path ... resolves to its file by name already"), which this
+ * dev server otherwise has no equivalent for. `/` is `/index.html`; a
+ * trailing slash is dropped (Vercel redirects `/search/` to `/search`
+ * before resolving it); and a path with no extension (a page route like
+ * `/search`, from `src/pages.js`) also tries `<path>.html`.
+ * @param {string} pathname
+ * @returns {string[]}
+ */
+function staticCandidates(pathname) {
+  if (pathname === '/') return ['/index.html'];
+  const withoutTrailingSlash = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+  return path.extname(withoutTrailingSlash) ? [withoutTrailingSlash] : [withoutTrailingSlash, `${withoutTrailingSlash}.html`];
 }
 
 /**
@@ -126,17 +142,21 @@ function applyRewrites(rewrites, pathname) {
  * @returns {Promise<void>}
  */
 async function serveStatic(root, pathname, res) {
-  const filePath = resolveStaticPath(root, pathname);
-  if (!filePath) {
-    res.statusCode = 404;
-    res.end('Not Found');
-    return;
+  for (const candidate of staticCandidates(pathname)) {
+    const filePath = resolveStaticPath(root, candidate);
+    if (!filePath) continue;
+    try {
+      const body = await readFile(filePath);
+      res.statusCode = 200;
+      res.setHeader('Content-Type', MIME_TYPES[path.extname(filePath)] ?? 'application/octet-stream');
+      res.end(body);
+      return;
+    } catch (/** @type {any} */ err) {
+      if (err.code !== 'ENOENT') throw err;
+    }
   }
-
-  const body = await readFile(filePath);
-  res.statusCode = 200;
-  res.setHeader('Content-Type', MIME_TYPES[path.extname(filePath)] ?? 'application/octet-stream');
-  res.end(body);
+  res.statusCode = 404;
+  res.end('Not Found');
 }
 
 /**

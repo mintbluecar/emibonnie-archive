@@ -21,8 +21,8 @@
 export const pages = [
   { path: '/', file: 'index.html' },
   { path: '/e/:slug', file: 'event.html', meta: '/meta/e/:slug' },
+  { path: '/search', file: 'search.html' },
   // Not yet built (later Plan 1b tasks); listed so no kind can claim these prefixes.
-  { path: '/search', file: null },
   { path: '/p/:ig', file: null },
   { path: '/tl/:handle', file: null },
   { path: '/about', file: null },

@@ -14,12 +14,16 @@ import * as footer from './footer.js';
 import * as tabBar from './tabBar.js';
 
 /**
- * @param {{ active?: import('./tabBar.js').TabKey, compact?: boolean, content: import('../core/html.js').SafeHtml }} props
+ * @param {{ active?: import('./tabBar.js').TabKey, compact?: boolean,
+ *   headerProps?: Record<string, unknown>, content: import('../core/html.js').SafeHtml }} props
+ *   `headerProps`: passed through to `header.render()` alongside `compact`
+ *   (e.g. the search page's `filterCount` badge) -- every other page
+ *   leaves it out, so `header.render()` sees only `{ compact }`, same as before.
  * @returns {import('../core/html.js').SafeHtml}
  */
-export function render({ active, compact = false, content }) {
+export function render({ active, compact = false, headerProps = {}, content }) {
   return html`
-    ${header.render({ compact })}
+    ${header.render({ compact, ...headerProps })}
     ${tabBar.render({ active })}
     <main class="container">${content}</main>
     ${footer.render()}
