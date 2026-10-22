@@ -1,0 +1,25 @@
+/* public/js/components/quoteCard.js */
+
+.c-quote {
+  background: var(--color-bg);
+  border-radius: var(--radius-card);
+  padding: 10px 12px;
+}
+
+.c-quote__author {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-ink-muted);
+  margin-bottom: 4px;
+}
+
+.c-quote__text {
+  font-size: 13px;
+  line-height: 1.45;
+  margin-bottom: 8px;
+}
+
+.c-quote .c-video,
+.c-quote .c-carousel {
+  border-radius: calc(var(--radius-card) - 4px);
+}

@@ -161,9 +161,12 @@ export async function runBuild(options = {}) {
   mkdirSync(kindsDir, { recursive: true });
   writeFileSync(path.join(kindsDir, '_registry.js'), buildKindsRegistryModule(listKindFolders(kindsDir)));
 
+  const { kindsRegistry } = await import(pathToFileURL(path.join(kindsDir, '_registry.js')).href);
+  const urlPrefixes = Object.fromEntries(Object.entries(kindsRegistry).map(([name, kind]) => [name, /** @type {any} */ (kind).urlPrefix]));
+
   const feKindsDir = path.join(repoRoot, 'public/js/kinds');
   mkdirSync(feKindsDir, { recursive: true });
-  writeFileSync(path.join(feKindsDir, '_registry.js'), buildFrontendKindsRegistryModule(listKindFolders(feKindsDir)));
+  writeFileSync(path.join(feKindsDir, '_registry.js'), buildFrontendKindsRegistryModule(listKindFolders(feKindsDir), urlPrefixes));
 
   const publicSiteDir = path.join(repoRoot, 'public/site');
   mkdirSync(publicSiteDir, { recursive: true });

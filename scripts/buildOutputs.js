@@ -99,19 +99,26 @@ export function buildKindsRegistryModule(kindNames) {
  * API `Section`s into markup. A section whose `kind` this build has no
  * front-end for (e.g. a kind scaffolded after this bundle was built) is
  * silently skipped, never thrown on -- a rolling deploy, or a kind with
- * server support but no UI yet, must not break every hub page.
+ * server support but no UI yet, must not break every hub page. Each
+ * entry also carries its `urlPrefix` (from the server-side kinds
+ * registry, read by `scripts/build.js` -- `null` if a kind somehow has
+ * none), so the item page (Plan 1b Task 4) can map a URL's prefix back
+ * to a kind name without any page ever naming one itself.
  * @param {string[]} kindNames
+ * @param {Record<string, string>} [urlPrefixes]
  * @returns {string}
  */
-export function buildFrontendKindsRegistryModule(kindNames) {
+export function buildFrontendKindsRegistryModule(kindNames, urlPrefixes = {}) {
   const imports = kindNames.flatMap((name, i) => [
     `import * as section${i} from './${name}/section.js';`,
     `import * as detail${i} from './${name}/detail.js';`,
   ]);
-  const entries = kindNames.map((name, i) => `  ${JSON.stringify(name)}: { section: section${i}, detail: detail${i} },`);
+  const entries = kindNames.map(
+    (name, i) => `  ${JSON.stringify(name)}: { section: section${i}, detail: detail${i}, urlPrefix: ${JSON.stringify(urlPrefixes[name] ?? null)} },`,
+  );
   return (
     `${GENERATED_HEADER}// @ts-check\n${imports.length > 0 ? `${imports.join('\n')}\n\n` : ''}` +
-    `/** @type {Record<string, { section: { render: Function, bind?: Function }, detail: { render: Function, bind?: Function } }>} */\n` +
+    `/** @type {Record<string, { section: { render: Function, bind?: Function }, detail: { render: Function, bind?: Function }, urlPrefix: string|null }>} */\n` +
     `export const KIND_UI = {\n${entries.join('\n')}\n};\n\n` +
     '/**\n' +
     ' * Renders every section whose kind this build has UI for, in registry\n' +

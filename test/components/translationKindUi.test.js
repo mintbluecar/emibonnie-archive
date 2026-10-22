@@ -3,6 +3,7 @@ import '../helpers/siteFixture.js';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { FakeEl } from '../helpers/fakeDom.js';
+import { html } from '../../public/js/core/html.js';
 // Dynamic import: see test/components/header.test.js for why.
 const section = await import('../../public/js/kinds/translation/section.js');
 const detail = await import('../../public/js/kinds/translation/detail.js');
@@ -38,13 +39,13 @@ function detailVm(overrides = {}) {
   };
 }
 
-test('translation detail: renders credits, cast, bubbles, and a hidden original toggle', () => {
+test('translation detail: renders credits, cast, bubbles, and a native <details> "show original"', () => {
   const markup = String(detail.render(detailVm()));
   assert.match(markup, /tl <b>@tl_alpha<\/b>/);
   assert.match(markup, /c-cast__chip/);
   assert.match(markup, /c-bubbles__bub/);
-  assert.match(markup, /show original/);
-  assert.match(markup, /hidden/);
+  assert.match(markup, /<details class="k-translation-detail__original">/);
+  assert.match(markup, /<summary class="k-translation-detail__original-toggle">show original<\/summary>/);
   assert.match(markup, /first paragraph/);
 });
 
@@ -53,30 +54,35 @@ test('translation detail: Thai-script text in the original gets lang="th", same 
   assert.match(markup, /<span lang="th">ครบ<\/span>/);
 });
 
-test('translation detail: Thai-script text in a quote gets lang="th" too', () => {
+test('translation detail: credits show when the post was made (timePair) alongside the event date (dayLabel)', () => {
+  const credits = { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, postedAt: '2026-10-19T08:00:00.000Z', occurredOn: '2026-10-19' };
+  const markup = String(detail.render(detailVm({ credits })));
+  assert.match(markup, /bangkok/);
+  assert.match(markup, /19 Oct 2026/);
+});
+
+test('translation detail: renders no media -- that is the item page\'s own mediaBox component\'s job', () => {
   /** @type {import('../../src/http/contracts.js').MediaVM} */
   const media = { type: 'quote', authorName: 'x', authorHandle: null, text: 'hello ครบ world', postedAt: null, inner: null };
   const markup = String(detail.render(detailVm({ media })));
-  assert.match(markup, /<span lang="th">ครบ<\/span>/);
+  assert.ok(!markup.includes('c-quote'));
+  assert.ok(!markup.includes('ครบ'));
 });
 
-test('translation detail bind: toggling the original flips aria-expanded and hidden', () => {
-  const toggle = new FakeEl({ 'data-role': 'toggle' });
-  const original = new FakeEl({ 'data-role': 'original' });
-  toggle.getAttribute = (name) => (name === 'aria-expanded' ? 'false' : null);
-  /** @type {Record<string,string>} */
-  const setAttrs = {};
-  toggle.setAttribute = (name, value) => { setAttrs[name] = value; };
-  original.hidden = true;
+test('translation detail: an optional afterCredits slot renders between credits and the cast legend', () => {
+  const markup = String(detail.render(detailVm(), { afterCredits: html`<div class="c-chips">PILL</div>` }));
+  const creditsIndex = markup.indexOf('k-translation-detail__credits');
+  const pillIndex = markup.indexOf('PILL');
+  const castIndex = markup.indexOf('c-cast__chip');
+  assert.ok(creditsIndex < pillIndex && pillIndex < castIndex, 'afterCredits renders between credits and cast');
+});
+
+test('translation detail bind: wires cast/bubbles colours and adds no listener of its own (the <details> toggle is native)', () => {
+  const root = new FakeEl({}, []);
+  /** @type {[string, Function][]} */
   const listeners = [];
-  const root = new FakeEl({}, [toggle, original]);
-  root.querySelector = (selector) => (selector.includes('original') ? original : null);
-  root.addEventListener = (event, fn) => listeners.push([event, fn]);
+  root.addEventListener = (/** @type {string} */ event, /** @type {Function} */ fn) => listeners.push([event, fn]);
   root.contains = () => true;
-  toggle.closest = () => toggle;
-  detail.bind(root);
-  const clickHandler = listeners.find(([event]) => event === 'click')[1];
-  clickHandler({ target: toggle });
-  assert.equal(setAttrs['aria-expanded'], 'true');
-  assert.equal(original.hidden, false);
+  assert.doesNotThrow(() => detail.bind(root));
+  assert.deepEqual(listeners, []);
 });

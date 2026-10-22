@@ -46,7 +46,12 @@ export class MiniElement {
     this.disabled = false;
     this.hidden = false;
     this.value = '';
-    this.style = { setProperty: () => {} };
+    /** @type {Record<string,string>} */
+    this.styleProps = {};
+    this.style = {
+      setProperty: (/** @type {string} */ name, /** @type {string} */ value) => { this.styleProps[name] = value; },
+      getPropertyValue: (/** @type {string} */ name) => this.styleProps[name] ?? '',
+    };
   }
 
   get classList() {

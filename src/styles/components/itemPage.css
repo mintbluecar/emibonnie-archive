@@ -1,0 +1,71 @@
+/*
+ * public/js/pages/item.js's own layout (task-4 brief): a sticky pinned
+ * media column (phone: sticky to the top of the viewport as the
+ * translation scrolls beneath it; web, via `.cols` from layout.css: the
+ * left column, sticky within the grid) plus prev/next, the body, and
+ * the footer below both columns.
+ */
+
+.c-item__media {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--color-bg);
+}
+
+.c-item__prevnext {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.c-item__prev,
+.c-item__next {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+
+.c-item__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1.5px solid var(--color-card-shadow);
+  font-size: 11px;
+}
+
+.c-item__footer-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  color: var(--color-ink-muted);
+  text-decoration: underline;
+}
+
+.c-item__added-by {
+  color: var(--color-ink-muted);
+}
+
+.c-item__copy-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 11px;
+  color: var(--color-ink);
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: 10px;
+}
+
+@media (min-width: 860px) {
+  .c-item__media {
+    align-self: start;
+  }
+}

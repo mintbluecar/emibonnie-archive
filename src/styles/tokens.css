@@ -30,6 +30,19 @@
      `--color-ink-muted`) only shows before JS runs or for an element with
      no colour of its own. */
   --c: var(--color-ink-muted);
+  /* Per-item aspect ratio for a `.c-video`/`.c-carousel` box (Plan 1b
+     Task 4), set per element by that component's `bind()`
+     (`el.style.setProperty('--aspect', …)`, from the rendered
+     `data-aspect` attribute) -- same CSP-safe pattern as `--c` above.
+     This default only shows before JS runs. */
+  --aspect: 16 / 9;
+  /* The approximate height of the compact header + tab bar above the
+     item page's content (Plan 1b Task 4): used to cap the sticky media
+     column at `calc(100svh - var(--layout-sticky-offset))` on web, so it
+     never grows taller than the viewport has room for above the fold.
+     An approximation (the builder's choice, per the task ruling), not a
+     measured value -- a few px of slack either way is harmless. */
+  --layout-sticky-offset: 96px;
 }
 
 @media (prefers-color-scheme: dark) {

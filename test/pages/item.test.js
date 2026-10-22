@@ -1,0 +1,119 @@
+// @ts-check
+/**
+ * DOM-free tests of `composeItem` (pure: `ItemView & { editOpenUntil }`
+ * -> `SafeHtml`), on a hand-built fixture matching `src/http/contracts.js`
+ * (the same approach test/components/translationKindUi.test.js's
+ * `detailVm()` uses) -- `public/js` can't import `src/**` (eslint layer
+ * rule), so there's no DB-backed snapshot here the way
+ * test/pages/event.test.js's is. `bind()` is driven against the real
+ * rendered markup via test/helpers/miniDom.js, the same as event.test.js.
+ */
+import '../helpers/siteFixture.js';
+import assert from 'node:assert/strict';
+import { test, mock } from 'node:test';
+import { MiniElement, fakeDocument } from '../helpers/miniDom.js';
+import { mount } from '../../public/js/core/dom.js';
+// Dynamic import: see test/components/header.test.js for why.
+const { composeItem, bind } = await import('../../public/js/pages/item.js');
+
+const flush = () => new Promise((resolve) => { setTimeout(resolve, 0); });
+
+/** @returns {import('../../src/http/contracts.js').ItemView & { editOpenUntil: string|null }} */
+function itemVm(overrides = {}) {
+  return {
+    kind: 'translation', sourceId: '1900000000000000004', url: '/t/1900000000000000004',
+    placement: 'post', event: { slug: 'solluna-happy-day-2026-10-19', name: 'SOLLUNA HAPPY DAY', occurredOn: '2026-10-19' },
+    people: [], tags: { keyword: null, hashtags: ['SLHappyDay2026'] }, category: 'clip', addedBy: { kind: 'handle', handle: 'tl_alpha' },
+    followsOnFrom: null, prev: { sourceId: '1', url: '/t/1' }, next: { sourceId: '2', url: '/t/2' },
+    bubbles: [{ kind: 'speech', emoji: '🧡', name: 'sol', colour: '#ff8a3d', text: 'hello', cont: false }],
+    cast: [{ kind: 'person', id: 1, emoji: '🧡', name: 'sol', colour: '#ff8a3d', igHandle: null }],
+    original: 'hello',
+    credits: { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, postedAt: '2026-10-19T08:00:00.000Z', occurredOn: '2026-10-19' },
+    sources: [{ role: 'primary', url: 'https://x.com/tl_alpha/status/1900000000000000004', status: 'live' }],
+    media: { type: 'video', variants: [{ bitrate: 632000, url: 'https://video.twimg.com/a/632000.mp4' }], width: 720, height: 1280 },
+    editOpenUntil: null,
+    ...overrides,
+  };
+}
+
+test('composeItem: the media box, credits, pills, cast and bubbles, in order (task-4 brief)', () => {
+  const markup = String(composeItem(itemVm()));
+  const indices = ['c-media-box', 'k-translation-detail__credits', 'c-chips', 'c-cast__chip', 'c-bubbles__bub'].map((m) => markup.indexOf(m));
+  assert.ok(indices.every((i) => i >= 0), markup);
+  for (let i = 1; i < indices.length; i++) assert.ok(indices[i - 1] < indices[i], `${indices}`);
+});
+
+test('composeItem: prev/next links when ItemView carries neighbours', () => {
+  const markup = String(composeItem(itemVm()));
+  assert.match(markup, /<a class="c-item__prev" href="\/t\/1">/);
+  assert.match(markup, /<a class="c-item__next" href="\/t\/2">/);
+});
+
+test('composeItem: no prev/next nav when there are no neighbours', () => {
+  const markup = String(composeItem(itemVm({ prev: null, next: null })));
+  assert.ok(!markup.includes('c-item__prevnext'));
+});
+
+test('composeItem: the footer -- original tweet, follows on, added by, copy link, report', () => {
+  const markup = String(composeItem(itemVm({
+    followsOnFrom: { sourceId: '3', url: '/t/3' },
+  })));
+  assert.match(markup, /<a class="c-item__footer-link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">original tweet<\/a>/);
+  assert.match(markup, /<a class="c-item__footer-link" href="\/t\/3">follows on from<\/a>/);
+  assert.match(markup, /added by @tl_alpha/);
+  assert.match(markup, /<button type="button" class="c-item__copy-link">copy link<\/button>/);
+  assert.match(markup, /<a class="c-item__footer-link" href="\/takedown\/">report<\/a>/);
+});
+
+test('composeItem: "added by" shows a fan, a chosen name, or nothing for the engine\'s own writes', () => {
+  assert.match(String(composeItem(itemVm({ addedBy: { kind: 'fan' } }))), /added by a fan/);
+  assert.match(String(composeItem(itemVm({ addedBy: { kind: 'name', name: 'a reader' } }))), /added by a reader/);
+  assert.ok(!String(composeItem(itemVm({ addedBy: null }))).includes('c-item__added-by'));
+});
+
+test('composeItem: the check-for-update button shows only while editOpenUntil is in the future', () => {
+  const future = new Date(Date.now() + 60_000).toISOString();
+  assert.match(String(composeItem(itemVm({ editOpenUntil: future }))), /c-refresh__btn/);
+  assert.ok(!String(composeItem(itemVm({ editOpenUntil: null }))).includes('c-refresh__btn'));
+});
+
+test('composeItem: includes the compact page shell (header + tabs + footer)', () => {
+  const markup = String(composeItem(itemVm()));
+  assert.match(markup, /c-header--compact/);
+  assert.match(markup, /c-tabbar/);
+  assert.match(markup, /c-footer__links/);
+});
+
+test('bind: the copy-link button copies the absolute item URL and shows "copied"', async () => {
+  const root = new MiniElement('div');
+  mount(root, composeItem(itemVm()));
+  globalThis.document = fakeDocument();
+  /** @type {string[]} */
+  const written = [];
+  // `navigator` is a getter-only Node global; redefine it for this test.
+  Object.defineProperty(globalThis, 'navigator', {
+    configurable: true, value: { clipboard: { writeText: async (/** @type {string} */ text) => { written.push(text); } } },
+  });
+  globalThis.window = /** @type {any} */ ({ location: { origin: 'https://example.fan', href: 'https://example.fan/t/1900000000000000004' } });
+  // A tiny fake, so refreshButton.js's bind() doesn't touch Node's real
+  // (experimental, warning-on-access) global localStorage.
+  /** @type {Map<string, string>} */
+  const store = new Map();
+  globalThis.localStorage = /** @type {any} */ ({ getItem: (/** @type {string} */ k) => store.get(k) ?? null, setItem: (/** @type {string} */ k, /** @type {string} */ v) => store.set(k, v) });
+  mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ variants: [] }), { status: 200 }));
+  try {
+    bind(root, itemVm());
+    const button = /** @type {any} */ (root.querySelector('.c-item__copy-link'));
+    assert.ok(button);
+    button.click();
+    await flush();
+    assert.deepEqual(written, ['https://example.fan/t/1900000000000000004']);
+    assert.equal(button.textContent, 'copied');
+  } finally {
+    mock.restoreAll();
+    delete (/** @type {any} */ (globalThis)).document;
+    delete (/** @type {any} */ (globalThis)).navigator;
+    delete (/** @type {any} */ (globalThis)).window;
+    delete (/** @type {any} */ (globalThis)).localStorage;
+  }
+});

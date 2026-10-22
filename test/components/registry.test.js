@@ -23,6 +23,15 @@ test('the generated front-end registry maps each kind folder to its {section, de
   assert.equal(typeof KIND_UI.translation.detail.render, 'function');
 });
 
+test('the generated front-end registry also carries each kind\'s urlPrefix, so the item page can map a URL to its kind without naming one', async () => {
+  writeFileSync(path.join(KINDS_DIR, '_registry.js'), buildFrontendKindsRegistryModule(listKindFolders(KINDS_DIR), { translation: '/t/' }));
+  // A cache-busting query string: Node's ESM loader caches by resolved
+  // URL, and an earlier test in this file already imported this same
+  // path with different (urlPrefix-less) generated content.
+  const { KIND_UI } = await import(`../../public/js/kinds/_registry.js?${Date.now()}`);
+  assert.equal(KIND_UI.translation.urlPrefix, '/t/');
+});
+
 test('renderSections: renders a section for a known kind, and skips one for an unknown kind', async () => {
   writeFileSync(path.join(KINDS_DIR, '_registry.js'), buildFrontendKindsRegistryModule(listKindFolders(KINDS_DIR)));
   const { renderSections } = await import('../../public/js/kinds/_registry.js');

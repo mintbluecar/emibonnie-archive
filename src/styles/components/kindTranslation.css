@@ -6,36 +6,6 @@
   gap: 8px;
 }
 
-.k-translation-detail__video {
-  width: 100%;
-  background: var(--color-ink);
-  aspect-ratio: 16 / 9;
-}
-
-.k-translation-detail__images {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 4px;
-}
-
-.k-translation-detail__quote {
-  background: var(--color-bg);
-  border-radius: var(--radius-card);
-  padding: 10px 12px;
-  margin-bottom: 8px;
-}
-
-.k-translation-detail__quote-author {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--color-ink-muted);
-}
-
-.k-translation-detail__quote-text {
-  font-size: 13px;
-  line-height: 1.45;
-}
-
 .k-translation-detail__credits {
   font-size: 11px;
   color: var(--color-ink-muted);
@@ -50,6 +20,7 @@
   min-height: 44px;
   display: inline-flex;
   align-items: center;
+  cursor: pointer;
 }
 
 .k-translation-detail__original-para {

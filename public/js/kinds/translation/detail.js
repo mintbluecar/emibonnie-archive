@@ -1,74 +1,23 @@
 // @ts-check
 /**
- * The translation kind's front-end "detail" half: the pinned media (when
- * there is any), credits, cast legend, the bubbles, and a toggle that
- * reveals the verbatim original text. Media here is the minimal
- * video/images/quote markup; swapping it for a "no longer available"
- * note when a source has gone (Review Focus #2) is Task 4's job.
+ * The translation kind's front-end "detail" half: credits, cast legend,
+ * the bubbles, and a toggle that reveals the verbatim original text.
+ * Media is kind-agnostic (`MediaVM` is a generic contract shape, not a
+ * translation-kind concept) and the item page's own pinned area owns it
+ * via `public/js/components/mediaBox.js` instead -- see that module's
+ * doc comment. This file renders only what's specific to the kind.
  */
 import { html } from '../../core/html.js';
-import { on } from '../../core/dom.js';
 import { site, t } from '../../core/site.js';
-import { dayLabel } from '../../core/format.js';
+import { dayLabel, timePair } from '../../core/format.js';
 import { thaiSpans } from '../../core/thai.js';
 import * as cast from '../../components/cast.js';
 import * as bubbles from '../../components/bubbles.js';
 
-const ORIGINAL_SELECTOR = '.k-translation-detail__original-toggle';
-
 /**
- * @param {import('../../../../src/http/contracts.js').MediaVM|null} media
- * @returns {import('../../core/html.js').SafeHtml}
- */
-function renderMedia(media) {
-  if (!media) return html``;
-  if (media.type === 'video') return renderVideo(media);
-  if (media.type === 'images') return renderImages(media);
-  return renderQuote(media);
-}
-
-/**
- * @param {import('../../../../src/http/contracts.js').VideoVM} video
- * @returns {import('../../core/html.js').SafeHtml}
- */
-function renderVideo(video) {
-  const best = [...video.variants].sort((a, b) => b.bitrate - a.bitrate)[0];
-  return html`
-    <video class="k-translation-detail__video" controls playsinline width="${video.width}" height="${video.height}">
-      ${best ? html`<source src="${best.url}">` : ''}
-    </video>
-  `;
-}
-
-/**
- * @param {import('../../../../src/http/contracts.js').ImagesVM} imagesVm
- * @returns {import('../../core/html.js').SafeHtml}
- */
-function renderImages(imagesVm) {
-  return html`
-    <div class="k-translation-detail__images">
-      ${imagesVm.images.map((image) => html`<img src="${image.url}" width="${image.width}" height="${image.height}" alt="">`)}
-    </div>
-  `;
-}
-
-/**
- * @param {import('../../../../src/http/contracts.js').QuoteVM} quote
- * @returns {import('../../core/html.js').SafeHtml}
- */
-function renderQuote(quote) {
-  return html`
-    <div class="k-translation-detail__quote">
-      ${quote.authorName || quote.authorHandle ? html`
-        <p class="k-translation-detail__quote-author">${quote.authorName ?? ''}${quote.authorHandle ? html` @${quote.authorHandle}` : ''}</p>
-      ` : ''}
-      <p class="k-translation-detail__quote-text">${thaiSpans(quote.text, site.sourceLanguage)}</p>
-      ${quote.inner ? renderMedia(quote.inner) : ''}
-    </div>
-  `;
-}
-
-/**
+ * `tl @handle · clip by @source · 4:00 pm bangkok · 14 Oct 2026`
+ * (task-4 brief): the account credits, then when the post was made
+ * (`timePair`) and the event date it happened on (`dayLabel`).
  * @param {import('../../../../src/http/contracts.js').DetailVM['credits']} credits
  * @returns {import('../../core/html.js').SafeHtml}
  */
@@ -77,6 +26,7 @@ function creditsLine(credits) {
     <p class="k-translation-detail__credits">
       ${credits.account ? html`${t('item.translatedBy')} <b>@${credits.account.handle}</b>` : ''}
       ${credits.clipBy ? html` · ${t('item.clipBy')} <b>@${credits.clipBy}</b>` : ''}
+      ${credits.postedAt ? html` · ${timePair(credits.postedAt, site.timezone)}` : ''}
       · ${dayLabel(credits.occurredOn)}
     </p>
   `;
@@ -90,35 +40,38 @@ function originalParagraphs(text) {
 }
 
 /**
+ * `afterCredits` is an optional slot rendered right after the credits
+ * line, before the cast legend -- the item page (task-4 brief: "Right:
+ * credits ..., then pills, then cast, then bubbles") uses it to place
+ * its own, generic pills row there without this kind-specific file ever
+ * needing to know what a "pill" is. Any kind's `detail.render` may
+ * support the same optional second argument.
  * @param {import('../../../../src/http/contracts.js').DetailVM} detail
+ * @param {{ afterCredits?: import('../../core/html.js').SafeHtml }} [extra]
  * @returns {import('../../core/html.js').SafeHtml}
  */
-export function render(detail) {
+export function render(detail, extra = {}) {
   return html`
     <div class="k-translation-detail" data-kind="translation">
-      ${renderMedia(detail.media)}
       ${creditsLine(detail.credits)}
+      ${extra.afterCredits ?? ''}
       ${cast.render({ cast: detail.cast })}
       ${bubbles.render({ bubbles: detail.bubbles })}
-      <button class="k-translation-detail__original-toggle" type="button" aria-expanded="false">${t('item.showOriginal')}</button>
-      <div class="k-translation-detail__original" hidden>${originalParagraphs(detail.original)}</div>
+      <details class="k-translation-detail__original">
+        <summary class="k-translation-detail__original-toggle">${t('item.showOriginal')}</summary>
+        ${originalParagraphs(detail.original)}
+      </details>
     </div>
   `;
 }
 
 /**
- * Wires the colours `cast`/`bubbles` rendered, plus the show-original toggle.
+ * Wires the colours `cast`/`bubbles` rendered. The "show original"
+ * disclosure is a native `<details>` (task-4 brief), so it needs no JS.
  * @param {Element} el
  * @returns {void}
  */
 export function bind(el) {
   cast.bind(el);
   bubbles.bind(el);
-  on(el, ORIGINAL_SELECTOR, 'click', (_e, target) => {
-    const original = el.querySelector('.k-translation-detail__original');
-    if (!original) return;
-    const expanded = target.getAttribute('aria-expanded') === 'true';
-    target.setAttribute('aria-expanded', String(!expanded));
-    /** @type {HTMLElement} */ (original).hidden = expanded;
-  });
 }
