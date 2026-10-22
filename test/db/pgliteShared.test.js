@@ -16,7 +16,7 @@
  */
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createDb } from '../../src/db/client.js';
@@ -48,6 +48,21 @@ describe('createDb({ dir }) shares one PGlite per directory', { skip: SKIP }, ()
     const c = createDb({ dir });
     assert.deepEqual((await c.query('select n from shared_probe')).rows, [{ n: 7 }], 'reopens cleanly after the last end()');
     await c.end();
+  });
+
+  test('an open that fails rejects its queries, end() still resolves, and the directory opens once it can (fix round 1, M5)', async () => {
+    const dir = path.join(scratch, 'not-a-dir');
+    writeFileSync(dir, 'a file where the data directory should be\n');
+    const broken = createDb({ dir });
+    await assert.rejects(broken.query('select 1'));
+    const alsoBroken = createDb({ dir });
+    await assert.rejects(alsoBroken.query('select 1'));
+    await broken.end();
+    await alsoBroken.end();
+    rmSync(dir);
+    const fixed = createDb({ dir });
+    assert.deepEqual((await fixed.query('select 1 as n')).rows, [{ n: 1 }], 'a failed open or close never poisons later opens');
+    await fixed.end();
   });
 
   test('in-memory Dbs stay separate', async () => {

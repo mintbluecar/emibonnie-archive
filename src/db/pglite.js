@@ -57,7 +57,8 @@ const closing = new Map();
 function acquire(key) {
   let entry = shared.get(key);
   if (!entry) {
-    const pg = (closing.get(key) ?? Promise.resolve()).then(() => openPglite(key));
+    // A close that failed must not stop the next open: its error was already swallowed in `release`.
+    const pg = (closing.get(key) ?? Promise.resolve()).catch(() => {}).then(() => openPglite(key));
     entry = { pg, users: 0 };
     shared.set(key, entry);
   }
@@ -66,7 +67,10 @@ function acquire(key) {
 }
 
 /**
- * Drops one hold on `entry`; the last closes it.
+ * Drops one hold on `entry`; the last closes it. Never rejects: an
+ * instance that failed to open has nothing to close (its error already
+ * reached every query), and a close that fails leaves nothing to retry,
+ * so neither may break `end()` or the next open of `key`.
  * @param {string} key @param {SharedInstance} entry
  * @returns {Promise<void>}
  */
@@ -74,7 +78,7 @@ async function release(key, entry) {
   entry.users -= 1;
   if (entry.users > 0) return;
   shared.delete(key);
-  const done = entry.pg.then((pg) => pg.close()).finally(() => {
+  const done = entry.pg.then((pg) => pg.close()).catch(() => {}).finally(() => {
     if (closing.get(key) === done) closing.delete(key);
   });
   closing.set(key, done);
