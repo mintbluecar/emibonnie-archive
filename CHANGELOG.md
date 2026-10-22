@@ -41,3 +41,5 @@ The first release: a read-only archive (browse, search, item pages) with intake 
   - `npm run migrate` (engine then site migrations, used by deploys). It refuses to run with neither `DATABASE_URL` nor `PGLITE_DIR` set.
   - `npm run doctor` handles peeled annotated tags.
   - Site regions follow Vercel's current list, now including `yul1`.
+- **Fixes from building the first real site:**
+  - The dev server no longer corrupts its PGlite directory when an item page's background edit refresh overlaps later requests: every `Db` on one `PGLITE_DIR` now shares one PGlite instance, closed by its last user. Postgres (Neon) is unchanged.
