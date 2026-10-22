@@ -125,3 +125,8 @@ test('dev server: waitUntil (from @vercel/functions) runs after the response, an
   assert.equal(done, true);
   srv.close();
 });
+
+test('dev server: names the build output it needs when there is none yet (a fresh clone; Task 9a item 8)', async () => {
+  const { missingBuildOutput } = await import('../scripts/dev.js');
+  assert.deepEqual(missingBuildOutput('test/fixtures'), ['vercel.json', 'src/site/generated.js', 'public/index.html']);
+});

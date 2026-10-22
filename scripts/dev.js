@@ -1,5 +1,6 @@
 // @ts-check
 import http from 'node:http';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -242,8 +243,24 @@ async function serveApi(handle, request, res) {
   return Promise.allSettled(tasks);
 }
 
+/**
+ * The build output this server needs that's missing under `root` (a
+ * fresh clone has none: it's all gitignored, Task 9a item 8).
+ * @param {string} root
+ * @returns {string[]}
+ */
+export function missingBuildOutput(root) {
+  return ['vercel.json', 'src/site/generated.js', 'public/index.html'].filter((rel) => !existsSync(path.join(root, rel)));
+}
+
 async function main() {
   const port = Number(process.env.PORT ?? 3000);
+  const missing = missingBuildOutput('.');
+  if (missing.length > 0) {
+    console.error(`dev: no build yet (missing ${missing.join(', ')}): run npm run build first, or npm run dev, which builds`);
+    process.exitCode = 1;
+    return;
+  }
   const { default: api } = await import('../api/[...route].js');
   const vercel = JSON.parse(await readFile('vercel.json', 'utf8'));
   const srv = createServer({ root: 'public', rewrites: vercel.rewrites ?? [], headers: vercel.headers ?? [], handle: (request) => api.fetch(request) });
