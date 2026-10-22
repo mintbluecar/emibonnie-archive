@@ -37,6 +37,20 @@
      this to a darker or different label colour instead. Gradients and
      backgrounds keep --gradient-from/--gradient-to. */
   --color-label: var(--gradient-to);
+  /* A pale wash of --color-label behind label-coloured text -- the home
+     count badges, the person/translator page's active view toggle (Task
+     9b; the mockups' lavender badges). --color-label itself only just
+     passes AA on a plain card, so text on this tint uses
+     --color-label-on-tint: the label shaded a quarter of the way toward
+     --color-ink (darker in light mode, lighter in dark mode). That's
+     5.1:1 or better on the tint for the engine default, the example and
+     a darkened-pink site, light and dark. Both derive from --color-label,
+     so a site that sets it gets matching badges without touching these. */
+  --color-label-tint: color-mix(in srgb, var(--color-label) 12%, var(--color-card));
+  --color-label-on-tint: color-mix(in srgb, var(--color-label) 75%, var(--color-ink));
+  /* Search results' match highlight (Task 9b; mockups/search-v2.html's
+     #ffd9a8). Ink on it is 11.4:1. */
+  --color-highlight: #ffd9a8;
   /* The text colour for something placed on a solid --gradient-to (or
      --gradient-from) surface (header.css's CTA, filterSheet.css's apply
      button, hub.css's picker-apply) -- a fixed white doesn't work in
@@ -92,6 +106,9 @@
     /* The same default, stated for dark mode too (a site may set either):
        #e2468c is 4.94:1/4.65:1 on the dark --color-bg/--color-card. */
     --color-label: var(--gradient-to);
+    /* A pale highlight would put light ink on a light wash; a dark amber
+       instead: the dark ink on it is 6.7:1. */
+    --color-highlight: #6b4f12;
     /* Black passes 5.49:1 against this theme's --gradient-to (white only
        passes 3.83:1 -- review round 2, I3) and 7.35:1 against
        --gradient-from, so it's correct for a solid accent surface. */

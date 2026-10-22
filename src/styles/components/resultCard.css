@@ -21,7 +21,7 @@
 }
 
 .c-result-card__text mark {
-  background: color-mix(in srgb, var(--gradient-from) 45%, transparent);
+  background: var(--color-highlight);
   border-radius: 3px;
   padding: 0 2px;
   color: inherit;

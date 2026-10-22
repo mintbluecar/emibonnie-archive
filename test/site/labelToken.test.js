@@ -37,3 +37,36 @@ test('--color-label is defined for light and dark mode, defaulting to --gradient
     assert.ok(uses.includes(selector), `${selector} uses --color-label (got ${uses.join(', ')})`);
   }
 });
+
+/** @param {string} css @param {string} name @returns {string|undefined} */
+const tokenIn = (css, name) => new RegExp(`${name}:\\s*([^;]+);`).exec(css)?.[1].trim();
+
+test('Task 9b: a pale --color-highlight is defined for light and dark mode, and ink text on it passes AA in both', async () => {
+  const { contrastRatio } = await import('../../src/site/contrast.js');
+  const tokens = readFileSync(path.join(STYLES, 'tokens.css'), 'utf8');
+  const [light, dark] = tokens.split('@media (prefers-color-scheme: dark)');
+  for (const [mode, css] of [['light', light], ['dark', dark]]) {
+    const highlight = tokenIn(css, '--color-highlight');
+    const ink = tokenIn(css, '--color-ink');
+    assert.ok(highlight && ink, `${mode}: --color-highlight and --color-ink are plain colours`);
+    assert.ok(contrastRatio(highlight, ink) >= 4.5, `${mode}: ink on ${highlight} is ${contrastRatio(highlight, ink).toFixed(2)}:1`);
+  }
+  assert.match(readFileSync(path.join(STYLES, 'components/resultCard.css'), 'utf8'), /mark\s*\{[^}]*background:\s*var\(--color-highlight\)/);
+});
+
+test('Task 9b: the label tint tokens derive from --color-label (so a site that sets it gets matching badges), and the badges, segmented control and active filter chips use them', () => {
+  const tokens = readFileSync(path.join(STYLES, 'tokens.css'), 'utf8');
+  assert.match(tokens, /--color-label-tint:\s*color-mix\(in srgb, var\(--color-label\) \d+%, var\(--color-card\)\);/);
+  assert.match(tokens, /--color-label-on-tint:\s*color-mix\(in srgb, var\(--color-label\) \d+%, var\(--color-ink\)\);/);
+  const uses = (/** @type {string} */ file, /** @type {string} */ selector) => {
+    const css = readFileSync(path.join(STYLES, 'components', file), 'utf8');
+    const block = css.slice(css.indexOf(`${selector} {`));
+    return block.slice(0, block.indexOf('}'));
+  };
+  for (const [file, selector] of [['eventCard.css', '.c-event-card__count'], ['hub.css', '.c-hub__seg .c-chips .c-chips__chip--on'],
+    ['searchPage.css', '.c-search__active-chip']]) {
+    const block = uses(file, selector);
+    assert.match(block, /background:\s*var\(--color-label-tint\)/, `${selector} background`);
+    assert.match(block, /color:\s*var\(--color-label-on-tint\)/, `${selector} text`);
+  }
+});

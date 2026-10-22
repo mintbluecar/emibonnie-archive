@@ -28,6 +28,8 @@
   border-radius: 999px;
   padding: 2px 8px;
   white-space: nowrap;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--gradient-from) 18%, transparent), color-mix(in srgb, var(--gradient-to) 18%, transparent));
-  color: var(--color-ink);
+  /* The mockups' lavender badge, from the site's own label colour (Task 9b). */
+  background: var(--color-label-tint);
+  border: 1.5px solid color-mix(in srgb, var(--color-label) 30%, var(--color-card));
+  color: var(--color-label-on-tint);
 }

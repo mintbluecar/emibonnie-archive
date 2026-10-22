@@ -51,6 +51,32 @@
   margin-bottom: 12px;
 }
 
+/* The view switch reads as one pill track with the active view tinted,
+   as in mockups/people-me-v1.html (Task 9b). Each option keeps chips.css's
+   44px tap height. */
+.c-hub__seg .c-chips {
+  flex-wrap: nowrap;
+  gap: 2px;
+  padding: 2px;
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: 999px;
+}
+
+.c-hub__seg .c-chips .c-chips__chip {
+  flex: 1;
+  justify-content: center;
+  border: 0;
+  background: none;
+  color: var(--color-ink-muted);
+}
+
+.c-hub__seg .c-chips .c-chips__chip--on {
+  background: var(--color-label-tint);
+  color: var(--color-label-on-tint);
+  font-weight: 800;
+}
+
 .c-hub-group__label {
   font-size: 11px;
   font-weight: 800;
