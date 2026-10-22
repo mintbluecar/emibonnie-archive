@@ -48,7 +48,9 @@ function rank(queryIndex) {
  * How a matching line reads in a result: a speech line's marker becomes
  * the emoji its bubble shows on the item page (a known person's standard
  * emoji; a generic role's or an unmapped marker's own), with no colon,
- * as the search mockup shows it. Any other line stays as written. A long
+ * as the search mockup shows it. A plain line shows its parsed text (a
+ * bare ': ' opener dropped, as on the item page); a footnote stays as
+ * written, mark included. A long
  * line's text is cut to a window around the match (`excerptAround`, Task
  * 9b), after the emoji, so the speaker always shows.
  * @param {string} line @param {string} q @param {SpeakerMap} speakers @param {PresentContext} ctx
@@ -56,6 +58,7 @@ function rank(queryIndex) {
  */
 function shownLine(line, q, speakers, ctx) {
   const [parsed] = splitLines(line);
+  if (parsed?.kind === 'plain') return excerptAround(parsed.text, q);
   if (parsed?.kind !== 'speech') return excerptAround(line, q);
   return `${parsed.markers.map((marker) => componentOf(marker, speakers, ctx).emoji).join('')} ${excerptAround(parsed.text, q)}`;
 }

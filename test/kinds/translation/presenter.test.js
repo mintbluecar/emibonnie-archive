@@ -333,3 +333,8 @@ test('search.matchLines (Task 9b): a long matching line is trimmed to a window a
   assert.match(line, /she hugged me/);
   assert.ok([...line].length < 130, `${[...line].length}`);
 });
+
+test('search.matchLines (fix round 1, M4): a line opened by a bare ":" shows without it, like the item page', () => {
+  const ctx = /** @type {any} */ ({ people: new Map(), formatName: (/** @type {string} */ n) => n.toLowerCase() });
+  assert.deepEqual(translation.search.matchLines({ body: ': luna, I have news\n🐶: what news?', speakers: {} }, 'news', ctx), ['luna, I have news', '🐶 what news?']);
+});

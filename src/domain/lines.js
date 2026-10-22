@@ -14,6 +14,8 @@
 /** A label marker: 1-3 alphanumerics, at least one a letter (M1b: a bare number, e.g. a clock time's "10", is never a marker). */
 const LABEL_MARKER = /^(?=.*[A-Za-z])[A-Za-z0-9]{1,3}$/;
 const FOOTNOTE_PREFIX = /^(\*{1,2})\s(.*)$/;
+/** A line's bare ':' opener and its spaces, when words follow (fix round 1, M4). */
+const BARE_COLON_OPENER = /^:\s*(?=[\p{L}\p{N}])/u;
 /** A joint marker is at most this many component markers (review round 1, I1). */
 const MAX_JOINT_MARKERS = 4;
 /** An emoji keycap sequence: digit/`#`/`*`, an optional variation selector, the combining enclosing keycap U+20E3 (Unicode UTS #51 ED-14c). */
@@ -106,7 +108,12 @@ function footnoteOf(line) {
  */
 function classifyLine(raw) {
   const line = raw.trim();
-  if (line.startsWith(':')) return { kind: 'plain', text: line };
+  // A bare ':' opening a line: a speaker the translator left unmarked
+  // (e.g. alternating with a marked one). It stays plain -- there's no
+  // marker to map -- but without the ': ' separator, as a speech line
+  // drops its own (fix round 1, M4).
+  // Only before a letter or digit, so an emoticon like ':)' stays as written.
+  if (line.startsWith(':')) return { kind: 'plain', text: BARE_COLON_OPENER.test(line) ? line.replace(BARE_COLON_OPENER, '') : line };
 
   const footnote = footnoteOf(line);
   if (footnote) return footnote;
