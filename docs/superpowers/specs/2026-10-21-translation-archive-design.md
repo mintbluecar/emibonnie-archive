@@ -152,7 +152,7 @@ Rules:
 
 A translation that **isn't tied to an event**: someone else talking about emi and/or bonnie. For example, michirujjang on the Starlympics (`vacantvolcanic/status/2003413749940834557`). The translator calls these "shared stories".
 
-- The add flow asks "part of an event, or a shared story?" It suggests "shared story" when no event hashtag, keyword, or live pattern is found.
+- The add flow asks "part of an event, a post, or a shared story?". Shared story is never guessed from a tag's shape: the submitter picks it (see **Hashtags** below).
 - A shared story records **who's sharing** (a person; an IG-like hashtag such as #michirujjang is suggested as a new person) and **who it's about** (people).
 - "Shared story" shows up as an option in the type filter. Underneath, it's the item's **placement** (`shared_story`), not a stored type, so there's one source of truth (expert review). It is **not a home tab** (owner's decision: a tab would make it too prominent). Shared stories appear in search results, on the shared-story type filter, and on the pages of everyone involved. They never appear on the events timeline.
 
@@ -179,6 +179,20 @@ A known personality: emi, bonnie, leo (a host), and others as they appear.
 - **(my call)** Someone with no Instagram account can't be added as a known person by submitters. They're mapped to a generic role, and the owner can create them by hand with a placeholder key.
 - **(my call)** IG handles can change. The owner can edit a person's handle. Existing translations stay linked, because links are by internal person ID, not by handle.
 - The owner can edit people and merge duplicates.
+- **Hashtags: known tags decide, new tags get asked** (owner's decision, 2026-10-22). Hashtags can be anything, so the engine never guesses what a tag *is* from its shape. Each header tag is one of:
+  - **ignored:** on the ignore list, so it's dropped.
+  - **a known person:** matches a person's IG handle or extra hashtags.
+  - **a known event tag:** attached to an existing event, so it matches that event.
+  - **new:** anything else. A new tag steers nothing on its own: no event is proposed from it, and no person or shared story is guessed.
+- **The add flow (Plan 2) asks about each new tag,** shown as chips: *an event* (new, or attach it to an existing one), *a person* (new, by IG handle), *just a tag*, or *ignore*. Answers are remembered only through things the archive already keeps:
+  - the tag joins that event's tags
+  - it becomes the person's extra hashtag
+  - it goes on the ignore list
+  - "just a tag" stores nothing, and is asked again next time
+
+  So there's no extra storage: each answer adds at most one row to an existing table.
+- **Bulk import (Plan 3):** tweets with new tags go to "check these".
+- **The all-caps keyword line** and **live patterns** still propose events, because they're translator conventions rather than guesses.
 - **Person hashtags are their IG handles** (owner's information): #beonnnie means @beonnnie, which is bonnie. The site recognises a person from a hashtag that matches their stored IG handle. The owner can add extra hashtags to a person if a fandom tag differs from the handle. Person hashtags identify **who** (for lives, shared stories and tagging). They never create or match an event by themselves.
 
 **Generic roles** cover people who don't need telling apart: host, fan, speaker. They have a neutral style and no person page. A translator's own emoji is kept for a generic role (e.g. 🌧️ shown as "speaker"), since generic roles have no standard emoji. 🗣️ is pre-mapped to **crowd reaction**, and 💬 (chat/comments) is suggested as **fan**.

@@ -41,6 +41,38 @@
 
 ---
 
+### Task 0: Tag classification rework (engine, in `fan-archive`)
+
+**Why:** owner decision (2026-10-22). Hashtags can be anything, so the engine must not guess a tag's role from its shape (uppercase meaning event, lowercase meaning person). Known tags decide; new tags are surfaced to be asked about. No new storage.
+
+**Files:** `src/domain/header.js`, `src/domain/events.js`, `src/kinds/translation/domain.js`, `src/kinds/defineKind.js` (types), their tests, `examples/solluna/seed/maps.json`, `src/services/ingest*.js` only if a status needs surfacing, and the spec references in `docs/`.
+
+**Interfaces:**
+- `Header` drops `hashtags` / `unknownHandleTags` and gains `tags: string[]`: every header hashtag that isn't ignored or a known person tag, in original case, deduped by `norm()`. `personTags` and `keyword` / `live` / `context` are unchanged.
+- **`matchEvent`:**
+  - **Rule 1 (unchanged):** a keyword (`norm`) or **any** of `tags` matching an existing event's hashtags or keywords (`norm`).
+  - **Rule 2:** the live rule.
+  - **Rule 3:** proposes a new event **only** from a keyword or a live, never from a tag.
+  - **Rule 4, placement without an event:** `post` when there's a post author (linked account), **or** when `personTags` is non-empty and there are **no new tags**. Otherwise `unsorted`. `shared_story` is **never** inferred; it only comes from `overrides.placement`.
+  - The result gains `newTags: string[]`: tags that matched no event and aren't known.
+- **`draftTranslation`** passes `newTags` through as `draft.newTags` (kind-specific; ingest ignores it). Plan 2's add flow asks about them. The CLI prints them.
+- **Shared story keeps working** through `overrides.placement: 'shared_story'` plus a sharer. `examples/solluna/seed/maps.json` gives `SHARED` that override and `starguest` as the sharer. `seed-dev` still prints `seeded 9`.
+
+- [ ] **Step 1: Update the tests first.**
+  - Header: `EVENT_A` and `EVENT_B` give `tags ['SLHappyDay2026']`. `SHARED` gives `tags ['starguest']` with no `unknownHandleTags`. Mixed-case and lowercase tags are treated the same.
+  - Events:
+    - A lowercase tag matching an existing event matches it.
+    - An unknown uppercase tag proposes **no** event (placement `unsorted`, `newTags` contains it).
+    - A keyword still proposes.
+    - A live still matches or proposes.
+    - `#solsunny #lunamoon` with no other tags gives `post`. `#solsunny #starguest` gives `unsorted` with `newTags ['starguest']`.
+    - `shared_story` only via the override.
+  - Draft/ingest: `SHARED` without the override gives `unsorted` with `newTags`; with the override, `shared_story`. The CLI prints new tags.
+- [ ] **Step 2: Implement** (domain stays pure; lint limits; `// @ts-check`). Run `npm run build && npm test && npm run check` on PGlite, plus the Postgres run with `--test-concurrency=1` (the Neon dev DB has little memory). `rm -rf .devdb && PGLITE_DIR=.devdb npm run seed-dev` gives `seeded 9`.
+- [ ] **Step 3: Commit** in `fan-archive`: `"Tags: known tags decide, new tags are surfaced; no shape guessing"`
+
+---
+
 ### Task 1: Front-end core, bundling, tokens, fonts
 
 **Files:**
