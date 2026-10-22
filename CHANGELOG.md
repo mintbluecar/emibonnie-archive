@@ -43,3 +43,4 @@ The first release: a read-only archive (browse, search, item pages) with intake 
   - Site regions follow Vercel's current list, now including `yul1`.
 - **Fixes from building the first real site:**
   - The dev server no longer corrupts its PGlite directory when an item page's background edit refresh overlaps later requests: every `Db` on one `PGLITE_DIR` now shares one PGlite instance, closed by its last user. Postgres (Neon) is unchanged.
+  - `npm run new kind t` gives its refusal reason once, not twice.

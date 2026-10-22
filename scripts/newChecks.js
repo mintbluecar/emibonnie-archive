@@ -53,17 +53,17 @@ function pagePrefixes(root) {
 
 /**
  * Why a new kind can't use `prefix`: reserved or owned (defineKind's own
- * check), or already another kind folder's.
+ * check), or else already another kind folder's. One reason only: an
+ * owned prefix is usually a kind folder's too, and saying so twice reads
+ * as two problems.
  * @param {string} root @param {string} prefix @param {string} name
  * @returns {string[]}
  */
 export function kindPrefixProblems(root, prefix, name) {
   const shared = urlPrefixProblem(prefix, name);
+  if (shared) return [`${shared}; pick another name`];
   const taken = kindPrefixes(root).get(prefix);
-  return [
-    ...(shared ? [`${shared}; pick another name`] : []),
-    ...(taken && taken !== name ? [`urlPrefix ${prefix} is already the ${taken} kind's; pick another name`] : []),
-  ];
+  return taken && taken !== name ? [`urlPrefix ${prefix} is already the ${taken} kind's; pick another name`] : [];
 }
 
 /**

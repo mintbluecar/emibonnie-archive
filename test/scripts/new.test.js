@@ -15,6 +15,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { scaffold } from '../../scripts/new.js';
+import { kindPrefixProblems } from '../../scripts/newChecks.js';
 
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const NEW_SCRIPT = path.join(REPO_ROOT, 'scripts/new.js');
@@ -202,4 +203,10 @@ test('the real checkout carries both route insertion markers and the pages marke
   assert.match(index, /^\/\/ scaffold:route-imports/m);
   assert.match(index, /^ {2}\/\/ scaffold:routes/m);
   assert.match(readFileSync(path.join(REPO_ROOT, 'src/pages.js'), 'utf8'), /^ {2}\/\/ scaffold:pages/m);
+});
+
+test("kind t in this checkout gives its reason once, though both the owned-prefix and kind-folder checks catch it (Task 9a item 10)", () => {
+  const problems = kindPrefixProblems(REPO_ROOT, '/t/', 't');
+  assert.equal(problems.length, 1, problems.join(' | '));
+  assert.match(problems[0], /\/t\/ belongs to the translation kind; pick another name$/);
 });
