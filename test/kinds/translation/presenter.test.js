@@ -128,7 +128,8 @@ test('detail: cast, original, credits, sources; media prefers the own video', as
   assert.equal(view.media.width, 1280);
   assert.equal(view.media.height, 720);
   assert.ok(view.media.variants.every((/** @type {any} */ v) => new URL(v.url).hostname === 'video.twimg.com'));
-  assert.deepEqual(Object.keys(view.media).sort(), ['height', 'type', 'variants', 'width']);
+  assert.deepEqual(Object.keys(view.media).sort(), ['height', 'poster', 'type', 'variants', 'width']);
+  assert.match(view.media.poster, /^https:\/\/pbs\.twimg\.com\//, 'the clip\'s still, for the box before play (Task 9b)');
 });
 
 test('media: own images, then the quote card (with the quoted pictures inside), else null', async () => {

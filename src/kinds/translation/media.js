@@ -26,7 +26,8 @@ export function publicSources(sources) {
 /** @param {any} video @returns {VideoVM|null} */
 function videoOf(video) {
   if (!video || !Array.isArray(video.variants) || video.variants.length === 0) return null;
-  return { type: 'video', variants: video.variants, width: video.width, height: video.height };
+  const poster = typeof video.poster === 'string' ? video.poster : null;
+  return { type: 'video', variants: video.variants, width: video.width, height: video.height, poster };
 }
 
 /** @param {any} images @returns {ImagesVM|null} */

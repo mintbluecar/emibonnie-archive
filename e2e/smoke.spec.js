@@ -202,3 +202,21 @@ test('header (Task 9b): desktop is one top bar with no search box (the search pa
   await gotoReady(page, `/search?q=${SEARCH_Q}`);
   await expect(page.locator('.c-header__search-box')).toBeVisible();
 });
+
+test('video (Task 9b): before play, the poster and a centred play button, no native controls; pressing play brings the controls', async ({ page }, testInfo) => {
+  test.skip(DARK_PROJECTS.includes(testInfo.project.name), 'item-page extras only run in light mode (I1)');
+  await stubSyntheticMedia(page);
+  await gotoReady(page, `/t/${IDS.LONG}`);
+  const video = page.locator('.c-video__el');
+  await expect(video).toHaveAttribute('poster', /^https:\/\/pbs\.twimg\.com\//);
+  expect(await video.evaluate((el) => /** @type {HTMLVideoElement} */ (el).controls)).toBe(false);
+  const play = page.locator('.c-video__play');
+  const [box, button] = await Promise.all([page.locator('.c-video').boundingBox(), play.boundingBox()]);
+  const b = /** @type {{x: number, y: number, width: number, height: number}[]} */ ([box, button]);
+  expect(Math.abs(b[0].x + b[0].width / 2 - (b[1].x + b[1].width / 2))).toBeLessThan(2);
+  expect(Math.abs(b[0].y + b[0].height / 2 - (b[1].y + b[1].height / 2))).toBeLessThan(2);
+  await play.click();
+  await expect(play).toHaveCount(0);
+  expect(await video.evaluate((el) => /** @type {HTMLVideoElement} */ (el).controls)).toBe(true);
+  await expect(page.locator('.c-video__full')).toBeVisible();
+});

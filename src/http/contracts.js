@@ -50,7 +50,9 @@
  *
  * @typedef {{ url: string, width: number, height: number }} ImageVM
  * @typedef {{ bitrate: number, url: string }} VariantVM
- * @typedef {{ type: 'video', variants: VariantVM[], width: number, height: number }} VideoVM
+ * @typedef {{ type: 'video', variants: VariantVM[], width: number, height: number, poster: string|null }} VideoVM
+ *   `poster`: the clip's own still (pbs.twimg.com), shown before play; null
+ *   when the source gave none (or it was archived before Task 9b).
  * @typedef {{ type: 'images', images: ImageVM[] }} ImagesVM
  * @typedef {{ type: 'quote', authorName: string|null, authorHandle: string|null, text: string, postedAt: string|null,
  *   inner: VideoVM|ImagesVM|null }} QuoteVM

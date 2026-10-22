@@ -95,6 +95,8 @@
     grid-template-areas: 'media back' 'media body';
     column-gap: 24px;
     row-gap: 0;
+    /* Clear of the one-line top bar (Task 9b), as in the mockup's web screen. */
+    padding-top: 16px;
   }
 
   .c-item__media {

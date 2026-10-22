@@ -76,3 +76,16 @@ test('normalize: a tweet with no edit_control gives versionIds [ownId] and isSta
   assert.equal(tweet.edit.latestId, IDS.EVENT_A);
   assert.equal(tweet.edit.isStale, false);
 });
+
+test('video poster (Task 9b): the clip\'s own still (mediaDetails media_url_https on pbs.twimg.com) is kept; another host, or none, gives null', () => {
+  const raw = loadRaw(IDS.LONG);
+  const tweet = normalize(IDS.LONG, raw);
+  assert.match(String(tweet.video?.poster), /^https:\/\/pbs\.twimg\.com\//);
+  const withHost = (/** @type {string|undefined} */ url) => {
+    const copy = structuredClone(raw);
+    for (const m of copy.syndication.mediaDetails) if (m.type === 'video') { if (url === undefined) delete m.media_url_https; else m.media_url_https = url; }
+    return normalize(IDS.LONG, copy).video?.poster;
+  };
+  assert.equal(withHost('https://evil.example/thumb.jpg'), null);
+  assert.equal(withHost(undefined), null);
+});

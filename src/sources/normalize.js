@@ -2,7 +2,8 @@
 
 /**
  * @typedef {{bitrate: number, url: string}} VideoVariant
- * @typedef {{variants: VideoVariant[], durationMs: number, width: number, height: number}} TweetVideo
+ * @typedef {{variants: VideoVariant[], durationMs: number, width: number, height: number, poster: string|null}} TweetVideo
+ *   `poster`: the clip's own still image (pbs.twimg.com only), shown before play.
  * @typedef {{url: string, width: number, height: number}} TweetImage
  * @typedef {{handle: string, url: string}} ClipSource
  * @typedef {{
@@ -92,6 +93,7 @@ function videoFrom(mediaDetails) {
     durationMs: numberOr(entry.video_info, 'duration_millis'),
     width: numberOr(entry.original_info, 'width'),
     height: numberOr(entry.original_info, 'height'),
+    poster: hostnameOf(entry.media_url_https ?? '') === IMAGE_HOST ? entry.media_url_https : null,
   };
 }
 

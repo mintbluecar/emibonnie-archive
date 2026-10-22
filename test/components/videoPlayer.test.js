@@ -34,7 +34,7 @@ test('render: a 720x1280 vertical clip renders a full-screen button and data-asp
   assert.match(markup, /class="c-video"/);
   assert.match(markup, /data-aspect="0\.5625"/);
   assert.match(markup, /class="c-video__full"/);
-  assert.match(markup, /<video[^>]*controls[^>]*playsinline[^>]*preload="metadata"/);
+  assert.match(markup, /<video[^>]*playsinline[^>]*preload="metadata"/, 'native controls come after play (Task 9b), see below');
 });
 
 test('render: the video has a src attribute pointing at the stored variant, never a <source> child (review round 1, CRITICAL #1 -- a <source>\'s error never bubbles to <video>)', () => {
@@ -160,6 +160,48 @@ test('bind: a second error, after the refetch succeeded but the swapped-in varia
     assert.ok(root.querySelector('.c-video__gone'), 'the sourceGone note is shown');
   } finally {
     mock.restoreAll();
+    delete (/** @type {any} */ (globalThis)).document;
+  }
+});
+
+test('render (Task 9b): before play, a dark box with the poster (when there is one) and a centred play button; no native controls yet', () => {
+  const markup = String(render({ variants: VARIANTS, width: 1280, height: 720, poster: 'https://pbs.twimg.com/amplify_video_thumb/1/img/a.jpg' }));
+  assert.match(markup, /<video class="c-video__el"[^>]*poster="https:\/\/pbs\.twimg\.com\/amplify_video_thumb\/1\/img\/a\.jpg"/);
+  assert.ok(!/<video[^>]*\scontrols/.test(markup), 'no controls before play');
+  assert.match(markup, /<button type="button" class="c-video__play" aria-label="play">/);
+  assert.match(markup, /preload="metadata"/, 'still loads metadata, so the box is sized and errors still surface');
+  assert.ok(!String(render({ variants: VARIANTS, width: 1280, height: 720, poster: null })).includes('poster='));
+});
+
+test('bind (Task 9b): pressing play shows the native controls, removes the play button and starts the clip', () => {
+  const root = new MiniElement('div');
+  mount(root, render({ variants: VARIANTS, width: 1280, height: 720, poster: null }));
+  globalThis.document = fakeDocument();
+  try {
+    bind(root, { kind: 'translation', sourceId: '1900000000000000002' });
+    const video = /** @type {any} */ (root.querySelector('video'));
+    let played = 0;
+    video.play = () => { played += 1; return Promise.resolve(); };
+    /** @type {any} */ (root.querySelector('.c-video__play')).click();
+    assert.equal(video.controls, true);
+    assert.equal(root.querySelector('.c-video__play'), null);
+    assert.equal(played, 1);
+  } finally {
+    delete (/** @type {any} */ (globalThis)).document;
+  }
+});
+
+test('bind (Task 9b): playing some other way (e.g. from full screen) also shows the controls and drops the play button', () => {
+  const root = new MiniElement('div');
+  mount(root, render({ variants: VARIANTS, width: 1280, height: 720, poster: null }));
+  globalThis.document = fakeDocument();
+  try {
+    bind(root, { kind: 'translation', sourceId: '1900000000000000002' });
+    const video = /** @type {any} */ (root.querySelector('video'));
+    video.dispatchEvent({ type: 'play', target: video });
+    assert.equal(video.controls, true);
+    assert.equal(root.querySelector('.c-video__play'), null);
+  } finally {
     delete (/** @type {any} */ (globalThis)).document;
   }
 });
