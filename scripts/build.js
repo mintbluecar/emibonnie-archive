@@ -8,10 +8,8 @@ import { walkFiles, findMissingCssTokens, findMissingCopyKeys } from './buildChe
 import {
   buildGeneratedSiteModule,
   buildPublicSiteModule,
-  listKindFolders,
-  buildKindsRegistryModule,
-  buildFrontendKindsRegistryModule,
   buildVercelConfig,
+  writeKindsRegistries,
 } from './buildOutputs.js';
 import { runBundling } from './buildBundle.js';
 
@@ -165,16 +163,7 @@ export async function runBuild(options = {}) {
     throw new Error(`build failed: code uses undefined copy key(s): ${missingCopyKeys.join(', ')}`);
   }
 
-  const kindsDir = path.join(repoRoot, 'src/kinds');
-  mkdirSync(kindsDir, { recursive: true });
-  writeFileSync(path.join(kindsDir, '_registry.js'), buildKindsRegistryModule(listKindFolders(kindsDir)));
-
-  const { kindsRegistry } = await import(pathToFileURL(path.join(kindsDir, '_registry.js')).href);
-  const urlPrefixes = Object.fromEntries(Object.entries(kindsRegistry).map(([name, kind]) => [name, /** @type {any} */ (kind).urlPrefix]));
-
-  const feKindsDir = path.join(repoRoot, 'public/js/kinds');
-  mkdirSync(feKindsDir, { recursive: true });
-  writeFileSync(path.join(feKindsDir, '_registry.js'), buildFrontendKindsRegistryModule(listKindFolders(feKindsDir), urlPrefixes));
+  await writeKindsRegistries(repoRoot);
 
   const publicSiteDir = path.join(repoRoot, 'public/site');
   mkdirSync(publicSiteDir, { recursive: true });

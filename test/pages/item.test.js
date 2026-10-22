@@ -11,20 +11,13 @@
 import '../helpers/siteFixture.js';
 import assert from 'node:assert/strict';
 import { test, mock } from 'node:test';
-import { writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
 import { MiniElement, fakeDocument } from '../helpers/miniDom.js';
 import { mount } from '../../public/js/core/dom.js';
-import { buildFrontendKindsRegistryModule, listKindFolders } from '../../scripts/buildOutputs.js';
 
-// Regenerate public/js/kinds/_registry.js with its real urlPrefix before
-// importing item.js (same guard test/components/registry.test.js uses):
-// other test files share and rewrite this one generated file, some of
-// them without a urlPrefix, so this file's own start()-level tests
-// (which route a pathname through it) can't trust whatever is on disk.
-const KINDS_DIR = fileURLToPath(new URL('../../public/js/kinds/', import.meta.url));
-writeFileSync(path.join(KINDS_DIR, '_registry.js'), buildFrontendKindsRegistryModule(listKindFolders(KINDS_DIR), { translation: '/t/' }));
+// `public/js/kinds/_registry.js` (with its real urlPrefix, `/t/`) is generated once, before
+// any test file runs, by `npm test`'s `pretest` step (`scripts/genRegistries.js`) -- see
+// scripts/buildOutputs.js's `writeKindsRegistries` doc comment (Plan 1b Task 7 brief, carried
+// item B). This file's own start()-level tests route a pathname through it via item.js's import.
 // Dynamic import: see test/components/header.test.js for why.
 const { composeItem, bind, start } = await import('../../public/js/pages/item.js');
 

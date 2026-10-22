@@ -1,41 +1,34 @@
 // @ts-check
 /**
- * `public/js/kinds/_registry.js` is generated the same way
- * `src/kinds/_registry.js` is (see test/kinds/registry.test.js): this
- * regenerates it from the real `public/js/kinds/` folders before
- * importing, so the test never reads a stale file.
+ * `public/js/kinds/_registry.js` is generated once, before any test file
+ * runs, by `npm test`'s `pretest` step (`scripts/genRegistries.js`) --
+ * not by this file. See scripts/buildOutputs.js's `writeKindsRegistries`
+ * doc comment (Plan 1b Task 7 brief, carried item B) for why, and
+ * test/kinds/registry.test.js for the server-side registry's own case.
+ * It's generated with the translation kind's real urlPrefix (`/t/`, from
+ * src/kinds/translation/index.js), same as `npm run build`.
  */
 import '../helpers/siteFixture.js';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
-import { buildFrontendKindsRegistryModule, listKindFolders } from '../../scripts/buildOutputs.js';
 
-const KINDS_DIR = fileURLToPath(new URL('../../public/js/kinds/', import.meta.url));
+// Dynamic import, after '../helpers/siteFixture.js' has installed its loader hook for
+// '/site/site.js' (see test/components/header.test.js for why): a static import here would be
+// resolved -- and fail -- before that hook exists, since static imports in a file all resolve
+// together, ahead of any module's top-level code running.
+const { KIND_UI, renderSections } = await import('../../public/js/kinds/_registry.js');
 
-test('the generated front-end registry maps each kind folder to its {section, detail} UI', async () => {
-  writeFileSync(path.join(KINDS_DIR, '_registry.js'), buildFrontendKindsRegistryModule(listKindFolders(KINDS_DIR)));
-  const { KIND_UI } = await import('../../public/js/kinds/_registry.js');
+test('the generated front-end registry maps each kind folder to its {section, detail} UI', () => {
   assert.ok(Object.keys(KIND_UI).includes('translation'));
   assert.equal(typeof KIND_UI.translation.section.render, 'function');
   assert.equal(typeof KIND_UI.translation.detail.render, 'function');
 });
 
-test('the generated front-end registry also carries each kind\'s urlPrefix, so the item page can map a URL to its kind without naming one', async () => {
-  writeFileSync(path.join(KINDS_DIR, '_registry.js'), buildFrontendKindsRegistryModule(listKindFolders(KINDS_DIR), { translation: '/t/' }));
-  // A cache-busting query string: Node's ESM loader caches by resolved
-  // URL, and an earlier test in this file already imported this same
-  // path with different (urlPrefix-less) generated content.
-  const { KIND_UI } = await import(`../../public/js/kinds/_registry.js?${Date.now()}`);
+test('the generated front-end registry also carries each kind\'s urlPrefix, so the item page can map a URL to its kind without naming one', () => {
   assert.equal(KIND_UI.translation.urlPrefix, '/t/');
 });
 
-test('renderSections: renders a section for a known kind, and skips one for an unknown kind', async () => {
-  writeFileSync(path.join(KINDS_DIR, '_registry.js'), buildFrontendKindsRegistryModule(listKindFolders(KINDS_DIR)));
-  const { renderSections } = await import('../../public/js/kinds/_registry.js');
-
+test('renderSections: renders a section for a known kind, and skips one for an unknown kind', () => {
   /** @type {import('../../src/http/contracts.js').Preview} */
   const item = {
     kind: 'translation', sourceId: '1', url: '/t/1', lines: [], people: [], accountHandle: null,
