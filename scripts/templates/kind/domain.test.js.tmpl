@@ -1,0 +1,34 @@
+// @ts-check
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { draft__Pascal__, peopleNamedIn, postOf } from '../../../src/kinds/__name__/domain.js';
+
+const POST = postOf('p1', 'https://example.com/posts/p1', { text: 'hello @Someone\nline two', author: { id: '7', handle: 'writer' } });
+const PEOPLE = [{ id: 3, displayName: 'someone', igHandle: 'someone' }, { id: 4, displayName: 'other', igHandle: 'other' }];
+
+/** @param {import('../../../src/kinds/defineKind.js').DraftOverrides} [overrides] @returns {any} */
+const ctx = (overrides = {}) => ({ people: PEOPLE, overrides });
+
+test('postOf: a well-formed post is live; anything else is unavailable, never a throw', () => {
+  assert.equal(POST.status, 'live');
+  assert.deepEqual(postOf('p1', 'https://example.com/posts/p1', { text: 'x' }), { status: 'unavailable' });
+  assert.deepEqual(postOf('p1', 'https://example.com/posts/p1', null), { status: 'unavailable' });
+});
+
+test('peopleNamedIn: @igHandle mentions, case-insensitively, as about', () => {
+  assert.deepEqual(peopleNamedIn('hi @SOMEONE and @nobody', PEOPLE), [{ personId: 3, role: 'about' }]);
+});
+
+test('draft: unsorted without an event; the chosen event places it; typed text replaces the post', () => {
+  const post = /** @type {any} */ (POST);
+  const plain = draft__Pascal__(post, ctx());
+  assert.equal(plain.common.placement, 'unsorted');
+  assert.equal(plain.body, 'hello @Someone\nline two');
+  assert.deepEqual(plain.common.people, [{ personId: 3, role: 'about' }]);
+  assert.deepEqual(plain.missing, []);
+  const placed = draft__Pascal__(post, ctx({ eventId: 9, text: 'typed' }));
+  assert.equal(placed.common.placement, 'event');
+  assert.equal(placed.common.eventId, 9);
+  assert.equal(placed.body, 'typed');
+  assert.equal(placed.common.textEnteredManually, true);
+});

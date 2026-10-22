@@ -20,7 +20,9 @@
     "add": "node scripts/add.js",
     "init-site": "node scripts/initSite.js",
     "seed-dev": "node scripts/seedDev.js",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "new": "node scripts/new.js",
+    "test:kind": "node --test test/kinds/scaffoldedKind.test.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",

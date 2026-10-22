@@ -1,0 +1,12 @@
+// @ts-check
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { render } from '../../public/js/components/__camel__.js';
+
+test('__name__: renders the caller-resolved label', () => {
+  assert.equal(String(render({ label: 'hello' })), '<span class="c-__dash__">hello</span>');
+});
+
+test('__name__: escapes the label', () => {
+  assert.equal(String(render({ label: '<b>&' })), '<span class="c-__dash__">&lt;b&gt;&amp;</span>');
+});

@@ -1,0 +1,30 @@
+// @ts-check
+/**
+ * The __name__ kind's front-end "detail" half: the item page's credits
+ * and bubbles. The page itself owns the shared parts (media box, pills,
+ * prev/next); `extra.afterCredits` is its slot right after the credits.
+ */
+import { html } from '../../core/html.js';
+import { dayLabel } from '../../core/format.js';
+import * as bubbles from '../../components/bubbles.js';
+
+/**
+ * @param {import('../../../../src/http/contracts.js').DetailVM} detail
+ * @param {{ afterCredits?: import('../../core/html.js').SafeHtml }} [extra]
+ * @returns {import('../../core/html.js').SafeHtml}
+ */
+export function render(detail, extra = {}) {
+  const { account, occurredOn } = detail.credits;
+  return html`
+    <div class="k-__dash__-detail" data-kind="__name__">
+      <p class="k-__dash__-detail__credits">${account ? html`<b>@${account.handle}</b> · ` : ''}${dayLabel(occurredOn)}</p>
+      ${extra.afterCredits ?? ''}
+      ${bubbles.render({ bubbles: detail.bubbles })}
+    </div>
+  `;
+}
+
+/** @param {Element} el @returns {void} */
+export function bind(el) {
+  bubbles.bind(el);
+}

@@ -1,0 +1,26 @@
+// @ts-check
+/**
+ * The __name__ kind's front-end "section" half
+ * (public/js/kinds/_registry.js, generated): a hub page's `Section` of
+ * __name__ items (src/http/contracts.js) as `previewCard`s. Markup only
+ * through `html`; colours are applied in `bind` (never inline styles).
+ */
+import { html } from '../../core/html.js';
+import * as previewCard from '../../components/previewCard.js';
+
+/**
+ * @param {import('../../../../src/http/contracts.js').Section} section
+ * @returns {import('../../core/html.js').SafeHtml}
+ */
+export function render(section) {
+  return html`
+    <div class="k-__dash__-section" data-kind="__name__">
+      ${section.items.map((result) => previewCard.render({ result }))}
+    </div>
+  `;
+}
+
+/** @param {Element} el @returns {void} */
+export function bind(el) {
+  previewCard.bind(el);
+}

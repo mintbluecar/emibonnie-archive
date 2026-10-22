@@ -1,0 +1,58 @@
+// @ts-check
+/**
+ * The __name__ kind's view models (src/http/contracts.js): a list
+ * entry's `KindPreview` and the item page's `DetailVM`. Text stays raw;
+ * the page escapes it. This kind shows every line as a `plain` bubble;
+ * `BubbleVM` also has `speech` (one speaker: emoji, name, colour),
+ * `joint` (2+ speakers sharing one neutral bubble, `parts[]`), `crowd`
+ * and `note` -- src/kinds/translation/presenter.js builds all of them.
+ */
+
+/** @typedef {import('../../http/contracts.js').BubbleVM} BubbleVM */
+/** @typedef {import('../../http/contracts.js').KindPreview} KindPreview */
+/** @typedef {import('../../http/contracts.js').DetailVM} DetailVM */
+/** @typedef {import('../../repo/cards.js').Card} Card */
+/** @typedef {import('../defineKind.js').PresentContext} PresentContext */
+/** @typedef {import('./repo.js').__Pascal__Details} __Pascal__Details */
+
+const KIND = '__name__';
+const PREVIEW_LINES = 2;
+
+/** Every non-empty line, as a plain bubble. @param {string} body @returns {BubbleVM[]} */
+function bubblesOf(body) {
+  return body.split('\n').map((line) => line.trim()).filter((line) => line.length > 0).map((text) => ({ kind: 'plain', text }));
+}
+
+/**
+ * @param {Card} card
+ * @param {__Pascal__Details} details
+ * @param {PresentContext} ctx
+ * @returns {KindPreview}
+ */
+function preview(card, details, ctx) {
+  const followsOn = card.followsOn;
+  return {
+    kind: KIND, sourceId: card.sourceId, url: ctx.urlFor(KIND, card.sourceId),
+    lines: bubblesOf(details.body).slice(0, PREVIEW_LINES), people: ctx.chips(card.people),
+    accountHandle: card.account?.handle ?? null, hasVideo: false,
+    followsOnFrom: followsOn ? { sourceId: followsOn.sourceId, url: ctx.urlFor(followsOn.kind, followsOn.sourceId) } : null,
+  };
+}
+
+/**
+ * @param {Card} card
+ * @param {__Pascal__Details} details
+ * @returns {DetailVM} (`present.detail` is also handed the PresentContext; this kind needs none of it)
+ */
+function detail(card, details) {
+  return {
+    bubbles: bubblesOf(details.body),
+    cast: [],
+    original: details.body,
+    credits: { account: card.account, clipBy: null, postedAt: card.postedAt, occurredOn: card.occurredOn },
+    sources: details.sources.map((s) => ({ role: String(s.role), url: String(s.url), status: /** @type {any} */ (s.status) })),
+    media: null,
+  };
+}
+
+export const present = { preview, detail };

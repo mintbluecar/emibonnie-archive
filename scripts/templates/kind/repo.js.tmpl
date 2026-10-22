@@ -1,0 +1,39 @@
+// @ts-check
+/**
+ * The __name__ kind's own table (`__name___items`, its migration in
+ * src/db/migrations/) and its primary source. `persist` runs inside
+ * ingest's transaction, after the shared item row and its people
+ * (src/services/ingestWrite.js); writes always use the `tx` it's given.
+ */
+import { addSources, listSourcesFor } from '../../repo/itemSources.js';
+
+/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {{ body: string, sources: Record<string, unknown>[] }} __Pascal__Details */
+
+const KIND = '__name__';
+
+/**
+ * `kind.persist`.
+ * @param {Tx} tx
+ * @param {import('./domain.js').__Pascal__Draft} draft
+ * @param {{ itemId: number, accountId: number }} meta
+ * @returns {Promise<number>} the item id
+ */
+export async function persist__Pascal__(tx, draft, { itemId, accountId }) {
+  const { primary } = draft.common;
+  await tx.query('insert into __name___items (item_id, body) values ($1, $2)', [itemId, draft.body]);
+  await addSources(tx, itemId, KIND, [{ platform: primary.platform, externalId: primary.externalId, url: primary.url, role: 'primary', accountId }]);
+  return itemId;
+}
+
+/**
+ * `kind.loadDetails`: each item's body and sources, in one query each.
+ * @param {Tx} db
+ * @param {number[]} itemIds
+ * @returns {Promise<Map<number, __Pascal__Details>>}
+ */
+export async function loadDetails(db, itemIds) {
+  const { rows } = await db.query('select item_id, body from __name___items where item_id = any($1::bigint[])', [itemIds]);
+  const sources = await listSourcesFor(db, itemIds);
+  return new Map(rows.map((row) => [row.item_id, { body: row.body, sources: sources.get(row.item_id) ?? [] }]));
+}

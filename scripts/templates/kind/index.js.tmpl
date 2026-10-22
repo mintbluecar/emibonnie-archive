@@ -1,0 +1,63 @@
+// @ts-check
+/**
+ * The __name__ kind: scaffolded by `npm run new kind __name__`. Adding a
+ * kind is this folder, public/js/kinds/__name__/ and its migration --
+ * nothing in the core changes (docs/architecture.md, rule 5; the build
+ * and `npm test` regenerate both kinds registries from the folders).
+ */
+import { defineKind } from '../defineKind.js';
+import { PLATFORM, draft__Pascal__, postOf } from './domain.js';
+import { loadDetails, persist__Pascal__ } from './repo.js';
+import { present } from './presenter.js';
+import { search } from './search.js';
+
+/** TODO your source's public post URLs, capturing the post id. */
+const POST_URL = /^https:\/\/example\.com\/posts\/([A-Za-z0-9_-]{1,64})\/?$/u;
+
+/** @param {string} id */
+const postUrlOf = (id) => `https://example.com/posts/${id}`;
+/** TODO where a post's JSON is read from (server side, through `deps.fetchImpl`). @param {string} id */
+const apiUrlOf = (id) => `https://example.com/api/posts/${encodeURIComponent(id)}.json`;
+
+/** `kind.matchesUrl`: the post id in a pasted URL, else null. @param {string} url @returns {string|null} */
+function matchesUrl(url) {
+  return POST_URL.exec(url.trim())?.[1] ?? null;
+}
+
+/**
+ * `kind.fetchSource`: a gone post is `deleted`, any other failure
+ * `unavailable` (ingest then refuses it; nothing is written).
+ * @param {{ fetchImpl: typeof fetch }} deps
+ * @param {string} id
+ */
+async function fetchSource(deps, id) {
+  try {
+    const res = await deps.fetchImpl(apiUrlOf(id));
+    if (res.status === 404 || res.status === 410) return { status: /** @type {const} */ ('deleted') };
+    if (!res.ok) return { status: /** @type {const} */ ('unavailable') };
+    return postOf(id, postUrlOf(id), await res.json());
+  } catch {
+    return { status: /** @type {const} */ ('unavailable') };
+  }
+}
+
+export default defineKind({
+  name: '__name__',
+  table: '__name___items',
+  urlPrefix: '/__dash__/',
+  platform: PLATFORM,
+  matchesUrl,
+  fetchSource,
+  draft: draft__Pascal__,
+  persist: persist__Pascal__,
+  loadDetails,
+  present,
+  search,
+  // Optional hooks (src/kinds/defineKind.js documents each; the translation kind uses them all):
+  // - followUpOf(input) + appendFollowUp(tx, args): attach a same-author continuation to the item it continues.
+  // - refresh(deps, itemId, { actor }) / checkFollowUps(deps, itemId, { actor }): upkeep for sources that change
+  //   after intake (re-read edits; append later follow-ups).
+  // - profileUrl(handle): the credited account's public profile, shown as the translator page's "open profile"
+  //   link (AccountView.account.profileUrl). Left out, the page shows no link -- never a hardcoded platform. E.g.
+  //   profileUrl: (handle) => `https://example.com/${encodeURIComponent(handle)}`,
+});

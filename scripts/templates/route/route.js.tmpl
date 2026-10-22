@@ -1,0 +1,23 @@
+// @ts-check
+import { PUBLIC_CACHE } from '../http/handler.js';
+
+/**
+ * `GET /api/__dash__`: TODO say what this returns. Scaffolded by
+ * `npm run new route __name__`.
+ *
+ * A route only reads its input and calls a service: routes may not
+ * import `src/repo/` or `src/db/` (eslint layer rule), so the real work
+ * (and any SQL) lives in a `src/services/` function that takes `deps`
+ * first -- see src/routes/filters.js and src/services/hubs.js's
+ * `filterOptions`. Document the response shape in src/http/contracts.js.
+ * A GET is cached (`PUBLIC_CACHE`); a write is `'no-store'` and gets the
+ * handler's Origin check.
+ */
+export const route = {
+  method: 'GET',
+  path: '/api/__dash__',
+  cache: PUBLIC_CACHE,
+  // run({ query, body, params }, deps): this placeholder reads neither (filters.js shows the usual shape).
+  /** @returns {Promise<{ items: string[] }>} */
+  run: async () => ({ items: [] }),
+};

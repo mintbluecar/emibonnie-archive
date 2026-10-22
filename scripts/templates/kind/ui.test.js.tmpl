@@ -1,0 +1,31 @@
+// @ts-check
+import '../../helpers/siteFixture.js';
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+// Dynamic import: see test/components/header.test.js for why.
+const section = await import('../../../public/js/kinds/__name__/section.js');
+const detail = await import('../../../public/js/kinds/__name__/detail.js');
+
+const PREVIEW = {
+  kind: '__name__', sourceId: 'p1', url: '/__dash__/p1', lines: [{ kind: 'plain', text: '<hello>' }], people: [],
+  accountHandle: 'w', hasVideo: false, followsOnFrom: null, occurredOn: '2026-01-02', placement: 'unsorted',
+};
+
+test('section: one preview card per item, linking to the item, text escaped', () => {
+  const markup = String(section.render(/** @type {any} */ ({ kind: '__name__', total: 1, hasMore: false, items: [PREVIEW] })));
+  assert.match(markup, /data-kind="__name__"/);
+  assert.match(markup, /href="\/__dash__\/p1"/);
+  assert.match(markup, /&lt;hello&gt;/);
+});
+
+test('detail: credits, the afterCredits slot, then the bubbles', () => {
+  const vm = /** @type {any} */ ({
+    bubbles: [{ kind: 'plain', text: 'line' }], cast: [], original: 'line',
+    credits: { account: { handle: 'w', displayName: null }, clipBy: null, postedAt: null, occurredOn: '2026-01-02' },
+    sources: [], media: null,
+  });
+  const markup = String(detail.render(vm, { afterCredits: /** @type {any} */ (section.render({ kind: '__name__', total: 0, hasMore: false, items: [] })) }));
+  assert.match(markup, /<b>@w<\/b>/);
+  assert.ok(markup.indexOf('k-__dash__-detail__credits') < markup.indexOf('k-__dash__-section'));
+  assert.match(markup, /line/);
+});
