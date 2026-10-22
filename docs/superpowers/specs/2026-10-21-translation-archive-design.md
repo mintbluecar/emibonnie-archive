@@ -505,7 +505,7 @@ Other fans start their own archive by copying a template repo, filling in `site/
   - The engine is versioned with semver tags, and sites pull a tagged release.
   - Each release lists its upgrade steps in `CHANGELOG.md`.
   - **`npm run doctor`** checks a site's setup: Node version, settings, pending migrations, missing tokens or copy, env vars, engine version.
-  - Deploys run database migrations automatically before going live.
+  - Deploys run database migrations automatically before going live on the GitHub Actions path and in the manual deploy script. On the Git-integration path (Vercel builds from GitHub), the owner runs `npm run migrate` before merging, because a Vercel build that migrates would hand a write-capable database URL to every preview build of PR code (controller ruling, 2026-10-23).
   - Engine migrations and a site's own migrations are numbered separately so they can't collide.
 - **Licence:** **MIT** for the engine (owner's decision). A site's `site/` content isn't covered.
 - **Two deploy paths** documented: Vercel's Git integration for fans whose repo is on a personal account (simplest), and the GitHub Actions + token path for org repos (emibonnie's case).
