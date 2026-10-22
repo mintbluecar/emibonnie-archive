@@ -15,11 +15,12 @@
  * (`body`), so nothing is filled in by hand here.
  *
  * Two builds, a PGlite setup, lint and tsc in the copy: about 8 s on a
- * laptop, so it runs in every `npm test` (and so in CI); `npm run
- * test:kind` runs it alone.
+ * laptop. It runs in every PGlite `npm test`, and so once in CI: it is
+ * skipped in the Postgres pass (`TEST_DATABASE_URL` set), because the
+ * copy always uses its own PGlite anyway. `npm run test:kind` runs it alone.
  */
 import assert from 'node:assert/strict';
-import { after, before, test } from 'node:test';
+import { after, before, describe, test } from 'node:test';
 import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -94,95 +95,100 @@ await db.end();
 console.log(JSON.stringify(out));
 `;
 
-before(async () => {
-  scratch = mkdtempSync(path.join(tmpdir(), 'fan-archive-kind-proof-'));
-  copy = path.join(scratch, 'repo');
-  copyCheckout();
-  run('node', ['scripts/initSite.js']);
-  run('npm', ['run', 'build']);
-  git(['init', '-q']);
-  appendFileSync(path.join(copy, '.git/info/exclude'), '/node_modules\n');
-  git(['add', '-A']);
-  git(['commit', '-qm', 'baseline']);
+/** Once per CI run is enough: the copy never touches the test database (see the header). */
+const SKIP = process.env.TEST_DATABASE_URL ? 'runs in the PGlite pass only (TEST_DATABASE_URL is set)' : false;
 
-  proof.migration = run('npm', ['run', 'new', 'kind', KIND]).match(/wrote (src\/db\/migrations\/\d{3}_zzcheck\.sql)/)?.[1];
-  run('npm', ['run', 'build']);
-  const pglite = { PGLITE_DIR: path.join(scratch, 'db') };
-  proof.setup = run('npm', ['run', 'setup'], pglite);
-  proof.migrate = run('npm', ['run', 'migrate'], pglite);
-  run('npm', ['run', 'check']);
-  proof.ownTests = run('node', ['--test', '--test-reporter=tap', `test/kinds/${KIND}/`]);
-  writeFileSync(path.join(scratch, 'driver.mjs'), DRIVER);
-  proof.api = JSON.parse(run('node', [path.join(scratch, 'driver.mjs'), copy, pglite.PGLITE_DIR]));
-});
+describe('a scaffolded kind plugs in without touching the core', { skip: SKIP }, () => {
+  before(async () => {
+    scratch = mkdtempSync(path.join(tmpdir(), 'fan-archive-kind-proof-'));
+    copy = path.join(scratch, 'repo');
+    copyCheckout();
+    run('node', ['scripts/initSite.js']);
+    run('npm', ['run', 'build']);
+    git(['init', '-q']);
+    appendFileSync(path.join(copy, '.git/info/exclude'), '/node_modules\n');
+    git(['add', '-A']);
+    git(['commit', '-qm', 'baseline']);
 
-after(() => {
-  if (scratch) rmSync(scratch, { recursive: true, force: true });
-});
+    proof.migration = run('npm', ['run', 'new', 'kind', KIND]).match(/wrote (src\/db\/migrations\/\d{3}_zzcheck\.sql)/)?.[1];
+    run('npm', ['run', 'build']);
+    const pglite = { PGLITE_DIR: path.join(scratch, 'db') };
+    proof.setup = run('npm', ['run', 'setup'], pglite);
+    proof.migrate = run('npm', ['run', 'migrate'], pglite);
+    run('npm', ['run', 'check']);
+    proof.ownTests = run('node', ['--test', '--test-reporter=tap', `test/kinds/${KIND}/`]);
+    writeFileSync(path.join(scratch, 'driver.mjs'), DRIVER);
+    proof.api = JSON.parse(run('node', [path.join(scratch, 'driver.mjs'), copy, pglite.PGLITE_DIR]));
+  });
 
-test('setup applies the kind migration; migrate then has nothing left to do', () => {
-  assert.ok(proof.migration, 'the scaffolder wrote the kind migration');
-  assert.ok(proof.setup.includes(`migrated engine/${proof.migration.split('/').pop()}`), proof.setup);
-  assert.match(proof.migrate, /migrations: up to date/);
-});
+  after(() => {
+    if (scratch) rmSync(scratch, { recursive: true, force: true });
+  });
 
-test("the scaffolded kind's own tests pass (lint and tsc already passed in the copy)", () => {
-  assert.match(proof.ownTests, /# fail 0/);
-  assert.doesNotMatch(proof.ownTests, /# pass 0\b/);
-});
+  test('setup applies the kind migration; migrate then has nothing left to do', () => {
+    assert.ok(proof.migration, 'the scaffolder wrote the kind migration');
+    assert.ok(proof.setup.includes(`migrated engine/${proof.migration.split('/').pop()}`), proof.setup);
+    assert.match(proof.migrate, /migrations: up to date/);
+  });
 
-test('ingest adds the item through the real write path', () => {
-  assert.equal(proof.api.added.status, 'added');
-});
+  test("the scaffolded kind's own tests pass (lint and tsc already passed in the copy)", () => {
+    assert.match(proof.ownTests, /# fail 0/);
+    assert.doesNotMatch(proof.ownTests, /# pass 0\b/);
+  });
 
-test("it is in GET /api/event/:slug's sections", () => {
-  const { status, body } = proof.api.event;
-  assert.equal(status, 200);
-  const section = body.sections.find((/** @type {any} */ s) => s.kind === KIND);
-  assert.ok(section, 'a zzcheck section');
-  assert.equal(section.total, 1);
-  assert.deepEqual(section.items[0].lines.map((/** @type {any} */ l) => l.text), ['zzcheck proof line about @lunamoon', `second ${WORD} line`]);
-  assert.equal(body.counts[KIND], 1);
-});
+  test('ingest adds the item through the real write path', () => {
+    assert.equal(proof.api.added.status, 'added');
+  });
 
-test('it is found by /api/search?q=<its text>&kinds=zzcheck, with its matching line', () => {
-  const { status, body } = proof.api.search;
-  assert.equal(status, 200);
-  assert.equal(body.count, 1);
-  assert.equal(body.results[0].kind, KIND);
-  assert.equal(body.results[0].url, `/${KIND}/zz1`);
-  assert.deepEqual(body.results[0].matchLines, [`second ${WORD} line`]);
-});
+  test("it is in GET /api/event/:slug's sections", () => {
+    const { status, body } = proof.api.event;
+    assert.equal(status, 200);
+    const section = body.sections.find((/** @type {any} */ s) => s.kind === KIND);
+    assert.ok(section, 'a zzcheck section');
+    assert.equal(section.total, 1);
+    assert.deepEqual(section.items[0].lines.map((/** @type {any} */ l) => l.text), ['zzcheck proof line about @lunamoon', `second ${WORD} line`]);
+    assert.equal(body.counts[KIND], 1);
+  });
 
-test('it is on the person page of the person it names', () => {
-  const { status, body } = proof.api.person;
-  assert.equal(status, 200);
-  assert.ok(body.sections.some((/** @type {any} */ s) => s.kind === KIND && s.items.some((/** @type {any} */ i) => i.sourceId === 'zz1')));
-});
+  test('it is found by /api/search?q=<its text>&kinds=zzcheck, with its matching line', () => {
+    const { status, body } = proof.api.search;
+    assert.equal(status, 200);
+    assert.equal(body.count, 1);
+    assert.equal(body.results[0].kind, KIND);
+    assert.equal(body.results[0].url, `/${KIND}/zz1`);
+    assert.deepEqual(body.results[0].matchLines, [`second ${WORD} line`]);
+  });
 
-test('its item page renders through the kind presenter', () => {
-  assert.equal(proof.api.item.status, 200);
-  assert.equal(proof.api.item.body.kind, KIND);
-  assert.equal(proof.api.item.body.bubbles.length, 2);
-});
+  test('it is on the person page of the person it names', () => {
+    const { status, body } = proof.api.person;
+    assert.equal(status, 200);
+    assert.ok(body.sections.some((/** @type {any} */ s) => s.kind === KIND && s.items.some((/** @type {any} */ i) => i.sourceId === 'zz1')));
+  });
 
-/** @param {string} text */
-const withoutBundleHashes = (text) => text.replace(/\/build\/([A-Za-z0-9_]+)-[A-Za-z0-9]+\.(js|css)/g, '/build/$1-HASH.$2');
+  test('its item page renders through the kind presenter', () => {
+    assert.equal(proof.api.item.status, 200);
+    assert.equal(proof.api.item.body.kind, KIND);
+    assert.equal(proof.api.item.body.bubbles.length, 2);
+  });
 
-test('the core is untouched: only the kind folders, its migration and regenerated build output changed', () => {
-  const changed = git(['status', '--porcelain', '--untracked-files=all']).split('\n').filter(Boolean).map((line) => line.slice(3));
-  const own = [`src/kinds/${KIND}/`, `public/js/kinds/${KIND}/`, `test/kinds/${KIND}/`];
-  const outside = changed.filter((p) => !own.some((dir) => p.startsWith(dir)) && p !== proof.migration);
-  assert.ok(changed.includes(proof.migration));
-  for (const p of outside) assert.ok(p === 'vercel.json' || /^public\/[a-z0-9-]+\.html$/.test(p), `unexpected change: ${p}`);
-  for (const html of outside.filter((p) => p.endsWith('.html'))) {
-    assert.equal(withoutBundleHashes(readFileSync(path.join(copy, html), 'utf8')), withoutBundleHashes(git(['show', `HEAD:${html}`])), `${html}: only bundle hashes changed`);
-  }
-  if (outside.includes('vercel.json')) {
-    const now = JSON.parse(readFileSync(path.join(copy, 'vercel.json'), 'utf8'));
-    const was = JSON.parse(git(['show', 'HEAD:vercel.json']));
-    const kindRewrite = { source: `/${KIND}/:id`, destination: `/api/meta/${KIND}/:id` };
-    assert.deepEqual(now.rewrites.filter((/** @type {any} */ r) => r.source === kindRewrite.source), [kindRewrite]);
-    assert.deepEqual({ ...now, rewrites: now.rewrites.filter((/** @type {any} */ r) => r.source !== kindRewrite.source) }, was);
-  }
+  /** @param {string} text */
+  const withoutBundleHashes = (text) => text.replace(/\/build\/([A-Za-z0-9_]+)-[A-Za-z0-9]+\.(js|css)/g, '/build/$1-HASH.$2');
+
+  test('the core is untouched: only the kind folders, its migration and regenerated build output changed', () => {
+    const changed = git(['status', '--porcelain', '--untracked-files=all']).split('\n').filter(Boolean).map((line) => line.slice(3));
+    const own = [`src/kinds/${KIND}/`, `public/js/kinds/${KIND}/`, `test/kinds/${KIND}/`];
+    const outside = changed.filter((p) => !own.some((dir) => p.startsWith(dir)) && p !== proof.migration);
+    assert.ok(changed.includes(proof.migration));
+    for (const p of outside) assert.ok(p === 'vercel.json' || /^public\/[a-z0-9-]+\.html$/.test(p), `unexpected change: ${p}`);
+    for (const html of outside.filter((p) => p.endsWith('.html'))) {
+      assert.equal(withoutBundleHashes(readFileSync(path.join(copy, html), 'utf8')), withoutBundleHashes(git(['show', `HEAD:${html}`])), `${html}: only bundle hashes changed`);
+    }
+    if (outside.includes('vercel.json')) {
+      const now = JSON.parse(readFileSync(path.join(copy, 'vercel.json'), 'utf8'));
+      const was = JSON.parse(git(['show', 'HEAD:vercel.json']));
+      const kindRewrite = { source: `/${KIND}/:id`, destination: `/api/meta/${KIND}/:id` };
+      assert.deepEqual(now.rewrites.filter((/** @type {any} */ r) => r.source === kindRewrite.source), [kindRewrite]);
+      assert.deepEqual({ ...now, rewrites: now.rewrites.filter((/** @type {any} */ r) => r.source !== kindRewrite.source) }, was);
+    }
+  });
 });

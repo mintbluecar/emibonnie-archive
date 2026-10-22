@@ -1,4 +1,5 @@
 -- __NNN_____name__: the __name__ kind (src/kinds/__name__/). Scaffolded by `npm run new kind __name__`.
+-- New tables reach the app role only when migrate runs with APP_DB_ROLE (docs/start-your-own.md, step 5).
 -- Conventions: docs/decisions/0006-data-model-conventions.md. Like `translations` in 001_initial.sql, a kind
 -- table is a child of `items` (which carries the common columns, soft delete and `meta`): keyed by `item_id`,
 -- with a composite foreign key to items (id, kind), so a row can never point at another kind's item.

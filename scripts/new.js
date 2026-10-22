@@ -17,7 +17,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PLANS, varsOf } from './newPlans.js';
+import { NOTES, PLANS, varsOf } from './newPlans.js';
+import { RESERVED_WORDS } from './newChecks.js';
 
 const TEMPLATES = fileURLToPath(new URL('./templates/', import.meta.url));
 const NAME = /^[a-z][a-z0-9_]*$/;
@@ -38,6 +39,7 @@ export function scaffold({ kind, name, root = '.', site = false, siteDir = proce
   if (!Object.hasOwn(PLANS, kind)) throw new Error(`unknown scaffold "${kind}": use one of ${Object.keys(PLANS).join(', ')}`);
   if (!NAME.test(name)) throw new Error(`name must match ^[a-z][a-z0-9_]*$: "${name}"`);
   const vars = varsOf(name);
+  if (RESERVED_WORDS.has(vars.camel)) throw new Error(`"${name}" is a JavaScript reserved word (it becomes the identifier ${vars.camel}); pick another name`);
   const plan = PLANS[kind](vars, { root, site, siteDir });
   const taken = plan.files.filter((f) => existsSync(path.join(root, f.target))).map((f) => `${f.target} already exists`);
   const conflicts = [...taken, ...plan.conflicts];
@@ -52,6 +54,11 @@ export function scaffold({ kind, name, root = '.', site = false, siteDir = proce
   return [...rendered, ...edited].map((f) => f.target);
 }
 
+/** What to do next that a scaffold can't do itself (e.g. a route's privacy-sweep entry). @param {string} kind @param {string} name @returns {string[]} */
+export function notesFor(kind, name) {
+  return Object.hasOwn(NOTES, kind) ? NOTES[kind](varsOf(name)) : [];
+}
+
 /** @param {string[]} argv @returns {void} */
 function main(argv) {
   const site = argv.includes('--site');
@@ -63,6 +70,7 @@ function main(argv) {
   }
   try {
     for (const target of scaffold({ kind, name, site })) console.log(`wrote ${target}`);
+    for (const note of notesFor(kind, name)) console.log(note);
     console.log(`next: follow the "${kind}" recipe in CONTRIBUTING.md, then npm run build && npm run check && npm test`);
   } catch (/** @type {any} */ err) {
     console.error(err.message ?? String(err));

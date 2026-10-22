@@ -14,8 +14,16 @@
 #   environment "preview":    DATABASE_URL_PREVIEW  (Neon `preview` branch)
 #                             VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
 # Why environments: a job only receives the secrets of the environment it names, so the preview job --
-# which runs code from a pull request -- can never read the production DATABASE_URL, even by mistake.
-# Give "production" a deployment-branch rule (main only) so nothing else can use it either.
+# which runs code from a pull request -- never receives the production DATABASE_URL.
+# Give "production" a deployment-branch rule (main only) so no other branch's job can use it either.
+#
+# Optional repository variable (Settings -> Secrets and variables -> Actions -> Variables):
+#   APP_DB_ROLE   the least-privilege role the running site connects as (docs/start-your-own.md, step 5).
+#                 When set, each migrate step grants it access to new tables; empty skips the grant.
+#
+# The running site reads its own DATABASE_URL from Vercel, not from here: store it in Vercel as type
+# **Secret** (write-only after saving) in both the Production and the Preview scope, with that scope's
+# database (https://vercel.com/docs/environment-variables/sensitive-environment-variables).
 #
 # Actions are pinned to full commit SHAs (the tag in the trailing comment), the same pins as the
 # engine's own .github/workflows/ci.yml. The Vercel CLI is pinned to an exact npm version.
@@ -76,6 +84,7 @@ jobs:
         run: npm run migrate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          APP_DB_ROLE: ${{ vars.APP_DB_ROLE }}
       - run: npx --yes vercel@65.1.0 pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx --yes vercel@65.1.0 build --prod --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx --yes vercel@65.1.0 deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
@@ -103,8 +112,9 @@ jobs:
         run: npm run migrate
         env:
           # The preview branch's URL, under the name npm run migrate reads. This job's environment
-          # ("preview") holds no DATABASE_URL secret, so production's is out of reach here.
+          # ("preview") holds no DATABASE_URL secret, so this job never receives production's.
           DATABASE_URL: ${{ secrets.DATABASE_URL_PREVIEW }}
+          APP_DB_ROLE: ${{ vars.APP_DB_ROLE }}
       - run: npx --yes vercel@65.1.0 pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx --yes vercel@65.1.0 build --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx --yes vercel@65.1.0 deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}

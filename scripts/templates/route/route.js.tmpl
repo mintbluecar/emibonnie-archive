@@ -12,6 +12,11 @@ import { PUBLIC_CACHE } from '../http/handler.js';
  * `filterOptions`. Document the response shape in src/http/contracts.js.
  * A GET is cached (`PUBLIC_CACHE`); a write is `'no-store'` and gets the
  * handler's Origin check.
+ *
+ * Privacy: add representative calls for this route to the sweep in
+ * test/privacy.test.js (`npm run new` reminds you) -- `npm test` fails
+ * until every registered route is called there, so nothing can leak an
+ * opted-out account, a removed item or a blocked submitter's work.
  */
 export const route = {
   method: 'GET',

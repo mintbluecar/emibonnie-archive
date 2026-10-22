@@ -91,6 +91,37 @@ test('Bad-Name, an unknown kind and a reserved kind URL prefix all throw', () =>
   });
 });
 
+test('kind t, page t and page api are refused with a clear reason, and nothing is written', () => {
+  inTempRoot((root) => {
+    const before = filesUnder(root);
+    assert.throws(() => scaffold({ kind: 'kind', name: 't', root }), /\/t\/ belongs to the translation kind/);
+    assert.throws(() => scaffold({ kind: 'page', name: 't', root }), /\/t would shadow item pages/);
+    assert.throws(() => scaffold({ kind: 'page', name: 'api', root }), /\/api is the API, not a page/);
+    assert.throws(() => scaffold({ kind: 'page', name: 'e', root }), /already has a page under \/e\//);
+    assert.deepEqual(filesUnder(root), before);
+  });
+});
+
+test('a kind folder already using a prefix blocks a page there, and another kind with the same prefix', () => {
+  inTempRoot((root) => {
+    scaffold({ kind: 'kind', name: 'clip_note', root });
+    assert.throws(() => scaffold({ kind: 'page', name: 'clip_note', root }), /shadow the clip_note kind's item pages/);
+    assert.throws(() => scaffold({ kind: 'kind', name: 'clip_note', root }), /already exists/);
+  });
+});
+
+test('JavaScript reserved words and names src/routes/index.js already binds are refused', () => {
+  inTempRoot((root) => {
+    const before = filesUnder(root);
+    assert.throws(() => scaffold({ kind: 'component', name: 'delete', root }), /reserved word/);
+    assert.throws(() => scaffold({ kind: 'route', name: 'class', root }), /reserved word/);
+    assert.throws(() => scaffold({ kind: 'route', name: 'home', root }), /already binds the name home/);
+    assert.throws(() => scaffold({ kind: 'route', name: 'kinds_registry', root }), /already binds the name kindsRegistry/);
+    assert.throws(() => scaffold({ kind: 'route', name: 'page_meta_routes', root }), /already binds the name pageMetaRoutes/);
+    assert.deepEqual(filesUnder(root), before);
+  });
+});
+
 test('route registers itself at the marked insertion points in src/routes/index.js', () => {
   inTempRoot((root) => {
     const created = scaffold({ kind: 'route', name: 'top_items', root });
@@ -154,6 +185,9 @@ test('CLI: prints what it made; a repeat or a bad name exits 1 with the reason',
     const ok = run(['component', 'badge']);
     assert.equal(ok.status, 0, ok.stderr);
     assert.match(ok.stdout, /wrote public\/js\/components\/badge\.js/);
+    const route = run(['route', 'top_items']);
+    assert.equal(route.status, 0, route.stderr);
+    assert.match(route.stdout, /reminder: add representative calls for \/api\/top-items to test\/privacy\.test\.js/);
     const again = run(['component', 'badge']);
     assert.equal(again.status, 1);
     assert.match(again.stderr, /already exists/);

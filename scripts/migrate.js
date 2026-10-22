@@ -17,6 +17,29 @@ import { grantAppRole } from '../src/repo/roles.js';
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 export const ENGINE_MIGRATIONS = path.join(REPO_ROOT, 'src/db/migrations');
 
+/**
+ * Where `npm run migrate` writes: the env's `DATABASE_URL` (always, when
+ * deployed) or a local PGlite directory (`PGLITE_DIR`). With neither it
+ * refuses, rather than migrating a throwaway in-memory database and
+ * reporting success.
+ * @param {Record<string, string|undefined>} env
+ * @returns {{ url?: string, dir?: string }}
+ */
+export function migrateTargetOf(env) {
+  if (!env.DATABASE_URL && !env.PGLITE_DIR) throw new Error('DATABASE_URL is not set (set PGLITE_DIR to migrate a local dev database)');
+  return dbOptionsFromEnv(env);
+}
+
+/**
+ * The one line printed for a failed run: the error's message, else its
+ * code, else a generic line. Never the connection string.
+ * @param {any} err
+ * @returns {string}
+ */
+export function errorText(err) {
+  return err?.message || err?.code || 'database connection failed';
+}
+
 /** @param {string} siteDir @returns {import('../src/db/migrate.js').MigrationDir[]} */
 export function migrationDirs(siteDir) {
   return [
@@ -48,7 +71,7 @@ export async function runMigrate(options = {}) {
   const siteDir = options.siteDir ?? process.env.SITE_DIR ?? 'site';
   const log = options.log ?? console.log;
   const ownDb = !options.db;
-  const db = options.db ?? createDb(dbOptionsFromEnv(process.env));
+  const db = options.db ?? createDb(migrateTargetOf(process.env));
   try {
     const applied = await migrate(db, { dirs: migrationDirs(siteDir) });
     for (const label of applied) log(`migrated ${label}`);
@@ -64,7 +87,7 @@ async function main() {
   try {
     await runMigrate();
   } catch (/** @type {any} */ err) {
-    console.error(err.message ?? String(err));
+    console.error(errorText(err));
     process.exitCode = 1;
   }
 }

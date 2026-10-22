@@ -1,4 +1,5 @@
 -- __NNN_____name__: TODO say what this changes and why.
+-- New tables reach the app role only when migrate runs with APP_DB_ROLE (docs/start-your-own.md, step 5).
 -- Scaffolded by `npm run new migration __name__`. Conventions: docs/decisions/0006-data-model-conventions.md
 -- (common columns, soft delete, `meta jsonb`, text-coded lookup rows, composite FKs on kind tables).
 -- Runs inside one transaction (src/db/migrate.js); never add begin/commit here.

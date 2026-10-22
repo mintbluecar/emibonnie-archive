@@ -61,8 +61,11 @@ export async function start() {
   const root = document.getElementById(APP_SELECTOR);
   if (!root) return;
   document.title = `${t('__camel__.title')} · ${site.name}`;
+  // The page's one sequence state: every later refetch (a filter, a "more" button, a retry) must
+  // call load(root, state) with THIS object, or its guard can't see the newer request.
+  const state = { seq: 0 };
   try {
-    await load(root, { seq: 0 });
+    await load(root, state);
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) {
       mountPage(root, pageShell.render({ compact: true, content: emptyState.render({ message: t('static.notFound') }) }));

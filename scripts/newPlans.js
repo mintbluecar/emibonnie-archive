@@ -8,7 +8,7 @@
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { RESERVED_URL_PREFIXES } from '../src/kinds/defineKind.js';
+import { boundNames, kindPrefixProblems, pagePrefixProblems } from './newChecks.js';
 
 /**
  * @typedef {{ name: string, camel: string, Pascal: string, dash: string, NNN: string }} Vars
@@ -66,9 +66,10 @@ function migrationStep(dirRel, vars, options, template) {
   };
 }
 
-/** @param {Vars} v @returns {Plan} */
-function routePlan(v) {
+/** @param {Vars} v @param {PlanOptions} options @returns {Plan} */
+function routePlan(v, options) {
   const index = 'src/routes/index.js';
+  const bound = boundNames(readFileSync(path.join(options.root, index), 'utf8'));
   return {
     files: [
       { template: 'route/route.js.tmpl', target: `src/routes/${v.camel}.js` },
@@ -81,7 +82,7 @@ function routePlan(v) {
         ROUTES_MARKER, `${v.camel},`, index,
       ),
     }],
-    conflicts: [],
+    conflicts: bound.has(v.camel) ? [`${index} already binds the name ${v.camel}; pick another name`] : [],
   };
 }
 
@@ -103,7 +104,7 @@ function pagePlan(v, options) {
       { target: copyFile, apply: (text) => `${JSON.stringify({ ...JSON.parse(text), ...keys }, null, 2)}\n` },
     ],
     conflicts: [
-      ...(pagesText.includes(`path: '/${v.dash}'`) ? [`${pagesFile} already lists /${v.dash}`] : []),
+      ...(pagesText.includes(`path: '/${v.dash}'`) ? [`${pagesFile} already lists /${v.dash}`] : pagePrefixProblems(options.root, v.dash)),
       ...Object.keys(keys).filter((key) => Object.hasOwn(copy, key)).map((key) => `${copyFile} key ${key} already exists`),
     ],
   };
@@ -132,7 +133,6 @@ function migrationPlan(v, options) {
 function kindPlan(v, options) {
   const server = ['index.js', 'domain.js', 'repo.js', 'presenter.js', 'search.js', 'copy.json'];
   const { step, conflicts } = migrationStep(ENGINE_MIGRATIONS, v, options, 'kind/migration.sql.tmpl');
-  const prefix = `/${v.dash}/`;
   const folders = [`src/kinds/${v.name}`, `public/js/kinds/${v.name}`, `test/kinds/${v.name}`];
   return {
     files: [
@@ -144,11 +144,18 @@ function kindPlan(v, options) {
     edits: [],
     conflicts: [
       ...conflicts,
-      ...(RESERVED_URL_PREFIXES.includes(prefix) ? [`the URL prefix ${prefix} is reserved by the engine (src/pages.js); pick another name`] : []),
+      ...kindPrefixProblems(options.root, `/${v.dash}/`, v.name),
       ...folders.filter((dir) => existsSync(path.join(options.root, dir))).map((dir) => `${dir}/ already exists`),
     ],
   };
 }
+
+/** What to do next that a scaffold can't do itself, by kind (printed by the CLI). @type {Record<string, (vars: Vars) => string[]>} */
+export const NOTES = {
+  route: (v) => [
+    `reminder: add representative calls for /api/${v.dash} to test/privacy.test.js -- npm test fails until every route is in the privacy sweep`,
+  ],
+};
 
 /** @type {Record<string, (vars: Vars, options: PlanOptions) => Plan>} */
 export const PLANS = { route: routePlan, page: pagePlan, component: componentPlan, migration: migrationPlan, kind: kindPlan };

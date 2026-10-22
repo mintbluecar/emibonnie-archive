@@ -2,15 +2,32 @@
 
 A step-by-step guide to running your own fan archive on this engine, on free plans, as its owner. Each archive is fully independent: its own repo, database, accounts and moderation. You need a computer with [Node 22+](https://nodejs.org/) and git, and the patience to follow the steps in order. The examples use the template's fictional example site, `solluna archive`.
 
-## 1. Use the template
+## 1. Copy the template, keeping its history
 
-Create your repo from the template (GitHub's **Use this template**, or clone it and push to a new repo). Keep the repo **private** if you'll store backups there (see [limits](limits.md)). Then:
+Clone the engine and push it to a new, empty repo of your own. Cloning keeps the engine's history and release tags, which is what lets you take updates later with a plain `git merge` (step 10).
 
-```sh
-git clone <your repo's URL> my-archive
-cd my-archive
-npm install
-```
+1. Clone the engine:
+
+   ```sh
+   git clone git@github.com:mintbluecar/fan-archive.git my-archive
+   cd my-archive
+   ```
+
+2. Create an **empty** repo on GitHub (no README, licence or `.gitignore`). Keep it **private** if you'll store backups there ([limits](limits.md)). Then point the clone at it, keeping the engine as `upstream`:
+
+   ```sh
+   git remote rename origin upstream
+   git remote add origin <your repo's URL>
+   ```
+
+3. Push, then install:
+
+   ```sh
+   git push -u origin main
+   npm install
+   ```
+
+Don't use GitHub's **Use this template** button: it copies the files without their history, so later engine releases can't be merged and every upgrade becomes a hand-copy.
 
 ## 2. Make `site/` yours
 
@@ -44,7 +61,7 @@ You need Vercel, Neon and GitHub accounts, plus later an X developer app and Goo
 4. Create a branch named **`preview`** for preview deploys, so they never touch your real data.
 5. Copy both connection strings, for the main branch and for `preview`. Treat them as passwords.
 6. Optional, recommended: create a second, least-privilege role for the app in Neon.
-   - Run `setup`/`migrate` as the owner with `APP_DB_ROLE=<role>`. They grant that role read and write on every table, except changing the audit log or the migration records.
+   - Run `setup`/`migrate` as the owner with `APP_DB_ROLE=<role>`. They grant that role read and write on every table, except changing the audit log or the migration records. Tables that a later migration adds reach the role only when that migrate also runs with `APP_DB_ROLE`, so set it every time (the deploy workflow takes it from a repository variable).
    - Give Vercel that role's connection string. The running site then can't rewrite its own edit history. The deploy workflow's migrate step keeps the owner's string.
 
 ## 6. Deploy
@@ -55,12 +72,18 @@ Choose the path that matches who owns your repo.
 
 The simplest path. In Vercel: **Add New → Project**, import your repo, and deploy. Vercel runs `npm run build` (set in the generated `vercel.json`). Every push to `main` deploys to production, and every pull request gets a preview.
 
-With this path Vercel doesn't run migrations for you. Before you push an update whose `CHANGELOG.md` entry lists a migration, run it yourself against each database:
-
-```sh
-DATABASE_URL='<main branch string>' npm run migrate
-DATABASE_URL='<preview branch string>' npm run migrate
-```
+> **Migrate first, then merge or deploy.** On this path nothing runs migrations for you, on purpose: a build that migrated would need a database URL that can write, inside every preview build of pull-request code. Whenever an update's `CHANGELOG.md` entry lists a migration, do these in order:
+>
+> 1. Migrate the preview database, then check the pull request's preview deploy.
+> 2. Migrate the production database.
+> 3. Only then merge to `main` (which deploys to production).
+>
+> ```sh
+> DATABASE_URL='<preview branch string>' APP_DB_ROLE=<role> npm run migrate
+> DATABASE_URL='<main branch string>' APP_DB_ROLE=<role> npm run migrate
+> ```
+>
+> Leave out `APP_DB_ROLE=<role>` if you skipped the app role in step 5. Migrations are expand-only within a release (ADR 0004), so the site that's still live keeps working against the migrated database until the merge deploys.
 
 ### Actions + token path (repo owned by a GitHub organisation)
 
@@ -75,14 +98,15 @@ Vercel Hobby can't connect to organisation-owned repos, so a GitHub Actions work
 
 Secrets live only in Vercel environment variables, GitHub environment secrets and your own untracked `.env` files. Never commit them.
 
-- **Vercel** (Project → Settings → Environment Variables). The app reads `DATABASE_URL`, so set it in both scopes:
-  - **Production:** `DATABASE_URL` = the main branch string.
+- **Vercel** (Project → Settings → Environment Variables). The app reads `DATABASE_URL`, so set it in both scopes, as type **Secret** (write-only once saved; see [Vercel's Config and Secret environment variables](https://vercel.com/docs/environment-variables/sensitive-environment-variables)):
+  - **Production:** `DATABASE_URL` = the main branch string (the app role's, if you made one in step 5).
   - **Preview:** `DATABASE_URL` = the `preview` branch string.
   - Optional: `ALLOWED_ORIGINS`, a comma-separated list of extra exact origins allowed to send writes (e.g. a custom domain during a move).
 - **GitHub** (Actions path only; Settings → Environments):
   - Environment **`production`**: `DATABASE_URL`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`. Restrict it to the `main` branch.
   - Environment **`preview`**: `DATABASE_URL_PREVIEW`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
-  - Keeping them in separate environments means a pull request's preview job can never read the production database URL.
+  - Optional repository variable `APP_DB_ROLE` (Settings → Secrets and variables → Actions → Variables): the app role from step 5. The migrate steps then grant it access to new tables.
+  - Keeping them in separate environments means a pull request's preview job never receives the production database URL.
 - Sign-in secrets (X, Google) arrive with the release that adds sign-in. Its `CHANGELOG.md` entry lists them.
 
 ## 8. Set up the database and check
@@ -102,15 +126,21 @@ DATABASE_URL='<main branch string>' npm run doctor    # every line should be ✓
 
 ## 10. Pull engine updates
 
-Releases are semver tags. To take one:
+Releases are semver tags. Your clone already has the engine as `upstream` (step 1). To take a release:
 
 ```sh
-git remote add upstream git@github.com:mintbluecar/fan-archive.git   # once
 git fetch upstream --tags
 git merge vX.Y.Z
 ```
 
-Then follow that release's **Upgrade steps** in `CHANGELOG.md`, run `npm install && npm run build && npm test`, run `npm run doctor`, and push. The merge should be conflict-free as long as you've only changed `site/`. On the Git-integration path, run `npm run migrate` first if the release adds migrations (see step 6).
+Then:
+
+1. Follow that release's **Upgrade steps** in `CHANGELOG.md`.
+2. Run `npm install && npm run build && npm test`, then `npm run doctor`.
+3. On the Git-integration path, if the release adds migrations, migrate before you push (step 6: preview, then production).
+4. Push.
+
+The merge should be conflict-free as long as you've only changed `site/`.
 
 ## Troubleshooting
 
@@ -123,6 +153,7 @@ Then follow that release's **Upgrade steps** in `CHANGELOG.md`, run `npm install
 | `settings invalid` / a list of `site.json` field errors | `site.json` doesn't validate. Each error names the exact field (e.g. `region: must be one of the Vercel region codes (…)`). | Fix that field. [`site-settings.md`](site-settings.md) has every field's rules. |
 | `item_kinds is missing a row for: <kind>` | A kind folder exists with no migration inserting its `item_kinds` row. | Add the migration (`npm run new kind <name>` scaffolds one), then rerun. |
 | `checksum mismatch: engine/NNN_….sql was edited after it was applied` | A migration that already ran was changed: an edit, a bad merge, or the wrong version checked out. | Restore the file exactly as released (`git checkout vX.Y.Z -- src/db/migrations/NNN_….sql`). Never edit an applied migration; changes go in a new one. |
+| `checksum mismatch`, or a migration the code no longer has, on the **preview** database after merging | Two branches each added a migration with the same number (e.g. both a `002_…`), and the preview database ran the losing one. Migrations are numbered in order, and an applied one can't change. | Renumber the unmerged branch's file to the next free number. Then reset the Neon `preview` branch from main (Neon console → **Branches** → `preview` → **Reset from parent**; [Neon docs](https://neon.com/docs/guides/reset-from-parent)), which discards the preview data, and run `migrate` on it again. Production only ever runs merged migrations. |
 | Connection or timeout errors on the first command | Neon sleeps after 5 minutes idle and the first connection wakes it, or the string is wrong. | Retry once. If it persists, copy the string again from the Neon console. |
 
 ### `npm run doctor`
@@ -134,6 +165,6 @@ Then follow that release's **Upgrade steps** in `CHANGELOG.md`, run `npm install
 | `✗ settings invalid — fix site/site.json: …` | As above: the message names each bad field. |
 | `✗ missing env var(s): DATABASE_URL` | Set it for the command: `DATABASE_URL='…' npm run doctor`. |
 | `✗ engine version vA is behind upstream vB — …` | Pull the update (step 10). |
-| `· engine version — skipped (no upstream remote / upstream unreachable / no vX.Y.Z tags)` | Not an error. Add the `upstream` remote (step 10) to get this check. |
+| `· engine version — skipped (no upstream remote / upstream unreachable / no vX.Y.Z tags)` | Not an error. Add the `upstream` remote (step 1) to get this check. |
 
 See also: [what happens at each free-tier limit, and how to spot it early](limits.md).

@@ -38,6 +38,6 @@ The first release: a read-only archive (browse, search, item pages) with intake 
   - `CONTRIBUTING.md` has a recipe for each extension point.
   - New docs: `docs/start-your-own.md`, `docs/limits.md`, and `docs/deploy-workflow.example.yml` (the Actions + token deploy path).
 - **Operations:**
-  - `npm run migrate` (engine then site migrations, used by deploys).
+  - `npm run migrate` (engine then site migrations, used by deploys). It refuses to run with neither `DATABASE_URL` nor `PGLITE_DIR` set.
   - `npm run doctor` handles peeled annotated tags.
   - Site regions follow Vercel's current list, now including `yul1`.

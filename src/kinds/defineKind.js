@@ -205,14 +205,28 @@ function shapeProblems(spec) {
 }
 
 /**
+ * Why `prefix` (`/x/`) can't be `kindName`'s item-page prefix, or null
+ * when it can: an engine page's or the API's (`RESERVED_URL_PREFIXES`),
+ * or one another kind owns. The one check `defineKind` and the
+ * scaffolder (`scripts/newPlans.js`) share. Pass no `kindName` to ask
+ * whether any kind owns it (e.g. for a new page's path).
+ * @param {string} prefix
+ * @param {string} [kindName]
+ * @returns {string|null}
+ */
+export function urlPrefixProblem(prefix, kindName) {
+  if (RESERVED_URL_PREFIXES.includes(prefix)) return `urlPrefix ${prefix} is reserved by the engine`;
+  const owner = Object.hasOwn(OWNED_URL_PREFIXES, prefix) ? OWNED_URL_PREFIXES[prefix] : undefined;
+  return owner && owner !== kindName ? `urlPrefix ${prefix} belongs to the ${owner} kind` : null;
+}
+
+/**
  * @param {any} spec
  * @returns {string[]}
  */
 function prefixProblems(spec) {
-  const prefix = spec.urlPrefix;
-  if (RESERVED_URL_PREFIXES.includes(prefix)) return [`urlPrefix ${prefix} is reserved by the engine`];
-  const owner = Object.hasOwn(OWNED_URL_PREFIXES, prefix) ? OWNED_URL_PREFIXES[prefix] : undefined;
-  return owner && owner !== spec.name ? [`urlPrefix ${prefix} belongs to the ${owner} kind`] : [];
+  const problem = urlPrefixProblem(spec.urlPrefix, spec.name);
+  return problem ? [problem] : [];
 }
 
 /**
