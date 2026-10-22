@@ -143,7 +143,7 @@ Then:
 3. On the Git-integration path, if the release adds migrations, migrate before you push (step 6: preview, then production).
 4. Push.
 
-The merge should be conflict-free as long as you've only changed `site/`.
+The merge should be conflict-free as long as you've only changed `site/` (and deleted lines in `.gitignore`'s marked site-repo block, plus committed your `vercel.json` on the Git-integration path). One known exception: a site made from an early build of 0.1.0, which still tracks the built pages, conflicts once. `CHANGELOG.md`'s 0.1.0 upgrade steps resolve it.
 
 ## Troubleshooting
 
