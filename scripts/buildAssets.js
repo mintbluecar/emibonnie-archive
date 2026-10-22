@@ -6,7 +6,7 @@
  * `scripts/buildBundle.js` adds esbuild's page JS and ties this together
  * with `manifest.json` and the HTML placeholder rewrite.
  */
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, copyFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import * as esbuild from 'esbuild';
@@ -43,9 +43,9 @@ const UNICODE_RANGES = {
   thai: 'U+02D7,U+0303,U+0331,U+0E01-0E5B,U+200C-200D,U+25CC',
 };
 
-/** @param {string} text @returns {string} a short, stable content hash for cache-busting filenames */
-export function contentHash(text) {
-  return crypto.createHash('sha256').update(text).digest('hex').slice(0, 10);
+/** @param {string|Buffer} content @returns {string} a short, stable content hash for cache-busting filenames */
+export function contentHash(content) {
+  return crypto.createHash('sha256').update(content).digest('hex').slice(0, 10);
 }
 
 /**
@@ -105,7 +105,11 @@ function fontFilePath(engineRoot, spec, subset, weight) {
 }
 
 /**
- * Copies every weight/subset a font spec ships into `fontsDir`.
+ * Copies every weight/subset a font spec ships into `fontsDir`, each
+ * renamed to `<original-stem>-<hash>.woff2` -- `/build/*` is cached
+ * `immutable` for a year, so a same-named `@fontsource` update (a new
+ * version shipping different bytes under the same filename) must still
+ * reach visitors as a new URL, the same as `app.css`/`fonts.css`.
  * @param {string} engineRoot @param {string} fontsDir @param {FontSpec} spec
  * @returns {FontFace[]}
  */
@@ -116,8 +120,9 @@ function copyOneFontSpec(engineRoot, fontsDir, spec) {
     for (const subset of spec.subsets) {
       const src = fontFilePath(engineRoot, spec, subset, weight);
       if (!src) continue;
-      const fileName = path.basename(src);
-      copyFileSync(src, path.join(fontsDir, fileName));
+      const bytes = readFileSync(src);
+      const fileName = `${path.basename(src, '.woff2')}-${contentHash(bytes)}.woff2`;
+      writeFileSync(path.join(fontsDir, fileName), bytes);
       faces.push({ family: spec.family, weight, fileName, unicodeRange: spec.subsets.length > 1 ? UNICODE_RANGES[subset] : null });
     }
   }

@@ -76,7 +76,7 @@ test('runBuild: self-hosts only woff2 files, for weights 400/600/700(/800), lati
     assert.ok(files.length > 0, 'at least one font file was copied');
     for (const file of files) {
       assert.ok(file.endsWith('.woff2'), `${file} is a woff2 file`);
-      assert.match(file, /-(400|600|700|800)-normal\.woff2$/);
+      assert.match(file, /-(400|600|700|800)-normal-[0-9a-f]{10}\.woff2$/);
     }
     assert.ok(files.some((f) => f.includes('nunito') && f.includes('latin')));
     assert.ok(files.some((f) => f.includes('ibm-plex-sans-thai') && f.includes('thai')));
@@ -84,6 +84,29 @@ test('runBuild: self-hosts only woff2 files, for weights 400/600/700(/800), lati
     const fontsCss = readFileSync(path.join(repoRoot, 'public/build', JSON.parse(readFileSync(path.join(repoRoot, 'public/build/manifest.json'), 'utf8')).fontsCss), 'utf8');
     assert.match(fontsCss, /font-display:\s*swap/);
     assert.ok(!fontsCss.includes('fonts.googleapis.com'), 'no Google Fonts origin');
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test('runBuild: every font file is content-hashed, and every fonts.css url resolves to one that exists', async () => {
+  const { repoRoot, siteDir } = makeBundlingRepoRoot();
+  try {
+    await runBuild({ repoRoot, siteDir });
+    const manifest = JSON.parse(readFileSync(path.join(repoRoot, 'public/build/manifest.json'), 'utf8'));
+    const fontsDir = path.join(repoRoot, 'public/build/fonts');
+    const files = readdirSync(fontsDir);
+    assert.ok(files.length > 0);
+    for (const file of files) assert.match(file, /-[0-9a-f]{10}\.woff2$/, `${file} carries a content hash`);
+
+    const fontsCss = readFileSync(path.join(repoRoot, 'public/build', manifest.fontsCss), 'utf8');
+    const urls = [...fontsCss.matchAll(/url\('\.\/fonts\/([^']+)'\)/g)].map((m) => m[1]);
+    assert.ok(urls.length > 0, 'fonts.css declares at least one @font-face src url');
+    for (const fileName of urls) {
+      assert.ok(existsSync(path.join(fontsDir, fileName)), `fonts.css references ${fileName}, which must exist on disk`);
+    }
+    // every referenced file is also one of the ones actually copied (no stray/unhashed leftovers)
+    assert.deepEqual([...urls].sort(), [...files].sort());
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }
