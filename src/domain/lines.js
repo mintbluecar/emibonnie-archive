@@ -11,9 +11,15 @@
  * @typedef {{marker: string, count: number}} Marker
  */
 
-const MARKER_WINDOW = 12;
-const LABEL_MARKER = /^[A-Za-z0-9]{1,3}$/;
+/** A label marker: 1-3 alphanumerics, at least one a letter (M1b: a bare number, e.g. a clock time's "10", is never a marker). */
+const LABEL_MARKER = /^(?=.*[A-Za-z])[A-Za-z0-9]{1,3}$/;
 const FOOTNOTE_PREFIX = /^(\*{1,2})\s(.*)$/;
+/** A joint marker is at most this many component markers (review round 1, I1). */
+const MAX_JOINT_MARKERS = 4;
+/** An emoji keycap sequence: digit/`#`/`*`, an optional variation selector, the combining enclosing keycap U+20E3 (Unicode UTS #51 ED-14c). */
+const KEYCAP_MARKER = /^[0-9#*]️?⃣$/u;
+/** An emoji flag sequence: exactly two Regional_Indicator symbols forming one grapheme cluster (Unicode UTS #51 ED-14). */
+const FLAG_MARKER = /^\p{Regional_Indicator}{2}$/u;
 
 /** @param {string} candidate */
 function graphemesOf(candidate) {
@@ -24,17 +30,17 @@ function graphemesOf(candidate) {
  * Whether `candidate` is one grapheme cluster that reads as an emoji: an
  * ordinary pictographic emoji (plain, skin-toned, or a ZWJ sequence --
  * `Extended_Pictographic` covers all three, since it matches on the base
- * character), a flag (two `Regional_Indicator` symbols forming one
- * cluster), or a keycap (digit/`#`/`*` plus the combining enclosing
- * keycap, U+20E3 -- neither `Extended_Pictographic` nor
- * `Regional_Indicator`, per Unicode's emoji-sequences.txt).
+ * character), an emoji flag sequence (`FLAG_MARKER`), or an emoji keycap
+ * sequence (`KEYCAP_MARKER`) -- the latter two are exact, anchored
+ * matches, so a lone regional indicator (not a flag) or a keycap mark on
+ * a non-digit base (not a keycap) correctly fail (review round 1, M1).
  * @param {string} candidate
  */
 function isEmojiMarker(candidate) {
   const graphemes = graphemesOf(candidate);
   if (graphemes.length !== 1) return false;
   const [grapheme] = graphemes;
-  return /\p{Extended_Pictographic}/u.test(grapheme) || /\p{Regional_Indicator}/u.test(grapheme) || grapheme.includes('⃣');
+  return /\p{Extended_Pictographic}/u.test(grapheme) || FLAG_MARKER.test(grapheme) || KEYCAP_MARKER.test(grapheme);
 }
 
 /** @param {string} candidate */
@@ -43,16 +49,18 @@ function isMarker(candidate) {
 }
 
 /**
- * A joint marker's component markers, when `candidate` is 2 or more
- * graphemes and each one is, on its own, a valid single-emoji marker
- * (so a skin-toned emoji, a ZWJ sequence, a flag or a keycap -- each
- * already one grapheme -- never splits). `null` otherwise.
+ * A joint marker's component markers, when `candidate` is 2 to
+ * `MAX_JOINT_MARKERS` graphemes and each one is, on its own, a valid
+ * single-emoji marker (so a skin-toned emoji, a ZWJ sequence, a flag or
+ * a keycap -- each already one grapheme -- never splits). `null`
+ * otherwise (including: too many graphemes, or any non-marker one --
+ * review round 1, I1).
  * @param {string} candidate
  * @returns {string[]|null}
  */
 function jointMarkersOf(candidate) {
   const graphemes = graphemesOf(candidate);
-  return graphemes.length >= 2 && graphemes.every(isEmojiMarker) ? graphemes : null;
+  return graphemes.length >= 2 && graphemes.length <= MAX_JOINT_MARKERS && graphemes.every(isEmojiMarker) ? graphemes : null;
 }
 
 /**
@@ -67,17 +75,20 @@ function markersOf(candidate) {
 }
 
 /**
- * The marker text immediately before a line's first `:`, if one is found
- * within `MARKER_WINDOW` characters of it and is a whole emoji grapheme
- * cluster, a short (1-3 character) label, or 2+ such emoji run together
- * (a joint marker). `null` otherwise.
+ * The marker text before a line's first `:` -- the whole prefix,
+ * trimmed, not a fixed-width slice of it (review round 1, I1: slicing a
+ * window could cut a longer prefix and read the leftover fragment as a
+ * false joint marker, or cut a multi-codepoint single marker like a ZWJ
+ * sequence mid-cluster). It's a marker when the whole prefix is a whole
+ * emoji grapheme cluster, a short (1-3 character, at least one letter)
+ * label, or 2 to `MAX_JOINT_MARKERS` such emoji run together (a joint
+ * marker). `null` otherwise.
  * @param {string} line
  * @param {number} colonIndex
  * @returns {{marker: string, markers: string[]}|null}
  */
 function markerBefore(line, colonIndex) {
-  const start = Math.max(0, colonIndex - MARKER_WINDOW);
-  const candidate = line.slice(start, colonIndex).trim();
+  const candidate = line.slice(0, colonIndex).trim();
   const markers = markersOf(candidate);
   return markers ? { marker: candidate, markers } : null;
 }

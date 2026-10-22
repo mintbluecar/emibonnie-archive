@@ -6,8 +6,12 @@
  * block at the end, however they were interleaved in `bubbles`. Pure view
  * models in, markup out -- this never resolves a person itself.
  *
- * A11y: every emoji speaker shows a visible name, or (an unmapped marker,
- * `name: null`) an `aria-label` on its avatar (see docs/.../1b plan,
+ * A11y: every emoji speaker shows a visible name -- a never-mapped
+ * marker (`name: null`) shows `item.unknownSpeaker` ("unknown speaker")
+ * in that same spot, rather than an avatar `aria-label` (review round 1,
+ * M2: a joint bubble's name is always visible text, since it's a join of
+ * every component's name, so a solo bubble does the same, instead of two
+ * different unmapped-marker treatments -- see docs/.../1b plan,
  * "Additional constraints" → Accessibility). Thai-script runs get
  * `lang="<site.sourceLanguage>"` (via public/js/core/thai.js, shared with
  * public/js/kinds/translation/detail.js).
@@ -35,12 +39,12 @@ function speechBubble(bubble) {
       </div>
     `;
   }
-  const hasName = bubble.name !== null;
+  const name = bubble.name ?? t('item.unknownSpeaker');
   return html`
     <div class="c-bubbles__msg"${bubble.colour ? html` data-c="${bubble.colour}"` : ''}>
-      <div class="c-bubbles__avatar" ${hasName ? '' : html`aria-label="${t('item.unknownSpeaker')}" role="img"`}>${bubble.emoji}</div>
+      <div class="c-bubbles__avatar">${bubble.emoji}</div>
       <div class="c-bubbles__bub">
-        ${hasName ? html`<div class="c-bubbles__name">${bubble.name}</div>` : ''}
+        <div class="c-bubbles__name">${name}</div>
         ${thaiSpans(bubble.text)}
       </div>
     </div>
@@ -49,9 +53,10 @@ function speechBubble(bubble) {
 
 /**
  * A joint line (2+ speakers at once): one neutral bubble (no `data-c`),
- * its avatars stacked in line order. A never-mapped component's own
- * avatar gets the same aria-label an unmapped solo marker would, and its
- * name joins in as `item.unknownSpeaker`, same text.
+ * its avatars stacked in line order. A never-mapped component's name
+ * joins in as `item.unknownSpeaker`, same as a solo unmapped marker's
+ * visible name (M2): no per-avatar `aria-label` here, so a screen reader
+ * reads it once, from the visible joined name, not again per avatar.
  * @param {import('../../../src/http/contracts.js').JointBubble} bubble
  * @returns {import('../core/html.js').SafeHtml}
  */
@@ -68,7 +73,7 @@ function jointBubble(bubble) {
   return html`
     <div class="c-bubbles__msg c-bubbles__msg--joint">
       <div class="c-bubbles__avatars">
-        ${bubble.parts.map((p) => html`<div class="c-bubbles__avatar" ${p.name === null ? html`aria-label="${t('item.unknownSpeaker')}" role="img"` : ''}>${p.emoji}</div>`)}
+        ${bubble.parts.map((p) => html`<div class="c-bubbles__avatar">${p.emoji}</div>`)}
       </div>
       <div class="c-bubbles__bub">
         <div class="c-bubbles__name">${name}</div>

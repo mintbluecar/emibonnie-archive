@@ -29,12 +29,12 @@ test('bubbles: a continuation bubble has no avatar or visible name', () => {
   assert.match(markup, /c-bubbles__avatar--blank/);
 });
 
-test('bubbles: an unmapped marker (name: null) gets an aria-label, not a visible name', () => {
+test('bubbles: an unmapped marker (name: null) shows "unknown speaker" as a visible name, no aria-label (review round 1, M2: consistent with a joint bubble\'s never-mapped component)', () => {
   /** @type {BubbleVM[]} */
   const bubbles = [{ kind: 'speech', emoji: '🌧️', name: null, text: 'mystery', cont: false }];
   const markup = String(render({ bubbles }));
-  assert.ok(!markup.includes('c-bubbles__name'));
-  assert.match(markup, /aria-label="unknown speaker"/);
+  assert.match(markup, /<div class="c-bubbles__name">unknown speaker<\/div>/);
+  assert.ok(!markup.includes('aria-label'));
 });
 
 test('bubbles: a joint bubble shows both emoji and names joined with " & ", neutral (no data-c)', () => {
@@ -46,11 +46,11 @@ test('bubbles: a joint bubble shows both emoji and names joined with " & ", neut
   assert.match(markup, />host &amp; host</);
 });
 
-test('bubbles: a joint bubble\'s never-mapped component gets an aria-label, same text as a solo unmapped marker', () => {
+test('bubbles: a joint bubble\'s never-mapped component joins into the visible name as "unknown speaker", with no per-avatar aria-label (M2: not announced twice)', () => {
   /** @type {BubbleVM[]} */
   const bubbles = [{ kind: 'joint', parts: [{ emoji: '🐸', name: null }, { emoji: '👦🏻', name: 'host' }], text: 'mystery duo', cont: false }];
   const markup = String(render({ bubbles }));
-  assert.match(markup, /aria-label="unknown speaker"/);
+  assert.ok(!markup.includes('aria-label'));
   assert.match(markup, />unknown speaker &amp; host</);
 });
 

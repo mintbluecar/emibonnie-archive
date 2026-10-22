@@ -188,13 +188,12 @@ test('a joint line of two markers both mapped to the generic "host" role is one 
   assert.equal(bubble.kind, 'joint');
   assert.equal('colour' in bubble, false);
   assert.deepEqual(bubble.parts, [{ emoji: '👦🏻', name: 'host' }, { emoji: '👩🏻', name: 'host' }]);
-  assert.equal(bubble.parts.map((/** @type {any} */ p) => p.name).join(' & '), 'host & host');
 });
 
-test('a joint line of two known people is one neutral bubble, names joined with " & "', () => {
+test('a joint line of two known people is one neutral bubble, no colour', () => {
   const bubble = jointBubbleFor(jointView.bubbles, 'joint known people');
+  assert.equal('colour' in bubble, false);
   assert.deepEqual(bubble.parts, [{ emoji: '☀️', name: 'sol' }, { emoji: '🌙', name: 'luna' }]);
-  assert.equal(bubble.parts.map((/** @type {any} */ p) => p.name).join(' & '), 'sol & luna');
 });
 
 test('a joint line\'s never-mapped component gets the same treatment as an unmapped single marker: its own emoji, name: null', () => {
@@ -214,8 +213,41 @@ test('consecutive identical joint lines collapse the same way single speakers do
   assert.equal(second.cont, true);
 });
 
-test('joint lines add no cast entries: the cast is unaffected by the 👦🏻🐸🗣️☀️🌙 joint lines, only SHARED\'s own solo 💬/🪇 lines', () => {
-  assert.deepEqual(jointView.cast.map((/** @type {any} */ c) => c.name), ['fan', 'host']);
+test('cast (review round 1, M5): a component that only ever speaks inside a joint line still appears, deduped, in order of first appearance; crowd (🗣️) and the never-mapped 🐸 stay out, as usual', () => {
+  assert.deepEqual(jointView.cast.map((/** @type {any} */ c) => [c.emoji, c.name]), [
+    ['💬', 'fan'],
+    ['🪇', 'host'],
+    ['👦🏻', 'host'],
+    ['👩🏻', 'host'],
+    ['☀️', 'sol'],
+    ['🌙', 'luna'],
+  ]);
+});
+
+/**
+ * A bare-bones `PresentContext` for calling `translation.present.preview`
+ * directly, with no DB (review round 1, I2's preview tests): the bug it
+ * covers is entirely inside `previewLines`'s speech filter, so there's
+ * no need to round-trip through ingest/review-state at all.
+ */
+function fakePreviewCtx() {
+  return { urlFor: (/** @type {string} */ kind, /** @type {string} */ id) => `/${kind}/${id}`, chips: () => [], people: new Map(), formatName: (/** @type {string} */ n) => n };
+}
+
+test('preview (review round 1, I2): an item that opens with a joint line gets a non-empty preview including it', () => {
+  const details = { body: '👦🏻👩🏻: hi everyone\n👦🏻: a solo line after', speakers: { '👦🏻': { role: 'host' }, '👩🏻': { role: 'host' } }, sources: [] };
+  const card = { sourceId: 'x', followsOn: null, people: [], account: null };
+  const preview = /** @type {any} */ (translation.present.preview(card, details, fakePreviewCtx()));
+  assert.ok(preview.lines.length > 0, 'non-empty preview');
+  assert.equal(preview.lines[0].kind, 'joint');
+});
+
+test('preview (review round 1, I2): an item whose only speech is a joint line still gets a non-empty preview, not the plain-line fallback', () => {
+  const details = { body: 'SOME HEADER\n\n👦🏻👩🏻: only joint speaker here', speakers: { '👦🏻': { role: 'host' }, '👩🏻': { role: 'host' } }, sources: [] };
+  const card = { sourceId: 'x', followsOn: null, people: [], account: null };
+  const preview = /** @type {any} */ (translation.present.preview(card, details, fakePreviewCtx()));
+  assert.ok(preview.lines.length > 0, 'non-empty preview');
+  assert.ok(preview.lines.some((/** @type {any} */ l) => l.kind === 'joint'));
 });
 
 test('a post with no speech lines previews its first 2 plain lines that are not header', async () => {

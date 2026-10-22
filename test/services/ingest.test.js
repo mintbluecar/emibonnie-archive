@@ -44,6 +44,17 @@ test('speakers carry over between tweets by the same translator', async () => {
   }
 });
 
+test('ingest: a component appearing only inside a joint line still ends up in `missing` (review round 1, I2/M4; task 7b, joint speaker lines)', async () => {
+  const deps = await ingestDeps();
+  try {
+    const result = await ingest(deps, IDS.LIVE, { overrides: { text: '👦🏻👩🏻: hi everyone, joint from the start' } });
+    assert.equal(result.status, 'needs_speakers');
+    assert.deepEqual(result.missing?.map((/** @type {any} */ m) => m.marker).sort(), ['👦🏻', '👩🏻']);
+  } finally {
+    await deps.db.end();
+  }
+});
+
 test('EVENT_A then EVENT_B land in one event, with one hashtag row and two item_tags', async () => {
   const deps = await ingestDeps();
   try {

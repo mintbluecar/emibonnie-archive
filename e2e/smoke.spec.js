@@ -46,6 +46,7 @@ const TINY_IMAGE_PATH = path.join(FIXTURES_DIR, 'tiny.png');
 const IDS = {
   LONG: '1900000000000000001',
   LIVE: '1900000000000000004',
+  JOINT_LIVE: '1900000000000000007',
   POST: '1900000000000000008',
   PHOTO: '1900000000000000009',
 };
@@ -148,6 +149,7 @@ const PAGES = [
   ['home', '/'],
   ['event', `/e/${EVENT_SLUG}`],
   ['item (LONG)', `/t/${IDS.LONG}`],
+  ['item (JOINT_LIVE, has a joint speaker bubble -- review round 1, M3)', `/t/${IDS.JOINT_LIVE}`],
   ['search', `/search?q=${SEARCH_Q}`],
   ['person', '/p/solsunny'],
   ['account', '/tl/tl_alpha'],

@@ -129,14 +129,15 @@ export function bubblesOf(details, ctx) {
 }
 
 /**
- * The first 2 speech bubbles, else the first 2 plain lines outside the
- * header (no hashtag, not the keyword or live line).
+ * The first 2 spoken bubbles (speech or joint), else the first 2 plain
+ * lines outside the header (no hashtag, not the keyword or live line).
+ * Review round 1, I2: a joint line is a spoken line too.
  * @param {TranslationDetails} details
  * @param {PresentContext} ctx
  */
 function previewLines(details, ctx) {
   const all = keyedBubbles(details, ctx);
-  const speech = all.filter((b) => b.kind === 'speech');
+  const speech = all.filter((b) => b.kind === 'speech' || b.kind === 'joint');
   if (speech.length > 0) return withContinuation(speech.slice(0, PREVIEW_LINES));
   const context = new Set((parseHeader(details.body, { livePatterns: LIVE_PATTERNS }).context ?? '').split('\n'));
   return withContinuation(all.filter((b) => b.kind === 'plain' && context.has(b.text)).slice(0, PREVIEW_LINES));
@@ -178,9 +179,11 @@ function castEntryOf(marker, speaker, ctx) {
 }
 
 /**
- * The people and generic roles who speak, in order of first line. Joint
- * lines add no cast entries: their components already appear
- * individually, from any solo line of their own.
+ * The people and generic roles who speak, in order of first line. A
+ * joint line's components count as speaking too, each on its own
+ * (review round 1, M5): a component that only ever speaks inside a
+ * joint line still appears here, deduped the same way a repeated solo
+ * speaker is.
  * @param {TranslationDetails} details
  * @param {PresentContext} ctx
  * @returns {CastVM[]}
@@ -189,9 +192,12 @@ function castOf(details, ctx) {
   /** @type {Map<string, CastVM>} */
   const cast = new Map();
   for (const line of splitLines(details.body)) {
-    if (line.kind !== 'speech' || line.markers.length > 1 || !Object.hasOwn(details.speakers, line.marker)) continue;
-    const entry = castEntryOf(line.marker, details.speakers[line.marker], ctx);
-    if (entry && !cast.has(entry[0])) cast.set(entry[0], entry[1]);
+    if (line.kind !== 'speech') continue;
+    for (const marker of line.markers) {
+      if (!Object.hasOwn(details.speakers, marker)) continue;
+      const entry = castEntryOf(marker, details.speakers[marker], ctx);
+      if (entry && !cast.has(entry[0])) cast.set(entry[0], entry[1]);
+    }
   }
   return [...cast.values()];
 }
