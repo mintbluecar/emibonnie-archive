@@ -1,7 +1,7 @@
 // @ts-check
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdtempSync, rmSync, readFileSync, existsSync, cpSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync, readdirSync, existsSync, cpSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
@@ -21,14 +21,16 @@ import { loadSite } from '../../src/site/loadSite.js';
 const TOKENS_CSS = readFileSync('src/styles/tokens.css', 'utf8');
 
 /**
- * A temp repo root with a real copy of `src/` and `examples/solluna/`
- * (as `site/`), so `runBuild` can run end to end without touching this
- * checkout. Caller must `rmSync(repoRoot, { recursive: true, force: true })`.
+ * A temp repo root with a real copy of `src/` (page templates included),
+ * the front end (`public/js/`) and `examples/solluna/` (as `site/`), so
+ * `runBuild` can run end to end without touching this checkout. Caller
+ * must `rmSync(repoRoot, { recursive: true, force: true })`.
  * @returns {{ repoRoot: string, siteDir: string }}
  */
 function makeBuildRepoRoot() {
   const repoRoot = mkdtempSync(path.join(tmpdir(), 'fan-archive-build-'));
   cpSync('src', path.join(repoRoot, 'src'), { recursive: true });
+  cpSync('public/js', path.join(repoRoot, 'public/js'), { recursive: true });
   cpSync('examples/solluna', path.join(repoRoot, 'site'), { recursive: true });
   cpSync('robots.txt', path.join(repoRoot, 'robots.txt'));
   return { repoRoot, siteDir: path.join(repoRoot, 'site') };
@@ -157,6 +159,12 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
     assert.ok(existsSync(path.join(repoRoot, 'public/site/theme.css')));
     assert.ok(existsSync(path.join(repoRoot, 'public/site/logo.svg')));
     assert.equal(readFileSync(path.join(repoRoot, 'public/robots.txt'), 'utf8'), readFileSync('robots.txt', 'utf8'), 'robots.txt is served from public/');
+    // Task 9a item 8: every page is built from its tracked src/html/ template into gitignored public/.
+    for (const page of readdirSync('src/html').filter((f) => f.endsWith('.html'))) {
+      const built = readFileSync(path.join(repoRoot, 'public', page), 'utf8');
+      assert.ok(!built.includes('{{asset:'), `${page}: every placeholder resolved`);
+      assert.match(built, /\/build\/app-[A-Za-z0-9]+\.css/, page);
+    }
 
     const vercelJson = JSON.parse(readFileSync(path.join(repoRoot, 'vercel.json'), 'utf8'));
     assert.deepEqual(vercelJson.regions, ['sin1']);

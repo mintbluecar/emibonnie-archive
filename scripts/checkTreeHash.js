@@ -1,10 +1,10 @@
 // @ts-check
 /**
- * `npm test`'s `posttest` step (review round 2, M2): re-hashes `src/`
- * and `public/` and compares against the hash `pretest`
+ * `npm test`'s `posttest` step (review round 2, M2): re-hashes every
+ * source tree (`treeHashConfig.js`) and compares against the hash `pretest`
  * (`scripts/genRegistries.js`) recorded right before the test run
  * started, failing loudly if anything differs -- proof that no test
- * wrote under either directory, not just a grep for the one historical
+ * wrote under any of them, not just a grep for the one historical
  * cause (`test/noGeneratedRegistryWrites.test.js`).
  */
 import { existsSync, readFileSync, rmSync } from 'node:fs';
@@ -26,7 +26,7 @@ function main() {
   const after = hashTree(TREE_HASH_DIRS.map((d) => path.join(REPO_ROOT, d)));
   rmSync(hashPath);
   if (before !== after) {
-    console.error(`checkTreeHash: ${TREE_HASH_DIRS.join('/')} changed during the test run -- a test wrote where it shouldn't have`);
+    console.error(`checkTreeHash: a source tree (${TREE_HASH_DIRS.join(', ')}) changed during the test run -- a test wrote where it shouldn't have`);
     process.exitCode = 1;
   }
 }

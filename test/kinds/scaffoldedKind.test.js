@@ -7,9 +7,9 @@
  * own tests, and whose item -- ingested through the real ingest path --
  * shows up in an event page's sections, in a kind-filtered search and on
  * a person's page, with the core untouched: the only changes in the
- * copy are the kind's own folders and its migration, plus what the build
- * regenerates from them (the kind's rewrite in vercel.json and the new
- * bundle hashes in public/*.html).
+ * copy are the kind's own folders and its migration. What the build
+ * regenerates from them (the kind's rewrite in vercel.json, new bundle
+ * hashes in public/*.html) is gitignored.
  *
  * The scaffolded template already is the "minimal domain: one text field"
  * (`body`), so nothing is filled in by hand here.
@@ -171,24 +171,13 @@ describe('a scaffolded kind plugs in without touching the core', { skip: SKIP },
     assert.equal(proof.api.item.body.bubbles.length, 2);
   });
 
-  /** @param {string} text */
-  const withoutBundleHashes = (text) => text.replace(/\/build\/([A-Za-z0-9_]+)-[A-Za-z0-9]+\.(js|css)/g, '/build/$1-HASH.$2');
-
-  test('the core is untouched: only the kind folders, its migration and regenerated build output changed', () => {
+  test('the core is untouched: only the kind folders and its migration changed (the rebuilt pages and vercel.json are gitignored)', () => {
     const changed = git(['status', '--porcelain', '--untracked-files=all']).split('\n').filter(Boolean).map((line) => line.slice(3));
     const own = [`src/kinds/${KIND}/`, `public/js/kinds/${KIND}/`, `test/kinds/${KIND}/`];
-    const outside = changed.filter((p) => !own.some((dir) => p.startsWith(dir)) && p !== proof.migration);
     assert.ok(changed.includes(proof.migration));
-    for (const p of outside) assert.ok(p === 'vercel.json' || /^public\/[a-z0-9-]+\.html$/.test(p), `unexpected change: ${p}`);
-    for (const html of outside.filter((p) => p.endsWith('.html'))) {
-      assert.equal(withoutBundleHashes(readFileSync(path.join(copy, html), 'utf8')), withoutBundleHashes(git(['show', `HEAD:${html}`])), `${html}: only bundle hashes changed`);
-    }
-    if (outside.includes('vercel.json')) {
-      const now = JSON.parse(readFileSync(path.join(copy, 'vercel.json'), 'utf8'));
-      const was = JSON.parse(git(['show', 'HEAD:vercel.json']));
-      const kindRewrite = { source: `/${KIND}/:id`, destination: `/api/meta/${KIND}/:id` };
-      assert.deepEqual(now.rewrites.filter((/** @type {any} */ r) => r.source === kindRewrite.source), [kindRewrite]);
-      assert.deepEqual({ ...now, rewrites: now.rewrites.filter((/** @type {any} */ r) => r.source !== kindRewrite.source) }, was);
-    }
+    assert.deepEqual(changed.filter((p) => !own.some((dir) => p.startsWith(dir)) && p !== proof.migration), []);
+    const kindRewrite = { source: `/${KIND}/:id`, destination: `/api/meta/${KIND}/:id` };
+    const vercel = JSON.parse(readFileSync(path.join(copy, 'vercel.json'), 'utf8'));
+    assert.deepEqual(vercel.rewrites.filter((/** @type {any} */ r) => r.source === kindRewrite.source), [kindRewrite], 'the build still adds the kind\'s rewrite');
   });
 });

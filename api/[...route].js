@@ -12,7 +12,7 @@ import { site, assets } from '../src/site/generated.js';
 import { routes } from '../src/routes/index.js';
 import { createHandler } from '../src/http/handler.js';
 
-/** The built pages (`vercel.json` bundles `public/{item,event}.html` with this function). */
+/** The built pages (`npm run build` writes them from `src/html/`; `vercel.json` bundles `public/{item,event}.html` with this function). */
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 
 /**

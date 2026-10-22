@@ -51,7 +51,7 @@ site/                    a site's own folder (gitignored in the template); examp
    - a migration in `src/db/migrations/` (its `<k>_items` table with a composite FK to `items (id, kind)`, plus a row in `item_kinds`)
    - a `public/js/kinds/<k>/` folder, and its tests under `test/kinds/<k>/`
 
-   Nothing else changes, apart from what the build regenerates (`vercel.json`'s item-page rewrite, bundle hashes in `public/*.html`). `setup` and a test check that the registry matches the `item_kinds` rows; `test/kinds/scaffoldedKind.test.js` proves the whole path in a temp copy. Core tests must take the set of kinds, migrations and routes from their sources (the registry, the migrations folder, `src/pages.js`), never pin today's list.
+   Nothing else changes, apart from what the build regenerates into gitignored files (`vercel.json`'s item-page rewrite, bundle hashes in `public/*.html`). `setup` and a test check that the registry matches the `item_kinds` rows; `test/kinds/scaffoldedKind.test.js` proves the whole path in a temp copy. Core tests must take the set of kinds, migrations and routes from their sources (the registry, the migrations folder, `src/pages.js`), never pin today's list.
 6. **Schema changes are new migrations.**
    - Engine migrations live in `src/db/migrations/NNN_*.sql`. A site's own migrations live in `site/migrations/`, tracked separately.
    - Migrations are checksummed: editing an applied one fails.
@@ -73,7 +73,7 @@ site/                    a site's own folder (gitignored in the template); examp
 
 ```
 package.json  package-lock.json  .nvmrc  .editorconfig  LICENSE (MIT)  README.md  CHANGELOG.md  SECURITY.md
-eslint.config.js  jsconfig.json  playwright.config.js  vercel.json (GENERATED)  robots.txt (copied to public/ by the build)
+eslint.config.js  jsconfig.json  playwright.config.js  vercel.json (GENERATED, gitignored)  robots.txt (copied to public/ by the build)
 CONTRIBUTING.md (recipes)  docs/{architecture,site-settings,start-your-own,limits,spikes}.md  docs/deploy-workflow.example.yml  docs/decisions/
 .github/pull_request_template.md  .github/ISSUE_TEMPLATE/{bug,kind-proposal}.md  .github/workflows/ci.yml  .github/dependabot.yml
 examples/solluna/{site.json,theme.css,copy.json,logo.svg,seed/}
@@ -88,6 +88,7 @@ src/repo/{visibility,rows,people,accounts,events,tags,lookups,settings,items,ite
 src/sources/{index,url,normalize,fetchTweet,syndication,fx,offlineFetch}.js
 src/db/{client,pglite,common,migrate}.js  src/db/migrations/001_initial.sql
 src/site/{schema,fieldValidators,contrast,regions,loadSite,copy,copyDefaults.json,generated.js (GENERATED)}  src/pages.js
+src/html/*.html (page templates; the build writes public/*.html from them, GENERATED, gitignored)
 src/domain/{constants,dates,lines,header,speakers,events,text}.js
 test/…  (mirrors src)  test/fixtures/{tweets (synthetic), site-alt, site-badcopy}
 ```

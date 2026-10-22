@@ -5,7 +5,7 @@
  * recipes in CONTRIBUTING.md say what to do next). Kinds:
  *
  *   route      src/routes/<name>.js + its test, registered in src/routes/index.js
- *   page       public/<name>.html, public/js/pages/<name>.js + its test, src/pages.js entry, copy keys
+ *   page       src/html/<name>.html, public/js/pages/<name>.js + its test, src/pages.js entry, copy keys
  *   component  public/js/components/<name>.js + its test
  *   migration  src/db/migrations/<NNN>_<name>.sql (`-- --site`: <SITE_DIR>/migrations/)
  *   kind       src/kinds/<name>/, public/js/kinds/<name>/, its migration and tests

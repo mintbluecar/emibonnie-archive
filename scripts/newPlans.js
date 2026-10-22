@@ -95,7 +95,7 @@ function pagePlan(v, options) {
   const copy = JSON.parse(readFileSync(path.join(options.root, copyFile), 'utf8'));
   return {
     files: [
-      { template: 'page/page.html.tmpl', target: `public/${v.dash}.html` },
+      { template: 'page/page.html.tmpl', target: `src/html/${v.dash}.html` },
       { template: 'page/page.js.tmpl', target: `public/js/pages/${v.camel}.js` },
       { template: 'page/page.test.js.tmpl', target: `test/pages/${v.camel}.test.js` },
     ],

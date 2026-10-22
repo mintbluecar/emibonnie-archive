@@ -138,10 +138,10 @@ test('page creates its HTML and JS, lists itself in src/pages.js and adds its co
   inTempRoot((root) => {
     const created = scaffold({ kind: 'page', name: 'top_items', root });
     assert.deepEqual(created, [
-      'public/top-items.html', 'public/js/pages/topItems.js', 'test/pages/topItems.test.js', 'src/pages.js', 'src/site/copyDefaults.json',
+      'src/html/top-items.html', 'public/js/pages/topItems.js', 'test/pages/topItems.test.js', 'src/pages.js', 'src/site/copyDefaults.json',
     ]);
     assert.match(read(root, 'src/pages.js'), /\{ path: '\/top-items', file: 'top-items\.html' \},\n {2}\/\/ scaffold:pages/);
-    assert.match(read(root, 'public/top-items.html'), /\{\{asset:js:topItems\}\}/);
+    assert.match(read(root, 'src/html/top-items.html'), /\{\{asset:js:topItems\}\}/);
     const copy = JSON.parse(read(root, 'src/site/copyDefaults.json'));
     assert.equal(typeof copy['topItems.title'], 'string');
     assert.throws(() => scaffold({ kind: 'page', name: 'top_items', root }), /already exists/);

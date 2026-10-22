@@ -42,7 +42,7 @@ What review checks on every PR, on top of each recipe's own list: the layer rule
 ### Page
 
 - **When:** a new screen with its own URL.
-- **Command:** `npm run new page <name>` → `public/<name>.html`, `public/js/pages/<name>.js`, `test/pages/<name>.test.js`, an entry in `src/pages.js` (at `// scaffold:pages`), and `<name>.title`/`<name>.empty` copy keys in `src/site/copyDefaults.json`. It reads `GET /api/<name>`, so pair it with `npm run new route <name>` or change `API_PATH`.
+- **Command:** `npm run new page <name>` → `src/html/<name>.html` (the page template), `public/js/pages/<name>.js`, `test/pages/<name>.test.js`, an entry in `src/pages.js` (at `// scaffold:pages`), and `<name>.title`/`<name>.empty` copy keys in `src/site/copyDefaults.json`. It reads `GET /api/<name>`, so pair it with `npm run new route <name>` or change `API_PATH`.
 - **Then:**
   1. Build the view in `compose<Name>(data)` (pure, so tests need no DOM).
   2. Keep the page rules the template follows:
@@ -54,7 +54,7 @@ What review checks on every PR, on top of each recipe's own list: the layer rule
   3. Every word goes through `t()`/`tCount()`, with new keys in `copyDefaults.json`. Markup goes only through `html`.
   4. Styles go in `src/styles/components/<name>.css`, using engine tokens only (the build fails on an undefined one).
   5. Any client-side path goes in `public/js/core/routes.js`, pinned by `test/core/routes.test.js`.
-  6. `npm run build` resolves the HTML's `{{asset:…}}` placeholders and emits the page's rewrite into `vercel.json`. Commit both.
+  6. `npm run build` writes `public/<name>.html` from the template with its `{{asset:…}}` placeholders resolved, and emits the page's rewrite into `vercel.json`. Both are generated and gitignored: commit the template, never the built page.
 - **Copy from:** `public/js/pages/account.js` (a fetch, 404 and load error), `public/js/pages/static.js` (copy only).
 - **Review checks:** no inline styles or scripts (the CSP forbids them); axe-clean in light and dark at 390px and 1280px (add the page to `e2e/smoke.spec.js`); no horizontal scroll; `#app[data-ready]` is set on every outcome.
 
@@ -108,7 +108,7 @@ What review checks on every PR, on top of each recipe's own list: the layer rule
   6. `npm run build` regenerates both kinds registries and adds the kind's `<urlPrefix>:id` rewrite. `npm run setup` (or `npm run migrate`; locally with `PGLITE_DIR=.devdb`) applies the migration, and setup checks that the registry matches the `item_kinds` rows.
 - **Copy from:** `src/kinds/translation/` (the full example).
 - **Review checks:**
-  - The diff touches only `src/kinds/<name>/`, `public/js/kinds/<name>/`, `test/kinds/<name>/`, its migration, and regenerated `vercel.json` and `public/*.html`. `test/kinds/scaffoldedKind.test.js` proves this is possible.
+  - The diff touches only `src/kinds/<name>/`, `public/js/kinds/<name>/`, `test/kinds/<name>/` and its migration. The build output it changes (`vercel.json`'s new rewrite, `public/*.html`'s bundle hashes) is gitignored. `test/kinds/scaffoldedKind.test.js` proves this is possible.
   - `domain.js` is pure (lint enforces this), and the kind's SQL fragments interpolate only their placeholder.
   - Its `urlPrefix` isn't reserved. `defineKind` derives the reserved list from `src/pages.js`.
   - Any new media host needs a CSP change (`img-src`/`media-src` in `scripts/buildOutputs.js`), which is a core change reviewed on its own.
@@ -200,7 +200,7 @@ npm run build && npm run check && npm test
      ```
 3. **Section** (`public/js/kinds/youtube_clip/section.js`): the template's `previewCard` stack works as is. Change it only if clips need a different card.
 4. **The core is untouched:**
-   - `git status` shows only the three `youtube_clip` folders, the migration, and the regenerated `vercel.json` (one rewrite) and `public/*.html` (bundle hashes).
+   - `git status` shows only the three `youtube_clip` folders and the migration. The rebuilt `vercel.json` (one new rewrite) and `public/*.html` (new bundle hashes) are gitignored.
    - `npm run setup` applies the migration.
    - The kind's items appear in event sections, in search (`?kinds=youtube_clip`) and on person pages without any change to services, routes or pages.
    - Embedding the video itself would mean a new `frame-src` in the CSP (`scripts/buildOutputs.js`), which is a separate, reviewed core change.
@@ -212,7 +212,7 @@ npm run build && npm run check && npm test
 - Use synthetic fixtures (`test/fixtures/`), never real translation text.
 - Pure `src/domain` code is unit-tested directly, with no mocking.
 - Code that needs the database, the clock, or the network takes them through `deps`, so tests can supply fakes.
-- Tests never write into `src/` or `public/`: `npm test` hashes both before and after the run and fails if either changed. Scaffold or build into a temp copy instead, as `test/kinds/scaffoldedKind.test.js` (also `npm run test:kind`) and `test/scripts/new.test.js` do.
+- Tests never write into a source tree (`src/`, `public/`, `api/`, `scripts/`, `test/`, `e2e/`, `examples/`, `docs/`, and a site repo's `site/`): `npm test` hashes them before and after the run and fails if any changed (`scripts/treeHashConfig.js`). Scaffold or build into a temp copy instead, as `test/kinds/scaffoldedKind.test.js` (also `npm run test:kind`) and `test/scripts/new.test.js` do.
 
 ## Engine vs. site
 

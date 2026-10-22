@@ -117,9 +117,15 @@ real translation text.
   missing or invalid.
 - `loadCopy(dir)` merges the engine defaults, then every kind's
   `copy.json` (sorted), then the site's own `copy.json`.
-- `npm run build` validates everything above and writes the generated,
-  gitignored files (`src/site/generated.js`, `src/kinds/_registry.js`,
-  `public/site/*`, `vercel.json`).
+- `npm run build` validates everything above and writes the generated
+  files (`src/site/generated.js`, both kinds registries, `public/site/*`,
+  the bundles in `public/build/`, the pages `public/*.html` built from
+  their `src/html/*.html` templates, and `vercel.json`). The engine
+  gitignores all of them, so a rebuild never changes a tracked file and
+  an engine upgrade never conflicts on one. One exception, on purpose:
+  a site deployed through Vercel's Git integration un-ignores and
+  commits its own `vercel.json`, because Vercel reads it before it runs
+  the build (`docs/start-your-own.md`, step 2).
 - `npm run doctor` reports whether a site's setup is healthy (Node
   version, `site/` present, settings valid, env vars, and -- if an
   `upstream` remote is configured and reachable -- the engine version).

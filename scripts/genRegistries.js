@@ -21,7 +21,7 @@ import { TREE_HASH_PATH, TREE_HASH_DIRS } from './treeHashConfig.js';
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 /**
- * Also records a hash of `src/`/`public/` as they stand once the
+ * Also records a hash of every source tree (`treeHashConfig.js`) as it stands once the
  * registries above are generated -- the state the test run is about to
  * start from -- for `posttest` (`scripts/checkTreeHash.js`) to compare
  * against afterwards (review round 2, M2).

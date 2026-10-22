@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * End-to-end bundling: esbuild output + manifest.json, self-hosted font
- * files, and the HTML placeholder rewrite, all driven through the real
+ * files, and the pages built from their templates, all driven through the real
  * `runBuild()` against a temp repo root (same pattern as
  * test/site/build.test.js, which covers the non-bundling parts of the
  * build).
@@ -15,21 +15,24 @@ import { runBuild } from '../../scripts/build.js';
 
 /**
  * A temp repo root with `src/`, the solluna example as `site/`, and one
- * fixture page (`public/js/pages/home.js` + `public/index.html` with
- * asset placeholders), so `runBuild` bundles something real.
+ * fixture page (`public/js/pages/home.js` + the template
+ * `src/html/index.html` with asset placeholders, in place of the engine's
+ * own pages), so `runBuild` bundles something real.
  * @returns {{ repoRoot: string, siteDir: string }}
  */
 function makeBundlingRepoRoot() {
   const repoRoot = mkdtempSync(path.join(tmpdir(), 'fan-archive-bundle-'));
   cpSync('src', path.join(repoRoot, 'src'), { recursive: true });
+  rmSync(path.join(repoRoot, 'src/html'), { recursive: true, force: true });
   cpSync('examples/solluna', path.join(repoRoot, 'site'), { recursive: true });
   cpSync('robots.txt', path.join(repoRoot, 'robots.txt'));
 
   mkdirSync(path.join(repoRoot, 'public/js/pages'), { recursive: true });
   writeFileSync(path.join(repoRoot, 'public/js/pages/home.js'), "export function start() { console.log('home'); }\n");
 
+  mkdirSync(path.join(repoRoot, 'src/html'), { recursive: true });
   writeFileSync(
-    path.join(repoRoot, 'public/index.html'),
+    path.join(repoRoot, 'src/html/index.html'),
     '<!doctype html>\n<html lang="en"><head>\n' +
       '<link rel="stylesheet" href="{{asset:app.css}}">\n' +
       '<link rel="stylesheet" href="{{asset:fonts.css}}">\n' +
@@ -39,10 +42,12 @@ function makeBundlingRepoRoot() {
   return { repoRoot, siteDir: path.join(repoRoot, 'site') };
 }
 
-test('runBuild: bundles one page, writes a manifest, and rewrites the page HTML placeholders', async () => {
+test('runBuild: bundles one page, writes a manifest, and writes the page from its template with placeholders resolved', async () => {
   const { repoRoot, siteDir } = makeBundlingRepoRoot();
   try {
+    const template = readFileSync(path.join(repoRoot, 'src/html/index.html'), 'utf8');
     await runBuild({ repoRoot, siteDir });
+    assert.equal(readFileSync(path.join(repoRoot, 'src/html/index.html'), 'utf8'), template, 'the tracked template is never rewritten (Task 9a item 8)');
 
     const manifestPath = path.join(repoRoot, 'public/build/manifest.json');
     assert.ok(existsSync(manifestPath), 'manifest.json is written');
@@ -135,6 +140,7 @@ test('runBuild: with no public/js/pages directory, bundling is a no-op (empty ma
   const repoRoot = mkdtempSync(path.join(tmpdir(), 'fan-archive-bundle-empty-'));
   try {
     cpSync('src', path.join(repoRoot, 'src'), { recursive: true });
+    rmSync(path.join(repoRoot, 'src/html'), { recursive: true, force: true });
     cpSync('examples/solluna', path.join(repoRoot, 'site'), { recursive: true });
     cpSync('robots.txt', path.join(repoRoot, 'robots.txt'));
 
@@ -147,12 +153,11 @@ test('runBuild: with no public/js/pages directory, bundling is a no-op (empty ma
   }
 });
 
-test('runBuild: rebuilding an already-built page (no more {{asset:...}} placeholders) still refreshes a changed hash', async () => {
+test('runBuild: a rebuild writes the page again from its unchanged template, with the new hash', async () => {
   const { repoRoot, siteDir } = makeBundlingRepoRoot();
   try {
     await runBuild({ repoRoot, siteDir });
     const firstManifest = JSON.parse(readFileSync(path.join(repoRoot, 'public/build/manifest.json'), 'utf8'));
-    assert.ok(!readFileSync(path.join(repoRoot, 'public/index.html'), 'utf8').includes('{{asset:'), 'placeholders are gone after the first build');
 
     // A source change that changes the page's bundled JS (so its hash changes), simulating a second `npm run dev` cycle.
     writeFileSync(path.join(repoRoot, 'public/js/pages/home.js'), "export function start() { console.log('home v2'); }\n");
@@ -161,9 +166,22 @@ test('runBuild: rebuilding an already-built page (no more {{asset:...}} placehol
     assert.notEqual(secondManifest.pages.home, firstManifest.pages.home, 'the hash did change');
 
     const html = readFileSync(path.join(repoRoot, 'public/index.html'), 'utf8');
-    assert.ok(html.includes(`/build/${secondManifest.pages.home}`), 'the already-built page picked up the new hash');
+    assert.ok(html.includes(`/build/${secondManifest.pages.home}`), 'the built page has the new hash');
     assert.ok(!html.includes(firstManifest.pages.home), 'the stale hash is gone, not left dangling');
     assert.ok(existsSync(path.join(repoRoot, 'public/build', secondManifest.pages.home)), 'and the file it now points to actually exists');
+    assert.match(readFileSync(path.join(repoRoot, 'src/html/index.html'), 'utf8'), /\{\{asset:js:home\}\}/, 'the template keeps its placeholder');
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test('runBuild: a built page whose template is gone is removed from public/', async () => {
+  const { repoRoot, siteDir } = makeBundlingRepoRoot();
+  try {
+    writeFileSync(path.join(repoRoot, 'public/old-page.html'), '<p>stale</p>\n');
+    await runBuild({ repoRoot, siteDir });
+    assert.ok(!existsSync(path.join(repoRoot, 'public/old-page.html')));
+    assert.ok(existsSync(path.join(repoRoot, 'public/index.html')));
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -172,7 +190,7 @@ test('runBuild: rebuilding an already-built page (no more {{asset:...}} placehol
 test('runBuild: an unresolved asset placeholder fails the build loudly', async () => {
   const { repoRoot, siteDir } = makeBundlingRepoRoot();
   try {
-    writeFileSync(path.join(repoRoot, 'public/broken.html'), '<script type="module" src="{{asset:js:nopage}}"></script>\n');
+    writeFileSync(path.join(repoRoot, 'src/html/broken.html'), '<script type="module" src="{{asset:js:nopage}}"></script>\n');
     await assert.rejects(() => runBuild({ repoRoot, siteDir }), /nopage/);
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });

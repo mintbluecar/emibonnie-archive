@@ -37,6 +37,8 @@ npm run init-site     # copies examples/solluna/ into site/
 
 - Edit `site/site.json`, `theme.css`, `copy.json` and the logo. [`docs/site-settings.md`](site-settings.md) documents every field. `npm run build` tells you exactly which field is wrong.
 - In **your** copy, delete the `/site/` line from `.gitignore` so your `site/` is committed. The template ignores it so its own example never conflicts with yours.
+- **Git-integration path only** (step 6): also delete the `/vercel.json` line from `.gitignore`, run `npm run build`, and commit the `vercel.json` it writes. Vercel reads that file (build command, region, headers, rewrites) before it runs any build, so it has to be in your repo. Rebuild and commit it again whenever you change `region` or take an engine update (step 10). On the Actions path the workflow runs the build before deploying, so leave it ignored.
+- Everything else the build writes (`public/*.html`, `public/build/`, `public/site/`, the generated registries) stays gitignored, so a rebuild never changes a tracked file.
 - Never put real translators' tweets in a public repo. `site/seed/` is for your own development data.
 
 Check it builds: `npm run build && npm run check && npm test`.
@@ -70,7 +72,7 @@ Choose the path that matches who owns your repo.
 
 ### Git-integration path (repo on a personal GitHub account)
 
-The simplest path. In Vercel: **Add New → Project**, import your repo, and deploy. Vercel runs `npm run build` (set in the generated `vercel.json`). Every push to `main` deploys to production, and every pull request gets a preview.
+The simplest path. In Vercel: **Add New → Project**, import your repo, and deploy. Vercel runs `npm run build` (set in the `vercel.json` you committed in step 2). Every push to `main` deploys to production, and every pull request gets a preview.
 
 > **Migrate first, then merge or deploy.** On this path nothing runs migrations for you, on purpose: a build that migrated would need a database URL that can write, inside every preview build of pull-request code. Whenever an update's `CHANGELOG.md` entry lists a migration, do these in order:
 >
@@ -136,7 +138,7 @@ git merge vX.Y.Z
 Then:
 
 1. Follow that release's **Upgrade steps** in `CHANGELOG.md`.
-2. Run `npm install && npm run build && npm test`, then `npm run doctor`.
+2. Run `npm install && npm run build && npm test`, then `npm run doctor`. On the Git-integration path, commit `vercel.json` if the build changed it.
 3. On the Git-integration path, if the release adds migrations, migrate before you push (step 6: preview, then production).
 4. Push.
 
