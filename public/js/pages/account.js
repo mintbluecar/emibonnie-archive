@@ -92,6 +92,10 @@ export async function start() {
   const root = document.getElementById(APP_SELECTOR);
   const handle = root && accountFromAccountPath(window.location.pathname);
   if (!root || !handle) return;
+  // A synchronous default, so the page never has an empty <title> while the
+  // account fetch below is in flight (axe's document-title rule; same pattern
+  // as home.js/item.js) -- overwritten with the account's own handle once it loads.
+  document.title = site.name;
   /** @type {AccountView|OptedOutAccountView} */
   let data;
   try {

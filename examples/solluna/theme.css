@@ -6,5 +6,9 @@
 
 :root {
   --gradient-from: #c47a12;
-  --gradient-to: #6a5cd6;
+  /* Darkened slightly from lunamoon's #6a5cd6: --gradient-to is also used as
+     plain text colour by several engine components, and #6a5cd6 was only
+     4.5:1/4.5:1 against --color-bg/--color-card -- just under WCAG AA's
+     4.5:1 (axe's color-contrast rule, Plan 1b Task 7 brief). */
+  --gradient-to: #6456c9;
 }

@@ -141,6 +141,15 @@ export default [
     },
   },
   {
+    // Plan 1b Task 7: test/e2e's Node-side Playwright code and its browser-side
+    // page.evaluate() callbacks are both lexically in these files, so both
+    // globals sets are needed (configuring the glob, not disabling a rule).
+    files: ['test/e2e/**/*.js'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
+    },
+  },
+  {
     files: ['public/js/components/**/*.js', 'public/js/kinds/**/*.js'],
     ignores: ['public/js/kinds/_registry.js'],
     rules: {

@@ -2,6 +2,7 @@ node_modules/
 .env*
 .vercel/
 .devdb/
+.e2e-db/
 public/site/
 public/build/
 public/robots.txt
@@ -10,3 +11,9 @@ src/site/generated.js
 src/kinds/_registry.js
 public/js/kinds/_registry.js
 .superpowers/
+
+# Playwright (Plan 1b Task 7): generated media fixtures, and its own run output.
+test/e2e/.generated/
+/test-results/
+/playwright-report/
+/blob-report/

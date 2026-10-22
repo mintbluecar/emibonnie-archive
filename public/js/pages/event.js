@@ -290,6 +290,10 @@ export async function start() {
   const root = document.getElementById(APP_SELECTOR);
   const slug = root && slugFromEventPath(window.location.pathname);
   if (!root || !slug) return;
+  // A synchronous default, so the page never has an empty <title> while the
+  // event fetch below is in flight (axe's document-title rule; same pattern
+  // as home.js/item.js) -- overwritten with the event's own name once it loads.
+  document.title = site.name;
   /** @type {import('../../../src/http/contracts.js').EventView} */
   let data;
   try {

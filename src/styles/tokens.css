@@ -17,9 +17,19 @@
   --color-card: #fffdf8;
   --color-card-shadow: #eadfce;
   --color-ink: #2b2233;
-  --color-ink-muted: #8a7f8f;
+  /* #8a7f8f (the original pick) was 3.7:1 against --color-card and 3.3:1
+     against --color-bg -- both below WCAG AA's 4.5:1 for normal text
+     (axe's color-contrast rule, Plan 1b Task 7 brief, flagged it on the
+     tab bar and the static pages' footer/badge text). Darkened to the
+     same hue at ~75% luminance: 6.0:1 and 5.4:1. */
+  --color-ink-muted: #675f6b;
   --gradient-from: #ff6a2b;
-  --gradient-to: #e03a85;
+  /* Used as a plain text `color` in several components (static.css,
+     hub.css, resultCard.css, tabBar.css, homeMonth.css, eventPage.css),
+     not only in a gradient -- the original #e03a85 was only 3.6:1/4.0:1
+     against --color-bg/--color-card, below WCAG AA's 4.5:1 (axe's
+     color-contrast rule, Plan 1b Task 7 brief). Darkened to the same hue. */
+  --gradient-to: #b32e6a;
   --radius-card: 16px;
   --font-latin: 'Nunito', sans-serif;
   --font-script: 'IBM Plex Sans Thai', sans-serif;
@@ -52,5 +62,8 @@
     --color-card-shadow: #0d0a11;
     --color-ink: #f4eef8;
     --color-ink-muted: #a89aad;
+    /* The light-mode #b32e6a above is too dark to read on these dark
+       backgrounds (3.2:1/3.0:1); a lighter pick of the same hue instead. */
+    --gradient-to: #e2468c;
   }
 }

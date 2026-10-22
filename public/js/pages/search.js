@@ -281,6 +281,10 @@ function sanitizeInitialState(state) {
 export async function start() {
   const root = document.getElementById(APP_SELECTOR);
   if (!root) return;
+  // A synchronous default, so the page never has an empty <title> while the
+  // filters/results fetches below are in flight (axe's document-title rule;
+  // same pattern as home.js/item.js).
+  document.title = `${t('nav.search')} · ${site.name}`;
   try {
     const url = new URL(window.location.href);
     const options = await getJson('/api/filters');
@@ -293,7 +297,6 @@ export async function start() {
     ctx.offset = ctx.data.results.length;
     if (state.q) recordRecent(state.q);
     ctx.recent = loadRecent();
-    document.title = `${t('nav.search')} · ${site.name}`;
     mount(root, composeSearch(ctx));
     bind(root, ctx);
     if (url.searchParams.get('filters') === '1') openSheet(root, ctx);
