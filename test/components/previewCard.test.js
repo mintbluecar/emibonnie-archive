@@ -26,11 +26,18 @@ test('previewCard: renders the opening lines via bubbles, and a meta row with th
   assert.match(markup, /aria-label="video"/);
 });
 
-test('previewCard: no accountHandle, no video, means no meta for them; follows-on shows a link', () => {
+test('previewCard: no accountHandle, no video, means no meta for them; follows-on shows as plain text, not a link', () => {
   const markup = String(render({ result: baseResult({ accountHandle: null, hasVideo: false, followsOnFrom: { sourceId: '0', url: '/t/0' } }) }));
   assert.ok(!markup.includes('tl @'));
   assert.ok(!markup.includes('aria-label="video"'));
-  assert.match(markup, /href="\/t\/0">follows on from ↑<\/a>/);
+  assert.ok(!markup.includes('/t/0'), 'followsOnFrom.url is never rendered -- it is plain text, not a link');
+  assert.match(markup, /follows on from ↑/);
+});
+
+test('previewCard: the card never nests a second <a> -- its own outer anchor is the only link, even with a video and a follows-on', () => {
+  const markup = String(render({ result: baseResult({ followsOnFrom: { sourceId: '0', url: '/t/0' } }) }));
+  const anchors = markup.match(/<a[\s>]/g) ?? [];
+  assert.equal(anchors.length, 1);
 });
 
 test('bind: delegates to bubbles.bind, colouring the embedded avatar', () => {

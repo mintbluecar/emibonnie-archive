@@ -7,8 +7,9 @@
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mount, on } from '../../public/js/core/dom.js';
+import { mount, on, applyColours } from '../../public/js/core/dom.js';
 import { html, raw } from '../../public/js/core/html.js';
+import { FakeEl } from '../helpers/fakeDom.js';
 
 class FakeElement {
   /** @param {string} tag @param {{ className?: string, children?: FakeElement[] }} [opts] */
@@ -83,4 +84,27 @@ test('on: the handler receives the event and the matched element', () => {
   on(root, '.go', 'click', (e, target) => seen.push([e.type, target]));
   root.dispatch('click', button);
   assert.deepEqual(seen, [['click', button]]);
+});
+
+test('applyColours: a valid #rrggbb data-c is applied as --c', () => {
+  const coloured = new FakeEl({ 'data-c': '#ff8a3d' });
+  const root = new FakeEl({}, [coloured]);
+  applyColours(root);
+  assert.equal(coloured.styleProps['--c'], '#ff8a3d');
+});
+
+test('applyColours: an invalid data-c (not a plain #rrggbb hex colour) is never applied', () => {
+  const coloured = new FakeEl({ 'data-c': 'red; background:url(x)' });
+  const root = new FakeEl({}, [coloured]);
+  applyColours(root);
+  assert.equal(coloured.styleProps['--c'], undefined);
+});
+
+test('applyColours: case-insensitive, but a short or non-hex value is rejected', () => {
+  const upper = new FakeEl({ 'data-c': '#FF8A3D' });
+  const short = new FakeEl({ 'data-c': '#fff' });
+  const root = new FakeEl({}, [upper, short]);
+  applyColours(root);
+  assert.equal(upper.styleProps['--c'], '#FF8A3D');
+  assert.equal(short.styleProps['--c'], undefined);
 });

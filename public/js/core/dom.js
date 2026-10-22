@@ -38,3 +38,24 @@ export function on(el, selector, event, fn) {
     if (target && el.contains(target)) fn(e, target);
   });
 }
+
+/** A plain 6-digit hex colour (`#rrggbb`), the only shape `data-c` may carry. */
+const COLOUR_PATTERN = /^#[0-9a-f]{6}$/i;
+
+/**
+ * Applies every `[data-c]` descendant's colour as its own `--c` custom
+ * property, but only when that `data-c` value is a plain `#rrggbb` hex
+ * colour -- it ultimately traces back to a person's stored colour, not
+ * this component's own markup, so it's validated here, the one place
+ * every colour-carrying component's `bind()` goes through, before it
+ * ever reaches a CSS custom property. CSP-safe: no inline `style`
+ * attribute is ever written server-side, only `setProperty()` here.
+ * @param {Element} el
+ * @returns {void}
+ */
+export function applyColours(el) {
+  for (const node of el.querySelectorAll('[data-c]')) {
+    const colour = node.getAttribute('data-c');
+    if (colour && COLOUR_PATTERN.test(colour)) /** @type {HTMLElement} */ (node).style.setProperty('--c', colour);
+  }
+}

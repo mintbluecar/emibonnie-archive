@@ -23,3 +23,10 @@ test('bind: sets --c on the mounted .c-person-header (a descendant of the elemen
   bind(mountPoint);
   assert.equal(coloured.styleProps['--c'], '#ff8a3d');
 });
+
+test('bind: an invalid data-c is never applied, via the shared applyColours() validation', () => {
+  const coloured = new FakeEl({ 'data-c': 'red; background:url(x)' });
+  const mountPoint = new FakeEl({}, [coloured]);
+  bind(mountPoint);
+  assert.equal(coloured.styleProps['--c'], undefined);
+});

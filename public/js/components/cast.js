@@ -8,6 +8,7 @@
  * rule without any extra markup.
  */
 import { html } from '../core/html.js';
+import { applyColours } from '../core/dom.js';
 
 /**
  * @param {import('../../../src/http/contracts.js').CastVM} member
@@ -32,8 +33,5 @@ export function render(props) {
 
 /** @param {Element} el @returns {void} */
 export function bind(el) {
-  for (const node of el.querySelectorAll('[data-c]')) {
-    const colour = node.getAttribute('data-c');
-    if (colour) /** @type {HTMLElement} */ (node).style.setProperty('--c', colour);
-  }
+  applyColours(el);
 }

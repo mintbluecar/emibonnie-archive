@@ -25,8 +25,8 @@ test('translation section: renders each item as a preview card', () => {
   assert.match(markup, /href="\/t\/1"/);
 });
 
-/** @returns {import('../../src/http/contracts.js').DetailVM} */
-function detailVm() {
+/** @param {Partial<import('../../src/http/contracts.js').DetailVM>} [overrides] @returns {import('../../src/http/contracts.js').DetailVM} */
+function detailVm(overrides = {}) {
   return {
     bubbles: [{ kind: 'speech', emoji: '🧡', name: 'sol', colour: '#ff8a3d', text: 'hello', cont: false }],
     cast: [{ kind: 'person', id: 1, emoji: '🧡', name: 'sol', colour: '#ff8a3d', igHandle: null }],
@@ -34,6 +34,7 @@ function detailVm() {
     credits: { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, postedAt: null, occurredOn: '2026-10-14' },
     sources: [],
     media: null,
+    ...overrides,
   };
 }
 
@@ -45,6 +46,18 @@ test('translation detail: renders credits, cast, bubbles, and a hidden original 
   assert.match(markup, /show original/);
   assert.match(markup, /hidden/);
   assert.match(markup, /first paragraph/);
+});
+
+test('translation detail: Thai-script text in the original gets lang="th", same as bubbles.js', () => {
+  const markup = String(detail.render(detailVm({ original: 'hello ครบ world' })));
+  assert.match(markup, /<span lang="th">ครบ<\/span>/);
+});
+
+test('translation detail: Thai-script text in a quote gets lang="th" too', () => {
+  /** @type {import('../../src/http/contracts.js').MediaVM} */
+  const media = { type: 'quote', authorName: 'x', authorHandle: null, text: 'hello ครบ world', postedAt: null, inner: null };
+  const markup = String(detail.render(detailVm({ media })));
+  assert.match(markup, /<span lang="th">ครบ<\/span>/);
 });
 
 test('translation detail bind: toggling the original flips aria-expanded and hidden', () => {

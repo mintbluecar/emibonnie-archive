@@ -4,8 +4,11 @@
  * its opening `lines` (rendered by `bubbles`, whose own escaping and
  * `data-c` colours this card's `bind()` delegates to) plus a meta row --
  * who's in it, the translator's handle, whether it has video, and
- * whether it follows on from an earlier entry. Entries show opening
- * lines, never a title (see mockups/screens-v2.html's event screen).
+ * whether it follows on from an earlier entry (plain text, not a link --
+ * the mockups show it that way, and the card's own outer `<a>` is
+ * already the one link; nesting another inside it would be invalid
+ * markup and ambiguous to click). Entries show opening lines, never a
+ * title (see mockups/screens-v2.html's event screen).
  */
 import { html } from '../core/html.js';
 import { t } from '../core/site.js';
@@ -21,7 +24,7 @@ function metaRow(preview) {
       ${preview.people.map((person) => html`<span aria-hidden="true">${person.emoji}</span>`)}
       ${preview.accountHandle ? html` · ${t('item.translatedBy')} @${preview.accountHandle}` : ''}
       ${preview.hasVideo ? html` · <span role="img" aria-label="${t('item.hasVideo')}">🎬</span>` : ''}
-      ${preview.followsOnFrom ? html` · <a href="${preview.followsOnFrom.url}">${t('item.followsOn')} ↑</a>` : ''}
+      ${preview.followsOnFrom ? html` · ${t('item.followsOn')} ↑` : ''}
     </div>
   `;
 }

@@ -8,8 +8,9 @@
  */
 import { html } from '../../core/html.js';
 import { on } from '../../core/dom.js';
-import { t } from '../../core/site.js';
+import { site, t } from '../../core/site.js';
 import { dayLabel } from '../../core/format.js';
+import { thaiSpans } from '../../core/thai.js';
 import * as cast from '../../components/cast.js';
 import * as bubbles from '../../components/bubbles.js';
 
@@ -61,7 +62,7 @@ function renderQuote(quote) {
       ${quote.authorName || quote.authorHandle ? html`
         <p class="k-translation-detail__quote-author">${quote.authorName ?? ''}${quote.authorHandle ? html` @${quote.authorHandle}` : ''}</p>
       ` : ''}
-      <p class="k-translation-detail__quote-text">${quote.text}</p>
+      <p class="k-translation-detail__quote-text">${thaiSpans(quote.text, site.sourceLanguage)}</p>
       ${quote.inner ? renderMedia(quote.inner) : ''}
     </div>
   `;
@@ -83,7 +84,9 @@ function creditsLine(credits) {
 
 /** @param {string} text @returns {import('../../core/html.js').SafeHtml[]} */
 function originalParagraphs(text) {
-  return text.split(/\n\s*\n/).map((para) => html`<p class="k-translation-detail__original-para">${para}</p>`);
+  return text
+    .split(/\n\s*\n/)
+    .map((para) => html`<p class="k-translation-detail__original-para">${thaiSpans(para, site.sourceLanguage)}</p>`);
 }
 
 /**

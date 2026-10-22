@@ -9,32 +9,17 @@
  * A11y: every emoji speaker shows a visible name, or (an unmapped marker,
  * `name: null`) an `aria-label` on its avatar (see docs/.../1b plan,
  * "Additional constraints" → Accessibility). Thai-script runs get
- * `lang="<site.sourceLanguage>"`.
+ * `lang="<site.sourceLanguage>"` (via public/js/core/thai.js, shared with
+ * public/js/kinds/translation/detail.js).
  */
 import { html } from '../core/html.js';
 import { site, t } from '../core/site.js';
+import { applyColours } from '../core/dom.js';
+import { thaiSpans as thaiSpansIn } from '../core/thai.js';
 
-const THAI_RUN = /[\p{Script=Thai}]+/gu;
-
-/**
- * Splits `text` into an array of plain strings and `lang`-tagged `SafeHtml`
- * spans for its Thai-script runs. `html\`…\`` escapes the plain parts and
- * the already-safe spans alike, so a hostile value (e.g. `<script>`) is
- * never unescaped by this split.
- * @param {string} text
- * @returns {(string|import('../core/html.js').SafeHtml)[]}
- */
+/** @param {string} text @returns {(string|import('../core/html.js').SafeHtml)[]} */
 function thaiSpans(text) {
-  /** @type {(string|import('../core/html.js').SafeHtml)[]} */
-  const parts = [];
-  let last = 0;
-  for (const match of text.matchAll(THAI_RUN)) {
-    if (match.index > last) parts.push(text.slice(last, match.index));
-    parts.push(html`<span lang="${site.sourceLanguage}">${match[0]}</span>`);
-    last = match.index + match[0].length;
-  }
-  if (last < text.length) parts.push(text.slice(last));
-  return parts;
+  return thaiSpansIn(text, site.sourceLanguage);
 }
 
 /**
@@ -100,15 +85,7 @@ export function render(props) {
   `;
 }
 
-/**
- * Applies each coloured element's `data-c` as the `--c` custom property
- * (CSP-safe: no inline `style` attribute is ever written server-side).
- * @param {Element} el
- * @returns {void}
- */
+/** @param {Element} el @returns {void} */
 export function bind(el) {
-  for (const node of el.querySelectorAll('[data-c]')) {
-    const colour = node.getAttribute('data-c');
-    if (colour) /** @type {HTMLElement} */ (node).style.setProperty('--c', colour);
-  }
+  applyColours(el);
 }

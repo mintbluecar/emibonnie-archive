@@ -75,3 +75,10 @@ test('bind: applies each data-c colour as the --c custom property', () => {
   bind(root);
   assert.equal(coloured.styleProps['--c'], '#ff8a3d');
 });
+
+test('bind: an invalid data-c is never applied, via the shared applyColours() validation', () => {
+  const coloured = new FakeEl({ 'data-c': 'red; background:url(x)' });
+  const root = new FakeEl({}, [coloured]);
+  bind(root);
+  assert.equal(coloured.styleProps['--c'], undefined);
+});
