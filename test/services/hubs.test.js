@@ -355,3 +355,11 @@ test('filters and person pages only through visible items: a person and category
     }, SYSTEM);
   }
 });
+
+test('lowercaseNames (on for the example) lowercases people only: a person page keeps its events\' stored case (Task 9a item 7)', async () => {
+  assert.equal(deps.site.lowercaseNames, true);
+  const view = /** @type {any} */ (await personView(deps, 'solsunny'));
+  assert.equal(view.person.name, 'sol');
+  const eventNames = view.sections.flatMap((/** @type {any} */ s) => s.items).map((/** @type {any} */ i) => i.event?.name).filter(Boolean);
+  assert.ok(eventNames.includes('SOLLUNA HAPPY DAY'), JSON.stringify(eventNames));
+});

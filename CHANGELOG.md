@@ -44,3 +44,4 @@ The first release: a read-only archive (browse, search, item pages) with intake 
 - **Fixes from building the first real site:**
   - The dev server no longer corrupts its PGlite directory when an item page's background edit refresh overlaps later requests: every `Db` on one `PGLITE_DIR` now shares one PGlite instance, closed by its last user. Postgres (Neon) is unchanged.
   - `npm run new kind t` gives its refusal reason once, not twice.
+  - `lowercaseNames` lowercases people's names only. Person and translator pages no longer lowercase event names in their group labels.
