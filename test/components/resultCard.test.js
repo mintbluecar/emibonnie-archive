@@ -40,14 +40,28 @@ test('resultCard: no q means no highlighting, text still escaped', () => {
   assert.match(markup, /&lt;b&gt;raw&lt;\/b&gt;/);
 });
 
-test('resultCard: empty matchLines (a filters-only search, no q) falls back to the item\'s own opening lines via bubbles.render, same as previewCard (review round 1, I4)', () => {
+test('resultCard (Task 9b): empty matchLines (a filters-only search, no q) shows at most the first two opening lines, compact, not full bubbles', () => {
   /** @type {SearchResult} */
   const result = {
     ...baseResult([]),
-    lines: [{ kind: 'plain', text: 'the opening line' }],
+    lines: [
+      { kind: 'speech', emoji: '🌙', name: 'luna', colour: '#6a5cd6', text: 'the opening line', cont: false },
+      { kind: 'plain', text: 'the second line' },
+      { kind: 'plain', text: 'a third line' },
+    ],
   };
   const markup = String(render({ result, q: '' }));
   assert.ok(!markup.includes('c-result-card__text'), 'no matchLines block when there is nothing to highlight');
-  assert.match(markup, /c-bubbles/);
+  assert.match(markup, /c-bubbles-compact/);
+  assert.ok(!markup.includes('c-bubbles__bub'));
   assert.match(markup, /the opening line/);
+  assert.match(markup, /the second line/);
+  assert.ok(!markup.includes('a third line'));
+});
+
+test('resultCard (Task 9b): with q, only the matching lines show -- not the opening lines', () => {
+  const result = { ...baseResult(['🌙 a hug line']), lines: [{ kind: 'plain', text: 'an opening line' }] };
+  const markup = String(render({ result: /** @type {SearchResult} */ (result), q: 'hug' }));
+  assert.match(markup, /<mark>hug<\/mark>/);
+  assert.ok(!markup.includes('an opening line'));
 });

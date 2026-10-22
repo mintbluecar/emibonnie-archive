@@ -279,3 +279,20 @@ test('bind: a loadMore failure just re-enables the button, leaving the existing 
     cleanup();
   }
 });
+
+/** @param {any} state @param {number} count @returns {string} */
+const composed = (state, count) => String(composeSearch({
+  state, options: OPTIONS, data: { count, results: count ? [RESULT] : [] }, offset: 0, recent: [],
+}));
+
+test('composeSearch (Task 9b): a results line above the results counts every match and names the order -- best match first with a query, newest first when browsing by filter', () => {
+  const withQ = composed({ ...EMPTY_STATE, q: 'hug' }, 3);
+  assert.match(withQ, /<p class="c-search__count">3 translations · best match first<\/p>/);
+  assert.ok(withQ.indexOf('c-search__count') < withQ.indexOf('c-search__results'));
+  assert.match(composed({ ...EMPTY_STATE, people: [1] }, 1), /<p class="c-search__count">1 translation · newest first<\/p>/);
+});
+
+test('composeSearch (Task 9b): no results line for the blank state or no results', () => {
+  assert.ok(!composed(EMPTY_STATE, 0).includes('c-search__count'));
+  assert.ok(!composed({ ...EMPTY_STATE, q: 'zzz' }, 0).includes('c-search__count'));
+});

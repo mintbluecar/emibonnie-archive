@@ -8,12 +8,13 @@
  * become an HTML entity (e.g. `q: 'amp'` against `'a & amp'`) marks only
  * the real word, never text that only looks like it once escaped.
  *
- * `matchLines` is only ever populated when a text query (`q`) ran
- * (src/http/contracts.js: "none without q") -- a filters-only search
- * (people/types/event/.../no text) always has an empty `matchLines`, so
- * this card falls back to `bubbles.render({ bubbles: result.lines })`,
- * the item's own opening lines, the same fallback `previewCard.js`
- * already uses (review round 1, I4).
+ * With a query, only the matching lines show (the spec: "Results show
+ * the event and date, then the matching lines"). `matchLines` is only
+ * ever populated when a text query (`q`) ran (src/http/contracts.js:
+ * "none without q"), and is empty too when `q` matched something other
+ * than the text (an event name, a hashtag, a person). Then this card
+ * shows at most the item's first two opening lines, compact
+ * (`bubbles.renderCompact`, Task 9b), as one run of "emoji text".
  */
 import { html } from '../core/html.js';
 import { dayLabel } from '../core/format.js';
@@ -36,6 +37,9 @@ function highlighted(line, q) {
   return html`${parts.map((part, i) => (i % 2 === 1 ? html`<mark>${part}</mark>` : part))}`;
 }
 
+/** Opening lines shown when there are no matching lines (Task 9b). */
+const FALLBACK_LINES = 2;
+
 /**
  * @param {import('../../../src/http/contracts.js').SearchResult} result
  * @returns {import('../core/html.js').SafeHtml}
@@ -57,7 +61,7 @@ export function render(props) {
   const { result, q } = props;
   const text = result.matchLines.length > 0
     ? html`<div class="c-result-card__text">${result.matchLines.map((line) => html`<div class="c-result-card__line">${highlighted(line, q)}</div>`)}</div>`
-    : bubbles.render({ bubbles: result.lines });
+    : bubbles.renderCompact({ bubbles: result.lines.filter((b) => b.kind !== 'note').slice(0, FALLBACK_LINES) });
   return html`
     <a class="c-result-card" href="${result.url}">
       ${result.event ? html`<div class="c-result-card__event">${result.event.name} · ${dayLabel(result.occurredOn)}</div>` : ''}

@@ -321,3 +321,14 @@ test('an opted-out quoted author vanishes: no quote card, no handle anywhere', a
     await setOptedOut('solsunny_x', false);
   }
 });
+
+test('search.matchLines (Task 9b): a long matching line is trimmed to a window around the match, the speaker emoji kept in front', () => {
+  const people = new Map([[1, { id: 1, emoji: '☀️', displayName: 'Sol', colour: '#d9a400', igHandle: 'solsunny' }]]);
+  const ctx = /** @type {any} */ ({ people, formatName: (/** @type {string} */ n) => n.toLowerCase() });
+  const long = `${'so many things happened before my eyes that night, '.repeat(4)}and then she hugged me in front of everyone ${'and we all cried about it for hours afterwards. '.repeat(3)}`;
+  const [line] = translation.search.matchLines({ body: `🐶: ${long}`, speakers: { '🐶': { person: 1 } } }, 'hug', ctx);
+  assert.ok(line.startsWith('☀️ …'), line);
+  assert.ok(line.endsWith('…'), line);
+  assert.match(line, /she hugged me/);
+  assert.ok([...line].length < 130, `${[...line].length}`);
+});

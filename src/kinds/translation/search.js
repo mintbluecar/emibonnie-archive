@@ -8,6 +8,7 @@
  * the best-matching part's `word_similarity` to the raw query.
  */
 import { splitLines } from '../../domain/lines.js';
+import { excerptAround } from '../../domain/text.js';
 import { componentOf } from './presenter.js';
 
 /** @typedef {import('../defineKind.js').PresentContext} PresentContext */
@@ -47,19 +48,22 @@ function rank(queryIndex) {
  * How a matching line reads in a result: a speech line's marker becomes
  * the emoji its bubble shows on the item page (a known person's standard
  * emoji; a generic role's or an unmapped marker's own), with no colon,
- * as the search mockup shows it. Any other line stays as written.
- * @param {string} line @param {SpeakerMap} speakers @param {PresentContext} ctx
+ * as the search mockup shows it. Any other line stays as written. A long
+ * line's text is cut to a window around the match (`excerptAround`, Task
+ * 9b), after the emoji, so the speaker always shows.
+ * @param {string} line @param {string} q @param {SpeakerMap} speakers @param {PresentContext} ctx
  * @returns {string}
  */
-function shownLine(line, speakers, ctx) {
+function shownLine(line, q, speakers, ctx) {
   const [parsed] = splitLines(line);
-  if (parsed?.kind !== 'speech') return line;
-  return `${parsed.markers.map((marker) => componentOf(marker, speakers, ctx).emoji).join('')} ${parsed.text}`;
+  if (parsed?.kind !== 'speech') return excerptAround(line, q);
+  return `${parsed.markers.map((marker) => componentOf(marker, speakers, ctx).emoji).join('')} ${excerptAround(parsed.text, q)}`;
 }
 
 /**
- * The lines (trimmed) containing `q`, case-insensitively, at most 3.
- * Matched on the verbatim text; with `ctx` (the search service always
+ * The lines (trimmed) containing `q`, case-insensitively, at most 3,
+ * each long one cut to a window around the match. Matched on the
+ * verbatim text; with `ctx` (the search service always
  * passes it), each is shown with its speaker resolved (`shownLine`).
  * @param {{ body: string, speakers?: SpeakerMap }} details
  * @param {string} q
@@ -73,7 +77,7 @@ function matchLines(details, q, ctx) {
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && line.normalize('NFC').toLowerCase().includes(needle))
     .slice(0, MAX_MATCH_LINES);
-  return ctx ? found.map((line) => shownLine(line, details.speakers ?? {}, ctx)) : found;
+  return ctx ? found.map((line) => shownLine(line, q, details.speakers ?? {}, ctx)) : found.map((line) => excerptAround(line, q));
 }
 
 export const search = { textClause, rank, matchLines };

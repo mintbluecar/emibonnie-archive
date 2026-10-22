@@ -9,7 +9,7 @@
  *   data: import('../../../src/http/contracts.js').SearchResponse, offset: number, recent: string[] }} Ctx
  */
 import { html } from '../core/html.js';
-import { t } from '../core/site.js';
+import { t, tCount } from '../core/site.js';
 import * as pageShell from '../components/pageShell.js';
 import * as resultCard from '../components/resultCard.js';
 import * as emptyState from '../components/emptyState.js';
@@ -96,6 +96,18 @@ function recentSearchesBlock(recent) {
   `;
 }
 
+/**
+ * "N translations · newest first" above the results (Task 9b,
+ * mockups/search-v2.html): every match, not just this page, and the
+ * order they really come in -- src/repo/search.js ranks a text query's
+ * results best match first, and lists a filters-only search newest first.
+ * @param {Ctx} ctx
+ */
+function countLine(ctx) {
+  const order = ctx.state.q ? t('search.bestFirst') : t('search.newestFirst');
+  return html`<p class="c-search__count">${t('search.countLine', { count: tCount('search.results', ctx.data.count), order })}</p>`;
+}
+
 /** @param {Ctx} ctx */
 function bodyContent(ctx) {
   if (ctx.data.results.length === 0) {
@@ -104,7 +116,7 @@ function bodyContent(ctx) {
   }
   const hasMore = ctx.data.results.length < ctx.data.count;
   const results = ctx.data.results.map((r) => resultCard.render({ result: r, q: ctx.state.q }));
-  return html`<div class="c-search__results">${results}</div>${hasMore ? html`<button type="button" class="c-search__more">${t('search.more')}</button>` : ''}`;
+  return html`${countLine(ctx)}<div class="c-search__results">${results}</div>${hasMore ? html`<button type="button" class="c-search__more">${t('search.more')}</button>` : ''}`;
 }
 
 /**

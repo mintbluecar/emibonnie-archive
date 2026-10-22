@@ -37,6 +37,12 @@
   text-decoration: underline;
 }
 
+.c-search__count {
+  font-size: 11px;
+  color: var(--color-ink-muted);
+  margin: 2px 2px 6px;
+}
+
 .c-search__results {
   display: flex;
   flex-direction: column;

@@ -145,7 +145,9 @@
  * @typedef {Preview & { event: EventRef|null, matchLines: string[] }} SearchResult
  *   `matchLines`: the lines containing `q` (at most 3; none without `q`), each
  *   shown as the item page shows it: a speaker's marker becomes the display
- *   emoji (a person's standard emoji), the rest of the text stays verbatim.
+ *   emoji (a person's standard emoji), the rest of the text stays verbatim,
+ *   except that a long line is cut to about 120 characters around the
+ *   match, with "…" where it was cut.
  * @typedef {{ count: number, results: SearchResult[] }} SearchResponse
  *   `count`: every match, ignoring `limit`/`offset`; `limit: 0` gives the count only.
  */
