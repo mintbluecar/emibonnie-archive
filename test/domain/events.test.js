@@ -80,47 +80,59 @@ test('an unknown uppercase tag proposes no event: unsorted, newTags carries it',
   assert.deepEqual(result.newTags, ['StarGuest']);
 });
 
+const STAR_CONCERT = event({ id: 11, keywords: ['STAR CONCERT'], hashtags: ['starconcert2026'], occurredOn: '2026-10-19' });
+
 /**
- * A whole post: its speech first, then `tail` on the last line (Task 9a item 5: translators often
- * put the event's tag or keyword after the text).
- * @param {string} tail @param {{ events?: any[] }} [opts]
+ * A whole post (Task 9a item 5, fix round 1 ruling I1): `head` above the speech, `tail` after it --
+ * translators often put the event hashtag after the text.
+ * @param {{ head?: string, tail?: string, events?: any[] }} parts
  */
-function matchTail(tail, { events = [] } = {}) {
+function matchPost({ head = 'Rough trans', tail = '', events = [] }) {
   const postedAt = '2026-10-19T13:00:00Z';
-  const text = `Rough trans\n\n☀️: hi\n🌙: hello\n\n${tail}`;
+  const text = `${head}\n\n☀️: hi\n🌙: hello\n\n${tail}`;
   const known = { ignoredHashtags: ['solluna'], personHandles: ['solsunny', 'lunamoon'] };
   const parsed = parseHeader(text, { ...known, livePatterns: LIVE_PATTERNS, postedAt, timezone: 'Asia/Bangkok' });
-  const post = { text, tags: postTags(text, known) };
+  const post = { tags: postTags(text, known) };
   return matchEvent({ header: parsed, postedAt, events, people: PEOPLE, formatName: lower, timezone: 'Asia/Bangkok', post });
 }
 
-test('known tags decide wherever they are: a known event hashtag on the last line matches its event', () => {
-  const result = matchTail('#SLHappyDay2026', { events: [HAPPY_DAY] });
+test('the header match wins: a header keyword beats a body mention of another event', () => {
+  const result = matchPost({ head: 'STAR CONCERT', tail: 'like at #SLHappyDay2026', events: [HAPPY_DAY, STAR_CONCERT] });
+  assert.equal(result.event?.id, STAR_CONCERT.id);
+});
+
+test('the header match wins: a header hashtag beats a later hashtag', () => {
+  const result = matchPost({ head: 'Rough trans #StarConcert2026', tail: '#SLHappyDay2026', events: [HAPPY_DAY, STAR_CONCERT] });
+  assert.equal(result.event?.id, STAR_CONCERT.id);
+});
+
+test('a known keyword only in the body, as a plain phrase, matches nothing (keywords are header-only)', () => {
+  const result = matchPost({ tail: 'what a solluna happy day it was', events: [HAPPY_DAY] });
+  assert.equal(result.event, null);
+  assert.equal(result.placement, 'unsorted');
+});
+
+test('with nothing in the header, a trailing known event hashtag matches its event', () => {
+  const result = matchPost({ tail: '#SLHappyDay2026', events: [HAPPY_DAY] });
   assert.equal(result.placement, 'event');
-  assert.equal(result.event?.id, 10);
+  assert.equal(result.event?.id, HAPPY_DAY.id);
   assert.equal(result.proposal, null);
   assert.deepEqual(result.newTags, []);
 });
 
-test('known tags decide wherever they are: a known event keyword after the text matches its event', () => {
-  const result = matchTail('SOLLUNA HAPPY DAY', { events: [HAPPY_DAY] });
-  assert.equal(result.event?.id, 10);
-  assert.equal(matchTail('— solluna happy day, part 2 —', { events: [HAPPY_DAY] }).event?.id, 10, 'inside a line, any case');
-});
-
 test('after the text, a new tag or caps line steers nothing: no event, no proposal, not asked about', () => {
   for (const tail of ['#StarGuest', 'A BRAND NEW SHOW']) {
-    const result = matchTail(tail, { events: [HAPPY_DAY] });
+    const result = matchPost({ tail, events: [HAPPY_DAY] });
     assert.equal(result.placement, 'unsorted', tail);
-    assert.equal(result.event, null, tail);
     assert.equal(result.proposal, null, tail);
     assert.deepEqual(result.newTags, [], tail);
   }
 });
 
-test('a person hashtag after the text never matches an event, even one that carries the same tag', () => {
-  const odd = event({ id: 30, hashtags: ['lunamoon'], occurredOn: '2026-10-19' });
-  assert.equal(matchTail('#lunamoon', { events: [odd] }).event, null);
+test('a #handle in the body never matches an event, even one whose hashtag or keyword is that handle', () => {
+  const odd = event({ id: 30, hashtags: ['lunamoon'], keywords: ['lunamoon'], occurredOn: '2026-10-19' });
+  assert.equal(matchPost({ tail: '#lunamoon', events: [odd] }).event, null);
+  assert.equal(matchPost({ tail: 'lunamoon', events: [odd] }).event, null);
 });
 
 test('an empty header gives unsorted', () => {

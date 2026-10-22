@@ -227,10 +227,17 @@ test('a known event hashtag on the tweet\'s last line places it in that event (k
   assert.deepEqual(draft.newTags ?? [], []);
 });
 
-test('a known keyword after the text matches too; an unknown tag there steers nothing', () => {
+test('a known keyword after the text does not match (keywords are header-only); an unknown tag there steers nothing', () => {
   const keyword = draftTranslation(tweetWith('Rough trans\n\n☀️: hi\n\nSOLLUNA HAPPY DAY'), ctx({ events: [HAPPY_DAY] }));
-  assert.equal(keyword.common.eventId, HAPPY_DAY.id);
+  assert.equal(keyword.common.eventId, null);
   const unknown = draftTranslation(tweetWith('Rough trans\n\n☀️: hi\n\n#SomethingElse'), ctx({ events: [HAPPY_DAY] }));
   assert.equal(unknown.common.placement, 'unsorted');
   assert.equal(unknown.common.eventId, null);
+});
+
+test('a known event hashtag in a follow-up part matches when the header has nothing (fix round 1, M3)', () => {
+  const tweet = { ...tweetWith('Rough trans\n\n☀️: thank you for coming'),
+    followUps: [{ id: '1900000000000000096', text: '🌙: see you next time\n#SLHappyDay2026', createdAt: null, editableUntil: null }] };
+  const draft = draftTranslation(tweet, ctx({ events: [HAPPY_DAY] }));
+  assert.equal(draft.common.eventId, HAPPY_DAY.id);
 });

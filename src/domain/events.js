@@ -88,38 +88,36 @@ function sameSet(a, b) {
 }
 
 /**
- * Whether `phrase` occurs in `text` (both normed) as a whole phrase:
- * not run into a letter or digit on either side.
- * @param {string} text @param {string} phrase
- */
-function hasPhrase(text, phrase) {
-  if (phrase === '') return false;
-  for (let at = text.indexOf(phrase); at !== -1; at = text.indexOf(phrase, at + 1)) {
-    const before = text.slice(0, at).at(-1) ?? ' ';
-    const after = text.charAt(at + phrase.length) || ' ';
-    if (!/[\p{L}\p{N}]/u.test(before) && !/[\p{L}\p{N}]/u.test(after)) return true;
-  }
-  return false;
-}
-
-/**
- * Rule 1: a keyword or tag (by `norm`) that an event already has. Known
- * tags decide wherever they are (Task 9a item 5): with the whole `post`,
- * an event keyword anywhere in its text, or any of its plain tags, also
- * matches -- translators often put the event tag after the text. A tag is
- * never classified by shape, so a lower-case tag is tried exactly like
- * any other.
+ * Rule 1: a keyword or any header tag (by `norm`) that an event already
+ * has. A tag is never classified by shape, so a lower-case tag is tried
+ * exactly like any other.
  * @param {Header} header
  * @param {Event[]} events
  * @param {string|null} date
- * @param {{ text: string, tags: string[] }|null} post
  */
-function matchByTag(header, events, date, post) {
+function matchByTag(header, events, date) {
   const keyword = header.keyword ? norm(header.keyword) : null;
-  const tags = new Set([...header.tags, ...(post?.tags ?? [])].map(norm));
-  const text = post ? norm(post.text) : null;
-  const keywordHit = (/** @type {string} */ k) => norm(k) === keyword || (text !== null && hasPhrase(text, norm(k)));
-  const hits = events.filter((e) => e.keywords.some(keywordHit) || e.hashtags.some((h) => tags.has(norm(h))));
+  const tags = new Set(header.tags.map(norm));
+  const hits = events.filter(
+    (e) => (keyword !== null && e.keywords.some((k) => norm(k) === keyword)) || e.hashtags.some((h) => tags.has(norm(h))),
+  );
+  return byCloseness(hits, date)[0] ?? null;
+}
+
+/**
+ * Rule 1b, only when the header matched nothing (Task 9a, fix round 1
+ * ruling I1): "known tags decide" wherever they are, so a hashtag from
+ * anywhere in the post (`postTags`: its plain tags, follow-ups included)
+ * that an event already has matches it -- translators often put the event
+ * hashtag after the text. Hashtags only: an event keyword matches in the
+ * header alone, and person and ignored tags never reach `postTags`.
+ * @param {string[]} postTagList
+ * @param {Event[]} events
+ * @param {string|null} date
+ */
+function matchByPostTag(postTagList, events, date) {
+  const tags = new Set(postTagList.map(norm));
+  const hits = events.filter((e) => e.hashtags.some((h) => tags.has(norm(h))));
   return byCloseness(hits, date)[0] ?? null;
 }
 
@@ -225,22 +223,32 @@ function placementWithoutEvent(tagIds, postAuthorIds, newTags) {
 }
 
 /**
+ * The existing event an entry belongs to, by the rules in order: header
+ * keyword/tag, then a hashtag anywhere in the post, then a live.
+ * @param {{ header: Header, postTagList: string[], tagIds: number[], events: Event[], date: string|null }} input
+ * @returns {Event|null}
+ */
+function existingEvent({ header, postTagList, tagIds, events, date }) {
+  return matchByTag(header, events, date) ?? matchByPostTag(postTagList, events, date) ?? matchByLive(header, tagIds, events, date);
+}
+
+/**
  * Decides where an entry goes, from its header. In order: an existing
- * event by keyword/tag (in the header, or -- given the post's `text` and
- * `postTags` -- anywhere in the post); an existing live by who/where/when; a new event
+ * event by header keyword/tag; else by a hashtag anywhere in the post
+ * (`post.tags`, from `postTags`); an existing live by who/where/when; a new event
  * when there's a keyword or a live (never from a tag alone); else a
  * post, or unsorted. The entry date is the live's date, else the posting
  * date in the site's time zone. `newTags`: header tags that matched no
  * existing event and aren't known (person/ignored tags never reach here).
  * @param {{header: Header, postedAt: string|null, events: Event[], people: EventPerson[],
- *   formatName: FormatName, timezone: string, postAuthorIds?: number[], post?: { text: string, tags: string[] }}} input
- *   `post`: the whole post's text and its plain tags (`postTags`), for known tags after the header.
+ *   formatName: FormatName, timezone: string, postAuthorIds?: number[], post?: { tags: string[] }}} input
+ *   `post.tags`: the whole post's plain hashtags (`postTags`), tried only when the header matches nothing.
  * @returns {EventMatch}
  */
 export function matchEvent({ header, postedAt, events, people, formatName, timezone, postAuthorIds = [], post }) {
   const date = header.live?.date ?? (postedAt ? localDate(postedAt, timezone) : null);
   const tagIds = peopleForTags(header.personTags, people).map((p) => p.id);
-  const matched = matchByTag(header, events, date, post ?? null) ?? matchByLive(header, tagIds, events, date);
+  const matched = existingEvent({ header, postTagList: post?.tags ?? [], tagIds, events, date });
   const newTags = newTagsOf(header, events);
   const base = { date, suggestions: suggestionsNear(events, date, matched), authorIds: [], newTags };
   if (matched) return { ...base, placement: 'event', event: matched, proposal: null };

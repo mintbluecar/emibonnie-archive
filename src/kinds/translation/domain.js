@@ -167,7 +167,8 @@ function readText(tweet, ctx) {
     timezone: ctx.timezone,
   });
   const allText = [text, ...tweet.followUps.map((f) => f.text)].join('\n');
-  const post = { text, tags: postTags(text, { ignoredHashtags: ctx.ignoredHashtags, personHandles }) };
+  // Every part of the post, follow-ups included: an event hashtag may close the thread.
+  const post = { tags: postTags(allText, { ignoredHashtags: ctx.ignoredHashtags, personHandles }) };
   return { text, header, post, markers: findMarkers(splitLines(allText)) };
 }
 
