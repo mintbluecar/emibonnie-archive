@@ -12,7 +12,7 @@ import { html } from '../core/html.js';
 import { mount } from '../core/dom.js';
 import { getJson, ApiError } from '../core/api.js';
 import { site, t } from '../core/site.js';
-import { eventUrl } from '../core/routes.js';
+import { eventHref } from '../core/routes.js';
 import * as chips from '../components/chips.js';
 import * as emptyState from '../components/emptyState.js';
 import * as pageShell from '../components/pageShell.js';
@@ -52,7 +52,7 @@ function prevNextNav(data) {
  */
 function backRow(data) {
   if (!data.event) return html``;
-  return html`<a class="c-item__back" href="${eventUrl(data.event.slug)}">${t('item.backToEvent', { name: data.event.name })}</a>`;
+  return html`<a class="c-item__back" href="${eventHref(data.event.slug)}">${t('item.backToEvent', { name: data.event.name })}</a>`;
 }
 
 /**

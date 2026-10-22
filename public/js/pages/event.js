@@ -23,6 +23,7 @@ import { dayLabel } from '../core/format.js';
 import * as chips from '../components/chips.js';
 import * as emptyState from '../components/emptyState.js';
 import * as pageShell from '../components/pageShell.js';
+import { slugFromEventPath } from '../core/routes.js';
 import { KIND_UI, renderSections } from '../kinds/_registry.js';
 
 const APP_SELECTOR = 'app';
@@ -276,12 +277,6 @@ export function bind(root, data, slug) {
   if (sectionsEl) on(sectionsEl, '.c-event-section__more', 'click', (_e, target) => { loadMore(root, slug, state, target); });
 }
 
-/** @param {string} path @returns {string|null} */
-function slugFromPath(path) {
-  const match = /^\/e\/([^/]+)/.exec(path);
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
 /** @param {Element} root @returns {void} */
 function mountNotFound(root) {
   mount(root, pageShell.render({ active: 'home', compact: true, content: emptyState.render({ message: t('event.notFound') }) }));
@@ -290,7 +285,7 @@ function mountNotFound(root) {
 /** @returns {Promise<void>} */
 export async function start() {
   const root = document.getElementById(APP_SELECTOR);
-  const slug = root && slugFromPath(window.location.pathname);
+  const slug = root && slugFromEventPath(window.location.pathname);
   if (!root || !slug) return;
   /** @type {import('../../../src/http/contracts.js').EventView} */
   let data;
