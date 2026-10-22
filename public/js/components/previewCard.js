@@ -8,7 +8,11 @@
  * the mockups show it that way, and the card's own outer `<a>` is
  * already the one link; nesting another inside it would be invalid
  * markup and ambiguous to click). Entries show opening lines, never a
- * title (see mockups/screens-v2.html's event screen).
+ * title (see mockups/screens-v2.html's event screen). The outer `<a>`
+ * also carries `data-person-ids`/`data-account` generically, so a hub
+ * page's own client-side people/translator filter (Plan 1b Task 3) works
+ * for any kind's entries without this component or the page knowing
+ * which kind it is.
  */
 import { html } from '../core/html.js';
 import { t } from '../core/site.js';
@@ -35,8 +39,14 @@ function metaRow(preview) {
  */
 export function render(props) {
   const { result } = props;
+  const personIds = result.people.map((person) => person.id).join(',');
   return html`
-    <a class="c-preview-card" href="${result.url}">
+    <a
+      class="c-preview-card"
+      href="${result.url}"
+      data-person-ids="${personIds}"
+      ${result.accountHandle ? html`data-account="${result.accountHandle}"` : ''}
+    >
       ${bubbles.render({ bubbles: result.lines })}
       ${metaRow(result)}
     </a>

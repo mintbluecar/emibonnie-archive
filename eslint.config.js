@@ -160,6 +160,9 @@ export default [
   },
   {
     files: ['public/js/**/*.js'],
+    languageOptions: {
+      globals: { ...globals.browser },
+    },
     rules: {
       'no-restricted-imports': [
         'error',

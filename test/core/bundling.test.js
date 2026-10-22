@@ -147,6 +147,28 @@ test('runBuild: with no public/js/pages directory, bundling is a no-op (empty ma
   }
 });
 
+test('runBuild: rebuilding an already-built page (no more {{asset:...}} placeholders) still refreshes a changed hash', async () => {
+  const { repoRoot, siteDir } = makeBundlingRepoRoot();
+  try {
+    await runBuild({ repoRoot, siteDir });
+    const firstManifest = JSON.parse(readFileSync(path.join(repoRoot, 'public/build/manifest.json'), 'utf8'));
+    assert.ok(!readFileSync(path.join(repoRoot, 'public/index.html'), 'utf8').includes('{{asset:'), 'placeholders are gone after the first build');
+
+    // A source change that changes the page's bundled JS (so its hash changes), simulating a second `npm run dev` cycle.
+    writeFileSync(path.join(repoRoot, 'public/js/pages/home.js'), "export function start() { console.log('home v2'); }\n");
+    await runBuild({ repoRoot, siteDir });
+    const secondManifest = JSON.parse(readFileSync(path.join(repoRoot, 'public/build/manifest.json'), 'utf8'));
+    assert.notEqual(secondManifest.pages.home, firstManifest.pages.home, 'the hash did change');
+
+    const html = readFileSync(path.join(repoRoot, 'public/index.html'), 'utf8');
+    assert.ok(html.includes(`/build/${secondManifest.pages.home}`), 'the already-built page picked up the new hash');
+    assert.ok(!html.includes(firstManifest.pages.home), 'the stale hash is gone, not left dangling');
+    assert.ok(existsSync(path.join(repoRoot, 'public/build', secondManifest.pages.home)), 'and the file it now points to actually exists');
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
 test('runBuild: an unresolved asset placeholder fails the build loudly', async () => {
   const { repoRoot, siteDir } = makeBundlingRepoRoot();
   try {

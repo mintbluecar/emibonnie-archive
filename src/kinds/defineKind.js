@@ -1,4 +1,5 @@
 // @ts-check
+import { pages } from '../pages.js';
 
 /**
  * The item-kind plugin contract. Generic code (ingest, search, hub views)
@@ -132,11 +133,26 @@ const NAME = /^[a-z][a-z0-9_]*$/;
 const URL_PREFIX = /^\/[a-z0-9-]+\/$/;
 
 /**
- * Item-page prefixes no kind may take: the engine's own pages and API
- * (`/e/` events, `/p/` people, `/tl/` translators, search, the API, the
- * add flow, the me page). `/t/` belongs to the translation kind alone.
+ * A page path's first segment as a `/x/` prefix (`'/e/:slug'` -> `'/e/'`),
+ * or `null` for one with none (`'/'`).
+ * @param {string} pagePath
+ * @returns {string|null}
  */
-export const RESERVED_URL_PREFIXES = Object.freeze(['/e/', '/p/', '/tl/', '/search/', '/api/', '/add/', '/me/']);
+function prefixOf(pagePath) {
+  const first = pagePath.split('/').find(Boolean);
+  return first ? `/${first}/` : null;
+}
+
+/**
+ * Item-page prefixes no kind may take: every `src/pages.js` page's
+ * prefix (the engine's own pages, including ones later Plan 1b tasks
+ * still have to build), plus the API. `/t/` belongs to the translation
+ * kind alone (see `OWNED_URL_PREFIXES` below).
+ */
+export const RESERVED_URL_PREFIXES = Object.freeze([
+  ...new Set(pages.map((page) => prefixOf(page.path)).filter((prefix) => prefix !== null)),
+  '/api/',
+]);
 /** @type {Readonly<Record<string, string>>} prefix -> the one kind that owns it */
 const OWNED_URL_PREFIXES = Object.freeze({ '/t/': 'translation' });
 const REQUIRED_FUNCTIONS = ['matchesUrl', 'fetchSource', 'draft', 'persist', 'loadDetails'];

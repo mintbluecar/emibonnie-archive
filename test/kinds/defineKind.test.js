@@ -68,7 +68,7 @@ test('rejects a urlPrefix that is not /x/', () => {
 });
 
 test('rejects a reserved urlPrefix, and /t/ for any kind but translation', () => {
-  for (const urlPrefix of ['/e/', '/p/', '/tl/', '/search/', '/api/', '/add/', '/me/', '/t/']) {
+  for (const urlPrefix of ['/e/', '/p/', '/tl/', '/search/', '/api/', '/add/', '/me/', '/about/', '/privacy/', '/takedown/', '/t/']) {
     assert.throws(() => defineKind({ ...spec(), urlPrefix }), /urlPrefix .* (is reserved|belongs to the translation kind)/, urlPrefix);
   }
   assert.equal(defineKind({ ...spec(), name: 'translation', urlPrefix: '/t/' }).urlPrefix, '/t/');

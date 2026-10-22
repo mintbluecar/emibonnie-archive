@@ -25,5 +25,17 @@
   "item.translatedBy": "tl",
   "item.clipBy": "clip by",
   "item.hasVideo": "video",
-  "item.unknownSpeaker": "unknown speaker"
+  "item.unknownSpeaker": "unknown speaker",
+  "home.empty": "no events yet",
+  "event.back": "‹ events",
+  "event.search": "search this event",
+  "event.translations": "translations",
+  "event.translators": "translators",
+  "event.allPeople": "all",
+  "event.translatorFilterLabel": "translator",
+  "event.translatorAll": "all translators",
+  "event.newestFirst": "newest first",
+  "event.more": "more",
+  "event.report": "report",
+  "event.notFound": "event not found"
 }

@@ -50,6 +50,7 @@ async function bundlePages(repoRoot, outDir) {
     metafile: true,
     write: true,
     logLevel: 'silent',
+    plugins: [siteJsPlugin(path.join(repoRoot, 'public/site/site.js'))],
   });
 
   /** @type {Record<string, string>} */
@@ -60,6 +61,23 @@ async function bundlePages(repoRoot, outDir) {
     pages[pageName] = path.basename(path.resolve(process.cwd(), outputPath));
   }
   return pages;
+}
+
+/**
+ * Resolves the one absolute browser-root import `public/js/core/site.js`
+ * uses (`'/site/site.js'`) to the real file on disk -- esbuild's own
+ * `alias` option rejects a leading `/` as a package name, so this is a
+ * tiny plugin instead.
+ * @param {string} sitePath
+ * @returns {import('esbuild').Plugin}
+ */
+function siteJsPlugin(sitePath) {
+  return {
+    name: 'site-js-absolute-import',
+    setup(build) {
+      build.onResolve({ filter: /^\/site\/site\.js$/ }, () => ({ path: sitePath }));
+    },
+  };
 }
 
 const ASSET_PLACEHOLDER = /\{\{asset:([a-zA-Z0-9_.:-]+)\}\}/g;
@@ -85,8 +103,42 @@ function resolveAssetToken(token, manifest) {
 }
 
 /**
- * Rewrites every `public/*.html` page's `{{asset:...}}` placeholders to
- * the manifest's hashed `/build/...` paths, in place.
+ * A `/build/<slot>-<hash>.<ext>` reference already resolved by an
+ * earlier build, for one asset slot (`app`, `fonts`, or a page name).
+ * `{{asset:...}}` placeholders are consumed the first time a page is
+ * built, so a committed page's `public/*.html` carries resolved paths,
+ * not placeholders, from then on; without also matching this shape, a
+ * later rebuild (e.g. a second `npm run dev`, once the page's bundle
+ * hash has changed) would leave the old, now-404ing path in place.
+ * @param {string} slot @param {string} ext
+ * @returns {RegExp}
+ */
+function resolvedAssetPattern(slot, ext) {
+  return new RegExp(`/build/${slot}-[A-Za-z0-9]+\\.${ext}`, 'g');
+}
+
+/**
+ * Refreshes any already-resolved `/build/...` reference in `text`, for
+ * each of `manifest`'s asset slots, to its current hash.
+ * @param {string} text @param {Manifest} manifest
+ * @returns {string}
+ */
+function refreshResolvedAssets(text, manifest) {
+  let result = text
+    .replace(resolvedAssetPattern('app', 'css'), `/build/${manifest.appCss}`)
+    .replace(resolvedAssetPattern('fonts', 'css'), `/build/${manifest.fontsCss}`);
+  for (const [page, fileName] of Object.entries(manifest.pages)) {
+    result = result.replace(resolvedAssetPattern(page, 'js'), `/build/${fileName}`);
+  }
+  return result;
+}
+
+/**
+ * Rewrites every `public/*.html` page's asset references to the
+ * manifest's current hashed `/build/...` paths, in place -- whether
+ * they're still `{{asset:...}}` placeholders (a page's first build) or
+ * already-resolved paths from an earlier one (idempotent: safe to run
+ * again and again as bundle hashes change).
  * @param {string} publicDir @param {Manifest} manifest
  * @returns {void}
  */
@@ -96,7 +148,8 @@ function rewriteHtmlAssets(publicDir, manifest) {
     if (!entry.isFile() || !entry.name.endsWith('.html')) continue;
     const filePath = path.join(publicDir, entry.name);
     const text = readFileSync(filePath, 'utf8');
-    const rewritten = text.replace(ASSET_PLACEHOLDER, (_whole, token) => resolveAssetToken(token, manifest));
+    const withPlaceholdersResolved = text.replace(ASSET_PLACEHOLDER, (_whole, token) => resolveAssetToken(token, manifest));
+    const rewritten = refreshResolvedAssets(withPlaceholdersResolved, manifest);
     if (rewritten !== text) writeFileSync(filePath, rewritten);
   }
 }

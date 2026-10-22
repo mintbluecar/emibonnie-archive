@@ -51,16 +51,42 @@ function collectEngineJsSources(repoRoot) {
 }
 
 /**
- * `src/pages.js`'s page rewrites (Plan 1b), or `[]` if the file doesn't
- * exist yet.
+ * The `{ source, destination }` rewrite one `src/pages.js` `PageRoute`
+ * needs, or `null` when it needs none: a static path (no `:param`)
+ * resolves to its file by name already; a dynamic one with no `file`
+ * yet (a later task's page) has nothing to rewrite to.
+ * @param {import('../src/pages.js').PageRoute} page
+ * @returns {{ source: string, destination: string }|null}
+ */
+function pageRewriteOf(page) {
+  if (!page.path.includes(':')) return null;
+  if (page.meta) return { source: page.path, destination: `/api${page.meta}` };
+  return page.file ? { source: page.path, destination: `/${page.file}` } : null;
+}
+
+/**
+ * `src/pages.js`'s own rewrites (Plan 1b), skipping any whose `source`
+ * the route table's rewrites already cover (e.g. the event page's meta
+ * route, registered through the kinds registry) -- so `src/pages.js` and
+ * the route table can agree on the same URL without `vercel.json`
+ * listing it twice.
  * @param {string} repoRoot
+ * @param {Set<string>} knownSources
  * @returns {Promise<{ source: string, destination: string }[]>}
  */
-async function readPageRewrites(repoRoot) {
+async function readPageRewrites(repoRoot, knownSources) {
   const pagesPath = path.join(repoRoot, 'src/pages.js');
   if (!existsSync(pagesPath)) return [];
   const mod = await import(pathToFileURL(pagesPath).href);
-  return mod.pages ?? [];
+  /** @type {import('../src/pages.js').PageRoute[]} */
+  const pageList = mod.pages ?? [];
+  /** @type {{ source: string, destination: string }[]} */
+  const rewrites = [];
+  for (const page of pageList) {
+    const rewrite = pageRewriteOf(page);
+    if (rewrite && !knownSources.has(rewrite.source)) rewrites.push(rewrite);
+  }
+  return rewrites;
 }
 
 /**
@@ -151,7 +177,8 @@ export async function runBuild(options = {}) {
   const siteThemePath = path.join(publicSiteDir, 'theme.css');
   await runBundling({ repoRoot, engineRoot: REPO_ROOT, siteThemePath: existsSync(siteThemePath) ? siteThemePath : null });
 
-  const rewrites = [...(await readRouteRewrites()), ...(await readPageRewrites(repoRoot))];
+  const routeRewrites = await readRouteRewrites();
+  const rewrites = [...routeRewrites, ...(await readPageRewrites(repoRoot, new Set(routeRewrites.map((r) => r.source))))];
   const vercelConfig = buildVercelConfig(site, rewrites);
   writeFileSync(path.join(repoRoot, 'vercel.json'), `${JSON.stringify(vercelConfig, null, 2)}\n`);
 }

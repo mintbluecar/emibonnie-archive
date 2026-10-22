@@ -111,7 +111,7 @@ export function buildFrontendKindsRegistryModule(kindNames) {
   const entries = kindNames.map((name, i) => `  ${JSON.stringify(name)}: { section: section${i}, detail: detail${i} },`);
   return (
     `${GENERATED_HEADER}// @ts-check\n${imports.length > 0 ? `${imports.join('\n')}\n\n` : ''}` +
-    `/** @type {Record<string, { section: { render: Function }, detail: { render: Function, bind?: Function } }>} */\n` +
+    `/** @type {Record<string, { section: { render: Function, bind?: Function }, detail: { render: Function, bind?: Function } }>} */\n` +
     `export const KIND_UI = {\n${entries.join('\n')}\n};\n\n` +
     '/**\n' +
     ' * Renders every section whose kind this build has UI for, in registry\n' +
