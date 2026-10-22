@@ -440,7 +440,8 @@ test('scripts/add.js exits 2 on needs_speakers and lists the missing markers (of
     const code = await runAdd({ args: [`https://x.com/tl_alpha/status/${IDS.LONG}`, '--map', '🌧️=fan'], deps, log: (l) => lines.push(l) });
     assert.equal(code, 2);
     assert.equal(lines[0], `needs_speakers ${IDS.LONG}`);
-    assert.deepEqual(lines.slice(1).map((l) => l.trim().split(' ')[1]), ['🦁', '🐶', '🐱']);
+    assert.deepEqual(lines.slice(1, 4).map((l) => l.trim().split(' ')[1]), ['🦁', '🐶', '🐱']);
+    assert.deepEqual(lines.slice(4), ['  new tag #SolLunaStarfest', '  new tag #fancamclip']);
     assert.equal(await count(deps.db, 'select count(*)::int as n from items'), 0);
     const added = await runAdd({ args: [IDS.EVENT_B], deps, log: () => {} });
     assert.equal(added, 0);

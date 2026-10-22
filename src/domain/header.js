@@ -9,9 +9,8 @@ import { localYear } from './dates.js';
  * @typedef {{code: string, platformCode: string, date: string|null}} HeaderLive
  * @typedef {{
  *   keyword: string|null,
- *   hashtags: string[], // as written (compare with norm)
+ *   tags: string[], // as written (compare with norm); never classified by shape
  *   personTags: string[], // normed
- *   unknownHandleTags: string[], // normed
  *   live: HeaderLive|null,
  *   context: string|null,
  * }} Header
@@ -46,15 +45,17 @@ function hashtagTokensOf(text) {
 }
 
 /**
+ * Never guesses a tag's role from its shape: only a known person handle
+ * or the ignore list decide. Anything else is just a tag.
  * @param {string} tag
  * @param {{ignoredHashtags: string[], personHandles: string[]}} opts
- * @returns {'person'|'ignored'|'hashtag'|'unknown'}
+ * @returns {'person'|'ignored'|'tag'}
  */
 function classifyTag(tag, { ignoredHashtags, personHandles }) {
   const normed = norm(tag);
   if (personHandles.some((handle) => norm(handle) === normed)) return 'person';
   if (ignoredHashtags.some((ignored) => norm(ignored) === normed)) return 'ignored';
-  return /[A-Z]/.test(tag) ? 'hashtag' : 'unknown';
+  return 'tag';
 }
 
 /**
@@ -68,26 +69,25 @@ function pushUnique(list, value) {
 
 /**
  * Scans every header line for `#tag` tokens, bucketing each into a person
- * tag (matches a known handle), a dropped ignored hashtag, a content
- * hashtag (mixed/upper-case, event-tag shaped), or an unknown handle tag
- * (plain lower-case, shaped like an unregistered person's handle).
+ * tag (matches a known handle) or a plain tag -- never guessed from the
+ * tag's shape. A dropped ignored hashtag joins neither bucket.
  * Duplicates are dropped by `norm`, keeping the first spelling.
  * @param {Line[]} headerLines
  * @param {{ignoredHashtags: string[], personHandles: string[]}} opts
  */
 function collectTags(headerLines, opts) {
-  /** @type {Record<'person'|'hashtag'|'unknown', string[]>} */
-  const buckets = { person: [], hashtag: [], unknown: [] };
+  /** @type {Record<'person'|'tag', string[]>} */
+  const buckets = { person: [], tag: [] };
   for (const line of headerLines) {
     for (const tag of hashtagTokensOf(line.text)) {
       const kind = classifyTag(tag, opts);
       if (kind === 'ignored') continue;
-      // Content hashtags keep their written case (stored as `tags.display`);
-      // person and unknown handle tags are compared as keys, so are normed.
-      pushUnique(buckets[kind], kind === 'hashtag' ? tag : norm(tag));
+      // Plain tags keep their written case (stored as `tags.display`);
+      // person tags are compared as keys, so are normed.
+      pushUnique(buckets[kind], kind === 'tag' ? tag : norm(tag));
     }
   }
-  return { personTags: buckets.person, hashtags: buckets.hashtag, unknownHandleTags: buckets.unknown };
+  return { personTags: buckets.person, tags: buckets.tag };
 }
 
 /**
@@ -167,7 +167,7 @@ export function parseHeader(text, options) {
   const headerLines = firstSpeechIndex === -1 ? lines : lines.slice(0, firstSpeechIndex);
 
   const keyword = findKeyword(headerLines);
-  const { personTags, hashtags, unknownHandleTags } = collectTags(headerLines, { ignoredHashtags, personHandles });
+  const { personTags, tags } = collectTags(headerLines, { ignoredHashtags, personHandles });
   const liveMatch = findLiveMatch(headerLines, livePatterns);
   const live = liveMatch
     ? { code: liveMatch.code, platformCode: liveMatch.platformCode, date: extractLiveDate(liveMatch.lineText, postedAt, timezone) }
@@ -175,9 +175,8 @@ export function parseHeader(text, options) {
 
   return {
     keyword,
-    hashtags,
+    tags,
     personTags,
-    unknownHandleTags,
     live,
     context: buildContext(headerLines, keyword, liveMatch?.lineText ?? null),
   };

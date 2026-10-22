@@ -101,7 +101,7 @@ test('filterOptions: people, categories, visible events, and only accounts with 
   assert.equal(before.events.length, 4);
   assert.deepEqual(Object.keys(before.events[0]).sort(), ['name', 'slug']);
   assert.deepEqual(before.categories, [], 'no visible item has a category yet');
-  assert.deepEqual(before.people.map((p) => p.name), ['sol', 'luna', 'host']);
+  assert.deepEqual(before.people.map((p) => p.name), ['sol', 'luna', 'host', 'star guest']);
 
   await deps.db.transaction((/** @type {any} */ tx) => tx.query("update accounts set opted_out_at = now() where handle = 'tl_gamma'"), SYSTEM);
   try {
@@ -193,7 +193,7 @@ test('itemView: placement, tags as first written, category name, and addedBy nul
   const id = await itemIdOf(deps.db, IDS.EVENT_A);
   const plain = /** @type {any} */ (await itemView(deps, 'translation', IDS.EVENT_A));
   assert.equal(plain.placement, 'event');
-  assert.deepEqual(plain.tags, { keyword: 'SOLLUNA HAPPY DAY', hashtags: ['SLHappyDay2026'] });
+  assert.deepEqual(plain.tags, { keyword: 'SOLLUNA HAPPY DAY', hashtags: ['SLHappyDay2026', 'fanclip'] });
   assert.equal(plain.category, null);
   assert.equal(plain.addedBy, null);
   await deps.db.transaction((/** @type {any} */ tx) => tx.query("update items set category_id = (select id from categories where name = 'live') where id = $1", [id]), SYSTEM);

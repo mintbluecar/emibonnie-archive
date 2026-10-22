@@ -66,10 +66,18 @@ test('a hashtag matches by norm', () => {
   assert.equal(result.event?.id, 10);
 });
 
-test('a lowercase event hashtag (an unknown handle tag) matches an existing event first', () => {
+test('a lowercase tag matching an existing event matches it, same as any other case', () => {
   const result = match('#slhappyday2026', { events: [HAPPY_DAY] });
   assert.equal(result.placement, 'event');
   assert.equal(result.event?.id, 10);
+});
+
+test('an unknown uppercase tag proposes no event: unsorted, newTags carries it', () => {
+  const result = match('#StarGuest');
+  assert.equal(result.placement, 'unsorted');
+  assert.equal(result.event, null);
+  assert.equal(result.proposal, null);
+  assert.deepEqual(result.newTags, ['StarGuest']);
 });
 
 test('an empty header gives unsorted', () => {
@@ -110,17 +118,25 @@ test('a joint live matches only the event with both people', () => {
   assert.match(proposal?.slug ?? '', /^[a-z0-9-]+$/);
 });
 
-test('an unknown handle tag gives a shared story', () => {
+test('an unknown tag alone is never a shared story (that only comes from an override): unsorted, newTags carries it', () => {
   const result = match('#SolLuna #starguest');
-  assert.equal(result.placement, 'shared_story');
+  assert.equal(result.placement, 'unsorted');
   assert.equal(result.event, null);
   assert.equal(result.proposal, null);
+  assert.deepEqual(result.newTags, ['starguest']);
 });
 
-test('post: known people’s own tags only; tagged people are the authors', () => {
+test('post: known people’s own tags only, no new tags; tagged people are the authors', () => {
   const result = match('#solsunny #lunamoon');
   assert.equal(result.placement, 'post');
   assert.deepEqual(result.authorIds, [SOL, LUNA]);
+  assert.deepEqual(result.newTags, []);
+});
+
+test('known people plus a new tag: unsorted, not post, with the new tag surfaced', () => {
+  const result = match('#solsunny #starguest');
+  assert.equal(result.placement, 'unsorted');
+  assert.deepEqual(result.newTags, ['starguest']);
 });
 
 test('post: postAuthorIds from the caller', () => {
@@ -160,7 +176,7 @@ test('proposeEvent: keyword name, a slug from it, tags carried', () => {
 });
 
 test('proposeEvent: a name with no Latin letters still gives a valid slug', () => {
-  const thai = { keyword: 'งานแฟนมีต', hashtags: [], personTags: [], unknownHandleTags: [], live: null, context: null };
+  const thai = { keyword: 'งานแฟนมีต', tags: [], personTags: [], live: null, context: null };
   const proposal = proposeEvent({ header: thai, date: '2026-10-18', people: PEOPLE, formatName: lower });
   assert.match(proposal.slug, /^[a-z0-9]+(-[a-z0-9]+)*$/);
 });

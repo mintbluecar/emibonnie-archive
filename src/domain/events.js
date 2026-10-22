@@ -26,6 +26,7 @@ import { LIVE_WINDOW_DAYS } from './constants.js';
  *   suggestions: Event[],
  *   authorIds: number[],
  *   date: string|null,
+ *   newTags: string[],
  * }} EventMatch
  */
 
@@ -87,20 +88,41 @@ function sameSet(a, b) {
 }
 
 /**
- * Rule 1: a keyword or hashtag (by `norm`) that an event already has.
- * Unknown handle tags are tried too, since an event hashtag may be all
- * lower-case and so look like a handle.
+ * Rule 1: a keyword or any header tag (by `norm`) that an event already
+ * has. A tag is never classified by shape, so a lower-case tag is tried
+ * exactly like any other.
  * @param {Header} header
  * @param {Event[]} events
  * @param {string|null} date
  */
 function matchByTag(header, events, date) {
   const keyword = header.keyword ? norm(header.keyword) : null;
-  const tags = new Set([...header.hashtags, ...header.unknownHandleTags].map(norm));
+  const tags = new Set(header.tags.map(norm));
   const hits = events.filter(
     (e) => (keyword !== null && e.keywords.some((k) => norm(k) === keyword)) || e.hashtags.some((h) => tags.has(norm(h))),
   );
   return byCloseness(hits, date)[0] ?? null;
+}
+
+/**
+ * Every hashtag/keyword any given event already has, normed -- the
+ * vocabulary a header tag must be outside of to count as new.
+ * @param {Event[]} events
+ */
+function knownEventTags(events) {
+  return new Set(events.flatMap((e) => [...e.hashtags, ...e.keywords]).map(norm));
+}
+
+/**
+ * Header tags that match no existing event's hashtags or keywords (by
+ * `norm`). `header.tags` already excludes person and ignored tags.
+ * @param {Header} header
+ * @param {Event[]} events
+ * @returns {string[]}
+ */
+function newTagsOf(header, events) {
+  const known = knownEventTags(events);
+  return header.tags.filter((tag) => !known.has(norm(tag)));
 }
 
 /**
@@ -142,7 +164,7 @@ function suggestionsNear(events, date, matched) {
 function proposalName(header, livePeople, formatName) {
   if (header.keyword) return header.keyword;
   if (header.live) return [livePeople.map((p) => formatName(p.displayName)).join(' & '), header.live.code].filter(Boolean).join(' ');
-  return header.hashtags[0] ?? 'event';
+  return header.tags[0] ?? 'event';
 }
 
 /**
@@ -160,31 +182,36 @@ export function proposeEvent({ header, date, people, formatName }) {
     slug: date ? `${slugify(name)}-${date}` : slugify(name),
     occurredOn: date,
     keywords: header.keyword ? [header.keyword] : [],
-    hashtags: [...header.hashtags],
+    hashtags: [...header.tags],
     livePeopleIds: livePeople.map((p) => p.id),
     livePlatformCode: header.live?.platformCode ?? null,
   };
 }
 
 /**
- * @param {Header} header
+ * Placement when no event matched or was proposed. `shared_story` is
+ * never inferred here -- it only ever comes from `overrides.placement`.
+ * A post needs either a linked post author or known tagged people with
+ * no new tags still unaccounted for; otherwise the entry is unsorted,
+ * surfacing its new tags to be asked about.
  * @param {number[]} tagIds
  * @param {number[]} postAuthorIds
+ * @param {string[]} newTags
  * @returns {{placement: Placement, authorIds: number[]}}
  */
-function placementWithoutEvent(header, tagIds, postAuthorIds) {
+function placementWithoutEvent(tagIds, postAuthorIds, newTags) {
   if (postAuthorIds.length > 0) return { placement: 'post', authorIds: [...postAuthorIds] };
-  const unknown = header.unknownHandleTags.length > 0;
-  if (tagIds.length > 0 && !unknown) return { placement: 'post', authorIds: tagIds };
-  return { placement: unknown ? 'shared_story' : 'unsorted', authorIds: [] };
+  if (tagIds.length > 0 && newTags.length === 0) return { placement: 'post', authorIds: tagIds };
+  return { placement: 'unsorted', authorIds: [] };
 }
 
 /**
  * Decides where an entry goes, from its header. In order: an existing
- * event by keyword/hashtag; an existing live by who/where/when; a new
- * event when there's a keyword, event hashtag or live; else a post, a
- * shared story, or unsorted. The entry date is the live's date, else the
- * posting date in the site's time zone.
+ * event by keyword/tag; an existing live by who/where/when; a new event
+ * when there's a keyword or a live (never from a tag alone); else a
+ * post, or unsorted. The entry date is the live's date, else the posting
+ * date in the site's time zone. `newTags`: header tags that matched no
+ * existing event and aren't known (person/ignored tags never reach here).
  * @param {{header: Header, postedAt: string|null, events: Event[], people: EventPerson[],
  *   formatName: FormatName, timezone: string, postAuthorIds?: number[]}} input
  * @returns {EventMatch}
@@ -193,10 +220,11 @@ export function matchEvent({ header, postedAt, events, people, formatName, timez
   const date = header.live?.date ?? (postedAt ? localDate(postedAt, timezone) : null);
   const tagIds = peopleForTags(header.personTags, people).map((p) => p.id);
   const matched = matchByTag(header, events, date) ?? matchByLive(header, tagIds, events, date);
-  const base = { date, suggestions: suggestionsNear(events, date, matched), authorIds: [] };
+  const newTags = newTagsOf(header, events);
+  const base = { date, suggestions: suggestionsNear(events, date, matched), authorIds: [], newTags };
   if (matched) return { ...base, placement: 'event', event: matched, proposal: null };
-  if (header.keyword || header.hashtags.length > 0 || header.live) {
+  if (header.keyword || header.live) {
     return { ...base, placement: 'event', event: null, proposal: proposeEvent({ header, date, people, formatName }) };
   }
-  return { ...base, ...placementWithoutEvent(header, tagIds, postAuthorIds), event: null, proposal: null };
+  return { ...base, ...placementWithoutEvent(tagIds, postAuthorIds, newTags), event: null, proposal: null };
 }

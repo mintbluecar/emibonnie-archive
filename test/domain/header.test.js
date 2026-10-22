@@ -23,17 +23,17 @@ function header(text, extra = {}) {
   });
 }
 
-test('EVENT_A: keyword and hashtag', () => {
+test('EVENT_A: keyword and tag', () => {
   const result = header(fxText(IDS.EVENT_A));
   assert.equal(result.keyword, 'SOLLUNA HAPPY DAY');
-  assert.ok(result.hashtags.includes('SLHappyDay2026'));
+  assert.ok(result.tags.includes('SLHappyDay2026'));
 });
 
 test('EVENT_B: drops the ignored #SolLuna', () => {
   const result = header(fxText(IDS.EVENT_B));
-  assert.deepEqual(result.hashtags, ['SLHappyDay2026']);
+  assert.deepEqual(result.tags, ['SLHappyDay2026']);
   assert.ok(!result.personTags.includes('solluna'));
-  assert.ok(!result.unknownHandleTags.includes('solluna'));
+  assert.ok(!result.tags.some((t) => t.toLowerCase() === 'solluna'));
 });
 
 test('LIVE: personTags and a tiktok live date from [YYMMDD]', () => {
@@ -48,9 +48,17 @@ test('JOINT_LIVE: both personTags and the ig live code', () => {
   assert.equal(result.live?.code, 'ig live');
 });
 
-test('SHARED: an unrecognised plain handle is an unknownHandleTag', () => {
+test('SHARED: an unrecognised plain handle is just a tag, in original case, no unknownHandleTags', () => {
   const result = header(fxText(IDS.SHARED));
-  assert.deepEqual(result.unknownHandleTags, ['starguest']);
+  assert.deepEqual(result.tags, ['starguest']);
+  assert.ok(!('unknownHandleTags' in result));
+});
+
+test('mixed-case and lowercase tags are treated the same: both just tags, never guessed by shape', () => {
+  const upper = header('#FanClip\n\n☀️: hi');
+  const lower = header('#fanclip\n\n☀️: hi');
+  assert.deepEqual(upper.tags, ['FanClip']);
+  assert.deepEqual(lower.tags, ['fanclip']);
 });
 
 test("a site's extraLivePatterns, compiled and appended by the caller, are detected", () => {
@@ -81,15 +89,14 @@ test('no keyword, hashtag, or live match gives null/empty defaults', () => {
   const result = header('🦁: just a greeting, nothing else');
   assert.deepEqual(result, {
     keyword: null,
-    hashtags: [],
+    tags: [],
     personTags: [],
-    unknownHandleTags: [],
     live: null,
     context: null,
   });
 });
 
-test('hashtags keep their written case; duplicates by norm keep the first spelling', () => {
+test('tags keep their written case; duplicates by norm keep the first spelling', () => {
   const result = header('#SLHappyDay2026 #SLHAPPYDAY2026 #FanClip\n\n☀️: hi');
-  assert.deepEqual(result.hashtags, ['SLHappyDay2026', 'FanClip']);
+  assert.deepEqual(result.tags, ['SLHappyDay2026', 'FanClip']);
 });

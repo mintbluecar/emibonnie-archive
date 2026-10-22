@@ -37,7 +37,10 @@ import { writeItem } from './ingestWrite.js';
  *   actor: string }} IngestRequest
  * @typedef {{ status: 'added'|'attached'|'pending'|'duplicate'|'removed'|'opted_out'|'deleted'|'unavailable'
  *     |'needs_speakers'|'needs_date',
- *   sourceId: string, itemId?: number, eventId?: number|null, missing?: object[], draft?: object }} IngestResult
+ *   sourceId: string, itemId?: number, eventId?: number|null, missing?: object[], draft?: object,
+ *   newTags?: string[] }} IngestResult
+ *   `newTags` is passed through from the draft, unread by ingest logic,
+ *   for the add flow and the CLI to surface; it never blocks ingest.
  * @typedef {{ deps: IngestDeps, request: IngestRequest, kind: Readonly<Kind>, sourceId: string }} Run
  */
 
@@ -92,9 +95,12 @@ async function attachIfFollowUp({ deps, request, kind, sourceId }, { input, cred
  * @returns {{ refusal: IngestResult|null, occurredOn: string|null }}
  */
 function readiness({ deps, request, sourceId }, draft) {
-  if (draft.missing.length > 0) return { refusal: { status: 'needs_speakers', sourceId, missing: draft.missing, draft }, occurredOn: null };
+  const newTags = draft.newTags ?? [];
+  if (draft.missing.length > 0) {
+    return { refusal: { status: 'needs_speakers', sourceId, missing: draft.missing, newTags, draft }, occurredOn: null };
+  }
   const occurredOn = occurredOnOf(draft.common, request.overrides, deps.site.timezone);
-  if (!occurredOn) return { refusal: { status: 'needs_date', sourceId, draft }, occurredOn: null };
+  if (!occurredOn) return { refusal: { status: 'needs_date', sourceId, newTags, draft }, occurredOn: null };
   return { refusal: null, occurredOn };
 }
 
@@ -120,7 +126,7 @@ async function write(run, { draft, occurredOn, creditedUserId }) {
       { actor },
     );
     const status = written.reviewState === 'pending' ? 'pending' : 'added';
-    return { status, sourceId, itemId: written.itemId, eventId: written.eventId };
+    return { status, sourceId, itemId: written.itemId, eventId: written.eventId, newTags: draft.newTags ?? [] };
   } catch (err) {
     const winner = isPrimaryRace(err) ? await knownSource(run, draft.common.primary) : null;
     if (!winner) throw err;

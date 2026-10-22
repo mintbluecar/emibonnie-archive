@@ -127,10 +127,10 @@ function usedSpeakers(draft) {
 
 /** @param {TranslationDraft} draft */
 function tagsOf(draft) {
-  const { keyword, hashtags } = draft.header;
+  const { keyword, tags } = draft.header;
   return [
     ...(keyword ? [{ kind: /** @type {const} */ ('keyword'), display: keyword }] : []),
-    ...hashtags.map((display) => ({ kind: /** @type {const} */ ('hashtag'), display })),
+    ...tags.map((display) => ({ kind: /** @type {const} */ ('hashtag'), display })),
   ];
 }
 

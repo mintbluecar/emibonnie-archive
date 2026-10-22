@@ -63,6 +63,7 @@ async function overridesOf(db, values) {
 function report(result, log) {
   log([result.status, result.sourceId, result.itemId ? `item ${result.itemId}` : ''].filter(Boolean).join(' '));
   for (const m of /** @type {{marker: string, count: number}[]} */ (result.missing ?? [])) log(`  missing ${m.marker} (${m.count} lines)`);
+  for (const t of /** @type {string[]} */ (result.newTags ?? [])) log(`  new tag #${t}`);
   if (result.status === 'needs_date') log('  no date found: pass --date YYYY-MM-DD');
   return result.status === 'needs_speakers' || result.status === 'needs_date' ? 2 : 0;
 }

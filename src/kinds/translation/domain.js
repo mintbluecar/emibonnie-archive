@@ -28,6 +28,7 @@ import { matchEvent, proposeEvent, peopleForTags } from '../../domain/events.js'
  *   markers: import('../../domain/lines.js').Marker[],
  *   memory: SpeakerMap,
  *   sharedStory: SharedStory|null,
+ *   newTags: string[],
  * }} TranslationDraft
  *   `tweet` is the fetched source (sources, media, follow-ups and quote
  *   are persisted from it); `text` is the main text actually used.
@@ -103,15 +104,19 @@ function placingOf(match, { ctx, header, tagIds, postAuthorIds }) {
 }
 
 /**
- * @param {Header} header
+ * The sharer is a known person tag when there is one; otherwise a new
+ * tag is suggested as their handle (never guessed as a person on its
+ * own -- this only runs once `overrides.placement` already says
+ * `shared_story`).
  * @param {number[]} tagIds
  * @param {number[]} speakerIds
+ * @param {string[]} newTags
  * @returns {SharedStory}
  */
-function sharedStoryOf(header, tagIds, speakerIds) {
+function sharedStoryOf(tagIds, speakerIds, newTags) {
   const sharingPersonId = tagIds[0] ?? null;
   const about = [...new Set([...tagIds, ...speakerIds])].filter((id) => id !== sharingPersonId);
-  const sharingHandleSuggestion = sharingPersonId === null ? (header.unknownHandleTags[0] ?? null) : null;
+  const sharingHandleSuggestion = sharingPersonId === null ? (newTags[0] ?? null) : null;
   return { sharingPersonId, sharingHandleSuggestion, aboutPersonIds: about };
 }
 
@@ -181,7 +186,7 @@ export function draftTranslation(tweet, ctx) {
   const tagIds = peopleForTags(header.personTags, ctx.people).map((p) => p.id);
   const speakerIds = personIdsFrom(speakers, markers);
   const placing = placingOf(match, { ctx, header, tagIds, postAuthorIds });
-  const sharedStory = placing.placement === 'shared_story' ? sharedStoryOf(header, tagIds, speakerIds) : null;
+  const sharedStory = placing.placement === 'shared_story' ? sharedStoryOf(tagIds, speakerIds, match.newTags) : null;
   const presentIds = [...new Set([...speakerIds, ...tagIds])];
   const common = {
     placement: placing.placement,
@@ -193,5 +198,5 @@ export function draftTranslation(tweet, ctx) {
   };
   const memory = { ...ctx.remembered, ...ctx.chosen };
   const missing = missingMarkers(markers, speakers);
-  return { common, missing, suggestions: match.suggestions, tweet, text, header, speakers, markers, memory, sharedStory };
+  return { common, missing, suggestions: match.suggestions, tweet, text, header, speakers, markers, memory, sharedStory, newTags: match.newTags };
 }

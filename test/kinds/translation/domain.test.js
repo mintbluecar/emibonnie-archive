@@ -109,8 +109,17 @@ test('EVENT_B matches an existing event', async () => {
   assert.deepEqual(draft.missing, []);
 });
 
-test('SHARED gives placement shared_story, no event, and suggests the unknown tag as the sharer', async () => {
+test('SHARED without the override: unsorted, not shared_story, with starguest as a new tag', async () => {
   const draft = draftTranslation(await tweet(IDS.SHARED), ctx());
+  assert.equal(draft.common.placement, 'unsorted');
+  assert.equal(draft.common.eventId, null);
+  assert.equal(draft.common.proposal, null);
+  assert.equal(draft.sharedStory, null);
+  assert.deepEqual(draft.newTags, ['starguest']);
+});
+
+test('SHARED with the shared_story override: suggests the new tag as the sharer', async () => {
+  const draft = draftTranslation(await tweet(IDS.SHARED), ctx({ overrides: { placement: 'shared_story' } }));
   assert.equal(draft.common.placement, 'shared_story');
   assert.equal(draft.common.eventId, null);
   assert.equal(draft.common.proposal, null);
@@ -152,9 +161,10 @@ test('#lunamoon TikTok live [260212]: the live wins over the post rule', () => {
   assert.equal(draft.common.occurredOn, '2026-02-12');
 });
 
-test('#solsunny #starguest: an unknown tag makes it a shared story', () => {
+test('#solsunny #starguest: a new tag keeps it from being a post, unsorted with the new tag surfaced', () => {
   const draft = draftTranslation(tweetWith('#solsunny #starguest\n\n☀️: hi'), ctx());
-  assert.equal(draft.common.placement, 'shared_story');
+  assert.equal(draft.common.placement, 'unsorted');
+  assert.deepEqual(draft.newTags, ['starguest']);
 });
 
 test('a tweet quoting its own author sets followsOn', async () => {

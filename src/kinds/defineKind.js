@@ -81,7 +81,10 @@
  * }} DraftCommon
  *
  * @typedef {{marker: string, count: number}} MissingMarker
- * @typedef {{common: DraftCommon, missing: MissingMarker[], suggestions?: Event[]}} Draft
+ * @typedef {{common: DraftCommon, missing: MissingMarker[], suggestions?: Event[], newTags?: string[]}} Draft
+ *   `newTags` (kind-specific, optional): header tags that steered nothing
+ *   -- generic code only passes it through for the add flow and the CLI
+ *   to surface; it never blocks or decides placement.
  *
  * @typedef {{status: 'live'|'deleted'|'unavailable'}} SourceInput
  *   What `fetchSource` returns: the kind's own input for `draft`, with at

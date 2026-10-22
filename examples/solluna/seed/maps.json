@@ -1,6 +1,7 @@
 {
   "createPeople": [
-    { "igHandle": "host_x", "displayName": "host", "emoji": "🦁", "colour": "#b5651d" }
+    { "igHandle": "host_x", "displayName": "host", "emoji": "🦁", "colour": "#b5651d" },
+    { "igHandle": "starguest", "displayName": "star guest", "emoji": "⭐", "colour": "#aa8800" }
   ],
   "tweets": {
     "1900000000000000001": {
@@ -15,7 +16,7 @@
     "1900000000000000003": {},
     "1900000000000000004": {},
     "1900000000000000007": {},
-    "1900000000000000005": { "chosen": { "🪇": { "role": "speaker" } } },
+    "1900000000000000005": { "chosen": { "🪇": { "role": "speaker" } }, "overrides": { "placement": "shared_story" } },
     "1900000000000000008": {},
     "1900000000000000009": {},
     "1900000000000000011": {}
