@@ -19,6 +19,12 @@ async function rulesHit(filePath, code) {
   return result.messages.map((m) => m.ruleId ?? m.message).filter((rule) => rule === 'no-restricted-imports');
 }
 
+/** Every rule id ESLint reports, unfiltered. @param {string} filePath @param {string} code @returns {Promise<(string|null)[]>} */
+async function allRulesHit(filePath, code) {
+  const [result] = await eslint.lintText(`// @ts-check\n${code}\n`, { filePath });
+  return result.messages.map((m) => m.ruleId);
+}
+
 test('services may import from src/kinds only _registry.js and defineKind.js', async () => {
   const file = 'src/services/hubs.js';
   assert.deepEqual(await rulesHit(file, "export { kindsRegistry } from '../kinds/_registry.js';"), []);
@@ -43,4 +49,18 @@ test("a kind's domain.js may import only from src/domain/", async () => {
   ]) {
     assert.deepEqual(await rulesHit(file, code), ['no-restricted-imports'], code);
   }
+});
+
+test('public/js is browser code: it may not import src/**', async () => {
+  // A path under a fictitious, not-on-disk subdirectory, like the kinds/domain.js
+  // cases above: a real existing directory here hits an unrelated eslint-plugin-import
+  // "import/no-cycle" crash (confirmed against a plain src/domain/text.js import too).
+  const file = 'public/js/core/zzfake/x.js';
+  assert.deepEqual(await rulesHit(file, "export { loadSite } from '../../../../src/site/loadSite.js';"), ['no-restricted-imports']);
+  assert.deepEqual(await rulesHit(file, "export { kindsRegistry } from '../../../../src/kinds/_registry.js';"), ['no-restricted-imports']);
+  assert.deepEqual(await rulesHit(file, "export { html } from '../../core/html.js';"), []);
+});
+
+test("public/js importing the absolute '/site/site.js' is not an unresolved-import error", async () => {
+  assert.deepEqual(await allRulesHit('public/js/core/zzfake/site.js', "export { site } from '/site/site.js';"), []);
 });

@@ -9,7 +9,8 @@
     "types": ["node"],
     "skipLibCheck": true,
     "paths": {
-      "punycode": ["./.ts-stubs/punycode.d.ts"]
+      "punycode": ["./.ts-stubs/punycode.d.ts"],
+      "/site/site.js": ["./.ts-stubs/site.d.ts"]
     }
   },
   "include": ["src/**/*.js", "api/**/*.js", "scripts/**/*.js", "public/js/**/*.js"]

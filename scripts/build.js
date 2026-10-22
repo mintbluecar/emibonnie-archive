@@ -12,6 +12,7 @@ import {
   buildKindsRegistryModule,
   buildVercelConfig,
 } from './buildOutputs.js';
+import { runBundling } from './buildBundle.js';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -133,12 +134,15 @@ export async function runBuild(options = {}) {
 
   const publicSiteDir = path.join(repoRoot, 'public/site');
   mkdirSync(publicSiteDir, { recursive: true });
-  writeFileSync(path.join(publicSiteDir, 'site.js'), buildPublicSiteModule(site));
+  writeFileSync(path.join(publicSiteDir, 'site.js'), buildPublicSiteModule(site, copy));
   writeFileSync(path.join(publicSiteDir, 'tokens.css'), tokensCss);
   const assets = copySiteAssets(siteDir, publicSiteDir);
   copyRobots(repoRoot);
 
   writeFileSync(path.join(repoRoot, 'src/site/generated.js'), buildGeneratedSiteModule(site, copy, assets));
+
+  const siteThemePath = path.join(publicSiteDir, 'theme.css');
+  await runBundling({ repoRoot, engineRoot: REPO_ROOT, siteThemePath: existsSync(siteThemePath) ? siteThemePath : null });
 
   const rewrites = [...(await readRouteRewrites()), ...(await readPageRewrites(repoRoot))];
   const vercelConfig = buildVercelConfig(site, rewrites);

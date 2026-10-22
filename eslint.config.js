@@ -159,6 +159,25 @@ export default [
     },
   },
   {
+    files: ['public/js/**/*.js'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/src/**'],
+              message: "public/js is browser code: it may not import src/** (server-only code with Node built-ins). Read settings and copy from the absolute '/site/site.js' instead.",
+            },
+          ],
+        },
+      ],
+      // '/site/site.js' is a real path once built (public/site/site.js, served at that URL), but
+      // not one Node's resolver -- or eslint-plugin-import's -- can find from this source file.
+      'import/no-unresolved': ['error', { ignore: ['^/site/'] }],
+    },
+  },
+  {
     files: ['test/**/*.js', 'test/**/*.mjs'],
     rules: {
       'max-lines': 'off',

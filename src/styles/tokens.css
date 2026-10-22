@@ -22,7 +22,7 @@
   --gradient-to: #e03a85;
   --radius-card: 16px;
   --font-latin: 'Nunito', sans-serif;
-  --font-source: 'IBM Plex Sans Thai', sans-serif;
+  --font-script: 'IBM Plex Sans Thai', sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {

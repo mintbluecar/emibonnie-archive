@@ -89,9 +89,12 @@ test('buildVercelConfig: region, security headers (Referrer-Policy: no-referrer)
   const config = buildVercelConfig(site, []);
   assert.deepEqual(config.regions, ['sin1']);
   assert.equal(config.buildCommand, 'npm run build');
-  assert.deepEqual(config.headers, [{ source: '/(.*)', headers: SECURITY_HEADERS }]);
+  assert.deepEqual(config.headers[0], { source: '/(.*)', headers: SECURITY_HEADERS });
   const referrerPolicy = SECURITY_HEADERS.find((h) => h.key === 'Referrer-Policy');
   assert.equal(referrerPolicy?.value, 'no-referrer');
+  // /build/* (Plan 1b's hashed esbuild output) is cached forever: a content change is always a new filename.
+  const buildHeaders = config.headers.find((/** @type {any} */ h) => h.source === '/build/(.*)');
+  assert.deepEqual(buildHeaders?.headers, [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }]);
   assert.equal(config.rewrites, undefined);
 });
 

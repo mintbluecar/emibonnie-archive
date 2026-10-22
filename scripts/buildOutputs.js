@@ -12,7 +12,7 @@ export const SECURITY_HEADERS = [
   {
     key: 'Content-Security-Policy',
     value:
-      "default-src 'self'; script-src 'self'; style-src 'self'; " +
+      "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; " +
       "img-src 'self' https://pbs.twimg.com; media-src 'self' https://video.twimg.com; " +
       "frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
   },
@@ -20,6 +20,9 @@ export const SECURITY_HEADERS = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
 ];
+
+/** `/build/*` (hashed JS/CSS/fonts from `scripts/buildBundle.js`) is safe to cache forever: a content change is always a new filename. */
+const BUILD_CACHE_HEADERS = [{ source: '/build/(.*)', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] }];
 
 /**
  * `src/site/generated.js`: a statically-importable module so Vercel bundles
@@ -39,16 +42,21 @@ export function buildGeneratedSiteModule(site, copy, assets = { logo: null }) {
 }
 
 /**
- * `public/site/site.js`: the public subset of `site`, without
- * `ownerXUserId`.
+ * `public/site/site.js`: the public subset of `site` (without
+ * `ownerXUserId`) plus `copy`, so `public/js/core/site.js`'s `t()` has
+ * everything it needs from this one module.
  * @param {import('../src/site/schema.js').Site} site
+ * @param {Record<string, string>} [copy]
  * @returns {string}
  */
-export function buildPublicSiteModule(site) {
+export function buildPublicSiteModule(site, copy = {}) {
   /** @type {any} */
   const publicSite = { ...site };
   delete publicSite.ownerXUserId;
-  return `${GENERATED_HEADER}export const site = ${JSON.stringify(publicSite, null, 2)};\n`;
+  return (
+    `${GENERATED_HEADER}export const site = ${JSON.stringify(publicSite, null, 2)};\n\n` +
+    `export const copy = ${JSON.stringify(copy, null, 2)};\n`
+  );
 }
 
 /**
@@ -89,9 +97,11 @@ export function buildKindsRegistryModule(kindNames) {
 export const FUNCTIONS = { 'api/*.js': { includeFiles: 'public/{item,event}.html' } };
 
 /**
- * `vercel.json`'s content: region, security headers, build command, the
- * function's bundled pages, and the rewrites (the route table's meta
- * rewrites, then any `src/pages.js` page rewrites from Plan 1b).
+ * `vercel.json`'s content: region, security headers (plus an immutable
+ * long-lived cache header on `/build/*`, Plan 1b's hashed esbuild
+ * output), build command, the function's bundled pages, and the
+ * rewrites (the route table's meta rewrites, then any `src/pages.js`
+ * page rewrites from Plan 1b).
  * @param {import('../src/site/schema.js').Site} site
  * @param {{ source: string, destination: string }[]} rewrites
  * @returns {object}
@@ -102,7 +112,7 @@ export function buildVercelConfig(site, rewrites = []) {
     regions: [site.region],
     buildCommand: 'npm run build',
     functions: FUNCTIONS,
-    headers: [{ source: '/(.*)', headers: SECURITY_HEADERS }],
+    headers: [{ source: '/(.*)', headers: SECURITY_HEADERS }, ...BUILD_CACHE_HEADERS],
   };
   if (rewrites.length > 0) config.rewrites = rewrites;
   return config;
