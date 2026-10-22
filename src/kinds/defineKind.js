@@ -43,11 +43,15 @@ import { pages } from '../pages.js';
  *   clientName?: string,
  *   text?: string,
  *   occurredOn?: string,
+ *   people?: { igHandle: string, role: ItemPerson['role'] }[],
  * }} DraftOverrides
  *   What the submitter changed in the add flow. `text` is text typed in by
  *   hand (it replaces the source's text and marks it `textEnteredManually`).
  *   `occurredOn` (`YYYY-MM-DD`) is read by ingest, not by `draft`: it
- *   supplies the date when the source gives none.
+ *   supplies the date when the source gives none. `people` (also read by
+ *   ingest, never by `draft`) adds known people to the item on top of the
+ *   ones the draft derives, e.g. who a shared story is about when its
+ *   speakers are only generic roles; each handle must already be a person.
  *
  * @typedef {{
  *   people: EventPerson[],

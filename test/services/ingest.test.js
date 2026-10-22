@@ -116,6 +116,48 @@ test('SHARED, with its sharer known: starguest is sharing, the mapped 🪇 speak
   }
 });
 
+test('overrides.people attaches people to a shared story whose speakers are only roles, on top of the derived ones (Task 9a item 6)', async () => {
+  const deps = await ingestDeps();
+  try {
+    await createPeople(deps, [{ igHandle: 'starguest', displayName: 'star guest', emoji: '⭐', colour: '#aa8800' }], SYSTEM);
+    const chosen = await resolveSpeakerRefs(deps.db, { '🪇': { role: 'speaker' } });
+    const overrides = {
+      placement: /** @type {const} */ ('shared_story'),
+      people: [{ igHandle: 'solsunny', role: /** @type {const} */ ('about') }, { igHandle: '@LunaMoon', role: /** @type {const} */ ('about') },
+        { igHandle: 'starguest', role: /** @type {const} */ ('sharing') }],
+    };
+    const result = await ingest(deps, IDS.SHARED, { chosen, overrides });
+    assert.equal(result.status, 'added');
+    const people = await rows(deps.db, `select p.display_name, ip.role from item_people ip join people p on p.id = ip.person_id
+      where ip.item_id = $1 order by ip.role, p.display_name`, [result.itemId]);
+    // starguest is also derived (its tag): the override adds no second row.
+    assert.deepEqual(people, [
+      { display_name: 'luna', role: 'about' }, { display_name: 'sol', role: 'about' }, { display_name: 'star guest', role: 'sharing' },
+    ]);
+  } finally {
+    await deps.db.end();
+  }
+});
+
+test('overrides.people refuses an unknown person or role clearly, before anything is fetched or written', async () => {
+  const patched = patchedFetch((_kind, _id, json) => json);
+  const deps = await ingestDeps({ fetchImpl: patched.fetchImpl });
+  try {
+    await assert.rejects(
+      ingest(deps, IDS.SHARED, { overrides: { people: [{ igHandle: 'nobody_here', role: 'about' }] } }),
+      /overrides\.people: unknown person @nobody_here/,
+    );
+    await assert.rejects(
+      ingest(deps, IDS.SHARED, { overrides: { people: [{ igHandle: 'solsunny', role: /** @type {any} */ ('guest') }] } }),
+      /overrides\.people: role for @solsunny must be one of present, sharing, about, author/,
+    );
+    assert.deepEqual(patched.calls, {});
+    assert.equal(await count(deps.db, 'select count(*)::int as n from items'), 0);
+  } finally {
+    await deps.db.end();
+  }
+});
+
 test('refusals: duplicate, removed, opted_out, deleted, unavailable -- none writes an item', async () => {
   const deps = await ingestDeps();
   try {

@@ -8,6 +8,12 @@ something to browse without any real content.
   People in `chosen` are referenced by IG handle (`{ "person": "<ig>" }`) or
   by role (`{ "role": "fan" }`). Only the posts listed under `tweets` are
   ingested, in the order they're listed.
+- `overrides` takes the add flow's choices (`DraftOverrides`,
+  `src/kinds/defineKind.js`), e.g. `"placement": "shared_story"`,
+  `"categoryName"`, `"occurredOn"`, or `"people": [{ "igHandle": "<ig>",
+  "role": "about" }]` to add people the post doesn't name itself (roles:
+  `present`, `sharing`, `about`, `author`; each person must already exist,
+  e.g. from `createPeople`).
 - `tweets/` — the posts, served offline as `<id>.syn.json`, `<id>.fx.json`
   and `<id>.thread.json` (synthetic copies of the engine's test fixtures;
   every id, handle and line is invented).

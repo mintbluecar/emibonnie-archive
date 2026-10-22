@@ -8,6 +8,8 @@
 
 /** @type {Role[]} */
 export const ROLES = ['host', 'fan', 'speaker', 'crowd'];
+/** How a person is on an item (`item_person_roles`, migration 001). */
+export const ITEM_PERSON_ROLES = ['present', 'sharing', 'about', 'author'];
 
 /**
  * Where an item is shown on the site: tied to a dated event, folded into a

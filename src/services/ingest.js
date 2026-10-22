@@ -21,6 +21,7 @@ import { findSourceOwner } from '../repo/itemSources.js';
 import { accountState } from '../repo/accounts.js';
 import { recall } from '../repo/speakerMemory.js';
 import { loadContext, occurredOnOf } from './ingestContext.js';
+import { resolvePeopleRefs } from './intakeRefs.js';
 import { writeItem } from './ingestWrite.js';
 
 /** @typedef {import('../kinds/defineKind.js').Kind} Kind */
@@ -41,7 +42,9 @@ import { writeItem } from './ingestWrite.js';
  *   newTags?: string[] }} IngestResult
  *   `newTags` is passed through from the draft, unread by ingest logic,
  *   for the add flow and the CLI to surface; it never blocks ingest.
- * @typedef {{ deps: IngestDeps, request: IngestRequest, kind: Readonly<Kind>, sourceId: string }} Run
+ * @typedef {{ deps: IngestDeps, request: IngestRequest, kind: Readonly<Kind>, sourceId: string,
+ *   extraPeople: Draft['common']['people'] }} Run
+ *   `extraPeople`: `overrides.people`, resolved before anything is fetched.
  */
 
 /** @type {Record<'visible'|'removed'|'pending', IngestResult['status']>} */
@@ -104,6 +107,24 @@ function readiness({ deps, request, sourceId }, draft) {
   return { refusal: null, occurredOn };
 }
 
+/**
+ * The draft with `overrides.people` added to the people it derived (an
+ * identical person-and-role pair isn't added twice).
+ * @param {Draft} draft @param {Draft['common']['people']} extra
+ * @returns {Draft}
+ */
+function withExtraPeople(draft, extra) {
+  const key = (/** @type {{ personId: number, role: string }} */ p) => `${p.personId}:${p.role}`;
+  const have = new Set(draft.common.people.map(key));
+  const added = [];
+  for (const person of extra) {
+    if (have.has(key(person))) continue;
+    have.add(key(person));
+    added.push(person);
+  }
+  return added.length === 0 ? draft : { ...draft, common: { ...draft.common, people: [...draft.common.people, ...added] } };
+}
+
 /** @param {any} err */
 function isPrimaryRace(err) {
   return err?.code === '23505' && String(err.constraint ?? err.message).includes('item_sources_primary_per_kind');
@@ -117,9 +138,10 @@ function isPrimaryRace(err) {
  * @param {{ draft: Draft, occurredOn: string, creditedUserId: string|null }} ready
  * @returns {Promise<IngestResult>}
  */
-async function write(run, { draft, occurredOn, creditedUserId }) {
+async function write(run, { draft: drafted, occurredOn, creditedUserId }) {
   const { deps, request, kind, sourceId } = run;
   const { actor, addedVia } = request;
+  const draft = withExtraPeople(drafted, run.extraPeople);
   try {
     const written = await deps.db.transaction(
       (tx) => writeItem(tx, { kind, draft, occurredOn, addedVia, actor, creditedUserId }),
@@ -183,6 +205,7 @@ export async function ingestItem(deps, request) {
   const kind = kindNamed(deps, request.kind);
   const sourceId = kind.matchesUrl(request.input);
   if (!sourceId) throw new BadRequest(`not a ${kind.name} source: ${request.input}`);
-  const run = { deps, request, kind, sourceId };
+  const extraPeople = await resolvePeopleRefs(deps.db, request.overrides?.people ?? []);
+  const run = { deps, request, kind, sourceId, extraPeople };
   return (await knownSource(run, { platform: kind.platform, externalId: sourceId })) ?? ingestNew(run);
 }
