@@ -76,8 +76,9 @@ The colour tokens a site usually sets:
 
 | Token | Used for | Default |
 |---|---|---|
-| `--gradient-from`, `--gradient-to` | The brand gradient: the wordmark, accent buttons and badges, event-card tints, search highlights. | An orange-to-pink pair. |
-| `--color-label` | Accent **text**: month and section headings, the active tab and toggles, result-card event names, and open-profile and contact links. | `var(--gradient-to)` |
+| `--gradient-from`, `--gradient-to` | The brand gradient: the wordmark and accent buttons. | An orange-to-pink pair. |
+| `--color-label` | Accent **text**: month and section headings, the active tab and toggles, result-card event names, and open-profile and contact links. Also tints the home count badges, active filter chips and the person/translator view switch (through `--color-label-tint` and `--color-label-on-tint`, which derive from it, so you rarely need to set them). | `var(--gradient-to)` |
+| `--color-highlight` | The search match highlight, behind ink text. | Pale peach (light), dark amber (dark). |
 | `--color-bg`, `--color-card`, `--color-ink`, `--color-ink-muted` | Paper, cards, text and secondary text. | Warm paper, cream cards, near-black ink. |
 | `--color-accent-text` | Text on a solid gradient surface (buttons, counts). | White (light), black (dark). |
 
