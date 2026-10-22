@@ -24,12 +24,19 @@
      same hue at ~75% luminance: 6.0:1 and 5.4:1. */
   --color-ink-muted: #675f6b;
   --gradient-from: #ff6a2b;
-  /* Used as a plain text `color` in several components (static.css,
-     hub.css, resultCard.css, tabBar.css, homeMonth.css, eventPage.css),
-     not only in a gradient -- the original #e03a85 was only 3.6:1/4.0:1
-     against --color-bg/--color-card, below WCAG AA's 4.5:1 (axe's
-     color-contrast rule, Plan 1b Task 7 brief). Darkened to the same hue. */
+  /* Also the default --color-label (below), so it must read as text too:
+     the original #e03a85 was only 3.6:1/4.0:1 against
+     --color-bg/--color-card, below WCAG AA's 4.5:1 (axe's color-contrast
+     rule, Plan 1b Task 7 brief). Darkened to the same hue. */
   --gradient-to: #b32e6a;
+  /* Accent *text*: section and month headings, the active tab and
+     toggle, result-card event names, open-profile and contact links
+     (Task 9a). Defaults to --gradient-to (5.23:1/5.88:1 against
+     --color-bg/--color-card), so a site that only sets its gradient
+     looks as before; a site that wants its exact brand gradient sets
+     this to a darker or different label colour instead. Gradients and
+     backgrounds keep --gradient-from/--gradient-to. */
+  --color-label: var(--gradient-to);
   /* The text colour for something placed on a solid --gradient-to (or
      --gradient-from) surface (header.css's CTA, filterSheet.css's apply
      button, hub.css's picker-apply) -- a fixed white doesn't work in
@@ -82,6 +89,9 @@
     /* The light-mode #b32e6a above is too dark to read on these dark
        backgrounds (3.2:1/3.0:1); a lighter pick of the same hue instead. */
     --gradient-to: #e2468c;
+    /* The same default, stated for dark mode too (a site may set either):
+       #e2468c is 4.94:1/4.65:1 on the dark --color-bg/--color-card. */
+    --color-label: var(--gradient-to);
     /* Black passes 5.49:1 against this theme's --gradient-to (white only
        passes 3.83:1 -- review round 2, I3) and 7.35:1 against
        --gradient-from, so it's correct for a solid accent surface. */

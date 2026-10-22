@@ -72,6 +72,24 @@ defaults, so a new engine token never breaks an older site.
 `scripts/build.js` fails the build if any engine CSS references a token
 `tokens.css` doesn't define.
 
+The colour tokens a site usually sets:
+
+| Token | Used for | Default |
+|---|---|---|
+| `--gradient-from`, `--gradient-to` | The brand gradient: the wordmark, accent buttons and badges, event-card tints, search highlights. | An orange-to-pink pair. |
+| `--color-label` | Accent **text**: month and section headings, the active tab and toggles, result-card event names, and open-profile and contact links. | `var(--gradient-to)` |
+| `--color-bg`, `--color-card`, `--color-ink`, `--color-ink-muted` | Paper, cards, text and secondary text. | Warm paper, cream cards, near-black ink. |
+| `--color-accent-text` | Text on a solid gradient surface (buttons, counts). | White (light), black (dark). |
+
+`--color-label` is text, so it needs WCAG AA contrast (4.5:1) against
+both `--color-bg` and `--color-card`, in light and dark mode. Since it
+defaults to `--gradient-to`, a site that keeps that default must pick a
+`--gradient-to` dark enough to read. To keep an exact brand gradient
+that's too light for text, set `--color-label` to a separate, darker
+colour instead, and set it again under
+`@media (prefers-color-scheme: dark)` with a value that reads on the
+dark backgrounds. `npm run e2e:site` checks contrast on every page.
+
 ## `site/copy.json`
 
 Every key must already exist -- in the engine's `src/site/copyDefaults.json`

@@ -30,7 +30,7 @@
 }
 
 .c-tabbar__item--on {
-  color: var(--gradient-to);
+  color: var(--color-label);
   font-weight: 800;
 }
 

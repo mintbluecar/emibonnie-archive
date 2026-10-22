@@ -37,7 +37,7 @@
 .c-static__contact a,
 .c-static__back a {
   font-weight: 800;
-  color: var(--gradient-to);
+  color: var(--color-label);
 }
 
 .c-static__back {

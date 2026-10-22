@@ -69,7 +69,7 @@
 }
 
 .c-event__newest-toggle[aria-pressed='true'] {
-  color: var(--gradient-to);
+  color: var(--color-label);
   font-weight: 700;
 }
 
