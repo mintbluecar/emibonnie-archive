@@ -164,7 +164,7 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
     // and every static page with a file (review round 1, C1: Vercel's cleanUrls defaults to
     // false, so a static page needs an explicit rewrite -- it doesn't resolve to <path>.html
     // on its own).
-    assert.deepEqual(vercelJson.rewrites, [
+    const core = [
       { source: '/e/:slug', destination: '/api/meta/e/:slug' },
       { source: '/t/:id', destination: '/api/meta/t/:id' },
       { source: '/search', destination: '/search.html' },
@@ -173,6 +173,15 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
       { source: '/about', destination: '/about.html' },
       { source: '/privacy', destination: '/privacy.html' },
       { source: '/takedown', destination: '/takedown.html' },
+    ];
+    for (const rewrite of core) assert.ok(vercelJson.rewrites.some((/** @type {any} */ r) => r.source === rewrite.source && r.destination === rewrite.destination), rewrite.source);
+    // ...and exactly those plus one per added kind (after the event page) and per added static page (at the end).
+    const { kindsRegistry } = await import('../../src/kinds/_registry.js');
+    const { pages } = await import('../../src/pages.js');
+    const kindRewrites = Object.values(kindsRegistry).map((k) => ({ source: `${k.urlPrefix}:id`, destination: `/api/meta${k.urlPrefix}:id` }));
+    const added = pages.filter((p) => p.file && p.path !== '/' && !core.some((r) => r.source === p.path));
+    assert.deepEqual(vercelJson.rewrites, [
+      core[0], ...kindRewrites, ...core.slice(2), ...added.map((p) => ({ source: p.path, destination: `/${p.file}` })),
     ]);
     const headers = vercelJson.headers[0].headers;
     assert.match(headers.find((/** @type {any} */ h) => h.key === 'Content-Security-Policy').value, /frame-ancestors 'none'/);

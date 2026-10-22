@@ -9,6 +9,10 @@ let db;
 before(async () => { db = await freshDb(); });
 after(async () => { await db.end(); });
 
-test('listItemKindCodes lists the item_kinds rows the engine migration inserts', async () => {
-  assert.deepEqual(await listItemKindCodes(db), ['translation']);
+test('listItemKindCodes lists the item_kinds rows the engine migrations insert: one per kind folder', async () => {
+  // Generated before any test file runs, by npm test's pretest step (scripts/genRegistries.js).
+  const { kindsRegistry } = await import('../../src/kinds/_registry.js');
+  const codes = await listItemKindCodes(db);
+  assert.ok(codes.includes('translation'));
+  assert.deepEqual(codes, Object.keys(kindsRegistry).sort());
 });

@@ -1,21 +1,24 @@
 // @ts-check
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { appendFileSync, copyFileSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { appendFileSync, copyFileSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { migrate } from '../../src/db/migrate.js';
 import { ENGINE_MIGRATIONS, freshDb } from '../helpers/db.js';
 
 const engine = { namespace: 'engine', dir: ENGINE_MIGRATIONS };
+/** Every engine migration, in order -- 001_initial.sql first, then any a kind or a later release added. */
+const ENGINE_FILES = readdirSync(ENGINE_MIGRATIONS).filter((f) => f.endsWith('.sql')).sort().map((f) => `engine/${f}`);
 
-test('the first run applies engine/001_initial.sql and the second applies nothing', async () => {
+test('the first run applies engine/001_initial.sql (then every later engine file) and the second applies nothing', async () => {
   const db = await freshDb({ migrated: false });
   try {
-    assert.deepEqual(await migrate(db, { dirs: [engine] }), ['engine/001_initial.sql']);
+    assert.equal(ENGINE_FILES[0], 'engine/001_initial.sql');
+    assert.deepEqual(await migrate(db, { dirs: [engine] }), ENGINE_FILES);
     assert.deepEqual(await migrate(db, { dirs: [engine] }), []);
-    const { rows } = await db.query('select namespace, name, length(sha256) as len, applied_at from schema_migrations');
-    assert.equal(rows.length, 1);
+    const { rows } = await db.query('select namespace, name, length(sha256) as len, applied_at from schema_migrations order by name');
+    assert.equal(rows.length, ENGINE_FILES.length);
     assert.equal(rows[0].namespace, 'engine');
     assert.equal(rows[0].name, '001_initial.sql');
     assert.equal(rows[0].len, 64);
@@ -57,7 +60,7 @@ test('a missing directory (a site with no migrations yet) is skipped', async () 
   const db = await freshDb({ migrated: false });
   try {
     const missing = path.join(tmpdir(), 'fa-no-such-dir-' + Date.now());
-    assert.deepEqual(await migrate(db, { dirs: [engine, { namespace: 'site', dir: missing }] }), ['engine/001_initial.sql']);
+    assert.deepEqual(await migrate(db, { dirs: [engine, { namespace: 'site', dir: missing }] }), ENGINE_FILES);
   } finally {
     await db.end();
   }

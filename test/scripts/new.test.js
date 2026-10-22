@@ -18,8 +18,11 @@ import { scaffold } from '../../scripts/new.js';
 
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const NEW_SCRIPT = path.join(REPO_ROOT, 'scripts/new.js');
-/** The tracked files the scaffolder reads or edits (it creates everything else). */
-const COPIED = ['src/routes/index.js', 'src/pages.js', 'src/site/copyDefaults.json', 'src/db/migrations'];
+/**
+ * The tracked files the scaffolder reads or edits (it creates everything else). Only the first
+ * engine migration, so the expected numbers hold whatever later migrations this checkout has.
+ */
+const COPIED = ['src/routes/index.js', 'src/pages.js', 'src/site/copyDefaults.json', 'src/db/migrations/001_initial.sql'];
 
 /** @param {(root: string) => void} fn */
 function inTempRoot(fn) {

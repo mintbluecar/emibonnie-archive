@@ -6,6 +6,7 @@ import { seededDeps, itemIdOf, rows, SYSTEM } from '../helpers/ingest.js';
 import { apiFor } from '../helpers/api.js';
 import { NotFound } from '../../src/http/errors.js';
 import { routes } from '../../src/routes/index.js';
+import { kindsRegistry } from '../../src/kinds/_registry.js';
 import { route as eventRoute } from '../../src/routes/event.js';
 import { route as itemRoute } from '../../src/routes/item.js';
 import { route as videoRoute } from '../../src/routes/video.js';
@@ -27,9 +28,12 @@ const input = (params, query = {}) => ({ params, query, body: undefined, origin:
 const routeDeps = () => ({ ...deps, defer: () => {} });
 
 test('every route is { method, path, cache, run }, with a unique method+path', () => {
+  // The original page paths of the meta routes: the event page, and each kind's item page.
+  const pagePaths = ['/e/:slug', ...Object.values(kindsRegistry).map((kind) => `${kind.urlPrefix}:sourceId`)];
+  assert.ok(pagePaths.includes('/t/:sourceId'));
   for (const r of routes) {
     assert.ok(['GET', 'POST'].includes(r.method), r.path);
-    assert.match(r.path, /^\/(api\/|e\/:slug$|t\/:sourceId$)/, 'API paths, plus the original page paths of the meta routes');
+    assert.ok(r.path.startsWith('/api/') || pagePaths.includes(r.path), `${r.path}: API paths, plus the original page paths of the meta routes`);
     assert.equal(typeof r.run, 'function');
     assert.ok(r.cache === 'no-store' || r.cache === PUBLIC || r.cache === VIDEO, r.path);
     assert.equal(r.cache === 'no-store', r.method !== 'GET', `${r.path}: GETs are cached, writes are no-store`);

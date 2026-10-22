@@ -14,6 +14,7 @@ import { IDS } from './helpers/fixtures.js';
 import { ingestDeps, ingest, rows, SYSTEM, SITE_DIR, HOST, LONG_REFS } from './helpers/ingest.js';
 import { apiFor } from './helpers/api.js';
 import { routes } from '../src/routes/index.js';
+import { kindsRegistry } from '../src/kinds/_registry.js';
 import { matchRoute } from '../src/http/router.js';
 import { runSeedDev } from '../scripts/seedDev.js';
 import { createPeople, resolveSpeakerRefs } from '../src/services/intakeRefs.js';
@@ -74,11 +75,15 @@ async function representativeCalls() {
   /** @type {[string, string][]} */
   const calls = [['GET', '/api/home'], ['GET', '/api/filters']];
   for (const slug of [...slugs, 'no-such-event']) calls.push(['GET', `/api/event/${slug}`], ['GET', `/api/meta/e/${slug}`], ['GET', `/e/${slug}`]);
-  for (const id of ids) {
-    calls.push(
-      ['GET', `/api/item/translation/${id}`], ['POST', `/api/item/translation/${id}/refresh`],
-      ['GET', `/api/video/translation/${id}`], ['GET', `/api/meta/t/${id}`], ['GET', `/t/${id}`],
-    );
+  // Every kind's item routes (an id of another kind's item must leak nothing either).
+  for (const kind of Object.values(kindsRegistry)) {
+    const prefix = kind.urlPrefix.slice(1, -1);
+    for (const id of ids) {
+      calls.push(
+        ['GET', `/api/item/${kind.name}/${id}`], ['POST', `/api/item/${kind.name}/${id}/refresh`],
+        ['GET', `/api/video/${kind.name}/${id}`], ['GET', `/api/meta/${prefix}/${id}`], ['GET', `${kind.urlPrefix}${id}`],
+      );
+    }
   }
   for (const ig of [...people, 'nobody']) calls.push(['GET', `/api/person/${ig}`]);
   for (const handle of [...handles, 'nobody']) calls.push(['GET', `/api/account/${encodeURIComponent(handle)}`]);
@@ -86,6 +91,7 @@ async function representativeCalls() {
     '', '?limit=50', '?offset=5', '?q=tell%20you', '?q=fanmeet', '?q=tl_gamma', '?q=clipper', '?q=everyone',
     '?accountHandle=tl_gamma', '?accountHandle=clipper_one', '?eventSlug=solluna-happy-day-2026-10-19', '?placements=event,unsorted',
     '?kinds=translation&from=2026-01-01&to=2026-12-31', '?people=1,2,3&peopleMode=all', '?categories=1,2,3',
+    ...Object.keys(kindsRegistry).map((name) => `?q=tell%20you&kinds=${name}`),
   ];
   for (const s of searches) calls.push(['GET', `/api/search${s}`]);
   return calls;

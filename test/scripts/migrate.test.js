@@ -6,11 +6,13 @@
  */
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { freshDb } from '../helpers/db.js';
-import { runMigrate } from '../../scripts/migrate.js';
+import { ENGINE_MIGRATIONS, runMigrate } from '../../scripts/migrate.js';
+
+const ENGINE_FILES = readdirSync(ENGINE_MIGRATIONS).filter((f) => f.endsWith('.sql')).sort().map((f) => `engine/${f}`);
 
 /** @type {Awaited<ReturnType<typeof freshDb>>} */
 let db;
@@ -32,7 +34,7 @@ test('runMigrate applies the engine, then the site namespace, and logs each file
   /** @type {string[]} */
   const lines = [];
   const applied = await runMigrate({ db, siteDir, log: (line) => lines.push(line) });
-  assert.deepEqual(applied, ['engine/001_initial.sql', 'site/001_site_extra.sql']);
+  assert.deepEqual(applied, [...ENGINE_FILES, 'site/001_site_extra.sql']);
   assert.ok(lines.includes('migrated engine/001_initial.sql'));
   assert.ok(lines.includes('migrated site/001_site_extra.sql'));
   const { rows } = await db.query("select count(*)::int as n from people");

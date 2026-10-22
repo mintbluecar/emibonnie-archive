@@ -38,7 +38,7 @@ delete SAFE_ENV.NODE_TEST_CONTEXT;
 
 /** @type {string} */ let scratch;
 /** @type {string} */ let copy;
-/** @type {any} */ let proof;
+/** @type {any} */ const proof = {};
 
 /** @param {string} cmd @param {string[]} args @param {Record<string, string>} [env] */
 function run(cmd, args, env = {}) {
@@ -105,10 +105,11 @@ before(async () => {
   git(['add', '-A']);
   git(['commit', '-qm', 'baseline']);
 
-  run('npm', ['run', 'new', 'kind', KIND]);
+  proof.migration = run('npm', ['run', 'new', 'kind', KIND]).match(/wrote (src\/db\/migrations\/\d{3}_zzcheck\.sql)/)?.[1];
   run('npm', ['run', 'build']);
   const pglite = { PGLITE_DIR: path.join(scratch, 'db') };
-  proof = { setup: run('npm', ['run', 'setup'], pglite), migrate: run('npm', ['run', 'migrate'], pglite) };
+  proof.setup = run('npm', ['run', 'setup'], pglite);
+  proof.migrate = run('npm', ['run', 'migrate'], pglite);
   run('npm', ['run', 'check']);
   proof.ownTests = run('node', ['--test', '--test-reporter=tap', `test/kinds/${KIND}/`]);
   writeFileSync(path.join(scratch, 'driver.mjs'), DRIVER);
@@ -120,7 +121,8 @@ after(() => {
 });
 
 test('setup applies the kind migration; migrate then has nothing left to do', () => {
-  assert.match(proof.setup, new RegExp(`migrated engine/002_${KIND}\\.sql`));
+  assert.ok(proof.migration, 'the scaffolder wrote the kind migration');
+  assert.ok(proof.setup.includes(`migrated engine/${proof.migration.split('/').pop()}`), proof.setup);
   assert.match(proof.migrate, /migrations: up to date/);
 });
 
@@ -170,8 +172,8 @@ const withoutBundleHashes = (text) => text.replace(/\/build\/([A-Za-z0-9_]+)-[A-
 test('the core is untouched: only the kind folders, its migration and regenerated build output changed', () => {
   const changed = git(['status', '--porcelain', '--untracked-files=all']).split('\n').filter(Boolean).map((line) => line.slice(3));
   const own = [`src/kinds/${KIND}/`, `public/js/kinds/${KIND}/`, `test/kinds/${KIND}/`];
-  const outside = changed.filter((p) => !own.some((dir) => p.startsWith(dir)) && p !== `src/db/migrations/002_${KIND}.sql`);
-  assert.ok(changed.includes(`src/db/migrations/002_${KIND}.sql`));
+  const outside = changed.filter((p) => !own.some((dir) => p.startsWith(dir)) && p !== proof.migration);
+  assert.ok(changed.includes(proof.migration));
   for (const p of outside) assert.ok(p === 'vercel.json' || /^public\/[a-z0-9-]+\.html$/.test(p), `unexpected change: ${p}`);
   for (const html of outside.filter((p) => p.endsWith('.html'))) {
     assert.equal(withoutBundleHashes(readFileSync(path.join(copy, html), 'utf8')), withoutBundleHashes(git(['show', `HEAD:${html}`])), `${html}: only bundle hashes changed`);
