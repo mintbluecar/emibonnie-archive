@@ -6,7 +6,7 @@ All notable changes to this project are documented here. Versions are semver tag
 
 The first release: a read-only archive (browse, search, item pages) with intake from the command line, and the contributor framework.
 
-**Upgrade steps:** none (first release). For a new archive, follow `docs/start-your-own.md`.
+**Upgrade steps:** none for a new archive: follow `docs/start-your-own.md`. A site repo made from an earlier build of this release: follow the one-time merge steps under "The build no longer rewrites tracked files" below.
 
 - **Engine foundations:**
   - Plain-JS, type-checked and lint-enforced layers (`docs/architecture.md`).
@@ -49,7 +49,15 @@ The first release: a read-only archive (browse, search, item pages) with intake 
   - A known event hashtag matches its event wherever it is in the post, follow-up parts included, e.g. on the last line after the translation ("known tags decide"). The header still decides first: this only applies when the header's keyword and tags match no event. Event keywords, new tags, proposals and placement still come from the header only, and person hashtags never pick an event.
   - `overrides.people: [{ igHandle, role }]` (in a seed's `maps.json`, or from any ingest caller) adds known people to an item on top of the ones it derives, e.g. who a shared story is about when its speakers are only roles. An unknown handle or role is refused before anything is fetched.
   - New theme token `--color-label` for accent text (month and section headings, the active tab, result-card event names, open-profile and contact links). It defaults to `--gradient-to`, so existing themes look the same; set it to keep an exact brand gradient with a separate, readable label colour (`docs/site-settings.md`).
-  - The build no longer rewrites tracked files, so engine upgrades don't conflict on build output. Page sources are templates in `src/html/*.html`; the build writes `public/*.html` from them, and both those and `vercel.json` are gitignored. **Upgrade step** for a site already on this release: `git rm --cached public/*.html vercel.json`, and on the Git-integration path un-ignore and commit your own `vercel.json` (`docs/start-your-own.md`, step 2). `npm test`'s write guard now covers every source tree, `site/` included.
+  - The build no longer rewrites tracked files, so engine upgrades don't conflict on build output. Page sources are templates in `src/html/*.html`; the build writes `public/*.html` from them, and both those and `vercel.json` are gitignored. The lines a site repo deletes from `.gitignore` (`/site/`, `/vercel.json`) now sit alone in a marked block at its end, so later updates merge cleanly. `npm test`'s write guard now covers every source tree, `site/` and the root `vercel.json` included.
+
+    **Upgrade step** for a site repo made from an earlier build of this release (one that tracks the built `public/*.html` and `vercel.json`). This merge conflicts once; after it, they don't. Checked by merging into a site repo made the old way, on both deploy paths:
+
+    1. `git merge` the release. Expect conflicts in `src/html/*.html` (your rebuilt pages, followed through the move), `.gitignore`, and `vercel.json` (modified by you, deleted by the engine).
+    2. Take the engine's page templates: `git checkout --theirs src/html && git add src/html`.
+    3. Take the engine's new `.gitignore` (`git checkout --theirs .gitignore`), then in its site-repo block at the end delete `/site/` again. On the Git-integration path, delete `/vercel.json` too. Then `git add .gitignore`.
+    4. Stop tracking whatever build output is still tracked. Quote the pattern, since the files may already be gone: `git ls-files 'public/*.html' vercel.json`. On the Actions path, `git rm --cached` what it lists (usually just `vercel.json`). On the Git-integration path, leave `vercel.json` out of that: you keep committing it.
+    5. `npm run build`. On the Git-integration path, `git add vercel.json`. Commit the merge, and check that `git status` is clean.
   - The engine's tests and e2e pass inside a site repo. The purity scan reads engine-owned files only (it skips `site/`, `.superpowers/` and `docs/superpowers/`), now also covers `test/` and `e2e/`, and bans a real site's names there, its seed's people included. The scaffolded-kind proof copies the engine without `site/` and runs on the bundled example. `npm run e2e` always runs the example on its own database.
   - New `npm run e2e:site`: the same browser checks on the repo's own `site/`, seeded from `site/seed/`, with every URL found through the site's API (`docs/start-your-own.md`, step 9). CI runs it on the example copy. `node scripts/dev.js` without a build now says to build first.
   - Engine tests name the example's own people only. A real site's host had slipped into three component and repo tests.
