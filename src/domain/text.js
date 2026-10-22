@@ -30,58 +30,72 @@ export function cleanDisplayName(s) {
   return withoutAt.trim().slice(0, 40);
 }
 
-/** How much of a long line a search result shows, in code points (about two and a half phone lines). */
+/** How much of a long line a search result shows, in grapheme clusters (about two and a half phone lines). */
 const EXCERPT_MAX = 120;
 /** How much of that window sits before the match. */
 const EXCERPT_BEFORE = 40;
 /** How far an edge may move to land on a space rather than mid-word. */
 const EXCERPT_SNAP = 15;
 
+const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
+/** @param {string} s @returns {string[]} the user-perceived characters: a Thai letter with its marks, a ZWJ emoji, a flag */
+function graphemesOf(s) {
+  return Array.from(GRAPHEMES.segment(s), (part) => part.segment);
+}
+
 /**
  * `start` moved forward to just after a space, if one is within reach
  * (and before `limit`), so the window opens on a whole word.
- * @param {string[]} chars @param {number} start @param {number} limit
+ * @param {string[]} units @param {number} start @param {number} limit
  * @returns {number}
  */
-function snapStart(chars, start, limit) {
+function snapStart(units, start, limit) {
   if (start === 0) return 0;
-  for (let i = start; i < Math.min(start + EXCERPT_SNAP, limit); i += 1) if (chars[i] === ' ') return i + 1;
+  for (let i = start; i < Math.min(start + EXCERPT_SNAP, limit); i += 1) if (units[i] === ' ') return i + 1;
   return start;
 }
 
 /**
  * `end` moved back to a space, if one is within reach (and after `limit`).
- * @param {string[]} chars @param {number} end @param {number} limit
+ * @param {string[]} units @param {number} end @param {number} limit
  * @returns {number}
  */
-function snapEnd(chars, end, limit) {
-  if (end === chars.length) return end;
-  for (let i = end; i > Math.max(end - EXCERPT_SNAP, limit); i -= 1) if (chars[i] === ' ') return i;
+function snapEnd(units, end, limit) {
+  if (end === units.length) return end;
+  for (let i = end; i > Math.max(end - EXCERPT_SNAP, limit); i -= 1) if (units[i] === ' ') return i;
   return end;
 }
 
 /**
- * A long line cut to a window of about `EXCERPT_MAX` code points around
- * the first case-insensitive match of `q`, opening and closing on word
- * edges where there are spaces, with "…" where text was cut (Task 9b: a
- * search result shows the matching lines, and a translator's paragraph
- * can run for several hundred characters). Counts code points, so Thai
- * (no spaces) is cut by length and an emoji is never split. A short line,
- * or one where the match isn't found as written, comes back unchanged.
+ * A long line cut to a window of about `EXCERPT_MAX` grapheme clusters
+ * around the first case-insensitive match of `q`, opening and closing on
+ * word edges where there are spaces, with "…" where text was cut (Task
+ * 9b: a search result shows the matching lines, and a translator's
+ * paragraph can run for several hundred characters).
+ *
+ * It counts and cuts grapheme clusters (`Intl.Segmenter`), never code
+ * points, so a Thai letter keeps its vowel and tone marks and an emoji
+ * sequence (ZWJ, skin tone, flag) is never split (fix round 1, I1). The
+ * line and `q` are both NFC-normalised first, as search matches them
+ * (M3). A short line, or one where the match isn't found, comes back
+ * unchanged.
  * @param {string} line @param {string} q
  * @returns {string}
  */
 export function excerptAround(line, q) {
-  const chars = [...line];
-  if (chars.length <= EXCERPT_MAX) return line;
-  const at = line.toLowerCase().indexOf(q.toLowerCase());
+  const text = line.normalize('NFC');
+  const units = graphemesOf(text);
+  if (units.length <= EXCERPT_MAX) return line;
+  const needle = q.normalize('NFC').toLowerCase();
+  const at = text.toLowerCase().indexOf(needle);
   if (at < 0) return line;
-  const matchStart = [...line.slice(0, at)].length;
-  const matchEnd = matchStart + [...q].length;
-  let start = Math.max(0, Math.min(matchStart - EXCERPT_BEFORE, chars.length - EXCERPT_MAX));
-  let end = Math.max(Math.min(chars.length, start + EXCERPT_MAX), matchEnd);
-  start = snapStart(chars, start, matchStart);
-  end = snapEnd(chars, end, matchEnd);
-  const body = chars.slice(start, end).join('').trim();
-  return `${start > 0 ? '…' : ''}${body}${end < chars.length ? '…' : ''}`;
+  const matchStart = graphemesOf(text.slice(0, at)).length;
+  const matchEnd = Math.max(matchStart + 1, graphemesOf(text.slice(0, at + needle.length)).length);
+  let start = Math.max(0, Math.min(matchStart - EXCERPT_BEFORE, units.length - EXCERPT_MAX));
+  let end = Math.max(Math.min(units.length, start + EXCERPT_MAX), matchEnd);
+  start = snapStart(units, start, matchStart);
+  end = snapEnd(units, end, matchEnd);
+  const body = units.slice(start, end).join('').trim();
+  return `${start > 0 ? '…' : ''}${body}${end < units.length ? '…' : ''}`;
 }

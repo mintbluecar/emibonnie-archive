@@ -50,7 +50,40 @@ test('excerptAround (Task 9b): a match near the start keeps the start; near the 
   assert.ok(end.startsWith('…') && end.endsWith('okay?'), end);
 });
 
-test('excerptAround (Task 9b): counts code points, so Thai (no spaces) is cut by length and never splits a surrogate pair', () => {
+/** @param {string} s @returns {string[]} */
+const graphemes = (s) => Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(s), (x) => x.segment);
+
+test('excerptAround (fix round 1, I1): Thai with combining marks is cut on grapheme clusters -- no excerpt starts or ends on a bare mark, at any match offset', () => {
+  const line = 'สวัสดีครับพี่น้อง'.repeat(20);
+  const units = graphemes(line);
+  for (let i = 0; i < units.length - 3; i += 7) {
+    const q = units.slice(i, i + 3).join('');
+    const out = excerptAround(line, q);
+    const body = out.replace(/^…/, '').replace(/…$/, '');
+    assert.ok(!/^\p{M}/u.test(body), `starts on a mark at ${i}: ${body.slice(0, 4)}`);
+    assert.ok(!/\p{M}$/u.test(graphemes(body).at(-1)?.[0] ?? ''), `ends on a whole cluster at ${i}`);
+    assert.ok(graphemes(body).every((g) => !/^\p{M}/u.test(g)), `every cluster starts on a base letter at ${i}`);
+    assert.ok(out.includes(q), `keeps the match at ${i}`);
+    assert.ok(graphemes(out).length <= 122);
+  }
+});
+
+test('excerptAround (fix round 1, I1): an emoji ZWJ sequence at the window edge is never split', () => {
+  const family = '👩🏻‍👦🏻';
+  const line = `${family.repeat(60)} hug ${family.repeat(60)}`;
+  const out = excerptAround(line, 'hug');
+  const body = out.replace(/^…/, '').replace(/…$/, '').trim();
+  for (const g of graphemes(body)) assert.ok(g === family || /^[ a-z]$/.test(g), `unexpected cluster ${JSON.stringify(g)}`);
+});
+
+test('excerptAround (fix round 1, M3): a decomposed line still finds a composed query (both NFC-normalised)', () => {
+  const decomposed = `${'word '.repeat(40)}cafe\u0301 au lait ${'word '.repeat(40)}`;
+  const out = excerptAround(decomposed, 'caf\u00e9');
+  assert.ok(out.startsWith('…') && out.endsWith('…'), out);
+  assert.match(out.normalize('NFC'), /café au lait/);
+});
+
+test('excerptAround (Task 9b): Thai with no spaces is cut by length, and an emoji is never split', () => {
   const thai = `${'ก'.repeat(200)}ครบ${'ข'.repeat(200)}`;
   const out = excerptAround(thai, 'ครบ');
   assert.match(out, /ครบ/);
