@@ -19,6 +19,7 @@
  * nothing to do with playback (ruling 2).
  */
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { expect } from '@playwright/test';
 import { AxeBuilder } from '@axe-core/playwright';
@@ -124,7 +125,20 @@ export const PROJECTS = [
 ];
 
 /**
- * The dev server one spec runs against: wipes `dbDir`, seeds `siteDir`'s
+ * This Playwright run's `.e2e-build.lock` token (scripts/e2eLock.js):
+ * set once in the CLI process when the config loads, and inherited by
+ * everything it starts (the `webServer` command, the teardown). Its pid
+ * part lets a later run tell a killed run's lock from a live one.
+ * @returns {string}
+ */
+export function e2eLockToken() {
+  process.env.E2E_LOCK_TOKEN ??= `${process.pid}:${randomUUID()}`;
+  return process.env.E2E_LOCK_TOKEN;
+}
+
+/**
+ * The dev server one spec runs against: takes the e2e build lock (fix
+ * round 1, M7: both e2e suites build into this checkout), wipes `dbDir`, seeds `siteDir`'s
  * `seed/` into it (`npm run seed-dev`), then `npm run dev` (which builds
  * `siteDir` first) -- the same rewrites and security headers production
  * uses. `DATABASE_URL`/`VERCEL` are forced empty (review round 2, I2) so
@@ -135,10 +149,10 @@ export const PROJECTS = [
 export function devServer({ port, dbDir, siteDir }) {
   const wipe = `node -e "require('node:fs').rmSync('${dbDir}', { recursive: true, force: true })"`;
   return {
-    command: `${wipe} && npm run seed-dev && npm run dev`,
+    command: `node scripts/e2eLock.js && ${wipe} && npm run seed-dev && npm run dev`,
     url: `http://127.0.0.1:${port}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { PORT: String(port), PGLITE_DIR: dbDir, SITE_DIR: siteDir, DATABASE_URL: '', VERCEL: '' },
+    env: { PORT: String(port), PGLITE_DIR: dbDir, SITE_DIR: siteDir, DATABASE_URL: '', VERCEL: '', E2E_LOCK_TOKEN: e2eLockToken() },
   };
 }

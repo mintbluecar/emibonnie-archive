@@ -218,7 +218,7 @@ npm run build && npm run check && npm test
 
 - `npm run e2e` is the engine's smoke (`e2e/smoke.spec.js`). It always runs the bundled example (`SITE_DIR=examples/solluna`, its own fresh `.e2e-db`), whatever `site/` holds, so it passes the same in the engine and in any site repo, then rebuilds the repo's own `site/` when there is one.
 - `npm run e2e:site` runs the same per-page checks on the repo's **own** `site/` (`e2e/site.spec.js`, `playwright.site.config.js`): it builds it, seeds `site/seed/` into a fresh `.e2e-site-db`, and finds every URL through the site's API (home, the first event and its first item, every listed person, the first translator, a search, about, privacy, takedown, a 404). Without a `site/` it skips with a message.
-- Both share their checks through `e2e/helpers.js` (200, no console or CSP errors, no horizontal scroll, axe finds nothing serious or critical) and run four projects: phone and desktop, light and dark. Don't run them at the same time: each builds into this checkout.
+- Both share their checks through `e2e/helpers.js` (200, no console or CSP errors, no horizontal scroll, axe finds nothing serious or critical) and run four projects: phone and desktop, light and dark. Each builds into this checkout, so each takes `.e2e-build.lock` first: a second run while one is going stops with a clear message (`scripts/e2eLock.js`).
 
 ## Engine vs. site
 

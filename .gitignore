@@ -4,6 +4,7 @@ node_modules/
 .devdb/
 .e2e-db/
 .e2e-site-db/
+.e2e-build.lock
 .tree-hash
 public/site/
 public/build/
