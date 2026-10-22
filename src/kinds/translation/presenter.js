@@ -27,6 +27,39 @@ const KIND = 'translation';
 const PREVIEW_LINES = 2;
 
 /**
+ * The one speaker resolver every display path uses (bubbles, joint
+ * parts, search match lines): a known person's standard emoji and
+ * name, a generic role's translator emoji and role name, or (never
+ * mapped) the marker itself with `name: null`. `person` is the known
+ * person, if any, for callers that need their id or colour.
+ * @param {string} marker
+ * @param {SpeakerMap} speakers
+ * @param {PresentContext} ctx
+ * @returns {{ emoji: string, name: string|null, person: any }}
+ */
+function speakerOf(marker, speakers, ctx) {
+  const speaker = Object.hasOwn(speakers, marker) ? speakers[marker] : undefined;
+  const person = speaker && 'person' in speaker ? ctx.people.get(speaker.person) : undefined;
+  if (person) return { emoji: person.emoji, name: ctx.formatName(person.displayName), person };
+  const name = speaker && 'role' in speaker ? speaker.role : null;
+  return { emoji: marker, name, person: undefined };
+}
+
+/**
+ * One marker's display emoji and name (`speakerOf`, without the person):
+ * a joint-bubble component, or a search match line's speaker. Crowd stays
+ * a named role here, rather than becoming a `kind: 'crowd'` bubble.
+ * @param {string} marker
+ * @param {SpeakerMap} speakers
+ * @param {PresentContext} ctx
+ * @returns {{emoji: string, name: string|null}}
+ */
+export function componentOf(marker, speakers, ctx) {
+  const { emoji, name } = speakerOf(marker, speakers, ctx);
+  return { emoji, name };
+}
+
+/**
  * @param {string} marker
  * @param {string} text
  * @param {SpeakerMap} speakers
@@ -36,32 +69,9 @@ const PREVIEW_LINES = 2;
 function soloBubble(marker, text, speakers, ctx) {
   const speaker = Object.hasOwn(speakers, marker) ? speakers[marker] : undefined;
   if (speaker && 'role' in speaker && speaker.role === 'crowd') return { kind: 'crowd', text };
-  const person = speaker && 'person' in speaker ? ctx.people.get(speaker.person) : undefined;
-  if (person) {
-    return { kind: 'speech', key: `p:${person.id}`, emoji: person.emoji, name: ctx.formatName(person.displayName), colour: person.colour, text, cont: false };
-  }
-  const name = speaker && 'role' in speaker ? speaker.role : null;
-  return { kind: 'speech', key: `m:${marker}`, emoji: marker, name, text, cont: false };
-}
-
-/**
- * One joint-bubble component's display emoji and name: a known person's
- * standard emoji and name, a generic role's translator emoji and role
- * name (crowd included -- it stays in the bubble, named by its role,
- * rather than becoming a `kind: 'crowd'` bubble), or (never mapped) the
- * marker itself with `name: null` -- exactly as a solo speech bubble
- * resolves that marker, minus the crowd short-circuit.
- * @param {string} marker
- * @param {SpeakerMap} speakers
- * @param {PresentContext} ctx
- * @returns {{emoji: string, name: string|null}}
- */
-export function componentOf(marker, speakers, ctx) {
-  const speaker = Object.hasOwn(speakers, marker) ? speakers[marker] : undefined;
-  const person = speaker && 'person' in speaker ? ctx.people.get(speaker.person) : undefined;
-  if (person) return { emoji: person.emoji, name: ctx.formatName(person.displayName) };
-  const name = speaker && 'role' in speaker ? speaker.role : null;
-  return { emoji: marker, name };
+  const { emoji, name, person } = speakerOf(marker, speakers, ctx);
+  if (person) return { kind: 'speech', key: `p:${person.id}`, emoji, name, colour: person.colour, text, cont: false };
+  return { kind: 'speech', key: `m:${marker}`, emoji, name, text, cont: false };
 }
 
 /**
