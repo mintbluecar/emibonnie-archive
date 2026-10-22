@@ -17,7 +17,16 @@
  *   marker the item never mapped keeps the marker, with `name: null` and
  *   no `colour` (both neutral). `cont`: the previous bubble had the same
  *   speaker, so the page shows no emoji or name.
+ * @typedef {{ kind: 'joint', parts: { emoji: string, name: string|null }[], text: string, cont: boolean }} JointBubble
+ *   A line whose marker is 2+ markers run together (e.g. both hosts
+ *   reacting at once): every speaker shares one neutral bubble (no
+ *   colour). `parts`, in line order: each component's display emoji and
+ *   name, resolved exactly as a `SpeechBubble` would (a crowd component
+ *   keeps its role name here instead of becoming a `kind: 'crowd'`
+ *   bubble); a never-mapped component has `name: null`, same meaning as
+ *   `SpeechBubble`'s. The page joins the names with " & ".
  * @typedef {SpeechBubble
+ *   | JointBubble
  *   | { kind: 'crowd', text: string }
  *   | { kind: 'plain', text: string }
  *   | { kind: 'note', mark: '*'|'**', text: string }} BubbleVM

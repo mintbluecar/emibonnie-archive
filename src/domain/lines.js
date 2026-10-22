@@ -1,7 +1,10 @@
 // @ts-check
 
 /**
- * @typedef {{kind: 'speech', marker: string, text: string}} SpeechLine
+ * @typedef {{kind: 'speech', marker: string, markers: string[], text: string}} SpeechLine
+ *   `marker` is the raw prefix as written; `markers` splits it into its
+ *   component single-emoji markers (length 1 for an ordinary line, 2+ for
+ *   a joint line -- see `markersOf`).
  * @typedef {{kind: 'plain', text: string}} PlainLine
  * @typedef {{kind: 'footnote', mark: '*'|'**', text: string}} FootnoteLine
  * @typedef {SpeechLine|PlainLine|FootnoteLine} Line
@@ -13,9 +16,25 @@ const LABEL_MARKER = /^[A-Za-z0-9]{1,3}$/;
 const FOOTNOTE_PREFIX = /^(\*{1,2})\s(.*)$/;
 
 /** @param {string} candidate */
+function graphemesOf(candidate) {
+  return [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(candidate)].map((s) => s.segment);
+}
+
+/**
+ * Whether `candidate` is one grapheme cluster that reads as an emoji: an
+ * ordinary pictographic emoji (plain, skin-toned, or a ZWJ sequence --
+ * `Extended_Pictographic` covers all three, since it matches on the base
+ * character), a flag (two `Regional_Indicator` symbols forming one
+ * cluster), or a keycap (digit/`#`/`*` plus the combining enclosing
+ * keycap, U+20E3 -- neither `Extended_Pictographic` nor
+ * `Regional_Indicator`, per Unicode's emoji-sequences.txt).
+ * @param {string} candidate
+ */
 function isEmojiMarker(candidate) {
-  const graphemes = [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(candidate)];
-  return graphemes.length === 1 && /\p{Extended_Pictographic}/u.test(graphemes[0].segment);
+  const graphemes = graphemesOf(candidate);
+  if (graphemes.length !== 1) return false;
+  const [grapheme] = graphemes;
+  return /\p{Extended_Pictographic}/u.test(grapheme) || /\p{Regional_Indicator}/u.test(grapheme) || grapheme.includes('⃣');
 }
 
 /** @param {string} candidate */
@@ -24,16 +43,43 @@ function isMarker(candidate) {
 }
 
 /**
+ * A joint marker's component markers, when `candidate` is 2 or more
+ * graphemes and each one is, on its own, a valid single-emoji marker
+ * (so a skin-toned emoji, a ZWJ sequence, a flag or a keycap -- each
+ * already one grapheme -- never splits). `null` otherwise.
+ * @param {string} candidate
+ * @returns {string[]|null}
+ */
+function jointMarkersOf(candidate) {
+  const graphemes = graphemesOf(candidate);
+  return graphemes.length >= 2 && graphemes.every(isEmojiMarker) ? graphemes : null;
+}
+
+/**
+ * `candidate`'s component markers: itself (length 1) when it's a single
+ * marker (emoji or short label), its graphemes when it's a joint marker,
+ * else `null` (not a marker at all).
+ * @param {string} candidate
+ * @returns {string[]|null}
+ */
+function markersOf(candidate) {
+  return isMarker(candidate) ? [candidate] : jointMarkersOf(candidate);
+}
+
+/**
  * The marker text immediately before a line's first `:`, if one is found
  * within `MARKER_WINDOW` characters of it and is a whole emoji grapheme
- * cluster or a short (1-3 character) label. `null` otherwise.
+ * cluster, a short (1-3 character) label, or 2+ such emoji run together
+ * (a joint marker). `null` otherwise.
  * @param {string} line
  * @param {number} colonIndex
+ * @returns {{marker: string, markers: string[]}|null}
  */
 function markerBefore(line, colonIndex) {
   const start = Math.max(0, colonIndex - MARKER_WINDOW);
   const candidate = line.slice(start, colonIndex).trim();
-  return isMarker(candidate) ? candidate : null;
+  const markers = markersOf(candidate);
+  return markers ? { marker: candidate, markers } : null;
 }
 
 /** @param {string} line */
@@ -55,8 +101,8 @@ function classifyLine(raw) {
   if (footnote) return footnote;
 
   const colonIndex = line.indexOf(':');
-  const marker = colonIndex > 0 ? markerBefore(line, colonIndex) : null;
-  if (marker) return { kind: 'speech', marker, text: line.slice(colonIndex + 1).trim() };
+  const found = colonIndex > 0 ? markerBefore(line, colonIndex) : null;
+  if (found) return { kind: 'speech', marker: found.marker, markers: found.markers, text: line.slice(colonIndex + 1).trim() };
 
   return { kind: 'plain', text: line };
 }
@@ -84,8 +130,9 @@ export function splitLines(text) {
 }
 
 /**
- * Tallies the distinct speech markers used in `lines`, in order of first
- * appearance.
+ * Tallies the distinct component speech markers used in `lines`, in order
+ * of first appearance. A joint line counts each of its components, never
+ * the joint string itself.
  * @param {Line[]} lines
  * @returns {Marker[]}
  */
@@ -94,7 +141,7 @@ export function findMarkers(lines) {
   const counts = new Map();
   for (const line of lines) {
     if (line.kind !== 'speech') continue;
-    counts.set(line.marker, (counts.get(line.marker) ?? 0) + 1);
+    for (const marker of line.markers) counts.set(marker, (counts.get(marker) ?? 0) + 1);
   }
   return [...counts.entries()].map(([marker, count]) => ({ marker, count }));
 }

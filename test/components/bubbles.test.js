@@ -37,6 +37,53 @@ test('bubbles: an unmapped marker (name: null) gets an aria-label, not a visible
   assert.match(markup, /aria-label="unknown speaker"/);
 });
 
+test('bubbles: a joint bubble shows both emoji and names joined with " & ", neutral (no data-c)', () => {
+  /** @type {BubbleVM[]} */
+  const bubbles = [{ kind: 'joint', parts: [{ emoji: '👦🏻', name: 'host' }, { emoji: '👩🏻', name: 'host' }], text: 'hey!', cont: false }];
+  const markup = String(render({ bubbles }));
+  assert.ok(!markup.includes('data-c='));
+  assert.ok(markup.includes('👦🏻') && markup.includes('👩🏻'));
+  assert.match(markup, />host &amp; host</);
+});
+
+test('bubbles: a joint bubble\'s never-mapped component gets an aria-label, same text as a solo unmapped marker', () => {
+  /** @type {BubbleVM[]} */
+  const bubbles = [{ kind: 'joint', parts: [{ emoji: '🐸', name: null }, { emoji: '👦🏻', name: 'host' }], text: 'mystery duo', cont: false }];
+  const markup = String(render({ bubbles }));
+  assert.match(markup, /aria-label="unknown speaker"/);
+  assert.match(markup, />unknown speaker &amp; host</);
+});
+
+test('bubbles: a joint bubble\'s text and names are escaped, like any other bubble', () => {
+  /** @type {BubbleVM[]} */
+  const bubbles = [{ kind: 'joint', parts: [{ emoji: '👦🏻', name: '<b>host</b>' }, { emoji: '👩🏻', name: 'host' }], text: '<script>alert(1)</script>', cont: false }];
+  const markup = String(render({ bubbles }));
+  assert.ok(!markup.includes('<script>alert(1)</script>'));
+  assert.ok(!markup.includes('<b>host</b>'));
+  assert.match(markup, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.match(markup, /&lt;b&gt;host&lt;\/b&gt;/);
+});
+
+test('bubbles: a joint continuation bubble has no avatars or visible name', () => {
+  /** @type {BubbleVM[]} */
+  const bubbles = [
+    { kind: 'joint', parts: [{ emoji: '👦🏻', name: 'host' }, { emoji: '👩🏻', name: 'host' }], text: 'first', cont: false },
+    { kind: 'joint', parts: [{ emoji: '👦🏻', name: 'host' }, { emoji: '👩🏻', name: 'host' }], text: 'second', cont: true },
+  ];
+  const markup = String(render({ bubbles }));
+  const contMsg = markup.split('c-bubbles__msg--cont')[1];
+  assert.ok(contMsg, 'a continuation joint bubble was rendered');
+  assert.ok(!contMsg.includes('c-bubbles__name'));
+});
+
+test('bubbles: no inline style or script attribute on a joint bubble (CSP)', () => {
+  /** @type {BubbleVM[]} */
+  const bubbles = [{ kind: 'joint', parts: [{ emoji: '👦🏻', name: 'host' }, { emoji: '👩🏻', name: 'host' }], text: 'hey!', cont: false }];
+  const markup = String(render({ bubbles }));
+  assert.ok(!markup.includes('style='));
+  assert.ok(!markup.includes('onclick'));
+});
+
 test('bubbles: a crowd note renders', () => {
   /** @type {BubbleVM[]} */
   const bubbles = [{ kind: 'crowd', text: 'Ahhh~' }];

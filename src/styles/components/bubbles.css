@@ -36,6 +36,24 @@
   visibility: hidden;
 }
 
+/*
+ * A joint line (2+ speakers at once, public/js/components/bubbles.js's
+ * `jointBubble`): always neutral, so this group carries no `data-c` and
+ * its avatars use the engine's default `--c` (src/styles/tokens.css).
+ */
+.c-bubbles__avatars {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: none;
+}
+
+.c-bubbles__avatars .c-bubbles__avatar {
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+}
+
 .c-bubbles__bub {
   padding: 6px 10px;
   border-radius: 4px 14px 14px 14px;

@@ -45,9 +45,33 @@ test('splitLines: line count equals the number of non-blank lines', () => {
 
 test('splitLines: blank lines are skipped entirely', () => {
   assert.deepEqual(splitLines('🦁: hi\n\n🐱: hey'), [
-    { kind: 'speech', marker: '🦁', text: 'hi' },
-    { kind: 'speech', marker: '🐱', text: 'hey' },
+    { kind: 'speech', marker: '🦁', markers: ['🦁'], text: 'hi' },
+    { kind: 'speech', marker: '🐱', markers: ['🐱'], text: 'hey' },
   ]);
+});
+
+test('splitLines: a joint marker (2+ single-emoji graphemes run together) is one speech line with both markers', () => {
+  assert.deepEqual(splitLines('👦🏻: a\n👩🏻: b\n👩🏻👦🏻: c'), [
+    { kind: 'speech', marker: '👦🏻', markers: ['👦🏻'], text: 'a' },
+    { kind: 'speech', marker: '👩🏻', markers: ['👩🏻'], text: 'b' },
+    { kind: 'speech', marker: '👩🏻👦🏻', markers: ['👩🏻', '👦🏻'], text: 'c' },
+  ]);
+});
+
+test('splitLines: a ZWJ sequence (family emoji) is a single marker, not split into a joint one', () => {
+  assert.deepEqual(splitLines('👩‍👦: x'), [{ kind: 'speech', marker: '👩‍👦', markers: ['👩‍👦'], text: 'x' }]);
+});
+
+test('splitLines: a flag (regional indicator pair) is a single marker', () => {
+  assert.deepEqual(splitLines('🇹🇭: x'), [{ kind: 'speech', marker: '🇹🇭', markers: ['🇹🇭'], text: 'x' }]);
+});
+
+test("splitLines: a short text label (\"P'Nam:\") is unchanged (never treated as joint)", () => {
+  assert.deepEqual(splitLines("P'Nam: x"), [{ kind: 'plain', text: "P'Nam: x" }]);
+});
+
+test('splitLines: a joint-looking prefix with no colon is plain', () => {
+  assert.deepEqual(splitLines('👩🏻👦🏻 text with no colon'), [{ kind: 'plain', text: '👩🏻👦🏻 text with no colon' }]);
 });
 
 test('splitLines: a leading * plus a space is a footnote', () => {
@@ -60,5 +84,13 @@ test('findMarkers: tallies occurrences in order of first appearance', () => {
   assert.deepEqual(findMarkers(lines), [
     { marker: '🦁', count: 2 },
     { marker: '🐱', count: 1 },
+  ]);
+});
+
+test('findMarkers: counts a joint line\'s component markers, never the joint string, including the joint appearance in each component\'s count', () => {
+  const lines = splitLines('👦🏻: a\n👩🏻: b\n👩🏻👦🏻: c');
+  assert.deepEqual(findMarkers(lines), [
+    { marker: '👦🏻', count: 2 },
+    { marker: '👩🏻', count: 2 },
   ]);
 });

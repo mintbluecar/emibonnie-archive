@@ -27,12 +27,13 @@ const KIND = 'translation';
 const PREVIEW_LINES = 2;
 
 /**
- * @param {Extract<Line, { kind: 'speech' }>} line
+ * @param {string} marker
+ * @param {string} text
  * @param {SpeakerMap} speakers
  * @param {PresentContext} ctx
  * @returns {KeyedBubble}
  */
-function speechBubble({ marker, text }, speakers, ctx) {
+function soloBubble(marker, text, speakers, ctx) {
   const speaker = Object.hasOwn(speakers, marker) ? speakers[marker] : undefined;
   if (speaker && 'role' in speaker && speaker.role === 'crowd') return { kind: 'crowd', text };
   const person = speaker && 'person' in speaker ? ctx.people.get(speaker.person) : undefined;
@@ -41,6 +42,49 @@ function speechBubble({ marker, text }, speakers, ctx) {
   }
   const name = speaker && 'role' in speaker ? speaker.role : null;
   return { kind: 'speech', key: `m:${marker}`, emoji: marker, name, text, cont: false };
+}
+
+/**
+ * One joint-bubble component's display emoji and name: a known person's
+ * standard emoji and name, a generic role's translator emoji and role
+ * name (crowd included -- it stays in the bubble, named by its role,
+ * rather than becoming a `kind: 'crowd'` bubble), or (never mapped) the
+ * marker itself with `name: null` -- exactly as a solo speech bubble
+ * resolves that marker, minus the crowd short-circuit.
+ * @param {string} marker
+ * @param {SpeakerMap} speakers
+ * @param {PresentContext} ctx
+ * @returns {{emoji: string, name: string|null}}
+ */
+function componentOf(marker, speakers, ctx) {
+  const speaker = Object.hasOwn(speakers, marker) ? speakers[marker] : undefined;
+  const person = speaker && 'person' in speaker ? ctx.people.get(speaker.person) : undefined;
+  if (person) return { emoji: person.emoji, name: ctx.formatName(person.displayName) };
+  const name = speaker && 'role' in speaker ? speaker.role : null;
+  return { emoji: marker, name };
+}
+
+/**
+ * A joint line (2+ markers run together): one neutral bubble (no person
+ * colour), its components resolved in line order.
+ * @param {Extract<Line, { kind: 'speech' }>} line
+ * @param {SpeakerMap} speakers
+ * @param {PresentContext} ctx
+ * @returns {KeyedBubble}
+ */
+function jointBubble(line, speakers, ctx) {
+  const parts = line.markers.map((marker) => componentOf(marker, speakers, ctx));
+  return { kind: 'joint', key: `j:${line.markers.join('|')}`, parts, text: line.text, cont: false };
+}
+
+/**
+ * @param {Extract<Line, { kind: 'speech' }>} line
+ * @param {SpeakerMap} speakers
+ * @param {PresentContext} ctx
+ * @returns {KeyedBubble}
+ */
+function speechBubble(line, speakers, ctx) {
+  return line.markers.length > 1 ? jointBubble(line, speakers, ctx) : soloBubble(line.marker, line.text, speakers, ctx);
 }
 
 /**
@@ -56,16 +100,20 @@ function bubbleOf(line, speakers, ctx) {
 }
 
 /**
- * Sets `cont` from the bubble before, and drops the speaker keys.
+ * Sets `cont` from the bubble before, and drops the speaker keys. A
+ * joint bubble's key is the whole joint (its markers, in order), so
+ * consecutive identical joint lines collapse the same way a repeated
+ * single speaker does.
  * @param {KeyedBubble[]} bubbles
  * @returns {BubbleVM[]}
  */
 function withContinuation(bubbles) {
   return bubbles.map((bubble, i) => {
-    if (bubble.kind !== 'speech') return bubble;
+    if (bubble.kind !== 'speech' && bubble.kind !== 'joint') return bubble;
     const { key, ...rest } = bubble;
     const before = bubbles[i - 1];
-    return { ...rest, cont: before?.kind === 'speech' && before.key === key };
+    const keyed = before?.kind === 'speech' || before?.kind === 'joint';
+    return { ...rest, cont: keyed && before.key === key };
   });
 }
 
@@ -112,7 +160,27 @@ function preview(card, details, ctx) {
 }
 
 /**
- * The people and generic roles who speak, in order of first line.
+ * `marker`'s cast entry (a person, or a non-crowd role), keyed for
+ * dedupe; `null` for crowd or an unmapped marker.
+ * @param {string} marker
+ * @param {SpeakerMap[string]} speaker
+ * @param {PresentContext} ctx
+ * @returns {[string, CastVM]|null}
+ */
+function castEntryOf(marker, speaker, ctx) {
+  const person = 'person' in speaker ? ctx.people.get(speaker.person) : undefined;
+  if (person) {
+    const name = ctx.formatName(person.displayName);
+    return [`p:${person.id}`, { kind: 'person', id: person.id, emoji: person.emoji, name, colour: person.colour, igHandle: person.igHandle }];
+  }
+  if ('role' in speaker && speaker.role !== 'crowd') return [`m:${marker}`, { kind: 'role', role: speaker.role, emoji: marker, name: speaker.role }];
+  return null;
+}
+
+/**
+ * The people and generic roles who speak, in order of first line. Joint
+ * lines add no cast entries: their components already appear
+ * individually, from any solo line of their own.
  * @param {TranslationDetails} details
  * @param {PresentContext} ctx
  * @returns {CastVM[]}
@@ -121,15 +189,9 @@ function castOf(details, ctx) {
   /** @type {Map<string, CastVM>} */
   const cast = new Map();
   for (const line of splitLines(details.body)) {
-    if (line.kind !== 'speech' || !Object.hasOwn(details.speakers, line.marker)) continue;
-    const speaker = details.speakers[line.marker];
-    const person = 'person' in speaker ? ctx.people.get(speaker.person) : undefined;
-    if (person && !cast.has(`p:${person.id}`)) {
-      const name = ctx.formatName(person.displayName);
-      cast.set(`p:${person.id}`, { kind: 'person', id: person.id, emoji: person.emoji, name, colour: person.colour, igHandle: person.igHandle });
-    } else if ('role' in speaker && speaker.role !== 'crowd' && !cast.has(`m:${line.marker}`)) {
-      cast.set(`m:${line.marker}`, { kind: 'role', role: speaker.role, emoji: line.marker, name: speaker.role });
-    }
+    if (line.kind !== 'speech' || line.markers.length > 1 || !Object.hasOwn(details.speakers, line.marker)) continue;
+    const entry = castEntryOf(line.marker, details.speakers[line.marker], ctx);
+    if (entry && !cast.has(entry[0])) cast.set(entry[0], entry[1]);
   }
   return [...cast.values()];
 }

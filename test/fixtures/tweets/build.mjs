@@ -337,7 +337,8 @@ function buildJointLive() {
 ☀️: hi everyone, thanks for tuning in
 🌙: hi hi!!
 ☀️: we're both here today
-🌙: love you all, thank you for watching`;
+🌙: love you all, thank you for watching
+☀️🌙: good night everyone, thank you for having us!`;
 
   const pair = buildTweet({
     id: IDS.JOINT_LIVE,

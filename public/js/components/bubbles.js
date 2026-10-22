@@ -48,11 +48,43 @@ function speechBubble(bubble) {
 }
 
 /**
+ * A joint line (2+ speakers at once): one neutral bubble (no `data-c`),
+ * its avatars stacked in line order. A never-mapped component's own
+ * avatar gets the same aria-label an unmapped solo marker would, and its
+ * name joins in as `item.unknownSpeaker`, same text.
+ * @param {import('../../../src/http/contracts.js').JointBubble} bubble
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+function jointBubble(bubble) {
+  if (bubble.cont) {
+    return html`
+      <div class="c-bubbles__msg c-bubbles__msg--cont">
+        <div class="c-bubbles__avatar c-bubbles__avatar--blank" aria-hidden="true"></div>
+        <div class="c-bubbles__bub msg cont">${thaiSpans(bubble.text)}</div>
+      </div>
+    `;
+  }
+  const name = bubble.parts.map((p) => p.name ?? t('item.unknownSpeaker')).join(' & ');
+  return html`
+    <div class="c-bubbles__msg c-bubbles__msg--joint">
+      <div class="c-bubbles__avatars">
+        ${bubble.parts.map((p) => html`<div class="c-bubbles__avatar" ${p.name === null ? html`aria-label="${t('item.unknownSpeaker')}" role="img"` : ''}>${p.emoji}</div>`)}
+      </div>
+      <div class="c-bubbles__bub">
+        <div class="c-bubbles__name">${name}</div>
+        ${thaiSpans(bubble.text)}
+      </div>
+    </div>
+  `;
+}
+
+/**
  * @param {import('../../../src/http/contracts.js').BubbleVM} bubble
  * @returns {import('../core/html.js').SafeHtml}
  */
 function nonNoteBubble(bubble) {
   if (bubble.kind === 'speech') return speechBubble(bubble);
+  if (bubble.kind === 'joint') return jointBubble(bubble);
   if (bubble.kind === 'crowd') return html`<p class="c-bubbles__crowd">${thaiSpans(bubble.text)}</p>`;
   return html`<p class="c-bubbles__plain">${thaiSpans(bubble.text)}</p>`;
 }

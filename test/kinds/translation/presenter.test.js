@@ -2,16 +2,60 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { IDS } from '../../helpers/fixtures.js';
-import { seededDeps, itemIdOf, SYSTEM } from '../../helpers/ingest.js';
+import { seededDeps, itemIdOf, SYSTEM, ingestDeps, ingest } from '../../helpers/ingest.js';
 import { itemView } from '../../../src/services/itemView.js';
 import { previewsFor, presenterContext } from '../../../src/services/cards.js';
-import { addParts } from '../../../src/kinds/translation/repo.js';
+import { addParts, setSpeakers } from '../../../src/kinds/translation/repo.js';
+import { resolveSpeakerRefs } from '../../../src/services/intakeRefs.js';
 import translation from '../../../src/kinds/translation/index.js';
 
 /** @type {any} */
 let deps;
 before(async () => { deps = await seededDeps(); });
 after(async () => { await deps.db.end(); });
+
+/**
+ * A fresh, isolated item (its own db) with four joint lines: two generic
+ * 'host' markers (twice, to check continuation), two known people (sol &
+ * luna), one with a never-mapped component, and one with a crowd
+ * component. Task 7b (joint speaker lines).
+ * @returns {Promise<{ jointDeps: any, view: any }>}
+ */
+async function jointLinesFixture() {
+  const jointDeps = await ingestDeps();
+  const refs = {
+    '💬': { role: 'fan' }, '🪇': { role: 'host' },
+    '👦🏻': { role: 'host' }, '👩🏻': { role: 'host' },
+    '☀️': { person: 'solsunny' }, '🌙': { person: 'lunamoon' },
+    '🗣️': { role: 'crowd' },
+  };
+  const chosen = await resolveSpeakerRefs(jointDeps.db, refs);
+  const result = await ingest(jointDeps, IDS.SHARED, { chosen });
+  const itemId = /** @type {number} */ (result.itemId);
+  const body = [
+    '👦🏻👩🏻: joint hosts, line one',
+    '👦🏻👩🏻: joint hosts, line two (same speakers, should collapse)',
+    '☀️🌙: joint known people',
+    '🐸👦🏻: one component never mapped',
+    '🗣️👦🏻: one component is crowd',
+  ].join('\n');
+  await jointDeps.db.transaction((/** @type {any} */ tx) => addParts(tx, itemId, [{ sourceId: null, body }]), SYSTEM);
+  await jointDeps.db.transaction((/** @type {any} */ tx) => setSpeakers(tx, itemId, chosen), SYSTEM);
+  const view = await itemView(jointDeps, 'translation', IDS.SHARED);
+  return { jointDeps, view };
+}
+
+/** @type {any} */
+let jointDeps;
+/** @type {any} */
+let jointView;
+before(async () => { ({ jointDeps, view: jointView } = await jointLinesFixture()); });
+after(async () => { await jointDeps.db.end(); });
+
+/** @param {any[]} bubbles @param {string} text */
+function jointBubbleFor(bubbles, text) {
+  return bubbles.find((/** @type {any} */ b) => b.kind === 'joint' && b.text === text);
+}
 
 /** @param {string} sourceId */
 async function previewOf(sourceId) {
@@ -137,6 +181,41 @@ test('a marker the item never mapped (from an attached follow-up) is a neutral s
     { kind: 'speech', emoji: '🐸', name: null, text: 'a line nobody mapped', cont: false },
     { kind: 'speech', emoji: '🐸', name: null, text: 'and another', cont: true },
   ]);
+});
+
+test('a joint line of two markers both mapped to the generic "host" role is one neutral bubble, both named "host"', () => {
+  const bubble = jointBubbleFor(jointView.bubbles, 'joint hosts, line one');
+  assert.equal(bubble.kind, 'joint');
+  assert.equal('colour' in bubble, false);
+  assert.deepEqual(bubble.parts, [{ emoji: '👦🏻', name: 'host' }, { emoji: '👩🏻', name: 'host' }]);
+  assert.equal(bubble.parts.map((/** @type {any} */ p) => p.name).join(' & '), 'host & host');
+});
+
+test('a joint line of two known people is one neutral bubble, names joined with " & "', () => {
+  const bubble = jointBubbleFor(jointView.bubbles, 'joint known people');
+  assert.deepEqual(bubble.parts, [{ emoji: '☀️', name: 'sol' }, { emoji: '🌙', name: 'luna' }]);
+  assert.equal(bubble.parts.map((/** @type {any} */ p) => p.name).join(' & '), 'sol & luna');
+});
+
+test('a joint line\'s never-mapped component gets the same treatment as an unmapped single marker: its own emoji, name: null', () => {
+  const bubble = jointBubbleFor(jointView.bubbles, 'one component never mapped');
+  assert.deepEqual(bubble.parts, [{ emoji: '🐸', name: null }, { emoji: '👦🏻', name: 'host' }]);
+});
+
+test('a joint line\'s crowd component stays in the bubble, labelled with the crowd role name (not a kind: \'crowd\' bubble)', () => {
+  const bubble = jointBubbleFor(jointView.bubbles, 'one component is crowd');
+  assert.deepEqual(bubble.parts, [{ emoji: '🗣️', name: 'crowd' }, { emoji: '👦🏻', name: 'host' }]);
+});
+
+test('consecutive identical joint lines collapse the same way single speakers do (cont, keyed on the whole joint)', () => {
+  const first = jointBubbleFor(jointView.bubbles, 'joint hosts, line one');
+  const second = jointBubbleFor(jointView.bubbles, 'joint hosts, line two (same speakers, should collapse)');
+  assert.equal(first.cont, false);
+  assert.equal(second.cont, true);
+});
+
+test('joint lines add no cast entries: the cast is unaffected by the 👦🏻🐸🗣️☀️🌙 joint lines, only SHARED\'s own solo 💬/🪇 lines', () => {
+  assert.deepEqual(jointView.cast.map((/** @type {any} */ c) => c.name), ['fan', 'host']);
 });
 
 test('a post with no speech lines previews its first 2 plain lines that are not header', async () => {
