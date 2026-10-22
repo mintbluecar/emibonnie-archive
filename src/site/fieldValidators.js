@@ -35,16 +35,23 @@ export function checkColour(errors, path, value) {
 }
 
 /**
- * A featured colour must stay readable against both card colours.
- * @param {string[]} errors
+ * A featured colour reading low against a card colour is a warning, not a
+ * build failure (review round 2, fix round 2, item 2): the raw colour is
+ * now only ever used for tints, fills and borders -- `applyColours()`
+ * (public/js/core/dom.js) derives a separate, guaranteed-readable
+ * `--c-text` for any actual text, via `textShade()`. Named so a site
+ * owner can still see and fix it (e.g. the real site's own sol
+ * `#ff8a3d`, 2.31:1 against the light card, would otherwise fail the
+ * build for a colour the engine no longer puts text in directly).
+ * @param {string[]} warnings
  * @param {string} path
  * @param {string} colour
  */
-export function checkColourContrast(errors, path, colour) {
+export function checkColourContrast(warnings, path, colour) {
   const vsLight = contrastRatio(colour, DEFAULT_CARD_COLOUR);
   const vsDark = contrastRatio(colour, DARK_CARD_COLOUR);
-  if (vsLight < 3) errors.push(`${path}: contrast ${vsLight.toFixed(2)}:1 against the card colour is below 3:1`);
-  if (vsDark < 3) errors.push(`${path}: contrast ${vsDark.toFixed(2)}:1 against the dark card colour is below 3:1`);
+  if (vsLight < 3) warnings.push(`${path} (${colour}): contrast ${vsLight.toFixed(2)}:1 against the card colour is below 3:1`);
+  if (vsDark < 3) warnings.push(`${path} (${colour}): contrast ${vsDark.toFixed(2)}:1 against the dark card colour is below 3:1`);
 }
 
 /**
@@ -249,13 +256,16 @@ function checkOtherAccounts(errors, person, personIndex) {
 }
 
 /**
- * @param {string[]} errors
+ * `report`'s two arrays, not a 5th positional param, keep this at the
+ * `max-params` limit of 4.
+ * @param {{ errors: string[], warnings: string[] }} report
  * @param {any} person
  * @param {number} index
  * @param {Set<string>} seenHandles
  * @returns {{ igHandle: string, displayName: string, emoji: string, colour: string, otherAccounts: { platform: string, handle: string }[] }}
  */
-export function checkOneFeaturedPerson(errors, person, index, seenHandles) {
+export function checkOneFeaturedPerson(report, person, index, seenHandles) {
+  const { errors, warnings } = report;
   const base = `featuredPeople[${index}]`;
   const igHandle = person?.igHandle;
   const displayName = person?.displayName;
@@ -265,7 +275,7 @@ export function checkOneFeaturedPerson(errors, person, index, seenHandles) {
   requireString(errors, `${base}.emoji`, emoji);
   checkDuplicateHandle(errors, base, igHandle, seenHandles);
   const colour = checkColour(errors, `${base}.colour`, person?.colour);
-  if (colour) checkColourContrast(errors, `${base}.colour`, colour);
+  if (colour) checkColourContrast(warnings, `${base}.colour`, colour);
   return {
     igHandle: asStringOr(igHandle, ''),
     displayName: asStringOr(displayName, ''),

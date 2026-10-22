@@ -70,13 +70,14 @@ test('validateSite: errors name the field for a bad colour', () => {
   assert.ok(result.errors.some((e) => e.startsWith('featuredPeople[0].colour:')));
 });
 
-test('validateSite: errors on a featured colour below 3:1 contrast', () => {
+test('validateSite: warns (doesn\'t fail) on a featured colour below 3:1 contrast, naming the colour and its ratio (review round 2, fix round 2, item 2)', () => {
   const raw = readFixture('examples/solluna/site.json');
   raw.featuredPeople[0].colour = '#fffefd'; // near-white: fails contrast against the light card
   const result = validateSite(raw);
-  assert.equal(result.ok, false);
-  if (result.ok) return;
-  assert.ok(result.errors.some((e) => e.includes('featuredPeople[0].colour') && e.includes('contrast')));
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.ok(result.warnings.some((w) => w.includes('featuredPeople[0].colour') && w.includes('#fffefd') && w.includes('contrast')));
+  assert.equal(result.site.featuredPeople[0].colour, '#fffefd');
 });
 
 test('validateSite: errors on an unknown marker handle', () => {

@@ -32,6 +32,7 @@ export function loadSite(dir = process.env.SITE_DIR ?? 'site') {
 
   const result = validateSite(raw);
   if (!result.ok) throw new SiteConfigError(result.errors);
+  for (const warning of result.warnings) console.warn(`site.json warning: ${warning}`);
   return result.site;
 }
 

@@ -48,6 +48,15 @@
      `--color-ink-muted`) only shows before JS runs or for an element with
      no colour of its own. */
   --c: var(--color-ink-muted);
+  /* --c's per-person derived TEXT colour (review round 2, fix round 2,
+     item 1): set per `[data-c]` element by `applyColours()`
+     (`public/js/core/dom.js`) via `textShade()`, same CSP-safe pattern
+     as `--c`/`--aspect`. Declared `initial` (not a real colour) purely
+     so scripts/build.js's token check passes -- every `var(--c-text,
+     <fallback>)` use (bubbles.css, personHeader.css, chips.css) needs
+     --c-text genuinely unset at the root, so it falls through to its
+     own literal fallback until JS has run. */
+  --c-text: initial;
   /* Per-item aspect ratio for a `.c-video`/`.c-carousel` box (Plan 1b
      Task 4), set per element by that component's `bind()`
      (`el.style.setProperty('--aspect', …)`, from the rendered

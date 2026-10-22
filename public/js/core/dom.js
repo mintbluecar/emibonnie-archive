@@ -59,6 +59,129 @@ export function on(el, selector, event, fn) {
 /** A plain 6-digit hex colour (`#rrggbb`), the only shape `data-c` may carry. */
 const COLOUR_PATTERN = /^#[0-9a-f]{6}$/i;
 
+/** @param {string} hex @returns {number[]} */
+function hexToRgb(hex) {
+  const n = hex.replace('#', '');
+  return [n.slice(0, 2), n.slice(2, 4), n.slice(4, 6)].map((part) => parseInt(part, 16));
+}
+
+/** @param {number[]} rgb @returns {string} */
+function rgbToHex(rgb) {
+  return `#${rgb.map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, '0')).join('')}`;
+}
+
+/**
+ * `color-mix(in srgb, hex1 <frac1*100>%, hex2)`: direct channel
+ * interpolation in gamma-encoded sRGB (0-255 per channel), matching
+ * what that CSS function does -- not a linear-light mix.
+ * @param {string} hex1 @param {string} hex2 @param {number} frac1 0-1, hex1's share
+ * @returns {string}
+ */
+function mixSrgb(hex1, hex2, frac1) {
+  const a = hexToRgb(hex1);
+  const b = hexToRgb(hex2);
+  return rgbToHex(a.map((v, i) => v * frac1 + b[i] * (1 - frac1)));
+}
+
+/** WCAG relative luminance. @param {string} hex @returns {number} */
+function relativeLuminance(hex) {
+  const [r, g, b] = hexToRgb(hex).map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** The WCAG contrast ratio between two colours (1-21). @param {string} hexA @param {string} hexB @returns {number} */
+export function contrastRatio(hexA, hexB) {
+  const a = relativeLuminance(hexA);
+  const b = relativeLuminance(hexB);
+  const [lighter, darker] = a > b ? [a, b] : [b, a];
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+const AA_TEXT_CONTRAST = 4.5;
+
+/**
+ * The smallest mix of `hex` toward `ink` (stepped by 1%) that reaches
+ * WCAG AA's 4.5:1 against every colour in `bgHexes`, mixing the same way
+ * CSS's `color-mix(in srgb, …)` does. Returns `hex` unchanged if it
+ * already passes -- review round 2, fix round 2, item 1: a single flat
+ * 60% mix (the previous fix) fails AA for some real person colours
+ * (e.g. #ff8a3d only reaches 4.14:1 against --color-bg at a 60% mix)
+ * while over-darkening others that needed far less; this instead finds
+ * the least mixing each person's own colour actually needs, against
+ * whatever it actually sits on.
+ * @param {string} hex @param {string[]} bgHexes @param {string} ink
+ * @returns {string}
+ */
+export function textShade(hex, bgHexes, ink) {
+  const passes = (/** @type {string} */ candidate) => bgHexes.every((bg) => contrastRatio(candidate, bg) >= AA_TEXT_CONTRAST);
+  if (passes(hex)) return hex;
+  for (let pct = 99; pct >= 0; pct -= 1) {
+    const mixed = mixSrgb(hex, ink, pct / 100);
+    if (passes(mixed)) return mixed;
+  }
+  return ink;
+}
+
+/**
+ * The background(s) a `data-c` element's own coloured text actually sits
+ * on, so `textShade()` checks against the real thing rather than a
+ * flat approximation:
+ *   - a bubble's name (`.c-bubbles__name`) sits on its `.c-bubbles__bub`'s
+ *     own tint, `color-mix(in srgb, --c 12%, --color-card)` (bubbles.css)
+ *   - a chip's `--on` text sits on its own on-tint,
+ *     `color-mix(in srgb, --c 14%, --color-bg)` (chips.css)
+ *   - a person header's name (`.c-person-header__name`) sits directly on
+ *     `--color-bg`: `.c-person-header` has no background of its own
+ *     (personHeader.css)
+ * @param {Element} node @param {string} colour @param {string} bg @param {string} card
+ * @returns {string[]}
+ */
+function textBackgroundsFor(node, colour, bg, card) {
+  if (typeof node.matches === 'function' && node.matches('.c-bubbles__msg')) return [mixSrgb(colour, card, 0.12)];
+  if (typeof node.matches === 'function' && node.matches('.c-chips__chip')) return [mixSrgb(colour, bg, 0.14)];
+  return [bg, card];
+}
+
+/** @returns {void} */
+function installSchemeListener() {
+  if (schemeListenerInstalled || typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+  schemeListenerInstalled = true;
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyColours(document.body));
+}
+
+/** Set once `installSchemeListener()` has attached its (one, module-lifetime) listener. */
+let schemeListenerInstalled = false;
+
+/**
+ * Sets one `[data-c]` node's `--c`, and (real browsers only -- `theme`
+ * is `null` for a non-browser test environment with no
+ * `document`/`getComputedStyle`) its `--c-text`.
+ * @param {Element} node @param {string} colour @param {{ ink: string, bg: string, card: string }|null} theme
+ * @returns {void}
+ */
+function applyOneColour(node, colour, theme) {
+  const styled = /** @type {HTMLElement} */ (node);
+  styled.style.setProperty('--c', colour);
+  if (!theme) return;
+  styled.style.setProperty('--c-text', textShade(colour, textBackgroundsFor(node, colour, theme.bg, theme.card), theme.ink));
+}
+
+/**
+ * `--color-bg`/`--color-card`/`--color-ink`, read from computed styles
+ * once -- `null` outside a real browser (no `document`/`getComputedStyle`,
+ * e.g. a unit test), so callers skip the `--c-text` work entirely then.
+ * @returns {{ ink: string, bg: string, card: string }|null}
+ */
+function currentTheme() {
+  if (typeof document === 'undefined' || typeof getComputedStyle !== 'function') return null;
+  const rootStyle = getComputedStyle(document.documentElement);
+  return {
+    ink: rootStyle.getPropertyValue('--color-ink').trim(),
+    bg: rootStyle.getPropertyValue('--color-bg').trim(),
+    card: rootStyle.getPropertyValue('--color-card').trim(),
+  };
+}
+
 /**
  * Applies every `[data-c]` descendant's colour as its own `--c` custom
  * property, but only when that `data-c` value is a plain `#rrggbb` hex
@@ -67,12 +190,21 @@ const COLOUR_PATTERN = /^#[0-9a-f]{6}$/i;
  * every colour-carrying component's `bind()` goes through, before it
  * ever reaches a CSS custom property. CSP-safe: no inline `style`
  * attribute is ever written server-side, only `setProperty()` here.
+ *
+ * Also sets `--c-text`: a per-person text colour (`textShade()`, above)
+ * guaranteed to reach AA against whatever that element's own text
+ * actually sits on (`currentTheme()`/`applyOneColour()`, above).
+ * Installs a `prefers-color-scheme` listener (once, module lifetime)
+ * that re-runs this over the whole document, since a scheme change
+ * flips the backgrounds and ink `--c-text` was computed against.
  * @param {Element} el
  * @returns {void}
  */
 export function applyColours(el) {
+  const theme = currentTheme();
   for (const node of el.querySelectorAll('[data-c]')) {
     const colour = node.getAttribute('data-c');
-    if (colour && COLOUR_PATTERN.test(colour)) /** @type {HTMLElement} */ (node).style.setProperty('--c', colour);
+    if (colour && COLOUR_PATTERN.test(colour)) applyOneColour(node, colour, theme);
   }
+  installSchemeListener();
 }

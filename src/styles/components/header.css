@@ -95,6 +95,20 @@
   font-weight: 800;
   line-height: 1;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
+  /*
+   * Review round 2, fix round 2 item 3: white text on the raw
+   * --gradient-from start stop is only 2.86:1 in light mode. Darkened
+   * just this start stop (light mode only -- dark mode's own
+   * --color-accent-text is black, which already passes against the raw
+   * stop) toward black: 4.79:1 (the reviewer measured 4.80:1).
+   */
+  background: linear-gradient(90deg, color-mix(in srgb, var(--gradient-from) 75%, #000), var(--gradient-to));
   color: var(--color-accent-text);
+}
+
+@media (prefers-color-scheme: dark) {
+  /* Dark mode's --color-accent-text is black, which already passes against the raw --gradient-from (7.35:1) -- the light-mode-only darkening above is reverted here. */
+  .c-header__filter-count {
+    background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
+  }
 }

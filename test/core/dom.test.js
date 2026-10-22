@@ -7,9 +7,21 @@
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mount, on, applyColours } from '../../public/js/core/dom.js';
+import { mount, on, applyColours, textShade, contrastRatio } from '../../public/js/core/dom.js';
 import { html, raw } from '../../public/js/core/html.js';
 import { FakeEl } from '../helpers/fakeDom.js';
+
+/** A hex colour's RGB channels, for a simple "how far did textShade move it" distance in tests below. @param {string} hex @returns {number[]} */
+function channels(hex) {
+  const n = hex.replace('#', '');
+  return [n.slice(0, 2), n.slice(2, 4), n.slice(4, 6)].map((part) => parseInt(part, 16));
+}
+
+/** @param {string} a @param {string} b @returns {number} */
+function hexDistance(a, b) {
+  const [ca, cb] = [channels(a), channels(b)];
+  return Math.sqrt(ca.reduce((sum, v, i) => sum + (v - cb[i]) ** 2, 0));
+}
 
 class FakeElement {
   /** @param {string} tag @param {{ className?: string, children?: FakeElement[] }} [opts] */
@@ -107,4 +119,30 @@ test('applyColours: case-insensitive, but a short or non-hex value is rejected',
   applyColours(root);
   assert.equal(upper.styleProps['--c'], '#FF8A3D');
   assert.equal(short.styleProps['--c'], undefined);
+});
+
+// `textShade` (review round 2, fix round 2, item 1): the light-mode tokens below
+// (src/styles/tokens.css) are the engine's own --color-bg/--color-card/--color-ink.
+const LIGHT_BG = '#f6efe3';
+const LIGHT_CARD = '#fffdf8';
+const LIGHT_INK = '#2b2233';
+
+test('textShade: a colour that already reaches 4.5:1 is returned unchanged', () => {
+  assert.equal(textShade('#000000', ['#ffffff'], '#000000'), '#000000');
+});
+
+test('textShade: a saturated orange (#ff8a3d) reaches >=4.5:1 against both light backgrounds once shaded', () => {
+  const shaded = textShade('#ff8a3d', [LIGHT_BG, LIGHT_CARD], LIGHT_INK);
+  assert.notEqual(shaded, '#ff8a3d', 'the raw colour does not already pass');
+  assert.ok(contrastRatio(shaded, LIGHT_BG) >= 4.5, `${shaded} vs ${LIGHT_BG}: ${contrastRatio(shaded, LIGHT_BG)}`);
+  assert.ok(contrastRatio(shaded, LIGHT_CARD) >= 4.5, `${shaded} vs ${LIGHT_CARD}: ${contrastRatio(shaded, LIGHT_CARD)}`);
+});
+
+test('textShade: luna (#6a5cd6) needs less mixing toward ink than sol (#c47a12), against the same light backgrounds', () => {
+  const luna = textShade('#6a5cd6', [LIGHT_BG, LIGHT_CARD], LIGHT_INK);
+  const sol = textShade('#c47a12', [LIGHT_BG, LIGHT_CARD], LIGHT_INK);
+  assert.ok(
+    hexDistance(luna, '#6a5cd6') < hexDistance(sol, '#c47a12'),
+    `luna moved ${hexDistance(luna, '#6a5cd6')}, sol moved ${hexDistance(sol, '#c47a12')}`,
+  );
 });

@@ -93,6 +93,17 @@ test('dev server: a page response carries vercel.json\'s headers, CSP and Referr
   srv.close();
 });
 
+test('dev server: a header rule matches the incoming path, not a rewrite\'s destination (review round 2, "also, small")', async () => {
+  const handle = async (req) => Response.json({ path: new URL(req.url).pathname });
+  // Only the incoming /e/x matches this; the rewrite's destination, /event.html, never would.
+  const headers = [{ source: '/e/(.*)', headers: [{ key: 'X-Incoming-Path-Rule', value: 'hit' }] }];
+  const srv = createServer({ root: 'test/fixtures/static', rewrites: [{ source: '/e/:slug', destination: '/event.html' }], headers, handle });
+  const base = await listen(srv);
+  const page = await fetch(base + '/e/x');
+  assert.equal(page.headers.get('x-incoming-path-rule'), 'hit');
+  srv.close();
+});
+
 test('dev server: waitUntil (from @vercel/functions) runs after the response, and the server awaits it', async () => {
   const { waitUntil } = await import('@vercel/functions');
   /** @type {(v?: unknown) => void} */

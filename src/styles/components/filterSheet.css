@@ -101,7 +101,15 @@
   font-size: 14px;
   font-weight: 800;
   color: var(--color-accent-text);
-  background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
+  /* Review round 2, fix round 2 item 3: same light-mode-only darkened start stop as header.css's .c-header__filter-count. */
+  background: linear-gradient(90deg, color-mix(in srgb, var(--gradient-from) 75%, #000), var(--gradient-to));
+}
+
+@media (prefers-color-scheme: dark) {
+  /* Dark mode's --color-accent-text is black, which already passes against the raw --gradient-from -- reverted here. */
+  .c-filter-sheet__apply {
+    background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
+  }
 }
 
 @media (min-width: 860px) {

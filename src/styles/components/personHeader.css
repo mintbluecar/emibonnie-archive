@@ -19,11 +19,16 @@
   background: color-mix(in srgb, var(--c) 22%, var(--color-card));
 }
 
-/* Review round 2, C1: same fix, and the same 60% mix, as bubbles.css's .c-bubbles__name. */
+/*
+ * Review round 2, fix round 2 item 1: `--c-text` (see bubbles.css's
+ * `.c-bubbles__name`) is this element's own text sitting directly on
+ * `--color-bg` -- `.c-person-header` has no background of its own. The
+ * flat 60% mix is only the fallback.
+ */
 .c-person-header__name {
   font-size: 18px;
   font-weight: 800;
-  color: color-mix(in srgb, var(--c) 60%, var(--color-ink));
+  color: var(--c-text, color-mix(in srgb, var(--c) 60%, var(--color-ink)));
   margin: 0;
 }
 

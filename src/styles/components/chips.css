@@ -42,10 +42,12 @@
 }
 
 /*
- * A person-coloured chip keeps --c for its border/background tint, but
- * mixes its text 60% toward ink -- many featured colours (pastels) are
- * too light against --color-bg at full strength.
+ * A person-coloured chip keeps --c for its border/background tint.
+ * `--c-text` (review round 2, fix round 2 item 1: see bubbles.css's
+ * `.c-bubbles__name`) is this chip's own on-tint background's text,
+ * shaded by the least this person's colour needs; the flat 60% mix is
+ * only the fallback (not every featured colour passes AA at 60%).
  */
 .c-chips__chip--on[data-c] {
-  color: color-mix(in srgb, var(--c) 60%, var(--color-ink));
+  color: var(--c-text, color-mix(in srgb, var(--c) 60%, var(--color-ink)));
 }

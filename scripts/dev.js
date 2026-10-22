@@ -124,7 +124,10 @@ function applyRewrites(rewrites, pathname) {
  * `headers` config works the same way, e.g. the security headers on
  * `/(.*)` and the cache header on `/build/(.*)` both apply to a path
  * under `/build/`), so dev's CSP (and the rest) matches production on
- * every response, API routes included (review round 2, C2).
+ * every response, API routes included (review round 2, C2). `pathname`
+ * is the incoming request path, never a rewrite's destination -- same
+ * as Vercel, whose `headers` config matches the path the browser asked
+ * for, not wherever it's rewritten to (review round 2, "also, small").
  * @param {HeaderRule[]} rules
  * @param {string} pathname
  * @param {import('node:http').ServerResponse} res
@@ -204,8 +207,11 @@ export function createServer({ root, rewrites = [], headers = [], handle }) {
     try {
       // The Host header keeps the port, so the request URL's origin is the browser's (the Origin check).
       const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+      // Matched against the incoming path, not the rewritten one -- same as Vercel's own
+      // `headers` config (review round 2, "also, small"): a `source` names what the browser
+      // actually requested, regardless of which file or function answers it.
+      applyHeaderRules(headers, url.pathname, res);
       const target = url.pathname.startsWith('/api/') ? url : new URL(applyRewrites(rewrites, url.pathname), url);
-      applyHeaderRules(headers, target.pathname, res);
       if (target.pathname.startsWith('/api/')) {
         await serveApi(handle, toWebRequest(req, target), res).then((results) => server.emit('waitUntilSettled', results));
         return;
