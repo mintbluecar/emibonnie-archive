@@ -212,7 +212,7 @@ npm run build && npm run check && npm test
 - Use synthetic fixtures (`test/fixtures/`), never real translation text.
 - Pure `src/domain` code is unit-tested directly, with no mocking.
 - Code that needs the database, the clock, or the network takes them through `deps`, so tests can supply fakes.
-- Tests never write into a source tree (`src/`, `public/`, `api/`, `scripts/`, `test/`, `e2e/`, `examples/`, `docs/`, and a site repo's `site/`): `npm test` hashes them before and after the run and fails if any changed (`scripts/treeHashConfig.js`). Scaffold or build into a temp copy instead, as `test/kinds/scaffoldedKind.test.js` (also `npm run test:kind`) and `test/scripts/new.test.js` do.
+- Tests never write into a source tree (`src/`, `public/`, `api/`, `scripts/`, `test/`, `e2e/`, `examples/`, `docs/`, a site repo's `site/`, and the root `vercel.json`): `npm test` hashes them before and after the run and fails if any changed (`scripts/treeHashConfig.js`). Scaffold or build into a temp copy instead, as `test/kinds/scaffoldedKind.test.js` (also `npm run test:kind`) and `test/scripts/new.test.js` do.
 
 ## Browser checks
 

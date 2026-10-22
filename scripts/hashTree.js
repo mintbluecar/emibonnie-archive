@@ -1,6 +1,7 @@
 // @ts-check
 /**
- * A stable content hash of every file under each of `dirs` -- gitignored
+ * A stable content hash of every file under each of `paths` (a directory,
+ * or a single file) -- gitignored
  * files included, since this is a runtime integrity check (review round
  * 2, M2), not a git operation. Used by `scripts/genRegistries.js`
  * (`pretest`) and `scripts/checkTreeHash.js` (`posttest`) to prove
@@ -12,7 +13,7 @@
  * allows before falling back to a `git status --porcelain` check.
  */
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 /** @param {string} dir @returns {string[]} */
@@ -28,12 +29,13 @@ function filesUnder(dir) {
 }
 
 /**
- * @param {string[]} dirs
+ * @param {string[]} paths directories (hashed recursively) or single files; missing ones are skipped
  * @returns {string}
  */
-export function hashTree(dirs) {
+export function hashTree(paths) {
   const hash = createHash('sha256');
-  const files = dirs.filter((dir) => existsSync(dir)).flatMap((dir) => filesUnder(dir)).sort();
+  const present = paths.filter((p) => existsSync(p));
+  const files = present.flatMap((p) => (statSync(p).isDirectory() ? filesUnder(p) : [p])).sort();
   for (const file of files) {
     hash.update(file);
     hash.update(readFileSync(file));

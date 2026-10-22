@@ -16,7 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeKindsRegistries } from './buildOutputs.js';
 import { hashTree } from './hashTree.js';
-import { TREE_HASH_PATH, TREE_HASH_DIRS } from './treeHashConfig.js';
+import { TREE_HASH_PATH, TREE_HASH_PATHS } from './treeHashConfig.js';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -29,7 +29,7 @@ const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 async function main() {
   try {
     await writeKindsRegistries(REPO_ROOT);
-    writeFileSync(path.join(REPO_ROOT, TREE_HASH_PATH), hashTree(TREE_HASH_DIRS.map((d) => path.join(REPO_ROOT, d))));
+    writeFileSync(path.join(REPO_ROOT, TREE_HASH_PATH), hashTree(TREE_HASH_PATHS.map((d) => path.join(REPO_ROOT, d))));
   } catch (/** @type {any} */ err) {
     console.error(err.message ?? String(err));
     process.exitCode = 1;

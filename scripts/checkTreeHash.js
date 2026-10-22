@@ -11,7 +11,7 @@ import { existsSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hashTree } from './hashTree.js';
-import { TREE_HASH_PATH, TREE_HASH_DIRS } from './treeHashConfig.js';
+import { TREE_HASH_PATH, TREE_HASH_PATHS } from './treeHashConfig.js';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -23,10 +23,10 @@ function main() {
     return;
   }
   const before = readFileSync(hashPath, 'utf8');
-  const after = hashTree(TREE_HASH_DIRS.map((d) => path.join(REPO_ROOT, d)));
+  const after = hashTree(TREE_HASH_PATHS.map((d) => path.join(REPO_ROOT, d)));
   rmSync(hashPath);
   if (before !== after) {
-    console.error(`checkTreeHash: a source tree (${TREE_HASH_DIRS.join(', ')}) changed during the test run -- a test wrote where it shouldn't have`);
+    console.error(`checkTreeHash: a source tree (${TREE_HASH_PATHS.join(', ')}) changed during the test run -- a test wrote where it shouldn't have`);
     process.exitCode = 1;
   }
 }

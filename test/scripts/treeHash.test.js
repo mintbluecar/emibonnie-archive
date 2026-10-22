@@ -11,10 +11,25 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { hashTree } from '../../scripts/hashTree.js';
-import { TREE_HASH_DIRS } from '../../scripts/treeHashConfig.js';
+import { TREE_HASH_PATHS } from '../../scripts/treeHashConfig.js';
 
-test('the guard covers the engine trees, the page templates (under src/), the tests, the docs and a site repo\'s site/', () => {
-  for (const dir of ['src', 'public', 'api', 'scripts', 'test', 'e2e', 'examples', 'docs', 'site']) assert.ok(TREE_HASH_DIRS.includes(dir), dir);
+test('the guard covers the engine trees, the page templates (under src/), the tests, the docs, a site repo\'s site/ and root vercel.json', () => {
+  for (const p of ['src', 'public', 'api', 'scripts', 'test', 'e2e', 'examples', 'docs', 'site', 'vercel.json']) assert.ok(TREE_HASH_PATHS.includes(p), p);
+});
+
+test('hashTree takes files as well as directories (fix round 1, M2): a rewritten vercel.json is caught', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'fan-archive-hash-'));
+  try {
+    const paths = [path.join(root, 'src'), path.join(root, 'vercel.json')];
+    const absent = hashTree(paths);
+    writeFileSync(path.join(root, 'vercel.json'), '{"regions":["sin1"]}\n');
+    const written = hashTree(paths);
+    assert.notEqual(written, absent, 'a vercel.json appearing is caught');
+    writeFileSync(path.join(root, 'vercel.json'), '{"regions":["iad1"]}\n');
+    assert.notEqual(hashTree(paths), written, 'a rewritten vercel.json is caught');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('hashTree sees a nested write, and skips a directory that does not exist', () => {
