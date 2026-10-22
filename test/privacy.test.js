@@ -11,10 +11,12 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { IDS } from './helpers/fixtures.js';
-import { seededDeps, ingest, rows, SYSTEM } from './helpers/ingest.js';
+import { ingestDeps, ingest, rows, SYSTEM, SITE_DIR, HOST, LONG_REFS } from './helpers/ingest.js';
 import { apiFor } from './helpers/api.js';
 import { routes } from '../src/routes/index.js';
 import { matchRoute } from '../src/http/router.js';
+import { runSeedDev } from '../scripts/seedDev.js';
+import { createPeople, resolveSpeakerRefs } from '../src/services/intakeRefs.js';
 
 /** Strings no public response may contain (compared case-insensitively). */
 const BANNED = [
@@ -29,35 +31,38 @@ const OPTED_OUT = ['tl_gamma', 'clipper_one'];
 /** @type {any} */
 let deps;
 before(async () => {
-  deps = await seededDeps();
-  await deps.db.transaction((/** @type {any} */ tx) => tx.query("insert into users (id, display_name) values ('member-b', 'b')"), SYSTEM);
+  deps = await ingestDeps();
+  // member-c (whose X account becomes the opted-out clipper_one) and member-d (a deleted user)
+  // must be LONG's and EVENT_A's submitters from the moment those items are written: the
+  // `set_common` trigger (src/db/migrations/001_initial.sql) keeps `created_by` fixed to the
+  // inserting actor on every later UPDATE, so there is no way to reassign it afterwards. Both
+  // items are therefore ingested here, under those actors, before the rest of the site's seed
+  // data -- which will see them as already-archived duplicates and leave them alone.
+  await deps.db.transaction((/** @type {any} */ tx) => tx.query(
+    "insert into users (id, display_name) values ('member-b', 'b'), ('member-c', 'c'), ('member-d', 'gone reader')",
+  ), SYSTEM);
+  await deps.db.transaction((/** @type {any} */ tx) => tx.query("update users set deleted_at = now() where id = 'member-d'"), SYSTEM);
+
+  await createPeople(deps, [HOST], SYSTEM);
+  const chosenLong = await resolveSpeakerRefs(deps.db, LONG_REFS);
+  assert.equal((await ingest(deps, IDS.LONG, {
+    chosen: chosenLong, overrides: { categoryName: 'live', clientName: 'Test Media Co' }, actor: 'member-c',
+  })).status, 'added');
+  const chosenEventA = await resolveSpeakerRefs(deps.db, {});
+  assert.equal((await ingest(deps, IDS.EVENT_A, { chosen: chosenEventA, actor: 'member-d' })).status, 'added');
+
+  await runSeedDev({ siteDir: SITE_DIR, db: deps.db, log: () => {} });
+
   assert.equal((await ingest(deps, IDS.EDITED_OLD, { actor: 'member-b' })).status, 'added');
   await deps.db.transaction(async (/** @type {any} */ tx) => {
     await tx.query("update accounts set opted_out_at = now() where handle = any($1)", [OPTED_OUT]);
     await tx.query("update users set blocked_at = now() where id = 'member-b'");
-  }, SYSTEM);
-  await setSubmitters();
-});
-
-/**
- * Two visible items get submitters whose names must not show: member-c,
- * whose X account is the opted-out clipper_one, and member-d, a deleted
- * user. `created_by` never changes after an insert (the `set_common`
- * trigger), so the trigger is switched off for this one test-only rewrite.
- */
-async function setSubmitters() {
-  await deps.db.transaction(async (/** @type {any} */ tx) => {
-    await tx.query("insert into users (id, display_name) values ('member-c', 'c'), ('member-d', 'gone reader')");
-    await tx.query("update users set deleted_at = now() where id = 'member-d'");
     await tx.query("update accounts set user_id = 'member-c' where handle = 'clipper_one'");
-    await tx.query('alter table items disable trigger items_set_common');
-    await tx.query("update items set created_by = 'member-c' where id = (select item_id from item_sources where role = 'primary' and external_id = $1)", [IDS.LONG]);
-    await tx.query("update items set created_by = 'member-d' where id = (select item_id from item_sources where role = 'primary' and external_id = $1)", [IDS.EVENT_A]);
-    await tx.query('alter table items enable trigger items_set_common');
   }, SYSTEM);
+
   const added = (await rows(deps.db, "select count(*)::int as n from items where created_by in ('member-c', 'member-d')"))[0].n;
   assert.equal(added, 2);
-}
+});
 after(async () => { await deps.db.end(); });
 
 /** Representative calls covering every route, built from what the database holds (hidden rows included). */
