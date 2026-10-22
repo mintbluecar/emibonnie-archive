@@ -14,7 +14,7 @@
  * for any kind's entries without this component or the page knowing
  * which kind it is.
  *
- * `compact` (Task 9b: the person and translator pages) shows the same
+ * `compact` (Task 9b: the event, person and translator pages) shows the same
  * lines as one clamped run of "emoji text" (`bubbles.renderCompact`)
  * instead of full bubbles, as in mockups/people-me-v1.html.
  */

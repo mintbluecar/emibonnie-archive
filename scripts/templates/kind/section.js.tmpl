@@ -10,7 +10,7 @@ import * as previewCard from '../../components/previewCard.js';
 
 /**
  * @param {import('../../../../src/http/contracts.js').Section} section
- * @param {{ compact?: boolean }} [ctx] `compact`: the person and translator
+ * @param {{ compact?: boolean }} [ctx] `compact`: the event, person and translator
  *   pages show each entry as a compact preview (Task 9b)
  * @returns {import('../../core/html.js').SafeHtml}
  */

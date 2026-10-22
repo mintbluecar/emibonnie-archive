@@ -26,6 +26,9 @@ import * as pageShell from '../components/pageShell.js';
 import * as headerLinks from '../components/headerLinks.js';
 import { slugFromEventPath } from '../core/routes.js';
 import { KIND_UI, renderSections } from '../kinds/_registry.js';
+
+/** Entries are compact previews, as on the person and translator pages (spec: "Entries show their opening lines ... as its preview"; mockups/screens-v2.html's event screen; fix round 1, I2). */
+const SECTION_CTX = { compact: true };
 import { mountLoadError } from './pageError.js';
 
 const APP_SELECTOR = 'app';
@@ -111,7 +114,7 @@ function accountFilterRow(accounts) {
  * @returns {import('../core/html.js').SafeHtml}
  */
 function sectionBlock(section) {
-  const [rendered] = renderSections([section], {});
+  const [rendered] = renderSections([section], SECTION_CTX);
   if (!rendered) return html``;
   return html`
     <div class="c-event-section" data-kind="${section.kind}" data-offset="${section.items.length}">
@@ -193,7 +196,7 @@ function renderAndBindSections(root, container, sections, state) {
  */
 function appendMoreItems(container, kind, sectionUi, section) {
   const scratch = document.createElement('div');
-  mount(scratch, sectionUi.render(section));
+  mount(scratch, sectionUi.render(section, SECTION_CTX));
   const liveList = container.querySelector(`[data-kind="${kind}"]`);
   const newList = scratch.querySelector(`[data-kind="${kind}"]`);
   while (liveList && newList && newList.firstChild) liveList.appendChild(newList.firstChild);

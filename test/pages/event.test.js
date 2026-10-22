@@ -140,6 +140,7 @@ test('bind: an active filter re-applies to entries "more" appends, not just the 
     const byAccount = Object.fromEntries(cards.map((c) => [c.getAttribute('data-account'), c.hidden]));
     assert.equal(byAccount.tl_beta, false, 'still matches the standing filter');
     assert.equal(byAccount.tl_gamma, true, 'newly appended, but filtered out just the same');
+    assert.ok(cards.every((c) => c.getAttribute('class')?.includes('c-preview-card--compact')), 'appended entries are compact too (fix round 1, I2)');
   } finally {
     mock.restoreAll();
     delete (/** @type {any} */ (globalThis)).document;
@@ -161,4 +162,13 @@ test('start: a non-404 failure renders the generic page.loadFailed fallback, nev
     delete (/** @type {any} */ (globalThis)).document;
     delete (/** @type {any} */ (globalThis)).window;
   }
+});
+
+test('composeEvent (fix round 1, I2): entries are compact previews -- opening lines as "emoji text", no full bubbles (spec: entries show their opening lines as a preview)', () => {
+  const root = new MiniElement('div');
+  mount(root, composeEvent(EVENT));
+  const cards = root.querySelectorAll('.c-preview-card');
+  assert.ok(cards.length > 0);
+  assert.ok(cards.every((c) => c.getAttribute('class')?.includes('c-preview-card--compact')));
+  assert.equal(root.querySelectorAll('.c-bubbles__msg').length, 0);
 });
