@@ -80,6 +80,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # vercel.json is build output (gitignored): `vercel build` reads it before running any builder.
+      - run: npm run build
       - name: Migrate the production database
         run: npm run migrate
         env:
@@ -108,6 +110,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # vercel.json is build output (gitignored): `vercel build` reads it before running any builder.
+      - run: npm run build
       - name: Migrate the preview database
         run: npm run migrate
         env:
