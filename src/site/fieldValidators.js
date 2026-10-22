@@ -40,9 +40,9 @@ export function checkColour(errors, path, value) {
  * now only ever used for tints, fills and borders -- `applyColours()`
  * (public/js/core/dom.js) derives a separate, guaranteed-readable
  * `--c-text` for any actual text, via `textShade()`. Named so a site
- * owner can still see and fix it (e.g. the real site's own sol
- * `#ff8a3d`, 2.31:1 against the light card, would otherwise fail the
- * build for a colour the engine no longer puts text in directly).
+ * owner can still see and fix it: a light, saturated orange such as
+ * `#ff8a3d` sits at 2.31:1 against the light card, which would otherwise
+ * fail the build for a colour the engine no longer puts text in directly.
  * @param {string[]} warnings
  * @param {string} path
  * @param {string} colour
