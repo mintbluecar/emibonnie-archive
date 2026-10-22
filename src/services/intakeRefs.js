@@ -68,13 +68,14 @@ export async function eventIdBySlug(db, slug) {
 
 /**
  * `overrides.people` (`[{ igHandle, role }]`) → item people. Throws
- * `BadRequest` naming an unknown handle (it must already be a person:
+ * `BadRequest` for anything but a list, or naming an unknown handle (it must already be a person:
  * created by `createPeople`, a seed's `createPeople`, or featured) or role.
  * @param {Db} db
- * @param {{ igHandle: string, role: string }[]} refs
+ * @param {unknown} refs `{ igHandle, role }[]`, as given (a seed file or caller may send anything)
  * @returns {Promise<import('../kinds/defineKind.js').ItemPerson[]>}
  */
 export async function resolvePeopleRefs(db, refs) {
+  if (!Array.isArray(refs)) throw new BadRequest('overrides.people: must be a list');
   /** @type {import('../kinds/defineKind.js').ItemPerson[]} */
   const people = [];
   for (const { igHandle, role } of refs) {

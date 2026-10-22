@@ -10,6 +10,7 @@ import { createPeople, resolveSpeakerRefs } from '../../src/services/intakeRefs.
 import { sourceState } from '../../src/repo/items.js';
 import { set as setSetting } from '../../src/repo/settings.js';
 import { runSeedDev } from '../../scripts/seedDev.js';
+import { BadRequest } from '../../src/domain/errors.js';
 
 const translation = kindsRegistry.translation;
 
@@ -151,6 +152,12 @@ test('overrides.people refuses an unknown person or role clearly, before anythin
       ingest(deps, IDS.SHARED, { overrides: { people: [{ igHandle: 'solsunny', role: /** @type {any} */ ('guest') }] } }),
       /overrides\.people: role for @solsunny must be one of present, sharing, about, author/,
     );
+    for (const notAList of [{ igHandle: 'solsunny', role: 'about' }, 'solsunny', 7]) {
+      await assert.rejects(
+        ingest(deps, IDS.SHARED, { overrides: { people: /** @type {any} */ (notAList) } }),
+        (/** @type {any} */ err) => err instanceof BadRequest && err.message === 'overrides.people: must be a list',
+      );
+    }
     assert.deepEqual(patched.calls, {});
     assert.equal(await count(deps.db, 'select count(*)::int as n from items'), 0);
   } finally {
