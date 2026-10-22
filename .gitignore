@@ -3,6 +3,7 @@ node_modules/
 .vercel/
 .devdb/
 .e2e-db/
+.e2e-site-db/
 .tree-hash
 public/site/
 public/build/

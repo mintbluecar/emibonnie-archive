@@ -79,7 +79,7 @@ test('EVENT_A stores a media source credited to the clipper, with the video.twim
     const media = (await sourcesOf(deps.db, /** @type {number} */ (itemId))).filter((s) => s.role === 'media');
     assert.equal(media.length, 1);
     assert.equal(media[0].handle, 'clipper_one');
-    assert.equal(media[0].external_id, '1800000000000000001');
+    assert.equal(media[0].external_id, '1900000000000000091');
     const variants = media[0].media.variants;
     assert.ok(variants.length > 0);
     assert.ok(variants.every((/** @type {any} */ v) => new URL(v.url).hostname === 'video.twimg.com'));

@@ -65,10 +65,10 @@ async function tweet(id) {
  */
 function tweetWith(text) {
   return {
-    id: '1990000000000000001', status: 'live', authorId: '9009', authorHandle: 'tl_test', authorName: 'test',
+    id: '1900000000000000097', status: 'live', authorId: '9009', authorHandle: 'tl_test', authorName: 'test',
     createdAt: '2026-02-12T13:00:00.000Z', text, textSource: 'fx', video: null, images: [], quoted: null,
     clipSource: null, quotedId: null, replyToId: null, followUps: [],
-    edit: { versionIds: ['1990000000000000001'], latestId: '1990000000000000001', editableUntil: null, isStale: false },
+    edit: { versionIds: ['1900000000000000097'], latestId: '1900000000000000097', editableUntil: null, isStale: false },
   };
 }
 

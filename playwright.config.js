@@ -1,46 +1,37 @@
 // @ts-check
 /**
- * Plan 1b Task 7 brief (review round 2): browser smoke tests and
- * accessibility checks. `npm run e2e` wipes `.e2e-db`, then starts
- * `npm run seed-dev && npm run dev` (the same rewrites production uses)
- * against that fresh, disposable PGlite directory, then runs
- * `e2e/smoke.spec.js` once per `projects` entry below: the brief's two
- * widths (390x844 phone, 1280x800 desktop) in light mode, and the same
- * two widths in dark mode (review round 2, I1). Chromium only: `npx
- * playwright install chromium` locally, `npx playwright install
- * --with-deps chromium` in CI.
+ * `npm run e2e`: the engine's browser smoke tests and accessibility
+ * checks (Plan 1b Task 7 brief, review round 2), `e2e/smoke.spec.js`
+ * only, once per project (e2e/helpers.js's `PROJECTS`: 390x844 phone and
+ * 1280x800 desktop, light and dark). Chromium only: `npx playwright
+ * install chromium` locally, `npx playwright install --with-deps
+ * chromium` in CI.
  *
- * `DATABASE_URL`/`VERCEL` are forced empty in `webServer.env` (review
- * round 2, I2) so the dev server this starts can never pick up a real
- * database from the shell environment and fall through to it instead of
- * the fresh PGlite directory just wiped below.
+ * The dev server always runs the **bundled example**
+ * (`SITE_DIR=examples/solluna`) on its own freshly wiped `.e2e-db`,
+ * whatever this repo's `site/` holds (Task 9a item 1), so it passes the
+ * same in the engine and in any site repo. That build replaces the
+ * checkout's build output with the example's, so `globalTeardown`
+ * rebuilds the repo's own `site/` afterwards, when there is one.
+ * A site's own pages are `npm run e2e:site` (`playwright.site.config.js`).
  */
 import { defineConfig } from '@playwright/test';
+import { PROJECTS, devServer } from './e2e/helpers.js';
 
 const PORT = Number(process.env.E2E_PORT ?? 4310);
-const WIPE_E2E_DB = "node -e \"require('node:fs').rmSync('.e2e-db', { recursive: true, force: true })\"";
 
 export default defineConfig({
   testDir: './e2e',
+  testMatch: 'smoke.spec.js',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
+  globalTeardown: './e2e/restoreBuild.js',
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: 'retain-on-failure',
   },
-  webServer: {
-    command: `${WIPE_E2E_DB} && npm run seed-dev && npm run dev`,
-    url: `http://127.0.0.1:${PORT}`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    env: { PORT: String(PORT), PGLITE_DIR: '.e2e-db', DATABASE_URL: '', VERCEL: '' },
-  },
-  projects: [
-    { name: 'phone', use: { browserName: 'chromium', viewport: { width: 390, height: 844 }, colorScheme: 'light' } },
-    { name: 'desktop', use: { browserName: 'chromium', viewport: { width: 1280, height: 800 }, colorScheme: 'light' } },
-    { name: 'phone-dark', use: { browserName: 'chromium', viewport: { width: 390, height: 844 }, colorScheme: 'dark' } },
-    { name: 'desktop-dark', use: { browserName: 'chromium', viewport: { width: 1280, height: 800 }, colorScheme: 'dark' } },
-  ],
+  webServer: devServer({ port: PORT, dbDir: '.e2e-db', siteDir: 'examples/solluna' }),
+  projects: PROJECTS,
 });

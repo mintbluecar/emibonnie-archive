@@ -26,13 +26,22 @@ import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isSiteOwned } from '../helpers/siteRepo.js';
 
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
+/**
+ * Always the bundled example, never the host repo's own `site/` (Task 9a
+ * item 1): the proof must pass the same in a plain engine checkout and in a
+ * site repo whose `site/` is tracked and full of its own people.
+ */
+const EXAMPLE = 'examples/solluna';
+/** A featured person of the example, named in the proof post so it shows on their page. */
+const PERSON = JSON.parse(readFileSync(path.join(REPO_ROOT, EXAMPLE, 'site.json'), 'utf8')).featuredPeople[0].igHandle;
 const KIND = 'zzcheck';
 const SLUG = 'zzcheck-proof-2026-10-01';
 const WORD = 'quokkaproof';
 /** Never a real database: the copy's scripts get PGlite in a temp dir, whatever this shell has set. */
-const SAFE_ENV = { ...process.env, DATABASE_URL: '', VERCEL: '', TEST_DATABASE_URL: '', SITE_DIR: 'site' };
+const SAFE_ENV = { ...process.env, DATABASE_URL: '', VERCEL: '', TEST_DATABASE_URL: '', SITE_DIR: EXAMPLE };
 // node --test marks its child processes with NODE_TEST_CONTEXT, which would make the copy's own
 // `node --test` report to this runner instead of printing; the nested run must be a plain one.
 delete SAFE_ENV.NODE_TEST_CONTEXT;
@@ -48,10 +57,14 @@ function run(cmd, args, env = {}) {
 /** @param {string[]} args */
 const git = (args) => run('git', ['-c', 'user.name=scaffold-proof', '-c', 'user.email=scaffold-proof@example.invalid', '-c', 'commit.gpgsign=false', ...args]);
 
-/** Copies every tracked or unignored file of this checkout (as it stands now) into `copy`. */
+/**
+ * Copies every tracked or unignored file of this checkout (as it stands
+ * now) into `copy`, except what a site repo owns (`site/`, its planning
+ * docs: `test/helpers/siteRepo.js`) -- the engine alone.
+ */
 function copyCheckout() {
   const listed = execFileSync('git', ['ls-files', '-co', '--exclude-standard', '-z'], { cwd: REPO_ROOT, encoding: 'utf8' });
-  for (const rel of listed.split('\0').filter(Boolean)) {
+  for (const rel of listed.split('\0').filter((p) => p && !isSiteOwned(p))) {
     const from = path.join(REPO_ROOT, rel);
     if (!existsSync(from)) continue; // deleted in the working tree
     mkdirSync(path.dirname(path.join(copy, rel)), { recursive: true });
@@ -73,9 +86,9 @@ const { createEvent } = await imp('src/repo/events.js');
 const { createHandler } = await imp('src/http/handler.js');
 const { routes } = await imp('src/routes/index.js');
 const db = createDb({ dir });
-const site = loadSite(path.join(root, 'site'));
+const site = loadSite(path.join(root, '${EXAMPLE}'));
 const now = () => new Date('2026-10-21T00:00:00.000Z');
-const post = { text: 'zzcheck proof line about @lunamoon\\nsecond ${WORD} line', postedAt: '2026-10-01T05:00:00.000Z',
+const post = { text: 'zzcheck proof line about @${PERSON}\\nsecond ${WORD} line', postedAt: '2026-10-01T05:00:00.000Z',
   author: { id: '42', handle: 'zz_writer', name: 'zz writer' } };
 const fetchImpl = async (url) => (url === 'https://example.com/api/posts/zz1.json' ? Response.json(post) : new Response('', { status: 404 }));
 const event = await db.transaction((tx) => createEvent(tx, { slug: '${SLUG}', name: 'zzcheck proof', occurredOn: '2026-10-01' }), { actor: 'system' });
@@ -88,7 +101,7 @@ const out = {
   added,
   event: await get('/api/event/${SLUG}'),
   search: await get('/api/search?q=${WORD}&kinds=${KIND}'),
-  person: await get('/api/person/lunamoon'),
+  person: await get('/api/person/${PERSON}'),
   item: await get('/api/item/${KIND}/zz1'),
 };
 await db.end();
@@ -103,7 +116,6 @@ describe('a scaffolded kind plugs in without touching the core', { skip: SKIP },
     scratch = mkdtempSync(path.join(tmpdir(), 'fan-archive-kind-proof-'));
     copy = path.join(scratch, 'repo');
     copyCheckout();
-    run('node', ['scripts/initSite.js']);
     run('npm', ['run', 'build']);
     git(['init', '-q']);
     appendFileSync(path.join(copy, '.git/info/exclude'), '/node_modules\n');
@@ -146,7 +158,7 @@ describe('a scaffolded kind plugs in without touching the core', { skip: SKIP },
     const section = body.sections.find((/** @type {any} */ s) => s.kind === KIND);
     assert.ok(section, 'a zzcheck section');
     assert.equal(section.total, 1);
-    assert.deepEqual(section.items[0].lines.map((/** @type {any} */ l) => l.text), ['zzcheck proof line about @lunamoon', `second ${WORD} line`]);
+    assert.deepEqual(section.items[0].lines.map((/** @type {any} */ l) => l.text), [`zzcheck proof line about @${PERSON}`, `second ${WORD} line`]);
     assert.equal(body.counts[KIND], 1);
   });
 
@@ -175,9 +187,16 @@ describe('a scaffolded kind plugs in without touching the core', { skip: SKIP },
     const changed = git(['status', '--porcelain', '--untracked-files=all']).split('\n').filter(Boolean).map((line) => line.slice(3));
     const own = [`src/kinds/${KIND}/`, `public/js/kinds/${KIND}/`, `test/kinds/${KIND}/`];
     assert.ok(changed.includes(proof.migration));
-    assert.deepEqual(changed.filter((p) => !own.some((dir) => p.startsWith(dir)) && p !== proof.migration), []);
+    // A site on Vercel's Git integration tracks its own vercel.json (docs/start-your-own.md, step 2):
+    // there it may change too, but only by the kind's new rewrite.
+    const outside = changed.filter((p) => !own.some((dir) => p.startsWith(dir)) && p !== proof.migration && p !== 'vercel.json');
+    assert.deepEqual(outside, []);
     const kindRewrite = { source: `/${KIND}/:id`, destination: `/api/meta/${KIND}/:id` };
     const vercel = JSON.parse(readFileSync(path.join(copy, 'vercel.json'), 'utf8'));
     assert.deepEqual(vercel.rewrites.filter((/** @type {any} */ r) => r.source === kindRewrite.source), [kindRewrite], 'the build still adds the kind\'s rewrite');
+    if (changed.includes('vercel.json')) {
+      const was = JSON.parse(git(['show', 'HEAD:vercel.json']));
+      assert.deepEqual({ ...vercel, rewrites: vercel.rewrites.filter((/** @type {any} */ r) => r.source !== kindRewrite.source) }, was);
+    }
   });
 });

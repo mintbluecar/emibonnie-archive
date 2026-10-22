@@ -78,7 +78,7 @@ CONTRIBUTING.md (recipes)  docs/{architecture,site-settings,start-your-own,limit
 .github/pull_request_template.md  .github/ISSUE_TEMPLATE/{bug,kind-proposal}.md  .github/workflows/ci.yml  .github/dependabot.yml
 examples/solluna/{site.json,theme.css,copy.json,logo.svg,seed/}
 scripts/{dev,build*,setup,migrate,doctor,initSite,add,seedDev,new,newPlans,genRegistries}.js  scripts/templates/{route,page,component,migration,kind}/
-e2e/smoke.spec.js  e2e/fixtures/
+e2e/smoke.spec.js (engine smoke)  e2e/site.spec.js (a site's own pages)  e2e/helpers.js  e2e/fixtures/
 api/[...route].js
 src/http/{router,handler,errors,query,origin,contracts}.js
 src/routes/{index,home,event,item,search,filters,person,account,video,meta}.js

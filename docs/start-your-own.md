@@ -125,6 +125,7 @@ DATABASE_URL='<main branch string>' npm run doctor    # every line should be ✓
 - Read your **about**, **privacy** and **takedown** pages (`/about`, `/privacy`, `/takedown`) and adjust their wording in `site/copy.json` (the `about.*`, `privacy.*` and `takedown.*` keys) to match how you actually run the archive.
 - Set `contactUrl` in `site.json` to the one public contact: a form or a profile link, never a personal email. Then check the link works.
 - Check the site on a phone, in light and dark mode.
+- Run `npm run e2e:site` (once: `npx playwright install chromium`). It builds your own `site/`, seeds `site/seed/` into a throwaway database, and checks your real pages (home, the first event and item, every featured person, a translator, a search, about, privacy, takedown and a 404) at phone and desktop widths in light and dark mode: each must answer, log no errors, never scroll sideways and pass the accessibility check, colour contrast included. It needs a `site/seed/maps.json` with at least one post.
 
 ## 10. Pull engine updates
 

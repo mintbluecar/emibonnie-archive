@@ -214,9 +214,15 @@ npm run build && npm run check && npm test
 - Code that needs the database, the clock, or the network takes them through `deps`, so tests can supply fakes.
 - Tests never write into a source tree (`src/`, `public/`, `api/`, `scripts/`, `test/`, `e2e/`, `examples/`, `docs/`, and a site repo's `site/`): `npm test` hashes them before and after the run and fails if any changed (`scripts/treeHashConfig.js`). Scaffold or build into a temp copy instead, as `test/kinds/scaffoldedKind.test.js` (also `npm run test:kind`) and `test/scripts/new.test.js` do.
 
+## Browser checks
+
+- `npm run e2e` is the engine's smoke (`e2e/smoke.spec.js`). It always runs the bundled example (`SITE_DIR=examples/solluna`, its own fresh `.e2e-db`), whatever `site/` holds, so it passes the same in the engine and in any site repo, then rebuilds the repo's own `site/` when there is one.
+- `npm run e2e:site` runs the same per-page checks on the repo's **own** `site/` (`e2e/site.spec.js`, `playwright.site.config.js`): it builds it, seeds `site/seed/` into a fresh `.e2e-site-db`, and finds every URL through the site's API (home, the first event and its first item, every listed person, the first translator, a search, about, privacy, takedown, a 404). Without a `site/` it skips with a message.
+- Both share their checks through `e2e/helpers.js` (200, no console or CSP errors, no horizontal scroll, axe finds nothing serious or critical) and run four projects: phone and desktop, light and dark. Don't run them at the same time: each builds into this checkout.
+
 ## Engine vs. site
 
-Everything outside `site/` and `examples/` is the engine: fandom-neutral, reusable by any archive built from this template. `site/` is gitignored here and holds one real archive's configuration (`site.json`, `theme.css`, `copy.json`, `logo.png`, optional `seed/` and `migrations/`). `examples/solluna/` is the template's fictional example, copied into `site/` by `npm run init-site`. See `docs/architecture.md` for the full layer rules, and `docs/start-your-own.md` to run your own archive.
+Everything outside `site/` and `examples/` is the engine: fandom-neutral, reusable by any archive built from this template. A site repo also keeps its own planning docs in `.superpowers/` and `docs/superpowers/`; the engine's checks skip those, along with `site/` (`test/helpers/siteRepo.js`). `site/` is gitignored here and holds one real archive's configuration (`site.json`, `theme.css`, `copy.json`, `logo.png`, optional `seed/` and `migrations/`). `examples/solluna/` is the template's fictional example, copied into `site/` by `npm run init-site`. See `docs/architecture.md` for the full layer rules, and `docs/start-your-own.md` to run your own archive.
 
 ## Releases
 

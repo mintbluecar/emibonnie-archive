@@ -29,7 +29,7 @@ test('LONG: drops the mp4 variant on a non-twimg host', () => {
 test('EVENT_A: clipSource is clipper_one', () => {
   const tweet = normalize(IDS.EVENT_A, loadRaw(IDS.EVENT_A));
   assert.equal(tweet.clipSource?.handle, 'clipper_one');
-  assert.equal(tweet.clipSource?.url, 'https://x.com/clipper_one/status/1800000000000000001/video/1');
+  assert.equal(tweet.clipSource?.url, 'https://x.com/clipper_one/status/1900000000000000091/video/1');
 });
 
 test('PHOTO: gives 2 images on pbs.twimg.com, dropping the non-pbs one', () => {
@@ -66,7 +66,7 @@ test('missing tweets: a tombstone is deleted, nothing at all is unavailable', ()
   const tomb = normalize(IDS.TOMB, loadRaw(IDS.TOMB));
   assert.equal(tomb.status, 'deleted');
 
-  const nothing = normalize('1900000000000099999', { syndication: null, fx: null });
+  const nothing = normalize('1900000000000000098', { syndication: null, fx: null });
   assert.equal(nothing.status, 'unavailable');
 });
 

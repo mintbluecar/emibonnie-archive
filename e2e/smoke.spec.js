@@ -1,14 +1,16 @@
 // @ts-check
 /**
  * Plan 1b Task 7 brief (review round 2): Playwright smoke + axe checks
- * against the dev server, which playwright.config.js's `webServer`
- * starts with the exact command the brief names (`npm run seed-dev &&
- * npm run dev`) -- the same rewrites and security headers production
- * uses (scripts/dev.js, review round 2, C2) -- against a freshly wiped
- * PGlite directory (review round 2, I2), seeded with the fictional
- * solluna example (`npm run seed-dev` reports "seeded 9"; ids and names
- * below come from test/fixtures/tweets/build.mjs's `IDS` and
- * examples/solluna/seed/maps.json). Run with `npm run e2e` (Chromium
+ * of the engine against the dev server, which playwright.config.js's
+ * `webServer` starts with `npm run seed-dev && npm run dev` -- the same
+ * rewrites and security headers production uses (scripts/dev.js, review
+ * round 2, C2) -- against a freshly wiped PGlite directory (review round
+ * 2, I2), always on the fictional solluna example, whatever the repo's
+ * own `site/` holds (Task 9a item 1: `SITE_DIR=examples/solluna`; a
+ * site's own pages are `npm run e2e:site`'s, `e2e/site.spec.js`).
+ * `npm run seed-dev` reports "seeded 9"; ids and names below come from
+ * test/fixtures/tweets/build.mjs's `IDS` and
+ * examples/solluna/seed/maps.json. Run with `npm run e2e` (Chromium
  * only -- `npx playwright install chromium` locally, `npx playwright
  * install --with-deps chromium` in CI). `playwright.config.js`'s four
  * `projects` run the per-page checks (the `PAGES` loop below, plus the
@@ -25,23 +27,12 @@
  * reason. This repo's own CI never sets it; the private site repo runs
  * it with a real URL later (Task 9 of this plan).
  *
- * Every other test routes `video.twimg.com`/`pbs.twimg.com` to
- * `e2e/fixtures/tiny-clip.webm`/`tiny.png` -- tiny (938 bytes / 136
- * bytes), genuinely decodable, synthetic media (never a real tweet's),
- * committed to the repo. See the fixtures' own README for how they were
- * made and verified. This stands in for the seed's real (404ing)
- * synthetic ids, so the `sourceGone` fallback videoPlayer.js's `bind()`
- * would otherwise show after its own refetch also fails never masks a
- * check that has nothing to do with real playback (ruling 2).
+ * Every other test routes the media hosts to tiny synthetic fixtures
+ * (`stubSyntheticMedia`, e2e/helpers.js, which also holds the per-page
+ * checks both specs share).
  */
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { test, expect } from '@playwright/test';
-import { AxeBuilder } from '@axe-core/playwright';
-
-const FIXTURES_DIR = fileURLToPath(new URL('./fixtures/', import.meta.url));
-const TINY_VIDEO_PATH = path.join(FIXTURES_DIR, 'tiny-clip.webm');
-const TINY_IMAGE_PATH = path.join(FIXTURES_DIR, 'tiny.png');
+import { checkPage, gotoReady, stubSyntheticMedia, DARK_PROJECTS } from './helpers.js';
 
 const IDS = {
   LONG: '1900000000000000001',
@@ -54,96 +45,6 @@ const EVENT_SLUG = 'solluna-at-starfest-2026-10-18';
 const SEARCH_Q = encodeURIComponent('ครบ');
 /** 40% of the phone viewport's 844px height, matching src/styles/components/videoPlayer.css's `max-height: 40svh`. */
 const LIVE_HEIGHT_CAP = 338;
-/** Review round 2, I1: dark-mode projects only run the per-page checks, not these item-page extras. */
-const DARK_PROJECTS = ['phone-dark', 'desktop-dark'];
-
-/**
- * @param {import('@playwright/test').Page} page
- * @returns {Promise<void>}
- */
-async function stubSyntheticMedia(page) {
-  await page.route('https://video.twimg.com/**', (route) => route.fulfill({ status: 200, contentType: 'video/webm', path: TINY_VIDEO_PATH }));
-  await page.route('https://pbs.twimg.com/**', (route) => route.fulfill({ status: 200, contentType: 'image/png', path: TINY_IMAGE_PATH }));
-}
-
-/**
- * Collects console `error`s, uncaught page errors, and -- explicitly,
- * not just by scraping console text -- CSP violations (review round 2,
- * C2: now that scripts/dev.js sends the real CSP header, a violation can
- * actually happen). `addInitScript` runs before any page script, so the
- * listener is in place for the very first navigation.
- * @param {import('@playwright/test').Page} page
- * @returns {Promise<string[]>}
- */
-async function trackErrors(page) {
-  /** @type {string[]} */
-  const errors = [];
-  page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()); });
-  page.on('pageerror', (err) => errors.push(String(err)));
-  await page.exposeFunction('__onCspViolation', (/** @type {string} */ detail) => errors.push(`securitypolicyviolation: ${detail}`));
-  await page.addInitScript(() => {
-    document.addEventListener('securitypolicyviolation', (e) => {
-      // @ts-expect-error -- exposed by trackErrors() above, not declared on window
-      window.__onCspViolation(`${e.violatedDirective} blocked ${e.blockedURI}`);
-    });
-  });
-  return errors;
-}
-
-/**
- * Navigates to `path` and waits for `#app[data-ready]` -- set once by
- * every page's first paint (`public/js/core/dom.js`'s `mountPage()`),
- * success, 404 or load-error alike -- before anything below inspects
- * the page (review round 2, C1: `checkPage` used to assert while `#app`
- * was still empty, async pages not having rendered anything yet).
- * @param {import('@playwright/test').Page} page @param {string} path
- * @returns {Promise<import('@playwright/test').Response|null>}
- */
-async function gotoReady(page, path) {
-  const response = await page.goto(path);
-  await page.waitForSelector('#app[data-ready]', { state: 'attached', timeout: 15_000 });
-  return response;
-}
-
-/** @param {import('@playwright/test').Page} page @returns {Promise<void>} */
-async function assertNoHorizontalScroll(page) {
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-  expect(overflow).toBeLessThanOrEqual(0);
-}
-
-/** @param {import('@playwright/test').Page} page @returns {Promise<void>} */
-async function assertNoSeriousA11yViolations(page) {
-  const { violations } = await new AxeBuilder({ page }).analyze();
-  const serious = violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
-  const details = serious.map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.map((n) => n.target) }));
-  expect(serious, JSON.stringify(details, null, 2)).toEqual([]);
-}
-
-/**
- * A console error Chromium logs for the top-level navigation itself
- * returning a non-2xx status -- unavoidable on the 404 page, which by
- * definition really does answer 404 (ruling 3: an allowlist kept to an
- * exact message, with this comment, since routing it away via page.route
- * would mean no longer testing the real 404 response).
- */
-const EXPECTED_404_NAVIGATION_ERROR = 'Failed to load resource: the server responded with a status of 404 (Not Found)';
-
-/**
- * The brief's four checks every page gets: a 200 (or `status`), no
- * console/page/CSP errors, no horizontal scroll, no serious/critical
- * axe violations. Waits for `#app[data-ready]` first (C1).
- * @param {import('@playwright/test').Page} page @param {string} path @param {{ status?: number }} [options]
- * @returns {Promise<void>}
- */
-async function checkPage(page, path, { status = 200 } = {}) {
-  await stubSyntheticMedia(page);
-  const errors = await trackErrors(page);
-  const response = await gotoReady(page, path);
-  expect(response?.status()).toBe(status);
-  await assertNoHorizontalScroll(page);
-  await assertNoSeriousA11yViolations(page);
-  expect(errors.filter((e) => !(status === 404 && e === EXPECTED_404_NAVIGATION_ERROR))).toEqual([]);
-}
 
 const PAGES = [
   ['home', '/'],

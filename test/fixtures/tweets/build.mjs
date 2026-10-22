@@ -272,7 +272,7 @@ function buildEventA() {
     createdAtIso: '2026-10-19T08:00:00.000Z',
     hashtags: ['SLHappyDay2026'],
     mediaDetails: [videoMediaDetail({ id: `${IDS.EVENT_A}v`, width: 1280, height: 720, durationMs: 15000 })],
-    clipExpandedUrl: 'https://x.com/clipper_one/status/1800000000000000001/video/1',
+    clipExpandedUrl: 'https://x.com/clipper_one/status/1900000000000000091/video/1',
   });
   write(DIR, IDS.EVENT_A, pair);
 }

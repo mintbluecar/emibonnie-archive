@@ -297,7 +297,7 @@ test('an opted-out clipper vanishes from the item: no handle, no clip, media nul
     const json = JSON.stringify(view);
     assert.ok(!json.includes('clipper_one'), json);
     assert.ok(!json.includes('video.twimg.com'), 'no media URL');
-    assert.ok(!json.includes('1800000000000000001'), 'no media source id');
+    assert.ok(!json.includes('1900000000000000091'), 'no media source id');
     assert.equal(view.media, null);
     assert.equal(view.credits.clipBy, null);
     assert.deepEqual(view.sources.map((/** @type {any} */ s) => s.role), ['primary']);
