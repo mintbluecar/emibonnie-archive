@@ -65,7 +65,14 @@ function hexToRgb(hex) {
   return [n.slice(0, 2), n.slice(2, 4), n.slice(4, 6)].map((part) => parseInt(part, 16));
 }
 
-/** @param {number[]} rgb @returns {string} */
+/**
+ * Quantises each channel to a whole 0-255 integer before hex-encoding --
+ * the same 8-bit-per-channel rounding a browser applies when it actually
+ * paints a colour (review round 2, fix round 3), so anything measured
+ * against this function's output (`mixSrgb()`, below) reflects the real
+ * rendered value, not an unrounded intermediate one.
+ * @param {number[]} rgb @returns {string}
+ */
 function rgbToHex(rgb) {
   return `#${rgb.map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, '0')).join('')}`;
 }
@@ -97,17 +104,29 @@ export function contrastRatio(hexA, hexB) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-const AA_TEXT_CONTRAST = 4.5;
+/**
+ * The real target, above WCAG AA's bare 4.5:1 (review round 2, fix round
+ * 3): browsers quantise every colour to 8-bit (0-255) channels, and axe
+ * measures that rendered value, not this module's maths -- a mix this
+ * function judged exactly 4.50:1 (several example/real-site colours
+ * landed there) can round to something a hair under 4.5:1 once actually
+ * painted, and fail for real. Targeting 4.6:1 leaves enough margin that
+ * 8-bit rounding can never tip a passing mix back under AA.
+ */
+const AA_TEXT_CONTRAST = 4.6;
 
 /**
  * The smallest mix of `hex` toward `ink` (stepped by 1%) that reaches
- * WCAG AA's 4.5:1 against every colour in `bgHexes`, mixing the same way
- * CSS's `color-mix(in srgb, …)` does. Returns `hex` unchanged if it
- * already passes -- review round 2, fix round 2, item 1: a single flat
- * 60% mix (the previous fix) fails AA for some real person colours
- * (e.g. #ff8a3d only reaches 4.14:1 against --color-bg at a 60% mix)
- * while over-darkening others that needed far less; this instead finds
- * the least mixing each person's own colour actually needs, against
+ * `AA_TEXT_CONTRAST` against every colour in `bgHexes`, mixing the same
+ * way CSS's `color-mix(in srgb, …)` does -- each candidate is quantised
+ * to 8-bit channels (`mixSrgb()`'s `rgbToHex()`, the same whole-integer
+ * 0-255 per channel a browser renders) *before* `contrastRatio()` ever
+ * measures it, not after. Returns `hex` unchanged if it already passes
+ * -- review round 2, fix round 2, item 1: a single flat 60% mix (the
+ * previous fix) fails AA for some real person colours (e.g. #ff8a3d
+ * only reaches 4.14:1 against --color-bg at a 60% mix) while
+ * over-darkening others that needed far less; this instead finds the
+ * least mixing each person's own colour actually needs, against
  * whatever it actually sits on.
  * @param {string} hex @param {string[]} bgHexes @param {string} ink
  * @returns {string}
@@ -116,7 +135,7 @@ export function textShade(hex, bgHexes, ink) {
   const passes = (/** @type {string} */ candidate) => bgHexes.every((bg) => contrastRatio(candidate, bg) >= AA_TEXT_CONTRAST);
   if (passes(hex)) return hex;
   for (let pct = 99; pct >= 0; pct -= 1) {
-    const mixed = mixSrgb(hex, ink, pct / 100);
+    const mixed = mixSrgb(hex, ink, pct / 100); // already 8-bit-quantised, below
     if (passes(mixed)) return mixed;
   }
   return ink;

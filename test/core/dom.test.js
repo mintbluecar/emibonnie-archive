@@ -127,15 +127,15 @@ const LIGHT_BG = '#f6efe3';
 const LIGHT_CARD = '#fffdf8';
 const LIGHT_INK = '#2b2233';
 
-test('textShade: a colour that already reaches 4.5:1 is returned unchanged', () => {
+test('textShade: a colour that already reaches 4.6:1 is returned unchanged', () => {
   assert.equal(textShade('#000000', ['#ffffff'], '#000000'), '#000000');
 });
 
-test('textShade: a saturated orange (#ff8a3d) reaches >=4.5:1 against both light backgrounds once shaded', () => {
+test('textShade: a saturated orange (#ff8a3d) reaches >=4.6:1 against both light backgrounds once shaded', () => {
   const shaded = textShade('#ff8a3d', [LIGHT_BG, LIGHT_CARD], LIGHT_INK);
   assert.notEqual(shaded, '#ff8a3d', 'the raw colour does not already pass');
-  assert.ok(contrastRatio(shaded, LIGHT_BG) >= 4.5, `${shaded} vs ${LIGHT_BG}: ${contrastRatio(shaded, LIGHT_BG)}`);
-  assert.ok(contrastRatio(shaded, LIGHT_CARD) >= 4.5, `${shaded} vs ${LIGHT_CARD}: ${contrastRatio(shaded, LIGHT_CARD)}`);
+  assert.ok(contrastRatio(shaded, LIGHT_BG) >= 4.6, `${shaded} vs ${LIGHT_BG}: ${contrastRatio(shaded, LIGHT_BG)}`);
+  assert.ok(contrastRatio(shaded, LIGHT_CARD) >= 4.6, `${shaded} vs ${LIGHT_CARD}: ${contrastRatio(shaded, LIGHT_CARD)}`);
 });
 
 test('textShade: luna (#6a5cd6) needs less mixing toward ink than sol (#c47a12), against the same light backgrounds', () => {
@@ -145,4 +145,33 @@ test('textShade: luna (#6a5cd6) needs less mixing toward ink than sol (#c47a12),
     hexDistance(luna, '#6a5cd6') < hexDistance(sol, '#c47a12'),
     `luna moved ${hexDistance(luna, '#6a5cd6')}, sol moved ${hexDistance(sol, '#c47a12')}`,
   );
+});
+
+// Dark-mode tokens (src/styles/tokens.css); DARK_INK is also the chip on-tint's and the bubble
+// tint's mix-toward colour in dark mode (applyColours()'s own usage).
+const DARK_CARD = '#1c1522';
+const DARK_INK = '#f4eef8';
+
+/** The same direct sRGB mix `mixSrgb()` (public/js/core/dom.js) does, for building a test background. @param {string} hex1 @param {string} hex2 @param {number} frac1 @returns {string} */
+function mixSrgbForTest(hex1, hex2, frac1) {
+  const [a, b] = [channels(hex1), channels(hex2)];
+  return `#${a.map((v, i) => Math.round(v * frac1 + b[i] * (1 - frac1)).toString(16).padStart(2, '0')).join('')}`;
+}
+
+test('textShade: every example/real-site person colour clears 4.6:1 in both themes, against its own bubble tint, after 8-bit rounding', () => {
+  // sol, luna, host, starguest (the bundled example's own invented colours), plus two more
+  // real-site colours named only by hex in this engine repo (review round 2, fix round 2).
+  const colours = ['#c47a12', '#6a5cd6', '#b5651d', '#aa8800', '#ff8a3d', '#9b6cff'];
+  const themes = [
+    ['light', LIGHT_CARD, LIGHT_INK],
+    ['dark', DARK_CARD, DARK_INK],
+  ];
+  for (const colour of colours) {
+    for (const [mode, card, ink] of themes) {
+      const bubbleTint = mixSrgbForTest(colour, card, 0.12); // bubbles.css's .c-bubbles__bub: color-mix(in srgb, --c 12%, --color-card)
+      const shaded = textShade(colour, [bubbleTint], ink);
+      const ratio = contrastRatio(shaded, bubbleTint);
+      assert.ok(ratio >= 4.6, `${colour} (${mode}) vs its own bubble tint ${bubbleTint}: ${shaded} only reaches ${ratio}`);
+    }
+  }
 });
