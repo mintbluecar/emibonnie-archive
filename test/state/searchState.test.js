@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  EMPTY_STATE, parseState, toQuery, toApiParams, filterCount, withFilter, withoutFilter,
+  EMPTY_STATE, parseState, toQuery, toApiParams, filterCount, withFilter, withoutFilter, sanitizeTypes, isBlank,
 } from '../../public/js/state/searchState.js';
 
 /** @type {import('../../src/http/contracts.js').FilterOptions} */
@@ -18,6 +18,7 @@ const OPTIONS = {
   ],
   categories: [{ id: 5, name: 'live' }, { id: 6, name: 'show / interview' }],
   events: [{ slug: 'solluna-happy-day-2026-10-19', name: 'SOLLUNA HAPPY DAY' }],
+  clients: [{ id: 9, name: 'Big Media Co' }],
   accounts: [{ handle: 'tl_beta' }, { handle: 'tl_gamma' }],
 };
 
@@ -86,4 +87,38 @@ test('withFilter/withoutFilter: a scalar field is set/cleared', () => {
   assert.equal(withEvent.event, 'e');
   const withoutEvent = withoutFilter(withEvent, 'event');
   assert.equal(withoutEvent.event, undefined);
+});
+
+test('toQuery: list fields (people, types) are repeated params, not comma-joined (review round 1, M3)', () => {
+  const qs = toQuery({ ...EMPTY_STATE, people: [1, 2], types: ['live', 'shared story'] });
+  assert.equal(qs.toString(), 'people=1&people=2&types=live&types=shared+story');
+});
+
+test('parseState: reads repeated list params back with getAll', () => {
+  const params = new URLSearchParams('people=1&people=2&types=live&types=shared+story');
+  const state = parseState(params);
+  assert.deepEqual(state.people, [1, 2]);
+  assert.deepEqual(state.types, ['live', 'shared story']);
+});
+
+test('parseState: drops an invalid from/to date rather than carrying garbage (review round 1, I2)', () => {
+  const state = parseState(new URLSearchParams('from=not-a-date&to=2026-13-40'));
+  assert.equal(state.from, undefined);
+  assert.equal(state.to, undefined);
+  const valid = parseState(new URLSearchParams('from=2026-01-01&to=2026-12-31'));
+  assert.equal(valid.from, '2026-01-01');
+  assert.equal(valid.to, '2026-12-31');
+});
+
+test('sanitizeTypes: drops a types entry that is neither a known category name nor a placement chip (review round 1, M3)', () => {
+  const state = { ...EMPTY_STATE, types: ['live', 'made-up-category', 'shared story'] };
+  const sanitized = sanitizeTypes(state, OPTIONS);
+  assert.deepEqual(sanitized.types, ['live', 'shared story']);
+});
+
+test('sanitizeTypes: an unknown type is neither counted by filterCount nor considered blank', () => {
+  const state = { ...EMPTY_STATE, types: ['made-up-category'] };
+  const sanitized = sanitizeTypes(state, OPTIONS);
+  assert.equal(filterCount(sanitized), 0);
+  assert.equal(isBlank(sanitized), true);
 });

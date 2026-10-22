@@ -122,13 +122,13 @@
  *   All an opted-out account's page gets: `handle` is the one asked for.
  *
  * @typedef {{
- *   people: PersonChip[], categories: { id: number, name: string }[],
+ *   people: PersonChip[], categories: { id: number, name: string }[], clients: { id: number, name: string }[],
  *   events: { slug: string, name: string }[], accounts: { handle: string }[],
  * }} FilterOptions
  *   `people`: featured people, and anyone else on a visible item.
- *   `categories`: those of a visible item. `events`: the 200 most recent
- *   visible events. `accounts`: only accounts with a visible item (so
- *   never an opted-out one).
+ *   `categories`/`clients`: those of a visible item (review round 1, I3:
+ *   `clients` added). `events`: the 200 most recent visible events.
+ *   `accounts`: only accounts with a visible item (so never an opted-out one).
  *
  * @typedef {Preview & { event: EventRef|null, matchLines: string[] }} SearchResult
  *   `matchLines`: the verbatim lines containing `q` (at most 3; none without `q`).

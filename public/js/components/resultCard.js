@@ -6,10 +6,18 @@
  * split on `q` *before* escaping, so a match inside what would otherwise
  * become an HTML entity (e.g. `q: 'amp'` against `'a & amp'`) marks only
  * the real word, never text that only looks like it once escaped.
+ *
+ * `matchLines` is only ever populated when a text query (`q`) ran
+ * (src/http/contracts.js: "none without q") -- a filters-only search
+ * (people/types/event/.../no text) always has an empty `matchLines`, so
+ * this card falls back to `bubbles.render({ bubbles: result.lines })`,
+ * the item's own opening lines, the same fallback `previewCard.js`
+ * already uses (review round 1, I4).
  */
 import { html } from '../core/html.js';
 import { dayLabel } from '../core/format.js';
 import { t } from '../core/site.js';
+import * as bubbles from './bubbles.js';
 
 /** @param {string} text @returns {string} */
 function escapeRegExp(text) {
@@ -46,13 +54,19 @@ function metaLine(result) {
  */
 export function render(props) {
   const { result, q } = props;
+  const text = result.matchLines.length > 0
+    ? html`<div class="c-result-card__text">${result.matchLines.map((line) => html`<div class="c-result-card__line">${highlighted(line, q)}</div>`)}</div>`
+    : bubbles.render({ bubbles: result.lines });
   return html`
     <a class="c-result-card" href="${result.url}">
       ${result.event ? html`<div class="c-result-card__event">${result.event.name} · ${dayLabel(result.occurredOn)}</div>` : ''}
-      <div class="c-result-card__text">
-        ${result.matchLines.map((line) => html`<div class="c-result-card__line">${highlighted(line, q)}</div>`)}
-      </div>
+      ${text}
       ${metaLine(result)}
     </a>
   `;
+}
+
+/** @param {Element} el @returns {void} */
+export function bind(el) {
+  bubbles.bind(el);
 }

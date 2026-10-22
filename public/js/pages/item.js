@@ -18,6 +18,7 @@ import * as emptyState from '../components/emptyState.js';
 import * as pageShell from '../components/pageShell.js';
 import * as mediaBox from '../components/mediaBox.js';
 import * as refreshButton from '../components/refreshButton.js';
+import * as headerLinks from '../components/headerLinks.js';
 import { KIND_UI } from '../kinds/_registry.js';
 import { footerBlock } from './itemFooter.js';
 
@@ -137,6 +138,7 @@ async function reloadBody(root, target) {
  * @returns {void}
  */
 export function bind(root, data) {
+  headerLinks.bind(root);
   const bodyEl = root.querySelector('.c-item__body') ?? root;
   bindBody(root, bodyEl, data);
   const mediaEl = root.querySelector('.c-item__media') ?? root;

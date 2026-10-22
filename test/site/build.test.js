@@ -104,6 +104,20 @@ test('buildVercelConfig: region, security headers (Referrer-Policy: no-referrer)
   assert.equal(config.rewrites, undefined);
 });
 
+test('runBuild: vercel.json rewrites /search to search.html, so the static page resolves in production (cleanUrls is off, review round 1, C1)', async () => {
+  const { repoRoot, siteDir } = makeBuildRepoRoot();
+  try {
+    await runBuild({ repoRoot, siteDir });
+    const vercelJson = JSON.parse(readFileSync(path.join(repoRoot, 'vercel.json'), 'utf8'));
+    assert.ok(
+      vercelJson.rewrites.some((/** @type {any} */ r) => r.source === '/search' && r.destination === '/search.html'),
+      JSON.stringify(vercelJson.rewrites),
+    );
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
 test('runBuild: builds examples/solluna end to end into a temp repo root', async () => {
   const { repoRoot, siteDir } = makeBuildRepoRoot();
   try {
@@ -124,10 +138,14 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
 
     const vercelJson = JSON.parse(readFileSync(path.join(repoRoot, 'vercel.json'), 'utf8'));
     assert.deepEqual(vercelJson.regions, ['sin1']);
-    // a rewrite for each page route: the item pages (one per kind's urlPrefix) and the event page
+    // a rewrite for each page route: the item pages (one per kind's urlPrefix), the event page,
+    // and every static page with a file (review round 1, C1: Vercel's cleanUrls defaults to
+    // false, so a static page needs an explicit rewrite -- it doesn't resolve to <path>.html
+    // on its own).
     assert.deepEqual(vercelJson.rewrites, [
       { source: '/e/:slug', destination: '/api/meta/e/:slug' },
       { source: '/t/:id', destination: '/api/meta/t/:id' },
+      { source: '/search', destination: '/search.html' },
     ]);
     const headers = vercelJson.headers[0].headers;
     assert.match(headers.find((/** @type {any} */ h) => h.key === 'Content-Security-Policy').value, /frame-ancestors 'none'/);

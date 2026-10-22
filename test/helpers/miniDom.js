@@ -101,6 +101,18 @@ export class MiniElement {
     this.parentNode = null;
   }
 
+  /** @param {MiniElement} node */
+  replaceWith(node) {
+    const parent = this.parentNode;
+    if (!parent) return;
+    const idx = parent.children.indexOf(this);
+    if (idx === -1) return;
+    if (node.parentNode) node.parentNode.children = node.parentNode.children.filter((c) => c !== node);
+    node.parentNode = parent;
+    parent.children[idx] = node;
+    this.parentNode = null;
+  }
+
   get firstChild() {
     return this.children[0] ?? null;
   }

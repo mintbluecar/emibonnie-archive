@@ -37,8 +37,7 @@ function eventChip(state, options) {
 /** @param {import('../state/searchState.js').State} state @param {import('../../../src/http/contracts.js').FilterOptions} options @returns {ChipVM|null} */
 function clientChip(state, options) {
   if (state.client === undefined) return null;
-  const clients = /** @type {any} */ (options).clients ?? [];
-  const name = clients.find((/** @type {any} */ c) => c.id === state.client)?.name;
+  const name = options.clients.find((c) => c.id === state.client)?.name;
   return { field: 'client', value: '', label: name ?? String(state.client) };
 }
 
@@ -108,11 +107,19 @@ function bodyContent(ctx) {
   return html`<div class="c-search__results">${results}</div>${hasMore ? html`<button type="button" class="c-search__more">${t('search.more')}</button>` : ''}`;
 }
 
-/** `.c-search`'s own content, re-rendered on every committed state change. @param {Ctx} ctx @returns {import('../core/html.js').SafeHtml} */
-export function searchAreaMarkup(ctx) {
+/**
+ * `.c-search`'s own content, re-rendered on every committed state
+ * change. `body`, given, overrides the normal results/blank-state logic
+ * -- `search.js` passes `errorMarkup()` when a fetch fails (review round
+ * 1, I2), so the active-filter chips (and "clear all", a way to retry)
+ * still show instead of the whole area going blank.
+ * @param {Ctx} ctx @param {import('../core/html.js').SafeHtml} [body]
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+export function searchAreaMarkup(ctx, body) {
   return html`
     ${activeFiltersRow(ctx.state, ctx.options)}
-    <div class="c-search__body">${bodyContent(ctx)}</div>
+    <div class="c-search__body">${body ?? bodyContent(ctx)}</div>
     <div class="c-search__sheet"></div>
   `;
 }
@@ -121,4 +128,20 @@ export function searchAreaMarkup(ctx) {
 export function composeSearch(ctx) {
   const content = html`<div class="c-search">${searchAreaMarkup(ctx)}</div>`;
   return pageShell.render({ active: 'search', compact: true, headerProps: { filterCount: filterCount(ctx.state) }, content });
+}
+
+/**
+ * The `.c-search__body` fallback when a `/api/search` (re)fetch fails
+ * unexpectedly (review round 1, I2 -- same "catch, then render
+ * `emptyState` with a copy key" shape as `event.js`'s 404 handling,
+ * `event.js:294`, just for any error here rather than one status).
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+export function errorMarkup() {
+  return emptyState.render({ message: t('search.error') });
+}
+
+/** The whole-page fallback when `start()` fails before anything is mounted (e.g. `/api/filters` itself). @returns {import('../core/html.js').SafeHtml} */
+export function errorPage() {
+  return pageShell.render({ active: 'search', compact: true, content: errorMarkup() });
 }

@@ -38,14 +38,21 @@ test('dev server: rewrites, api dispatch, 404', async () => {
   srv.close();
 });
 
-test('dev server: a static page route with no extension resolves to <path>.html, with or without a trailing slash (mirrors Vercel\'s default clean-url resolution, scripts/build.js\'s pageRewriteOf)', async () => {
+test('dev server: a static page route (no :param) resolves only through an explicit rewrite, same as production -- no extension-guessing fallback (review round 1, C1)', async () => {
   const handle = async (req) => Response.json({ path: new URL(req.url).pathname });
+  // No rewrite for /event here: unlike production's vercel.json (which scripts/build.js's
+  // pageRewriteOf now emits one for every static page with a file), this server has none.
   const srv = createServer({ root: 'test/fixtures/static', routes: [], rewrites: [], handle });
   const base = await listen(srv);
-  assert.match(await (await fetch(base + '/event')).text(), /EVENT PAGE/, 'no trailing slash');
-  assert.match(await (await fetch(base + '/event/')).text(), /EVENT PAGE/, 'a trailing slash still resolves');
-  assert.equal((await fetch(base + '/nope')).status, 404, 'still 404s when neither the bare path nor <path>.html exists');
+  assert.equal((await fetch(base + '/event')).status, 404, 'no rewrite means no <path>.html guessing');
+
+  const withRewrite = createServer({
+    root: 'test/fixtures/static', routes: [], rewrites: [{ source: '/event', destination: '/event.html' }], handle,
+  });
+  const base2 = await listen(withRewrite);
+  assert.match(await (await fetch(base2 + '/event')).text(), /EVENT PAGE/, 'an explicit rewrite (as production has) resolves it');
   srv.close();
+  withRewrite.close();
 });
 
 test('dev server: waitUntil (from @vercel/functions) runs after the response, and the server awaits it', async () => {

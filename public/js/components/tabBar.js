@@ -13,7 +13,7 @@ import { t } from '../core/site.js';
 /** @type {{ key: TabKey, href: string }[]} */
 const TABS = [
   { key: 'home', href: '/' },
-  { key: 'search', href: '/search/' },
+  { key: 'search', href: '/search' },
   { key: 'add', href: '/add/' },
   { key: 'me', href: '/me/' },
 ];

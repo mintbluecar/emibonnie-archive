@@ -52,16 +52,24 @@ function collectEngineJsSources(repoRoot) {
 
 /**
  * The `{ source, destination }` rewrite one `src/pages.js` `PageRoute`
- * needs, or `null` when it needs none: a static path (no `:param`)
- * resolves to its file by name already; a dynamic one with no `file`
- * yet (a later task's page) has nothing to rewrite to.
+ * needs, or `null` when it needs none. Vercel's `cleanUrls` defaults to
+ * false (https://vercel.com/docs/project-configuration/vercel-json,
+ * "cleanUrls"), so a path with no file-extension does *not* resolve to
+ * `<path>.html` on its own -- every page with a `file` needs an explicit
+ * rewrite (review round 1, C1), except `/` itself (served as
+ * `index.html` by the platform's own static-file default). A page with
+ * no `file` yet (a later task's) has nothing to rewrite to; a dynamic
+ * page (`:param`) with a meta route rewrites there instead, so its
+ * link-preview meta still renders for a real browser too.
  * @param {import('../src/pages.js').PageRoute} page
  * @returns {{ source: string, destination: string }|null}
  */
 function pageRewriteOf(page) {
-  if (!page.path.includes(':')) return null;
-  if (page.meta) return { source: page.path, destination: `/api${page.meta}` };
-  return page.file ? { source: page.path, destination: `/${page.file}` } : null;
+  if (page.path.includes(':')) {
+    if (page.meta) return { source: page.path, destination: `/api${page.meta}` };
+    return page.file ? { source: page.path, destination: `/${page.file}` } : null;
+  }
+  return page.path === '/' || !page.file ? null : { source: page.path, destination: `/${page.file}` };
 }
 
 /**

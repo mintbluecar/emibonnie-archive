@@ -116,3 +116,19 @@ export async function visibleCategories(db) {
   );
   return rows.map((row) => ({ id: row.id, name: row.name }));
 }
+
+/**
+ * The clients of at least one visible item, by lowercased name (review
+ * round 1, I3 -- mirrors `visibleCategories`, ordered the way
+ * `visibleAccountHandles` orders handles).
+ * @param {Tx} db
+ * @returns {Promise<{ id: number, name: string }[]>}
+ */
+export async function visibleClients(db) {
+  const { rows } = await db.query(
+    `select cl.id, cl.name from clients cl
+     where cl.deleted_at is null and exists (select 1 from items i where i.client_id = cl.id and ${VISIBLE})
+     order by lower(cl.name), cl.id`,
+  );
+  return rows.map((row) => ({ id: row.id, name: row.name }));
+}

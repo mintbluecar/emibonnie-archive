@@ -39,3 +39,15 @@ test('resultCard: no q means no highlighting, text still escaped', () => {
   assert.ok(!markup.includes('<mark>'));
   assert.match(markup, /&lt;b&gt;raw&lt;\/b&gt;/);
 });
+
+test('resultCard: empty matchLines (a filters-only search, no q) falls back to the item\'s own opening lines via bubbles.render, same as previewCard (review round 1, I4)', () => {
+  /** @type {SearchResult} */
+  const result = {
+    ...baseResult([]),
+    lines: [{ kind: 'plain', text: 'the opening line' }],
+  };
+  const markup = String(render({ result, q: '' }));
+  assert.ok(!markup.includes('c-result-card__text'), 'no matchLines block when there is nothing to highlight');
+  assert.match(markup, /c-bubbles/);
+  assert.match(markup, /the opening line/);
+});

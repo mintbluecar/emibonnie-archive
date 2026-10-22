@@ -17,7 +17,7 @@ test('tabBar: marks only the active tab', () => {
   const items = markup.split('<a').slice(1);
   const on = items.filter((item) => item.includes('c-tabbar__item--on'));
   assert.equal(on.length, 1);
-  assert.match(on[0], /href="\/search\/"/);
+  assert.match(on[0], /href="\/search"/);
 });
 
 test('tabBar: with no active tab, nothing is marked on', () => {

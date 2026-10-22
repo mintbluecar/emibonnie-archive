@@ -95,27 +95,11 @@ async function sendWebResponse(response, res) {
  * @returns {string | null}
  */
 function resolveStaticPath(root, pathname) {
+  const safePathname = pathname === '/' ? '/index.html' : pathname;
   const resolvedRoot = path.resolve(root);
-  const resolvedPath = path.resolve(resolvedRoot, `.${pathname}`);
+  const resolvedPath = path.resolve(resolvedRoot, `.${safePathname}`);
   if (resolvedPath !== resolvedRoot && !resolvedPath.startsWith(resolvedRoot + path.sep)) return null;
   return resolvedPath;
-}
-
-/**
- * The pathnames to try, in order, for a request -- mirroring Vercel's own
- * default static-file resolution (scripts/build.js's `pageRewriteOf`:
- * "a static path ... resolves to its file by name already"), which this
- * dev server otherwise has no equivalent for. `/` is `/index.html`; a
- * trailing slash is dropped (Vercel redirects `/search/` to `/search`
- * before resolving it); and a path with no extension (a page route like
- * `/search`, from `src/pages.js`) also tries `<path>.html`.
- * @param {string} pathname
- * @returns {string[]}
- */
-function staticCandidates(pathname) {
-  if (pathname === '/') return ['/index.html'];
-  const withoutTrailingSlash = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-  return path.extname(withoutTrailingSlash) ? [withoutTrailingSlash] : [withoutTrailingSlash, `${withoutTrailingSlash}.html`];
 }
 
 /**
@@ -135,28 +119,28 @@ function applyRewrites(rewrites, pathname) {
 
 /**
  * Serves a static file from `root` for `pathname`, or a 404 when it's
- * missing or would escape `root`.
+ * missing or would escape `root`. No extension-guessing here: a page
+ * route like `/search` only resolves through `applyRewrites` (the same
+ * `vercel.json` rewrites production uses -- `scripts/build.js`'s
+ * `pageRewriteOf` emits one per static page with a `file`, review round
+ * 1, C1), so dev and production resolve a URL exactly the same way.
  * @param {string} root
  * @param {string} pathname
  * @param {import('node:http').ServerResponse} res
  * @returns {Promise<void>}
  */
 async function serveStatic(root, pathname, res) {
-  for (const candidate of staticCandidates(pathname)) {
-    const filePath = resolveStaticPath(root, candidate);
-    if (!filePath) continue;
-    try {
-      const body = await readFile(filePath);
-      res.statusCode = 200;
-      res.setHeader('Content-Type', MIME_TYPES[path.extname(filePath)] ?? 'application/octet-stream');
-      res.end(body);
-      return;
-    } catch (/** @type {any} */ err) {
-      if (err.code !== 'ENOENT') throw err;
-    }
+  const filePath = resolveStaticPath(root, pathname);
+  if (!filePath) {
+    res.statusCode = 404;
+    res.end('Not Found');
+    return;
   }
-  res.statusCode = 404;
-  res.end('Not Found');
+
+  const body = await readFile(filePath);
+  res.statusCode = 200;
+  res.setHeader('Content-Type', MIME_TYPES[path.extname(filePath)] ?? 'application/octet-stream');
+  res.end(body);
 }
 
 /**

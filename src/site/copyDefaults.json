@@ -40,6 +40,7 @@
   "event.unsorted": "unsorted",
   "event.sharedStory": "shared story",
   "search.empty": "no results",
+  "search.error": "something went wrong, try again",
   "search.filters": "filters",
   "search.filtersActive": "filters, {n} active",
   "search.placeholder": "search what they said…",

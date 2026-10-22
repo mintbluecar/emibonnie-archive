@@ -31,3 +31,21 @@
   color: var(--c);
   font-weight: 700;
 }
+
+/*
+ * Review round 1, I5: a selected chip's text at the raw --c often fails
+ * AA (4.5:1). A neutral chip (no person colour: the any/all toggle, type
+ * chips) uses full-strength ink instead of the muted default --c.
+ */
+.c-chips__chip--on:not([data-c]) {
+  --c: var(--color-ink);
+}
+
+/*
+ * A person-coloured chip keeps --c for its border/background tint, but
+ * mixes its text 60% toward ink -- many featured colours (pastels) are
+ * too light against --color-bg at full strength.
+ */
+.c-chips__chip--on[data-c] {
+  color: color-mix(in srgb, var(--c) 60%, var(--color-ink));
+}

@@ -15,6 +15,7 @@ import { monthLabel } from '../core/format.js';
 import * as pageShell from '../components/pageShell.js';
 import * as eventCard from '../components/eventCard.js';
 import * as emptyState from '../components/emptyState.js';
+import * as headerLinks from '../components/headerLinks.js';
 
 const APP_SELECTOR = 'app';
 
@@ -42,18 +43,14 @@ export function composeHome(data) {
 
 /**
  * Sends the header's search box and filter button to the search page,
- * since home has no live search of its own (spec: "the search box goes
- * to /search", "the filter icon goes to /search?filters=1"). Exported
- * (the `render`/`bind` pair every component uses) so tests can drive it
- * directly.
+ * since home has no live search of its own -- `headerLinks.js`, shared
+ * with every other page that doesn't (review round 1, I6). Exported (the
+ * `render`/`bind` pair every component uses) so tests can drive it directly.
  * @param {Element} root
  * @returns {void}
  */
 export function bind(root) {
-  const searchBox = root.querySelector('.c-header__search-box');
-  const filterBtn = root.querySelector('.c-header__filter-btn');
-  searchBox?.addEventListener('focus', () => { window.location.href = '/search/'; });
-  filterBtn?.addEventListener('click', () => { window.location.href = '/search/?filters=1'; });
+  headerLinks.bind(root);
 }
 
 /** @returns {Promise<void>} */

@@ -24,15 +24,6 @@ import { withFilter, withoutFilter, toApiParams } from '../state/searchState.js'
 
 const PLACEMENT_TYPES = [{ value: 'shared story', label: () => t('search.sharedStory') }, { value: 'posts', label: () => t('search.posts') }];
 
-/**
- * `/api/filters`' real response has no `clients` list yet (src/services/hubs.js's
- * `filterOptions()` -- see task-5-report.md, "concerns"): this component
- * tolerates one anyway, hiding the client select when it's absent/empty,
- * the same "render nothing when there's no data to drive it" rule
- * `public/js/pages/event.js`'s `accountFilterRow` already follows.
- * @typedef {import('../../../src/http/contracts.js').FilterOptions & { clients?: { id: number, name: string }[] }} FilterOptionsVM
- */
-
 /** @param {import('../../../src/http/contracts.js').PersonChip[]} people @param {import('../state/searchState.js').State} state */
 function peopleSection(people, state) {
   const modeItems = [
@@ -69,7 +60,7 @@ function selectedAttr(optionValue, current) {
 }
 
 /**
- * @param {FilterOptionsVM} options
+ * @param {import('../../../src/http/contracts.js').FilterOptions} options
  * @param {import('../state/searchState.js').State} state
  */
 function selectsSection(options, state) {
@@ -88,7 +79,7 @@ function selectsSection(options, state) {
         ${options.accounts.map((a) => html`<option value="${a.handle}"${selectedAttr(a.handle, state.account)}>@${a.handle}</option>`)}
       </select>
     </label>
-    ${options.clients && options.clients.length > 0 ? html`
+    ${options.clients.length > 0 ? html`
       <label class="c-filter-sheet__field">
         ${t('search.clientLabel')}
         <select class="c-filter-sheet__client">
@@ -113,7 +104,7 @@ function datesSection(state) {
 }
 
 /**
- * @param {{ state: import('../state/searchState.js').State, options: FilterOptionsVM, count: number }} props
+ * @param {{ state: import('../state/searchState.js').State, options: import('../../../src/http/contracts.js').FilterOptions, count: number }} props
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function render({ state, options, count }) {
@@ -202,14 +193,14 @@ function makeClose(opener, dialog) {
 
 /**
  * @param {Element} el
- * @param {{ state: import('../state/searchState.js').State, options?: FilterOptionsVM,
+ * @param {{ state: import('../state/searchState.js').State, options?: import('../../../src/http/contracts.js').FilterOptions,
  *   onChange: (s: import('../state/searchState.js').State) => void, opener?: { focus?: Function }|null,
  *   onTentativeChange?: (s: import('../state/searchState.js').State) => void }} props
  *   `onTentativeChange`: fired on every edit, before Apply, with the not-yet-committed state --
  *   so the page can keep the filter icon's own badge live while the sheet is still open.
  * @returns {void}
  */
-export function bind(el, { state, options = { people: [], categories: [], events: [], accounts: [] }, onChange, opener = null, onTentativeChange }) {
+export function bind(el, { state, options = { people: [], categories: [], clients: [], events: [], accounts: [] }, onChange, opener = null, onTentativeChange }) {
   const dialog = el.querySelector('.c-filter-sheet') ?? el;
   chips.bind(el);
   let tentative = state;
@@ -220,9 +211,15 @@ export function bind(el, { state, options = { people: [], categories: [], events
   // preview (onEdit, below) reverts to the still-committed `state`.
   const cancel = () => { closeDialog(); onTentativeChange?.(state); };
 
+  // Guards against a stale count response landing after a newer edit's
+  // (whichever order the two responses actually arrive in) -- review
+  // round 1, I1.
+  let seq = 0;
   const refreshCount = async () => {
+    const mySeq = ++seq;
     try {
       const { count } = await getJson('/api/search', { ...toApiParams(tentative, options), limit: 0 });
+      if (mySeq !== seq) return;
       const applyBtn = dialog.querySelector('.c-filter-sheet__apply');
       if (applyBtn) applyBtn.textContent = t('search.showN', { n: count });
     } catch {

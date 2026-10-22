@@ -23,6 +23,7 @@ import { dayLabel } from '../core/format.js';
 import * as chips from '../components/chips.js';
 import * as emptyState from '../components/emptyState.js';
 import * as pageShell from '../components/pageShell.js';
+import * as headerLinks from '../components/headerLinks.js';
 import { slugFromEventPath } from '../core/routes.js';
 import { KIND_UI, renderSections } from '../kinds/_registry.js';
 
@@ -41,7 +42,7 @@ function headRow(event) {
   return html`
     <div class="c-event__head">
       <h1 class="c-event__name">${event.name}</h1>
-      <a class="c-event__search" href="/search/?event=${event.slug}" aria-label="${t('event.search')}">
+      <a class="c-event__search" href="/search?event=${event.slug}" aria-label="${t('event.search')}">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="11" cy="11" r="7"></circle>
           <path d="M21 21l-4.3-4.3"></path>
@@ -250,6 +251,7 @@ async function toggleOrder(root, slug, state, toggle) {
  * @returns {void}
  */
 export function bind(root, data, slug) {
+  headerLinks.bind(root);
   chips.bind(root);
   for (const section of data.sections) KIND_UI[section.kind]?.section.bind?.(root);
   const peopleFilterEl = root.querySelector('.c-event__people-filter');

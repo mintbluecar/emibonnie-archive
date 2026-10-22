@@ -42,6 +42,12 @@ const servicesKindsPattern = {
   message: 'src/services may import from src/kinds only _registry.js and defineKind.js: talk to a kind through the Kind contract.',
 };
 
+/** public/js/state is pure data (ruling 1, task-5-brief.md; review round 1, M5). */
+const stateRestrictedPattern = {
+  group: ['**/components/**', '**/pages/**', '**/kinds/**'],
+  message: 'public/js/state is pure data: no components, pages or kinds.',
+};
+
 const baseRules = {
   'max-lines': ['error', { max: 200, skipBlankLines: true, skipComments: true }],
   'max-lines-per-function': ['error', { max: 50, skipBlankLines: true, skipComments: true }],
@@ -80,82 +86,31 @@ export default [
   {
     files: ['src/repo/**/*.js'],
     rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['**/services/**', '**/sources/**', '**/http/**', '**/routes/**', '**/kinds/**'],
-              message: 'src/repo may not import services, sources, http, routes or kinds.',
-            },
-          ],
-        },
-      ],
+      'no-restricted-imports': ['error', { patterns: [{ group: ['**/services/**', '**/sources/**', '**/http/**', '**/routes/**', '**/kinds/**'], message: 'src/repo may not import services, sources, http, routes or kinds.' }] }],
     },
   },
   {
     files: ['src/db/**/*.js'],
     rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['**/repo/**', '**/services/**', '**/sources/**', '**/http/**', '**/routes/**', '**/kinds/**'],
-              message: 'src/db may not import repo, services, sources, http, routes or kinds.',
-            },
-          ],
-        },
-      ],
+      'no-restricted-imports': ['error', { patterns: [{ group: ['**/repo/**', '**/services/**', '**/sources/**', '**/http/**', '**/routes/**', '**/kinds/**'], message: 'src/db may not import repo, services, sources, http, routes or kinds.' }] }],
     },
   },
   {
     files: ['src/services/**/*.js'],
     rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['**/http/**', '**/routes/**'],
-              message: 'src/services may not import http or routes.',
-            },
-            servicesKindsPattern,
-          ],
-        },
-      ],
+      'no-restricted-imports': ['error', { patterns: [{ group: ['**/http/**', '**/routes/**'], message: 'src/services may not import http or routes.' }, servicesKindsPattern] }],
     },
   },
   {
     files: ['src/routes/**/*.js'],
     rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['**/repo/**', '**/db/**'],
-              message: 'src/routes may not import repo or db directly.',
-            },
-          ],
-        },
-      ],
+      'no-restricted-imports': ['error', { patterns: [{ group: ['**/repo/**', '**/db/**'], message: 'src/routes may not import repo or db directly.' }] }],
     },
   },
   {
     files: ['src/sources/**/*.js'],
     rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['**/repo/**', '**/services/**', '**/http/**', '**/routes/**', '**/kinds/**'],
-              message: 'src/sources may not import repo, services, http, routes or kinds.',
-            },
-          ],
-        },
-      ],
+      'no-restricted-imports': ['error', { patterns: [{ group: ['**/repo/**', '**/services/**', '**/http/**', '**/routes/**', '**/kinds/**'], message: 'src/sources may not import repo, services, http, routes or kinds.' }] }],
     },
   },
   {
@@ -164,20 +119,16 @@ export default [
       globals: { ...globals.browser },
     },
     rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['**/src/**'],
-              message: "public/js is browser code: it may not import src/** (server-only code with Node built-ins). Read settings and copy from the absolute '/site/site.js' instead.",
-            },
-          ],
-        },
-      ],
+      'no-restricted-imports': ['error', { patterns: [{ group: ['**/src/**'], message: "public/js is browser code: it may not import src/** (server-only code with Node built-ins). Read settings and copy from the absolute '/site/site.js' instead." }] }],
       // '/site/site.js' is a real path once built (public/site/site.js, served at that URL), but
       // not one Node's resolver -- or eslint-plugin-import's -- can find from this source file.
       'import/no-unresolved': ['error', { ignore: ['^/site/'] }],
+    },
+  },
+  {
+    files: ['public/js/state/**/*.js'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [stateRestrictedPattern] }],
     },
   },
   {

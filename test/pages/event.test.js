@@ -76,7 +76,7 @@ test('composeEvent: the newest-first toggle and the report link', () => {
 
 test('composeEvent: the search icon links to the event-scoped search, as an SVG (not an emoji), matching the header\'s icon style', () => {
   const markup = String(composeEvent(EVENT));
-  assert.match(markup, /href="\/search\/\?event=solluna-happy-day-2026-10-19"/);
+  assert.match(markup, /href="\/search\?event=solluna-happy-day-2026-10-19"/);
   assert.match(markup, /aria-label="search this event"/);
   assert.match(markup, /<a class="c-event__search"[^>]*>\s*<svg width="16" height="16" viewBox="0 0 24 24"/);
   assert.ok(!markup.includes('🔍'));

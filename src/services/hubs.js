@@ -9,7 +9,7 @@ import { listVisibleEvents, getVisibleEventBySlug } from '../repo/events.js';
 import { getPersonByHandle, listPeople } from '../repo/people.js';
 import { findAccountForView } from '../repo/accounts.js';
 import {
-  countsByEventKind, eventCrowd, eventLabels, personCounts, visibleAccountHandles, visibleCategories, visiblePersonIds,
+  countsByEventKind, eventCrowd, eventLabels, personCounts, visibleAccountHandles, visibleCategories, visibleClients, visiblePersonIds,
 } from '../repo/hubQueries.js';
 import { formatName } from '../site/loadSite.js';
 import { kindsOf, chipOf } from './cards.js';
@@ -128,19 +128,20 @@ export async function accountView(deps, handle, params = {}) {
 
 /**
  * The search filter options: featured people always, anyone else only
- * while on a visible item; categories, events and accounts only through
- * visible items.
+ * while on a visible item; categories, clients, events and accounts only
+ * through visible items (review round 1, I3: `clients` added).
  * @param {ViewDeps} deps @returns {Promise<FilterOptions>}
  */
 export async function filterOptions(deps) {
-  const [people, onVisible, categories, events, accounts] = await Promise.all([
-    listPeople(deps.db), visiblePersonIds(deps.db), visibleCategories(deps.db),
+  const [people, onVisible, categories, clients, events, accounts] = await Promise.all([
+    listPeople(deps.db), visiblePersonIds(deps.db), visibleCategories(deps.db), visibleClients(deps.db),
     listVisibleEvents(deps.db, { limit: RECENT_EVENTS }), visibleAccountHandles(deps.db),
   ]);
   const format = (/** @type {string} */ name) => formatName(deps.site, name);
   return {
     people: people.filter((p) => p.featured || onVisible.has(p.id)).map((p) => chipOf(p, format)),
     categories,
+    clients,
     events: events.map((e) => ({ slug: e.slug, name: e.name })),
     accounts,
   };

@@ -39,43 +39,71 @@ function positiveInt(value) {
   return Number.isInteger(n) && n > 0 ? n : undefined;
 }
 
+/** A plain `YYYY-MM-DD` that's also a real calendar date (mirrors `src/services/search.js`'s own `isDate`, which this layer can't import). */
+const DATE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+/** @param {string} value @returns {boolean} */
+function isValidDate(value) {
+  return DATE.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
+}
+/** @param {string|null} value @returns {string|undefined} */
+function dateOrUndefined(value) {
+  return value && isValidDate(value) ? value : undefined;
+}
+
 /**
  * The `State` a search page URL's query string carries. Unknown or
  * malformed values are dropped rather than thrown on, so a hand-edited
- * or stale URL degrades to "no filter" instead of a broken page.
+ * or stale URL degrades to "no filter" instead of a broken page --
+ * including an invalid `from`/`to` (review round 1, I2). List fields
+ * (`people`, `types`) are repeated params (`?people=1&people=2`, review
+ * round 1, M3), read with `getAll`.
  * @param {URLSearchParams} params
  * @returns {State}
  */
 export function parseState(params) {
-  const peopleRaw = params.get('people');
-  const typesRaw = params.get('types');
   const clientRaw = params.get('client');
   return {
     q: params.get('q') ?? '',
-    people: peopleRaw ? peopleRaw.split(',').map(positiveInt).filter((n) => n !== undefined) : [],
+    people: params.getAll('people').map(positiveInt).filter((n) => n !== undefined),
     peopleMode: params.get('peopleMode') === 'all' ? 'all' : 'any',
-    types: typesRaw ? typesRaw.split(',').filter(Boolean) : [],
+    types: params.getAll('types').filter(Boolean),
     event: params.get('event') ?? undefined,
     account: params.get('account') ?? undefined,
     client: clientRaw ? positiveInt(clientRaw) : undefined,
-    from: params.get('from') ?? undefined,
-    to: params.get('to') ?? undefined,
+    from: dateOrUndefined(params.get('from')),
+    to: dateOrUndefined(params.get('to')),
   };
+}
+
+/**
+ * Drops any `types` entry that isn't a known category name (from
+ * `options.categories`, `/api/filters`) or one of the two placement
+ * chips -- so a stale or hand-edited URL's unknown type is neither
+ * counted by `filterCount` nor shown as an active-filter chip (review
+ * round 1, M3). Call once `options` is actually loaded.
+ * @param {State} state @param {{ categories?: { id: number, name: string }[] }} options
+ * @returns {State}
+ */
+export function sanitizeTypes(state, options) {
+  const known = new Set([...(options.categories ?? []).map((c) => c.name), ...Object.keys(PLACEMENT_BY_TYPE)]);
+  return { ...state, types: state.types.filter((type) => known.has(type)) };
 }
 
 /**
  * `state` as a URL query string, with every empty/default field left out
  * (so the canonical URL for no filters is just `/search`, not
- * `/search?peopleMode=any&...`).
+ * `/search?peopleMode=any&...`). List fields repeat the param (M3),
+ * rather than comma-joining, so each value round-trips through
+ * `parseState` untouched (a category name may itself contain a comma).
  * @param {State} state
  * @returns {URLSearchParams}
  */
 export function toQuery(state) {
   const params = new URLSearchParams();
   if (state.q) params.set('q', state.q);
-  if (state.people.length > 0) params.set('people', state.people.join(','));
+  for (const id of state.people) params.append('people', String(id));
   if (state.peopleMode === 'all') params.set('peopleMode', 'all');
-  if (state.types.length > 0) params.set('types', state.types.join(','));
+  for (const type of state.types) params.append('types', type);
   if (state.event) params.set('event', state.event);
   if (state.account) params.set('account', state.account);
   if (state.client !== undefined) params.set('client', String(state.client));

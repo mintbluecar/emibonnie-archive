@@ -8,7 +8,7 @@ import { itemView, addedByOf } from '../../src/services/itemView.js';
 import { search } from '../../src/services/search.js';
 import { upsertAccount } from '../../src/repo/accounts.js';
 import { addPerson } from '../../src/repo/people.js';
-import { ensureCategory } from '../../src/repo/lookups.js';
+import { ensureCategory, ensureClient } from '../../src/repo/lookups.js';
 import { setItemPeople } from '../../src/repo/itemPeople.js';
 import { insertItem, insertUser } from '../helpers/seed.js';
 
@@ -112,6 +112,7 @@ test('filterOptions: people, categories, visible events, and only accounts with 
   assert.equal(before.events.length, 4);
   assert.deepEqual(Object.keys(before.events[0]).sort(), ['name', 'slug']);
   assert.deepEqual(before.categories, [], 'no visible item has a category yet');
+  assert.deepEqual(before.clients, [], 'no visible item has a client yet');
   assert.deepEqual(before.people.map((p) => p.name), ['sol', 'luna', 'host', 'star guest']);
 
   await deps.db.transaction((/** @type {any} */ tx) => tx.query("update accounts set opted_out_at = now() where handle = 'tl_gamma'"), SYSTEM);
@@ -120,6 +121,26 @@ test('filterOptions: people, categories, visible events, and only accounts with 
     assert.deepEqual(after.accounts, [{ handle: 'tl_alpha' }, { handle: 'tl_beta' }]);
   } finally {
     await deps.db.transaction((/** @type {any} */ tx) => tx.query("update accounts set opted_out_at = null where handle = 'tl_gamma'"), SYSTEM);
+  }
+});
+
+test('filterOptions: a client used only on a hidden item is excluded (review round 1, I3)', async () => {
+  const { itemId, clientId } = await deps.db.transaction(async (/** @type {any} */ tx) => {
+    const client = await ensureClient(tx, 'Hidden Channel');
+    const item = await insertItem(tx, { reviewState: 'pending' });
+    await tx.query('update items set client_id = $1 where id = $2', [client, item]);
+    return { itemId: item, clientId: client };
+  }, SYSTEM);
+  const clientNames = async () => (await filterOptions(deps)).clients.map((c) => c.name);
+  try {
+    assert.ok(!(await clientNames()).includes('Hidden Channel'), 'pending: client not listed');
+    await deps.db.transaction((/** @type {any} */ tx) => tx.query("update items set review_state = 'published' where id = $1", [itemId]), SYSTEM);
+    assert.ok((await clientNames()).includes('Hidden Channel'), 'published: client listed');
+  } finally {
+    await deps.db.transaction((/** @type {any} */ tx) => tx.query(
+      "update items set deleted_at = now(), deleted_reason = 'spam', client_id = null where id = $1", [itemId],
+    ), SYSTEM);
+    await deps.db.transaction((/** @type {any} */ tx) => tx.query('update clients set deleted_at = now() where id = $1', [clientId]), SYSTEM);
   }
 });
 
