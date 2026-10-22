@@ -149,15 +149,19 @@ export function textShade(hex, bgHexes, ink) {
  *     own tint, `color-mix(in srgb, --c 12%, --color-card)` (bubbles.css)
  *   - a chip's `--on` text sits on its own on-tint,
  *     `color-mix(in srgb, --c 14%, --color-bg)` (chips.css)
- *   - a person header's name (`.c-person-header__name`) sits directly on
- *     `--color-bg`: `.c-person-header` has no background of its own
- *     (personHeader.css)
+ *   - a person header's name (`.c-person-header__name`) sits on the
+ *     header card's own gradient, from `color-mix(in srgb, --c 12%,
+ *     --color-card)` to 3% (personHeader.css, Task 9b), so both ends count
+ *   - anything else: `--color-bg` and `--color-card`
+ * Exported for its unit test.
  * @param {Element} node @param {string} colour @param {string} bg @param {string} card
  * @returns {string[]}
  */
-function textBackgroundsFor(node, colour, bg, card) {
-  if (typeof node.matches === 'function' && node.matches('.c-bubbles__msg')) return [mixSrgb(colour, card, 0.12)];
-  if (typeof node.matches === 'function' && node.matches('.c-chips__chip')) return [mixSrgb(colour, bg, 0.14)];
+export function textBackgroundsFor(node, colour, bg, card) {
+  const is = (/** @type {string} */ selector) => typeof node.matches === 'function' && node.matches(selector);
+  if (is('.c-bubbles__msg')) return [mixSrgb(colour, card, 0.12)];
+  if (is('.c-chips__chip')) return [mixSrgb(colour, bg, 0.14)];
+  if (is('.c-person-header')) return [mixSrgb(colour, card, 0.12), mixSrgb(colour, card, 0.03)];
   return [bg, card];
 }
 

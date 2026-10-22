@@ -7,7 +7,7 @@
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mount, on, applyColours, textShade, contrastRatio } from '../../public/js/core/dom.js';
+import { mount, on, applyColours, textShade, contrastRatio, textBackgroundsFor } from '../../public/js/core/dom.js';
 import { html, raw } from '../../public/js/core/html.js';
 import { FakeEl } from '../helpers/fakeDom.js';
 
@@ -174,4 +174,10 @@ test('textShade: every example/real-site person colour clears 4.6:1 in both them
       assert.ok(ratio >= 4.6, `${colour} (${mode}) vs its own bubble tint ${bubbleTint}: ${shaded} only reaches ${ratio}`);
     }
   }
+});
+
+test('textBackgroundsFor (Task 9b): a person header name is checked against both ends of its own tinted card (12% and 3% of its colour over the card)', () => {
+  const header = { matches: (/** @type {string} */ s) => s === '.c-person-header' };
+  assert.deepEqual(textBackgroundsFor(/** @type {any} */ (header), '#9b6cff', LIGHT_BG, LIGHT_CARD),
+    [mixSrgbForTest('#9b6cff', LIGHT_CARD, 0.12), mixSrgbForTest('#9b6cff', LIGHT_CARD, 0.03)]);
 });

@@ -32,26 +32,24 @@ const APP_SELECTOR = 'app';
 /** @typedef {import('../../../src/http/contracts.js').FilterOptions} FilterOptions */
 /** @typedef {import('./hubGroups.js').HubCtx & { options: FilterOptions|null, selected: Set<number> }} Ctx */
 
-/** @param {PersonView} data @returns {import('../core/html.js').SafeHtml} */
-function headRow(data) {
-  const href = `/search?${toQuery({ ...EMPTY_STATE, people: [data.person.id] }).toString()}`;
-  return html`
-    <div class="c-person__head">
-      ${personHeader.render({ person: data.person })}
-      <a class="c-person__search" href="${href}" aria-label="${t('person.search')}">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="7"></circle>
-          <path d="M21 21l-4.3-4.3"></path>
-        </svg>
-      </a>
-    </div>
-  `;
-}
-
 /** @param {PersonView['counts']} counts @returns {import('../core/html.js').SafeHtml} */
 const countsLine = (counts) => html`<p class="c-hub__counts">${t('person.countsLine', {
   translations: tCount('person.translations', counts.items), events: tCount('person.events', counts.events), shared: tCount('person.sharedStories', counts.sharedStories),
 })}</p>`;
+
+/** The person's card: their header, with the counts line and the scoped-search icon inside it (Task 9b). @param {PersonView} data @returns {import('../core/html.js').SafeHtml} */
+function headRow(data) {
+  const href = `/search?${toQuery({ ...EMPTY_STATE, people: [data.person.id] }).toString()}`;
+  const action = html`
+    <a class="c-person__search" href="${href}" aria-label="${t('person.search')}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle>
+        <path d="M21 21l-4.3-4.3"></path>
+      </svg>
+    </a>
+  `;
+  return personHeader.render({ person: data.person, counts: countsLine(data.counts), action });
+}
 
 /** @param {number} selfId @param {import('../../../src/http/contracts.js').PersonChip[]} people @returns {import('../core/html.js').SafeHtml} */
 function pickerMarkup(selfId, people) {
@@ -77,7 +75,6 @@ function pickerErrorMarkup() {
 export function composePerson(data) {
   const content = html`
     ${headRow(data)}
-    ${countsLine(data.counts)}
     ${segmentedControl('byEvent', true)}
     <div class="c-hub__content">${activeView('byEvent', data.sections, {})}</div>
     <dialog class="c-hub__picker" aria-label="${t('person.withTitle')}"></dialog>

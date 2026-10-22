@@ -1,16 +1,9 @@
 /*
  * public/js/pages/{person,account}.js and public/js/pages/hubGroups.js:
  * the layout shared by the person and translator pages -- the
- * head row, the counts/totals line, the segmented control, each
+ * translator's head card, the counts/totals line, the segmented control, each
  * group's label, and the person page's "with…" picker dialog.
  */
-
-.c-person__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
 
 .c-person__search {
   display: flex;
@@ -21,9 +14,13 @@
   flex: none;
 }
 
+/* A plain card, like the person page's (mockups/people-me-v1.html, Task 9b). */
 .c-account__head {
   text-align: center;
-  padding: 16px 0 4px;
+  padding: 16px;
+  margin: 12px 0;
+  border-radius: 20px;
+  background: var(--color-card);
 }
 
 .c-account__handle {

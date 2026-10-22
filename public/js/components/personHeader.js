@@ -1,21 +1,27 @@
 // @ts-check
-/** A person page's header: emoji, name, their IG handle, coloured via `data-c` + `bind()`. */
+/**
+ * A person page's header: a centred card tinted with the person's colour
+ * (`data-c` + `bind()`), with a large emoji, their name, their IG handle,
+ * then the page's own counts line and action (the scoped-search icon), as
+ * in mockups/people-me-v1.html (Task 9b).
+ */
 import { html } from '../core/html.js';
 import { applyColours } from '../core/dom.js';
 
 /**
- * @param {{ person: import('../../../src/http/contracts.js').PersonChip & { featured: boolean } }} props
+ * @param {{ person: import('../../../src/http/contracts.js').PersonChip & { featured: boolean },
+ *   counts?: import('../core/html.js').SafeHtml, action?: import('../core/html.js').SafeHtml }} props
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function render(props) {
-  const { person } = props;
+  const { person, counts, action } = props;
   return html`
     <div class="c-person-header"${person.colour ? html` data-c="${person.colour}"` : ''}>
       <span class="c-person-header__emoji" aria-hidden="true">${person.emoji}</span>
-      <div>
-        <h1 class="c-person-header__name">${person.name}</h1>
-        ${person.igHandle ? html`<p class="c-person-header__handle">@${person.igHandle}</p>` : ''}
-      </div>
+      <h1 class="c-person-header__name">${person.name}</h1>
+      ${person.igHandle ? html`<p class="c-person-header__handle">@${person.igHandle}</p>` : ''}
+      ${counts ?? ''}
+      ${action ? html`<div class="c-person-header__action">${action}</div>` : ''}
     </div>
   `;
 }
