@@ -91,6 +91,20 @@ function collectTags(headerLines, opts) {
 }
 
 /**
+ * Every plain tag anywhere in a post (Task 9a item 5): the same buckets
+ * as the header's, over all of its lines, so a known event tag after the
+ * text still matches its event. Person and ignored tags are left out, so
+ * a person tag never matches an event. Only for matching *known* tags:
+ * new tags, proposals and placement still come from the header alone.
+ * @param {string} text
+ * @param {{ignoredHashtags?: string[], personHandles?: string[]}} options
+ * @returns {string[]}
+ */
+export function postTags(text, { ignoredHashtags = [], personHandles = [] }) {
+  return collectTags(splitLines(text), { ignoredHashtags, personHandles }).tags;
+}
+
+/**
  * @param {Line[]} headerLines
  * @param {LiveTextPattern[]} livePatterns
  */

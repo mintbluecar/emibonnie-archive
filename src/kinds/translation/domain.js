@@ -1,6 +1,6 @@
 // @ts-check
 import { splitLines, findMarkers } from '../../domain/lines.js';
-import { parseHeader } from '../../domain/header.js';
+import { parseHeader, postTags } from '../../domain/header.js';
 import { norm } from '../../domain/text.js';
 import { resolveSpeakers, missingMarkers, personIdsFrom } from '../../domain/speakers.js';
 import { matchEvent, proposeEvent, peopleForTags } from '../../domain/events.js';
@@ -167,7 +167,8 @@ function readText(tweet, ctx) {
     timezone: ctx.timezone,
   });
   const allText = [text, ...tweet.followUps.map((f) => f.text)].join('\n');
-  return { text, header, markers: findMarkers(splitLines(allText)) };
+  const post = { text, tags: postTags(text, { ignoredHashtags: ctx.ignoredHashtags, personHandles }) };
+  return { text, header, post, markers: findMarkers(splitLines(allText)) };
 }
 
 /**
@@ -178,11 +179,11 @@ function readText(tweet, ctx) {
  * @returns {TranslationDraft}
  */
 export function draftTranslation(tweet, ctx) {
-  const { text, header, markers } = readText(tweet, ctx);
+  const { text, header, post, markers } = readText(tweet, ctx);
   const speakers = resolveSpeakers({ defaults: ctx.defaultMarkers, people: ctx.people, remembered: ctx.remembered, chosen: ctx.chosen });
   const postAuthorIds = postAuthorIdsOf(tweet, ctx.personAccounts);
   const { events, people, formatName, timezone } = ctx;
-  const match = matchEvent({ header, postedAt: tweet.createdAt, events, people, formatName, timezone, postAuthorIds });
+  const match = matchEvent({ header, postedAt: tweet.createdAt, events, people, formatName, timezone, postAuthorIds, post });
   const tagIds = peopleForTags(header.personTags, ctx.people).map((p) => p.id);
   const speakerIds = personIdsFrom(speakers, markers);
   const placing = placingOf(match, { ctx, header, tagIds, postAuthorIds });

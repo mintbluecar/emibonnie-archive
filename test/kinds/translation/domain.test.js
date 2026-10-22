@@ -217,3 +217,20 @@ test("an 'event' override with no signals proposes a slug that does not collide"
   assert.equal(draft.common.placement, 'event');
   assert.equal(draft.common.proposal?.slug, 'event-2026-02-12-2');
 });
+
+test('a known event hashtag on the tweet\'s last line places it in that event (known tags decide, Task 9a item 5)', () => {
+  const text = 'Rough trans\n\n☀️: thank you for coming\n🌙: see you next time\n\n#SLHappyDay2026';
+  const draft = draftTranslation(tweetWith(text), ctx({ events: [HAPPY_DAY] }));
+  assert.equal(draft.common.placement, 'event');
+  assert.equal(draft.common.eventId, HAPPY_DAY.id);
+  assert.equal(draft.common.proposal, null);
+  assert.deepEqual(draft.newTags ?? [], []);
+});
+
+test('a known keyword after the text matches too; an unknown tag there steers nothing', () => {
+  const keyword = draftTranslation(tweetWith('Rough trans\n\n☀️: hi\n\nSOLLUNA HAPPY DAY'), ctx({ events: [HAPPY_DAY] }));
+  assert.equal(keyword.common.eventId, HAPPY_DAY.id);
+  const unknown = draftTranslation(tweetWith('Rough trans\n\n☀️: hi\n\n#SomethingElse'), ctx({ events: [HAPPY_DAY] }));
+  assert.equal(unknown.common.placement, 'unsorted');
+  assert.equal(unknown.common.eventId, null);
+});

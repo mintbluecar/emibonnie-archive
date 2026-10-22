@@ -46,3 +46,4 @@ The first release: a read-only archive (browse, search, item pages) with intake 
   - `npm run new kind t` gives its refusal reason once, not twice.
   - `lowercaseNames` lowercases people's names only. Person and translator pages no longer lowercase event names in their group labels.
   - Search results show each matching line's speaker as the item page does: a known person's standard emoji, not the translator's own marker. A kind's `search.matchLines` now gets the presenter context as an optional third argument.
+  - A known event hashtag or keyword matches its event wherever it is in the post, e.g. on the last line after the translation ("known tags decide"). New tags, proposals and placement still come from the header only, and person tags never match an event.

@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { matchEvent, proposeEvent } from '../../src/domain/events.js';
-import { parseHeader } from '../../src/domain/header.js';
+import { parseHeader, postTags } from '../../src/domain/header.js';
 import { LIVE_PATTERNS } from '../../src/domain/constants.js';
 
 const SOL = 1;
@@ -78,6 +78,49 @@ test('an unknown uppercase tag proposes no event: unsorted, newTags carries it',
   assert.equal(result.event, null);
   assert.equal(result.proposal, null);
   assert.deepEqual(result.newTags, ['StarGuest']);
+});
+
+/**
+ * A whole post: its speech first, then `tail` on the last line (Task 9a item 5: translators often
+ * put the event's tag or keyword after the text).
+ * @param {string} tail @param {{ events?: any[] }} [opts]
+ */
+function matchTail(tail, { events = [] } = {}) {
+  const postedAt = '2026-10-19T13:00:00Z';
+  const text = `Rough trans\n\n☀️: hi\n🌙: hello\n\n${tail}`;
+  const known = { ignoredHashtags: ['solluna'], personHandles: ['solsunny', 'lunamoon'] };
+  const parsed = parseHeader(text, { ...known, livePatterns: LIVE_PATTERNS, postedAt, timezone: 'Asia/Bangkok' });
+  const post = { text, tags: postTags(text, known) };
+  return matchEvent({ header: parsed, postedAt, events, people: PEOPLE, formatName: lower, timezone: 'Asia/Bangkok', post });
+}
+
+test('known tags decide wherever they are: a known event hashtag on the last line matches its event', () => {
+  const result = matchTail('#SLHappyDay2026', { events: [HAPPY_DAY] });
+  assert.equal(result.placement, 'event');
+  assert.equal(result.event?.id, 10);
+  assert.equal(result.proposal, null);
+  assert.deepEqual(result.newTags, []);
+});
+
+test('known tags decide wherever they are: a known event keyword after the text matches its event', () => {
+  const result = matchTail('SOLLUNA HAPPY DAY', { events: [HAPPY_DAY] });
+  assert.equal(result.event?.id, 10);
+  assert.equal(matchTail('— solluna happy day, part 2 —', { events: [HAPPY_DAY] }).event?.id, 10, 'inside a line, any case');
+});
+
+test('after the text, a new tag or caps line steers nothing: no event, no proposal, not asked about', () => {
+  for (const tail of ['#StarGuest', 'A BRAND NEW SHOW']) {
+    const result = matchTail(tail, { events: [HAPPY_DAY] });
+    assert.equal(result.placement, 'unsorted', tail);
+    assert.equal(result.event, null, tail);
+    assert.equal(result.proposal, null, tail);
+    assert.deepEqual(result.newTags, [], tail);
+  }
+});
+
+test('a person hashtag after the text never matches an event, even one that carries the same tag', () => {
+  const odd = event({ id: 30, hashtags: ['lunamoon'], occurredOn: '2026-10-19' });
+  assert.equal(matchTail('#lunamoon', { events: [odd] }).event, null);
 });
 
 test('an empty header gives unsorted', () => {
