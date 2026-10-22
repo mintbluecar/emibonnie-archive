@@ -13,7 +13,8 @@ import {
   checkOneLivePattern,
 } from './fieldValidators.js';
 
-export { contrastRatio, DEFAULT_CARD_COLOUR, DARK_CARD_COLOUR, ALLOWED_REGIONS } from './contrast.js';
+export { contrastRatio, DEFAULT_CARD_COLOUR, DARK_CARD_COLOUR } from './contrast.js';
+export { ALLOWED_REGIONS } from './regions.js';
 
 /** @typedef {{ platform: string, handle: string }} OtherAccount */
 /**

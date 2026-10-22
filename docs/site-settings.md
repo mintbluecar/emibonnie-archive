@@ -22,7 +22,7 @@ path).
 | `ownerXUserId` | string of digits | required | The owner's numeric X user ID (never the handle; handles change). |
 | `sourceLanguage` | string | required | The language translations are from, e.g. `"th"`. |
 | `timezone` | IANA zone | required | Every "which day" calculation uses this zone, never UTC or the viewer's. Checked with `Intl.DateTimeFormat`. |
-| `region` | Vercel region code | default `"sin1"` | Must be one of the current Vercel serverless function regions (`src/site/contrast.js`'s `ALLOWED_REGIONS`). |
+| `region` | Vercel region code | default `"sin1"` | Must be one of the current Vercel serverless function regions (`src/site/regions.js`'s `ALLOWED_REGIONS`, from vercel.com/docs/regions). Pick the one nearest your database and your fans. |
 | `lowercaseNames` | boolean | default `false` | When true, `formatName()` lowercases every display name site-wide. |
 | `featuredPeople` | `FeaturedPerson[]` | required, non-empty | See below. |
 | `defaultMarkers` | `Record<string, { personHandle } \| { role }>` | default `{}` | Maps a speaker marker (e.g. an emoji) to a featured person's `igHandle` or a generic role. |

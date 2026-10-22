@@ -1,6 +1,7 @@
 // @ts-check
 import { ROLES } from '../domain/constants.js';
-import { contrastRatio, DEFAULT_CARD_COLOUR, DARK_CARD_COLOUR, ALLOWED_REGIONS } from './contrast.js';
+import { contrastRatio, DEFAULT_CARD_COLOUR, DARK_CARD_COLOUR } from './contrast.js';
+import { ALLOWED_REGIONS } from './regions.js';
 
 const COLOUR_RE = /^#[0-9a-f]{6}$/i;
 const ALLOWED_PLATFORMS = ['x', 'instagram', 'tiktok', 'youtube', 'weverse', 'telegram'];

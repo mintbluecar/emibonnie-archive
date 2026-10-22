@@ -1,22 +1,17 @@
 // @ts-check
 /**
- * One-shot setup for a fresh database: migrate, seed from `site/`, check
- * the kinds registry against `item_kinds`, and (optionally) grant the
- * app role. Safe to run again -- `migrate` and `seedFromSite` are both
- * idempotent.
+ * One-shot setup for a fresh database: migrate (and, optionally, grant
+ * the app role -- `npm run migrate`'s `runMigrate`), seed from `site/`,
+ * and check the kinds registry against `item_kinds`. Safe to run again
+ * -- `migrate` and `seedFromSite` are both idempotent.
  */
-import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createDb, dbOptionsFromEnv } from '../src/db/client.js';
-import { migrate } from '../src/db/migrate.js';
 import { loadSite } from '../src/site/loadSite.js';
 import { seedFromSite } from '../src/services/seedFromSite.js';
 import { listItemKindCodes } from '../src/repo/kinds.js';
-import { grantAppRole } from '../src/repo/roles.js';
 import { kindsRegistry } from '../src/kinds/_registry.js';
-
-const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
-export const ENGINE_MIGRATIONS = path.join(REPO_ROOT, 'src/db/migrations');
+import { runMigrate } from './migrate.js';
 
 /**
  * The registry codes that have no matching `item_kinds` row.
@@ -40,24 +35,10 @@ async function assertKindsMatchDb(db, registryCodes) {
   if (missing.length > 0) {
     throw new Error(
       `item_kinds is missing a row for: ${missing.join(', ')} -- ` +
-        'add an insert into item_kinds for it in a migration (src/kinds/<kind>/migrations/), then re-run setup',
+        "add `insert into item_kinds values ('<kind>')` to the kind's migration in src/db/migrations/ " +
+        '(npm run new kind <name> scaffolds one), then re-run setup',
     );
   }
-}
-
-/**
- * @param {import('../src/db/common.js').Db} db
- * @param {(line: string) => void} log
- * @returns {Promise<void>}
- */
-async function grantAppRoleIfConfigured(db, log) {
-  const role = process.env.APP_DB_ROLE;
-  if (!role) {
-    log('hint: set APP_DB_ROLE=<role> to grant it write access on this schema after migrating');
-    return;
-  }
-  await db.transaction((tx) => grantAppRole(tx, role), { actor: 'system' });
-  log(`granted the app role to ${role}`);
 }
 
 /**
@@ -73,19 +54,12 @@ export async function runSetup(options = {}) {
   const db = options.db ?? createDb(dbOptionsFromEnv(process.env));
 
   try {
-    const applied = await migrate(db, {
-      dirs: [
-        { namespace: 'engine', dir: ENGINE_MIGRATIONS },
-        { namespace: 'site', dir: path.join(siteDir, 'migrations') },
-      ],
-    });
-    for (const label of applied) log(`migrated ${label}`);
+    await runMigrate({ db, siteDir, log });
 
     const seeded = await seedFromSite({ db, site });
     log(`seeded ${seeded.people} people, ${seeded.hashtags} ignored hashtags, ${seeded.categories} categories`);
 
     await assertKindsMatchDb(db, options.registryCodes ?? Object.keys(kindsRegistry));
-    await grantAppRoleIfConfigured(db, log);
   } finally {
     if (ownDb) await db.end();
   }

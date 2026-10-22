@@ -5,13 +5,6 @@ import { fileURLToPath } from 'node:url';
 /** The default (light-mode) card colour, from `src/styles/tokens.css`. */
 export const DEFAULT_CARD_COLOUR = '#fffdf8';
 
-/** Vercel serverless function region codes, as of 2026-10-21. */
-export const ALLOWED_REGIONS = [
-  'arn1', 'bom1', 'cdg1', 'cle1', 'cpt1', 'dub1', 'fra1', 'gru1',
-  'hnd1', 'hkg1', 'iad1', 'icn1', 'kix1', 'lhr1', 'pdx1', 'sfo1',
-  'sin1', 'syd1',
-];
-
 /**
  * Reads the dark-mode `--color-card` token out of `src/styles/tokens.css`,
  * so the schema's contrast check and the engine's actual dark theme can

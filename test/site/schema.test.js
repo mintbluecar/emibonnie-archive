@@ -115,3 +115,14 @@ test('validateSite: errors when contactUrl is missing', () => {
   if (result.ok) return;
   assert.ok(result.errors.some((e) => e.startsWith('contactUrl:')));
 });
+
+test('ALLOWED_REGIONS: Vercel\'s 19 compute regions (vercel.com/docs/regions, checked 2026-10-23), re-exported by schema.js', async () => {
+  const { ALLOWED_REGIONS } = await import('../../src/site/schema.js');
+  const { ALLOWED_REGIONS: own } = await import('../../src/site/regions.js');
+  assert.equal(ALLOWED_REGIONS, own);
+  assert.equal(own.length, 19);
+  assert.ok(own.includes('yul1'), 'Montréal, added since the first list');
+  const raw = readFixture('examples/solluna/site.json');
+  assert.equal(validateSite({ ...raw, region: 'yul1' }).ok, true);
+  assert.equal(validateSite({ ...raw, region: 'dev1' }).ok, false, 'the local-dev pseudo-region is not a deploy target');
+});

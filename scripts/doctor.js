@@ -72,19 +72,56 @@ function checkEnvVars(env) {
   return { symbol: '✗', text: `missing env var(s): ${missing.join(', ')} — set them in your .env file` };
 }
 
+const SEMVER_TAG = /^v(\d+)\.(\d+)\.(\d+)$/;
+
+/** @param {string} tag @returns {number[]} */
+const versionOf = (tag) => (SEMVER_TAG.exec(tag) ?? []).slice(1).map(Number);
+
+/** @param {string} a @param {string} b @returns {number} negative when a is older */
+function compareVersions(a, b) {
+  const [x, y] = [versionOf(a), versionOf(b)];
+  return x[0] - y[0] || x[1] - y[1] || x[2] - y[2];
+}
+
+/**
+ * The newest `vX.Y.Z` tag in `git ls-remote --tags` output, or null.
+ * An annotated tag is listed twice: as `refs/tags/<tag>` and as the
+ * peeled `refs/tags/<tag>^{}` -- the commit it points at (git-ls-remote
+ * docs, "OUTPUT": https://git-scm.com/docs/git-ls-remote; the `^{}`
+ * suffix, "dereference the tag recursively until a non-tag object is
+ * found", is gitrevisions' notation: https://git-scm.com/docs/gitrevisions).
+ * So `^{}` is stripped and the names deduped; non-semver tags are ignored,
+ * and the order git printed them in is never relied on.
+ * @param {string} tagsOutput
+ * @returns {string|null}
+ */
+export function latestTagOf(tagsOutput) {
+  const names = tagsOutput.split('\n')
+    .map((line) => line.split('refs/tags/')[1]?.trim().replace(/\^\{\}$/, ''))
+    .filter((name) => name !== undefined && SEMVER_TAG.test(name));
+  const tags = [...new Set(/** @type {string[]} */ (names))].sort(compareVersions);
+  return tags.at(-1) ?? null;
+}
+
 /**
  * @param {string} tagsOutput
  * @param {string} repoRoot
  * @returns {DoctorLine}
  */
-function compareUpstreamVersion(tagsOutput, repoRoot) {
-  const tagLine = tagsOutput.split('\n').find((line) => line.includes('refs/tags/'));
-  if (!tagLine) return { symbol: '·', text: 'engine version — skipped (upstream has no tags)' };
-  const latestTag = tagLine.split('refs/tags/')[1]?.trim();
+export function compareUpstreamVersion(tagsOutput, repoRoot) {
+  const latestTag = latestTagOf(tagsOutput);
+  if (!latestTag) return { symbol: '·', text: 'engine version — skipped (upstream has no vX.Y.Z tags)' };
   const pkg = JSON.parse(readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
   const localVersion = `v${pkg.version}`;
   if (localVersion === latestTag) return { symbol: '✓', text: `engine version ${localVersion} matches upstream` };
-  return { symbol: '✗', text: `engine version ${localVersion} is behind upstream ${latestTag} — run git pull upstream main` };
+  if (SEMVER_TAG.test(localVersion) && compareVersions(localVersion, latestTag) > 0) {
+    return { symbol: '✓', text: `engine version ${localVersion} is ahead of upstream's ${latestTag}` };
+  }
+  return {
+    symbol: '✗',
+    text: `engine version ${localVersion} is behind upstream ${latestTag} — git fetch upstream --tags && git merge ${latestTag}, ` +
+      "then follow that release's upgrade steps in CHANGELOG.md",
+  };
 }
 
 /**
@@ -100,7 +137,7 @@ function checkUpstreamVersion(repoRoot) {
     return { symbol: '·', text: 'engine version — skipped (no upstream remote)' };
   }
   try {
-    const tagsOutput = execFileSync('git', ['ls-remote', '--tags', '--sort=-v:refname', 'upstream'], {
+    const tagsOutput = execFileSync('git', ['ls-remote', '--tags', 'upstream'], {
       cwd: repoRoot,
       stdio: ['ignore', 'pipe', 'ignore'],
       timeout: 5000,

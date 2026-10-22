@@ -64,3 +64,36 @@ test('doctor: no upstream remote is a neutral skip, not a ✗', () => {
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });
+
+test('latestTagOf: peeled annotated-tag lines (refs/tags/vX.Y.Z^{}) are stripped and deduped; the highest semver wins', async () => {
+  const { latestTagOf } = await import('../../scripts/doctor.js');
+  // `git ls-remote --tags` prints an annotated tag twice: the tag, and `<tag>^{}` for the commit it points at
+  // (git-ls-remote docs, OUTPUT; gitrevisions: `<rev>^{}` dereferences the tag).
+  const output = [
+    'aaa1\trefs/tags/v0.10.0^{}',
+    'aaa2\trefs/tags/v0.10.0',
+    'bbb1\trefs/tags/v0.9.1',
+    'ccc1\trefs/tags/not-a-version',
+    'ddd1\trefs/tags/v0.2.0^{}',
+    '',
+  ].join('\n');
+  assert.equal(latestTagOf(output), 'v0.10.0');
+  assert.equal(latestTagOf('eee\trefs/tags/v0.1.0^{}\nfff\trefs/tags/v0.1.0\n'), 'v0.1.0');
+  assert.equal(latestTagOf(''), null);
+  assert.equal(latestTagOf('ggg\trefs/tags/release-candidate\n'), null);
+});
+
+test('compareUpstreamVersion: the local version equal to the newest (peeled) tag is a ✓, an older one a ✗ naming the tag', async () => {
+  const { compareUpstreamVersion } = await import('../../scripts/doctor.js');
+  const repoRoot = makeTempRepoRoot();
+  try {
+    assert.equal(compareUpstreamVersion('a\trefs/tags/v0.1.0^{}\nb\trefs/tags/v0.1.0\n', repoRoot).symbol, '✓');
+    const behind = compareUpstreamVersion('a\trefs/tags/v0.2.0^{}\nb\trefs/tags/v0.2.0\nc\trefs/tags/v0.1.0\n', repoRoot);
+    assert.equal(behind.symbol, '✗');
+    assert.match(behind.text, /behind upstream v0\.2\.0 — git fetch upstream --tags && git merge v0\.2\.0/);
+    assert.doesNotMatch(behind.text, /\^\{\}/);
+    assert.equal(compareUpstreamVersion('a\trefs/tags/v0.0.9\n', repoRoot).symbol, '✓', 'ahead of upstream is not a problem');
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
