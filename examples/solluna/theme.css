@@ -8,7 +8,17 @@
   --gradient-from: #c47a12;
   /* Darkened slightly from lunamoon's #6a5cd6: --gradient-to is also used as
      plain text colour by several engine components, and #6a5cd6 was only
-     4.5:1/4.5:1 against --color-bg/--color-card -- just under WCAG AA's
-     4.5:1 (axe's color-contrast rule, Plan 1b Task 7 brief). */
+     4.47:1/5.02:1 against --color-bg/--color-card -- the first just under
+     WCAG AA's 4.5:1 (axe's color-contrast rule, Plan 1b Task 7 brief). Now
+     4.94:1/5.56:1. */
   --gradient-to: #6456c9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* #6a5cd6 (lunamoon's own colour) is 3.70:1/3.49:1 against the dark
+       --color-bg/--color-card -- also below 4.5:1 (review round 2, I1).
+       Lightened the same hue, keeping it recognisably luna purple: 5.02:1/4.73:1. */
+    --gradient-to: #8276dd;
+  }
 }

@@ -100,7 +100,7 @@
   border-radius: 14px;
   font-size: 14px;
   font-weight: 800;
-  color: #fff;
+  color: var(--color-accent-text);
   background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
 }
 

@@ -9,7 +9,7 @@
  * but a 404). Never rethrows: a transient network hiccup shows this
  * message instead of crashing the page blank.
  */
-import { mount } from '../core/dom.js';
+import { mountPage } from '../core/dom.js';
 import { t } from '../core/site.js';
 import * as pageShell from '../components/pageShell.js';
 import * as emptyState from '../components/emptyState.js';
@@ -20,5 +20,5 @@ import * as emptyState from '../components/emptyState.js';
  * @returns {void}
  */
 export function mountLoadError(root, { active } = {}) {
-  mount(root, pageShell.render({ active, compact: true, content: emptyState.render({ message: t('page.loadFailed') }) }));
+  mountPage(root, pageShell.render({ active, compact: true, content: emptyState.render({ message: t('page.loadFailed') }) }));
 }

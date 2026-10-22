@@ -3,6 +3,7 @@ node_modules/
 .vercel/
 .devdb/
 .e2e-db/
+.tree-hash
 public/site/
 public/build/
 public/robots.txt
@@ -12,8 +13,7 @@ src/kinds/_registry.js
 public/js/kinds/_registry.js
 .superpowers/
 
-# Playwright (Plan 1b Task 7): generated media fixtures, and its own run output.
-test/e2e/.generated/
+# Playwright (Plan 1b Task 7): its own run output. e2e/fixtures/ is committed, not generated.
 /test-results/
 /playwright-report/
 /blob-report/

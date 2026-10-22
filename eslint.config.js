@@ -141,12 +141,21 @@ export default [
     },
   },
   {
-    // Plan 1b Task 7: test/e2e's Node-side Playwright code and its browser-side
+    // Plan 1b Task 7: e2e/'s Node-side Playwright code and its browser-side
     // page.evaluate() callbacks are both lexically in these files, so both
     // globals sets are needed (configuring the glob, not disabling a rule).
-    files: ['test/e2e/**/*.js'],
+    // The line/complexity limits are relaxed the same way test/**/*.js's
+    // own block does, for the same reason (thorough e2e coverage in one
+    // spec file, same as a thorough unit test file).
+    files: ['e2e/**/*.js'],
     languageOptions: {
       globals: { ...globals.node, ...globals.browser },
+    },
+    rules: {
+      'max-lines': 'off',
+      'max-lines-per-function': 'off',
+      complexity: 'off',
+      'max-params': 'off',
     },
   },
   {

@@ -8,7 +8,7 @@
  * month labels.
  */
 import { html } from '../core/html.js';
-import { mount } from '../core/dom.js';
+import { mountPage } from '../core/dom.js';
 import { getJson } from '../core/api.js';
 import { site, t } from '../core/site.js';
 import { monthLabel } from '../core/format.js';
@@ -59,7 +59,7 @@ export async function start() {
   if (!root) return;
   document.title = site.name;
   const data = await getJson('/api/home');
-  mount(root, composeHome(data));
+  mountPage(root, composeHome(data));
   bind(root);
 }
 

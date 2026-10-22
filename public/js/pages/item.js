@@ -9,7 +9,7 @@
  * page never special-cases the translation kind by name.
  */
 import { html } from '../core/html.js';
-import { mount } from '../core/dom.js';
+import { mount, mountPage } from '../core/dom.js';
 import { getJson, ApiError } from '../core/api.js';
 import { site, t } from '../core/site.js';
 import { eventHref } from '../core/routes.js';
@@ -173,7 +173,7 @@ function kindFromPath(path) {
 
 /** @param {Element} root @returns {void} */
 function mountNotFound(root) {
-  mount(root, pageShell.render({ compact: true, content: emptyState.render({ message: t('item.notFound') }) }));
+  mountPage(root, pageShell.render({ compact: true, content: emptyState.render({ message: t('item.notFound') }) }));
 }
 
 /** @returns {Promise<void>} */
@@ -194,7 +194,7 @@ export async function start() {
     return;
   }
   document.title = `${site.name}`;
-  mount(root, composeItem(data));
+  mountPage(root, composeItem(data));
   bind(root, data);
 }
 

@@ -19,10 +19,11 @@
   background: color-mix(in srgb, var(--c) 22%, var(--color-card));
 }
 
+/* Review round 2, C1: same fix, and the same 60% mix, as bubbles.css's .c-bubbles__name. */
 .c-person-header__name {
   font-size: 18px;
   font-weight: 800;
-  color: var(--c);
+  color: color-mix(in srgb, var(--c) 60%, var(--color-ink));
   margin: 0;
 }
 

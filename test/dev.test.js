@@ -76,6 +76,23 @@ test('dev server: a static page route (no :param) resolves only through an expli
   withRewrite.close();
 });
 
+test('dev server: a page response carries vercel.json\'s headers, CSP and Referrer-Policy included (review round 2, C2)', async () => {
+  const handle = async (req) => Response.json({ path: new URL(req.url).pathname });
+  const headers = [
+    { source: '/(.*)', headers: [{ key: 'Content-Security-Policy', value: "default-src 'self'" }, { key: 'Referrer-Policy', value: 'no-referrer' }] },
+    { source: '/build/(.*)', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] },
+  ];
+  const srv = createServer({ root: 'test/fixtures/static', rewrites: [{ source: '/e/:slug', destination: '/event.html' }], headers, handle });
+  const base = await listen(srv);
+  const page = await fetch(base + '/e/x');
+  assert.equal(page.headers.get('content-security-policy'), "default-src 'self'");
+  assert.equal(page.headers.get('referrer-policy'), 'no-referrer');
+  assert.equal(page.headers.get('cache-control'), null, 'only /build/(.*) gets Cache-Control');
+  const api = await fetch(base + '/api/ping');
+  assert.equal(api.headers.get('content-security-policy'), "default-src 'self'", 'the API gets it too, same as production');
+  srv.close();
+});
+
 test('dev server: waitUntil (from @vercel/functions) runs after the response, and the server awaits it', async () => {
   const { waitUntil } = await import('@vercel/functions');
   /** @type {(v?: unknown) => void} */

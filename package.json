@@ -10,6 +10,7 @@
   "scripts": {
     "pretest": "node scripts/genRegistries.js",
     "test": "node --test \"test/**/*.test.js\"",
+    "posttest": "node scripts/checkTreeHash.js",
     "check": "tsc --noEmit -p jsconfig.json && eslint .",
     "dev": "node scripts/build.js && node scripts/dev.js",
     "build": "node scripts/build.js",

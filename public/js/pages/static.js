@@ -11,7 +11,7 @@
  * pathname naming the page.
  */
 import { html } from '../core/html.js';
-import { mount } from '../core/dom.js';
+import { mountPage } from '../core/dom.js';
 import { site, t } from '../core/site.js';
 import * as pageShell from '../components/pageShell.js';
 import * as emptyState from '../components/emptyState.js';
@@ -98,7 +98,7 @@ export function start() {
   if (!root) return;
   const page = document.body.getAttribute('data-page') ?? 'notFound';
   document.title = `${titleFor(page)} · ${site.name}`;
-  mount(root, composeStatic(page));
+  mountPage(root, composeStatic(page));
   headerLinks.bind(root);
 }
 

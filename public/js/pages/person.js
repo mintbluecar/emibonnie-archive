@@ -14,7 +14,7 @@
  * re-render (review round 1, I2).
  */
 import { html } from '../core/html.js';
-import { mount, on } from '../core/dom.js';
+import { mount, mountPage, on } from '../core/dom.js';
 import { getJson, ApiError } from '../core/api.js';
 import { site, t, tCount } from '../core/site.js';
 import * as chips from '../components/chips.js';
@@ -175,7 +175,7 @@ export function bind(root, data, ig) {
 
 /** @param {Element} root @returns {void} */
 function mountNotFound(root) {
-  mount(root, pageShell.render({ active: 'home', compact: true, content: emptyState.render({ message: t('person.notFound') }) }));
+  mountPage(root, pageShell.render({ active: 'home', compact: true, content: emptyState.render({ message: t('person.notFound') }) }));
 }
 
 /** @returns {Promise<void>} */
@@ -204,7 +204,7 @@ export async function start() {
     return;
   }
   document.title = `${data.person.name} · ${site.name}`;
-  mount(root, composePerson(data));
+  mountPage(root, composePerson(data));
   bind(root, data, ig);
 }
 

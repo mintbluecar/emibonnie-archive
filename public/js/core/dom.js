@@ -23,6 +23,23 @@ export function mount(el, safeHtml) {
 }
 
 /**
+ * `mount()`, plus marking `root` ready for an e2e test to wait on
+ * (`#app[data-ready]`) before inspecting the page -- every page's first
+ * paint, whichever of success, 404 or a load error it ends up being,
+ * calls this (instead of plain `mount()`) exactly once, so the marker
+ * lives in this one shared place rather than in every page (review
+ * round 2, C1). Never used for a page's later, partial re-renders
+ * (e.g. item.js's body-only reload) -- those stay plain `mount()`.
+ * @param {Element} root
+ * @param {SafeHtml} safeHtml
+ * @returns {void}
+ */
+export function mountPage(root, safeHtml) {
+  mount(root, safeHtml);
+  root.setAttribute('data-ready', '');
+}
+
+/**
  * A delegated event listener: `fn(event, target)` runs when `event` fires
  * on, or bubbles from, a descendant of `el` matching `selector`.
  * @param {{ addEventListener: (event: string, fn: (e: any) => void) => void, contains: (node: any) => boolean }} el

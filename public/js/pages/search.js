@@ -12,7 +12,7 @@
  * and refetches page 1.
  */
 import { html } from '../core/html.js';
-import { mount, on } from '../core/dom.js';
+import { mount, mountPage, on } from '../core/dom.js';
 import { getJson } from '../core/api.js';
 import { site, t } from '../core/site.js';
 import * as resultCard from '../components/resultCard.js';
@@ -297,11 +297,11 @@ export async function start() {
     ctx.offset = ctx.data.results.length;
     if (state.q) recordRecent(state.q);
     ctx.recent = loadRecent();
-    mount(root, composeSearch(ctx));
+    mountPage(root, composeSearch(ctx));
     bind(root, ctx);
     if (url.searchParams.get('filters') === '1') openSheet(root, ctx);
   } catch {
-    mount(root, errorPage());
+    mountPage(root, errorPage());
   }
 }
 

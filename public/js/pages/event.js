@@ -16,7 +16,7 @@
  * active (Task 3 review #1).
  */
 import { html } from '../core/html.js';
-import { mount, on } from '../core/dom.js';
+import { mount, mountPage, on } from '../core/dom.js';
 import { getJson, ApiError } from '../core/api.js';
 import { site, t, tCount } from '../core/site.js';
 import { dayLabel } from '../core/format.js';
@@ -282,7 +282,7 @@ export function bind(root, data, slug) {
 
 /** @param {Element} root @returns {void} */
 function mountNotFound(root) {
-  mount(root, pageShell.render({ active: 'home', compact: true, content: emptyState.render({ message: t('event.notFound') }) }));
+  mountPage(root, pageShell.render({ active: 'home', compact: true, content: emptyState.render({ message: t('event.notFound') }) }));
 }
 
 /** @returns {Promise<void>} */
@@ -307,7 +307,7 @@ export async function start() {
     return;
   }
   document.title = `${data.event.name} · ${site.name}`;
-  mount(root, composeEvent(data));
+  mountPage(root, composeEvent(data));
   bind(root, data, slug);
 }
 

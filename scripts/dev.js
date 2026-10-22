@@ -35,6 +35,7 @@ const MIME_TYPES = {
 
 /**
  * @typedef {{ source: string, destination: string }} Rewrite
+ * @typedef {{ source: string, headers: { key: string, value: string }[] }} HeaderRule
  * @typedef {(request: Request) => Promise<Response>} ApiHandler
  */
 
@@ -118,6 +119,25 @@ function applyRewrites(rewrites, pathname) {
 }
 
 /**
+ * Sets every header from every `vercel.json` rule whose `source` matches
+ * `pathname` -- unlike a rewrite, every match applies (Vercel's own
+ * `headers` config works the same way, e.g. the security headers on
+ * `/(.*)` and the cache header on `/build/(.*)` both apply to a path
+ * under `/build/`), so dev's CSP (and the rest) matches production on
+ * every response, API routes included (review round 2, C2).
+ * @param {HeaderRule[]} rules
+ * @param {string} pathname
+ * @param {import('node:http').ServerResponse} res
+ * @returns {void}
+ */
+function applyHeaderRules(rules, pathname, res) {
+  for (const rule of rules) {
+    if (!new RegExp(`^${rule.source}$`).test(pathname)) continue;
+    for (const { key, value } of rule.headers) res.setHeader(key, value);
+  }
+}
+
+/**
  * The `root/404.html` body, or plain text when there is none (the repo's
  * own `test/fixtures/static` has no 404.html, for instance). Mirrors
  * Vercel's own static-output behaviour: "Emit a 404.html file to your
@@ -174,10 +194,10 @@ async function serveStatic(root, pathname, res) {
  * page rewrites, and sends `/api/*` requests to `handle`. Used both for
  * local development and, through the same contract, by tests exercising the
  * Vercel function's behaviour without Vercel.
- * @param {{ root: string, routes?: unknown[], rewrites?: Rewrite[], handle: ApiHandler }} options
+ * @param {{ root: string, routes?: unknown[], rewrites?: Rewrite[], headers?: HeaderRule[], handle: ApiHandler }} options
  * @returns {import('node:http').Server}
  */
-export function createServer({ root, rewrites = [], handle }) {
+export function createServer({ root, rewrites = [], headers = [], handle }) {
   installRequestContext();
   /** @type {import('node:http').Server} */
   const server = http.createServer(async (req, res) => {
@@ -185,6 +205,7 @@ export function createServer({ root, rewrites = [], handle }) {
       // The Host header keeps the port, so the request URL's origin is the browser's (the Origin check).
       const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
       const target = url.pathname.startsWith('/api/') ? url : new URL(applyRewrites(rewrites, url.pathname), url);
+      applyHeaderRules(headers, target.pathname, res);
       if (target.pathname.startsWith('/api/')) {
         await serveApi(handle, toWebRequest(req, target), res).then((results) => server.emit('waitUntilSettled', results));
         return;
@@ -219,7 +240,7 @@ async function main() {
   const port = Number(process.env.PORT ?? 3000);
   const { default: api } = await import('../api/[...route].js');
   const vercel = JSON.parse(await readFile('vercel.json', 'utf8'));
-  const srv = createServer({ root: 'public', rewrites: vercel.rewrites ?? [], handle: (request) => api.fetch(request) });
+  const srv = createServer({ root: 'public', rewrites: vercel.rewrites ?? [], headers: vercel.headers ?? [], handle: (request) => api.fetch(request) });
   srv.listen(port, () => {
     console.log(`dev server listening on http://localhost:${port}`);
   });

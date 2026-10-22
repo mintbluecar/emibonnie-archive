@@ -122,6 +122,6 @@
   padding: 10px;
   border-radius: 12px;
   font-weight: 800;
-  color: #fff;
+  color: var(--color-accent-text);
   background: var(--gradient-to);
 }

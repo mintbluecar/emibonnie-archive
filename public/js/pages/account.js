@@ -13,7 +13,7 @@
  * handle) replaces the page at the current one, same as the person page.
  */
 import { html } from '../core/html.js';
-import { mount, on } from '../core/dom.js';
+import { mount, mountPage, on } from '../core/dom.js';
 import { getJson, ApiError } from '../core/api.js';
 import { site, t, tCount } from '../core/site.js';
 import * as chips from '../components/chips.js';
@@ -84,7 +84,7 @@ export function bind(root, data, handle) {
 
 /** @param {Element} root @returns {void} */
 function mountNotFound(root) {
-  mount(root, pageShell.render({ active: 'home', compact: true, content: emptyState.render({ message: t('account.notFound') }) }));
+  mountPage(root, pageShell.render({ active: 'home', compact: true, content: emptyState.render({ message: t('account.notFound') }) }));
 }
 
 /** @returns {Promise<void>} */
@@ -110,7 +110,7 @@ export async function start() {
   }
   if ('optedOut' in data.account) {
     document.title = `${t('account.optedOut')} · ${site.name}`;
-    mount(root, composeOptedOut());
+    mountPage(root, composeOptedOut());
     headerLinks.bind(root);
     return;
   }
@@ -120,7 +120,7 @@ export async function start() {
     return;
   }
   document.title = `@${view.account.handle} · ${site.name}`;
-  mount(root, composeAccount(view));
+  mountPage(root, composeAccount(view));
   bind(root, view, handle);
 }
 

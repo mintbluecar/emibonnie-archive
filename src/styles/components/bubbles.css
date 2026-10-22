@@ -49,10 +49,19 @@
   border-radius: 14px;
 }
 
+/*
+ * Review round 2, C1: the raw --c often fails AA 4.5:1 against
+ * --color-bg/--color-card (e.g. #c47a12, #aa8800 in light mode; #6a5cd6
+ * in dark mode -- the example site's own colours). Same fix as
+ * chips.css's selected-chip text: mix 60% toward --color-ink, which
+ * passes 4.5:1 for every example colour in both themes with a
+ * comfortable margin (light ≥5.3:1, dark ≥6.7:1) while keeping the name
+ * visibly in the person's colour.
+ */
 .c-bubbles__name {
   font-size: 10px;
   font-weight: 800;
-  color: var(--c);
+  color: color-mix(in srgb, var(--c) 60%, var(--color-ink));
   margin-bottom: 1px;
 }
 
