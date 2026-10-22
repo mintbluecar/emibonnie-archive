@@ -1,4 +1,11 @@
-/* public/js/components/header.js. Phone-first; see layout.css for the shared 860px breakpoint. */
+/*
+ * public/js/components/header.js. Phone-first; see layout.css for the
+ * shared 860px breakpoint. Phone: brand, tagline, then the search row
+ * (the nav inside the bar is tabBar.css's fixed bottom bar). Desktop: one
+ * top bar -- brand left, nav right, inner content aligned with the
+ * centred `.container` column -- and no search box, except on the
+ * search page (`--live`), as in mockups/screens-v2.html's web screen.
+ */
 
 .c-header {
   padding: 16px 16px 8px;
@@ -54,13 +61,30 @@
   gap: 8px;
 }
 
+.c-header__search-field {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+/* The mockup's 🔍, drawn as the same line icon as the other header icons. */
+.c-header__search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-ink-muted);
+  pointer-events: none;
+}
+
 .c-header__search-box {
   flex: 1;
   min-width: 0;
   background: var(--color-card);
   border: 1.5px solid var(--color-card-shadow);
   border-radius: 14px;
-  padding: 10px 12px;
+  padding: 10px 12px 10px 34px;
   font-family: inherit;
   font-size: 13px;
   color: var(--color-ink);
@@ -110,5 +134,60 @@
   /* Dark mode's --color-accent-text is black, which already passes against the raw --gradient-from (7.35:1) -- the light-mode-only darkening above is reverted here. */
   .c-header__filter-count {
     background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
+  }
+}
+
+@media (min-width: 860px) {
+  .c-header {
+    padding: 0;
+  }
+
+  .c-header__bar {
+    background: var(--color-card);
+    border-bottom: 1px solid var(--color-card-shadow);
+  }
+
+  /* Same width and gutters as layout.css's `.container`, so the bar's
+     content lines up with the page column below it. */
+  .c-header__inner {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .c-header__brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .c-header__logo {
+    width: 26px;
+    height: 26px;
+  }
+
+  .c-header__wordmark,
+  .c-header--compact .c-header__wordmark {
+    font-size: 16px;
+  }
+
+  .c-header__tagline {
+    margin: 0;
+  }
+
+  .c-header__search {
+    display: none;
+  }
+
+  .c-header--live .c-header__search {
+    display: flex;
+    max-width: 960px;
+    margin: 16px auto 12px;
+    padding: 0 16px;
   }
 }

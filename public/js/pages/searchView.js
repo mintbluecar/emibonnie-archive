@@ -127,7 +127,7 @@ export function searchAreaMarkup(ctx, body) {
 /** The whole page, for its first mount only (`search.js`'s `start()`). @param {Ctx} ctx @returns {import('../core/html.js').SafeHtml} */
 export function composeSearch(ctx) {
   const content = html`<div class="c-search">${searchAreaMarkup(ctx)}</div>`;
-  return pageShell.render({ active: 'search', compact: true, headerProps: { filterCount: filterCount(ctx.state) }, content });
+  return pageShell.render({ active: 'search', compact: true, headerProps: { filterCount: filterCount(ctx.state), liveSearch: true }, content });
 }
 
 /**

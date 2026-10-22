@@ -183,3 +183,22 @@ test('LONG real playback (requires E2E_REAL_VIDEO_URL -- see this file\'s header
   ).toBeGreaterThanOrEqual(2);
   expect(forbidden).toEqual([]);
 });
+
+test('header (Task 9b): desktop is one top bar with no search box (the search page keeps its box); a phone keeps the box and the bottom tab bar', async ({ page }, testInfo) => {
+  test.skip(DARK_PROJECTS.includes(testInfo.project.name), 'layout, not colour: light projects only');
+  const desktop = testInfo.project.name === 'desktop';
+  await gotoReady(page, '/');
+  const bar = page.locator('.c-header__bar');
+  await expect(bar.locator('.c-tabbar')).toHaveCount(1);
+  await expect(page.locator('.c-header__search-box')).toBeVisible({ visible: !desktop });
+  await expect(page.locator('.c-tabbar')).toHaveCSS('position', desktop ? 'static' : 'fixed');
+  if (desktop) {
+    const [wordmark, nav, column] = await Promise.all(['.c-header__wordmark', '.c-tabbar', 'main.container'].map((s) => page.locator(s).boundingBox()));
+    const b = /** @type {{x: number, y: number, width: number, height: number}[]} */ ([wordmark, nav, column]);
+    expect(Math.abs(b[0].y + b[0].height / 2 - (b[1].y + b[1].height / 2))).toBeLessThan(8);
+    expect(b[0].x).toBeGreaterThanOrEqual(b[2].x);
+    expect(b[1].x + b[1].width).toBeLessThanOrEqual(b[2].x + b[2].width + 1);
+  }
+  await gotoReady(page, `/search?q=${SEARCH_Q}`);
+  await expect(page.locator('.c-header__search-box')).toBeVisible();
+});
