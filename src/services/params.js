@@ -37,3 +37,15 @@ export function hubPage(params = {}) {
   if (limit < 1) throw new BadRequest(`limit must be an integer from 1 to ${HUB_LIMIT_MAX}`);
   return { limit, offset: integer('offset', params.offset, HUB_OFFSET_MAX, 0) };
 }
+
+/**
+ * A hub section's listing order: `'asc'` (event order, the default) or
+ * `'desc'` ("newest first"); anything else is a `BadRequest`.
+ * @param {unknown} value
+ * @returns {'asc'|'desc'}
+ */
+export function orderParam(value) {
+  if (absent(value)) return 'asc';
+  if (value === 'asc' || value === 'desc') return value;
+  throw new BadRequest("order must be 'asc' or 'desc'");
+}

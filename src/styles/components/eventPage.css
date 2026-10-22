@@ -1,11 +1,8 @@
 /*
  * public/js/pages/event.js: the event page's own layout -- the back
  * link, name/search row, meta line, filters, the newest-first toggle,
- * and the sections wrapper. Kind sections themselves (e.g.
- * `.k-translation-section`) are a flex column by convention
- * (src/styles/components/kindTranslation.css), so `.is-newest-first`'s
- * `flex-direction: column-reverse` here reverses any kind's section
- * purely visually, without this file (or event.js) ever naming a kind.
+ * and the sections wrapper. "Newest first" re-fetches and re-renders
+ * (Task 3 review #1), so there's no CSS-only reorder rule here.
  */
 
 .c-event__back {
@@ -80,10 +77,6 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.c-event-sections.is-newest-first > * {
-  flex-direction: column-reverse;
 }
 
 .c-event-section__more {

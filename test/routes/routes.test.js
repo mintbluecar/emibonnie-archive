@@ -43,6 +43,13 @@ test('event returns sections[0].kind', async () => {
   await assert.rejects(eventRoute.run(input({ slug: 'no-such-event' }), routeDeps()), NotFound);
 });
 
+test('event: ?order=desc reverses the section; an unknown order is a BadRequest', async () => {
+  const asc = await eventRoute.run(input({ slug: SLUG }, { order: 'asc' }), routeDeps());
+  const desc = await eventRoute.run(input({ slug: SLUG }, { order: 'desc' }), routeDeps());
+  assert.deepEqual(desc.sections[0].items.map((/** @type {any} */ i) => i.sourceId).reverse(), asc.sections[0].items.map((/** @type {any} */ i) => i.sourceId));
+  await assert.rejects(eventRoute.run(input({ slug: SLUG }, { order: 'bogus' }), routeDeps()), { name: 'BadRequest' });
+});
+
 test('item: a removed item and an unknown kind throw NotFound', async () => {
   const view = await itemRoute.run(input({ kind: 'translation', sourceId: IDS.EVENT_A }), routeDeps());
   assert.equal(view.sourceId, IDS.EVENT_A);
@@ -149,10 +156,10 @@ test('unknown query params on API GETs are a no-store 400; meta pages ignore tra
     assert.equal(res.headers.get('cache-control'), 'no-store', path);
   }
   assert.equal((await api.call('GET', '/api/search?q=everyone&limit=2&people=1,2&peopleMode=any')).status, 200);
-  for (const path of [`/api/event/${SLUG}?limit=1&offset=1`, '/api/person/solsunny?limit=2', '/api/account/tl_alpha?offset=0']) {
+  for (const path of [`/api/event/${SLUG}?limit=1&offset=1`, '/api/person/solsunny?limit=2', '/api/account/tl_alpha?offset=0', `/api/event/${SLUG}?order=desc`]) {
     assert.equal((await api.call('GET', path)).status, 200, path);
   }
-  for (const path of [`/api/event/${SLUG}?limit=0`, '/api/person/solsunny?limit=51', '/api/account/tl_alpha?offset=x', `/api/event/${SLUG}?limit=1&limit=2`]) {
+  for (const path of [`/api/event/${SLUG}?limit=0`, '/api/person/solsunny?limit=51', '/api/account/tl_alpha?offset=x', `/api/event/${SLUG}?limit=1&limit=2`, `/api/event/${SLUG}?order=newest`]) {
     assert.equal((await api.call('GET', path)).status, 400, path);
   }
   assert.equal((await api.call('GET', `/api/meta/t/${IDS.LONG}?s=20&utm_source=share`)).status, 200);

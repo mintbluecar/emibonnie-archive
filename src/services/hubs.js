@@ -14,7 +14,7 @@ import {
 import { formatName } from '../site/loadSite.js';
 import { kindsOf, chipOf } from './cards.js';
 import { sectionsOf } from './sections.js';
-import { hubPage } from './params.js';
+import { hubPage, orderParam } from './params.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
 /** @typedef {import('../http/contracts.js').HomeView} HomeView */
@@ -46,16 +46,20 @@ export async function homeView(deps) {
  *   As parsed from the query string: each per-kind section's page size
  *   (1 to 50, default 50) and start (0 to 10000, default 0); anything else
  *   is a `BadRequest`.
+ * @typedef {PageParams & { order?: unknown }} EventParams
+ *   `PageParams` plus `order` (`'asc'`|`'desc'`, default `'asc'`; see
+ *   `orderParam`), the event page's "newest first" toggle.
  */
 
-/** @param {ViewDeps} deps @param {string} slug @param {PageParams} [params] @returns {Promise<EventView|null>} */
+/** @param {ViewDeps} deps @param {string} slug @param {EventParams} [params] @returns {Promise<EventView|null>} */
 export async function eventView(deps, slug, params = {}) {
   const page = hubPage(params);
+  const order = orderParam(params.order);
   const event = await getVisibleEventBySlug(deps.db, slug);
   if (!event) return null;
   const [crowd, people, labels, listed] = await Promise.all([
     eventCrowd(deps.db, event.id), listPeople(deps.db), eventLabels(deps.db, event.id),
-    sectionsOf(deps, { scope: { eventId: event.id }, order: 'asc', page, withEvent: false }),
+    sectionsOf(deps, { scope: { eventId: event.id }, order, page, withEvent: false }),
   ]);
   const format = (/** @type {string} */ name) => formatName(deps.site, name);
   const byId = new Map(people.map((p) => [p.id, p]));

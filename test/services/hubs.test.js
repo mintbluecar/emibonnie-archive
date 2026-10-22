@@ -40,6 +40,17 @@ test('eventView: the event, its translator count, people, and per-kind sections 
   assert.equal(await eventView(deps, 'no-such-event'), null);
 });
 
+test('eventView: order=desc reverses each section (the event page\'s "newest first" toggle); an unknown order is a BadRequest', async () => {
+  const slug = 'solluna-happy-day-2026-10-19';
+  const asc = /** @type {any} */ (await eventView(deps, slug));
+  assert.deepEqual(asc.sections[0].items.map((/** @type {any} */ i) => i.sourceId), [IDS.EVENT_A, IDS.EVENT_B]);
+  const defaulted = /** @type {any} */ (await eventView(deps, slug, { order: 'asc' }));
+  assert.deepEqual(defaulted.sections[0].items.map((/** @type {any} */ i) => i.sourceId), [IDS.EVENT_A, IDS.EVENT_B]);
+  const desc = /** @type {any} */ (await eventView(deps, slug, { order: 'desc' }));
+  assert.deepEqual(desc.sections[0].items.map((/** @type {any} */ i) => i.sourceId), [IDS.EVENT_B, IDS.EVENT_A]);
+  await assert.rejects(eventView(deps, slug, { order: 'bogus' }), { name: 'BadRequest' });
+});
+
 test('an event whose items are all hidden is not visible', async () => {
   const id = await itemIdOf(deps.db, IDS.LIVE);
   await deps.db.transaction((/** @type {any} */ tx) => tx.query("update items set deleted_at = now(), deleted_reason = 'spam' where id = $1", [id]), SYSTEM);
