@@ -37,9 +37,10 @@ test('render: a 720x1280 vertical clip renders a full-screen button and data-asp
   assert.match(markup, /<video[^>]*controls[^>]*playsinline[^>]*preload="metadata"/);
 });
 
-test('render: the video has a source pointing at the stored variant', () => {
+test('render: the video has a src attribute pointing at the stored variant, never a <source> child (review round 1, CRITICAL #1 -- a <source>\'s error never bubbles to <video>)', () => {
   const markup = String(render({ variants: VARIANTS, width: 1280, height: 720 }));
-  assert.match(markup, /<source src="https:\/\/video\.twimg\.com\/a\/2176000\.mp4">/);
+  assert.match(markup, /<video[^>]*\bsrc="https:\/\/video\.twimg\.com\/a\/2176000\.mp4"[^>]*><\/video>/);
+  assert.ok(!markup.includes('<source'), 'no <source> child');
 });
 
 /** One macrotask tick, enough for a single `await getJson(...)` chain to settle. */
@@ -90,8 +91,8 @@ test('bind: on a phone-width viewport, swaps the initial source to the small var
   globalThis.window = /** @type {any} */ ({ matchMedia: () => ({ matches: true }) });
   try {
     bind(root, { kind: 'translation', sourceId: '1900000000000000002', variants: VARIANTS });
-    const source = root.querySelector('source');
-    assert.equal(source?.getAttribute('src'), 'https://video.twimg.com/a/632000.mp4');
+    const video = root.querySelector('video');
+    assert.equal(video?.getAttribute('src'), 'https://video.twimg.com/a/632000.mp4');
   } finally {
     delete (/** @type {any} */ (globalThis)).document;
     delete (/** @type {any} */ (globalThis)).window;
@@ -105,15 +106,15 @@ test('bind: on a wide viewport, keeps render()\'s large-variant default', () => 
   globalThis.window = /** @type {any} */ ({ matchMedia: () => ({ matches: false }) });
   try {
     bind(root, { kind: 'translation', sourceId: '1900000000000000002', variants: VARIANTS });
-    const source = root.querySelector('source');
-    assert.equal(source?.getAttribute('src'), 'https://video.twimg.com/a/2176000.mp4');
+    const video = root.querySelector('video');
+    assert.equal(video?.getAttribute('src'), 'https://video.twimg.com/a/2176000.mp4');
   } finally {
     delete (/** @type {any} */ (globalThis)).document;
     delete (/** @type {any} */ (globalThis)).window;
   }
 });
 
-test('bind: a second error (after the refetch already ran) does not refetch again', async () => {
+test('bind: a second error, after the refetch already ran, never fetches again -- the first 404 case', async () => {
   const root = new MiniElement('div');
   mount(root, render({ variants: VARIANTS, width: 1280, height: 720 }));
   globalThis.document = fakeDocument();
@@ -126,6 +127,37 @@ test('bind: a second error (after the refetch already ran) does not refetch agai
     await flush();
     assert.equal(fetchCount, 1);
     assert.equal(root.querySelector('video'), null);
+  } finally {
+    mock.restoreAll();
+    delete (/** @type {any} */ (globalThis)).document;
+  }
+});
+
+test('bind: a second error, after the refetch succeeded but the swapped-in variant also fails to play, mounts sourceGone and never fetches again (review round 1, IMPORTANT #4)', async () => {
+  const root = new MiniElement('div');
+  mount(root, render({ variants: VARIANTS, width: 1280, height: 720 }));
+  globalThis.document = fakeDocument();
+  let fetchCount = 0;
+  mock.method(globalThis, 'fetch', async () => {
+    fetchCount += 1;
+    return new Response(JSON.stringify({ variants: VARIANTS }), { status: 200 });
+  });
+  try {
+    bind(root, { kind: 'translation', sourceId: '1900000000000000002' });
+    const video = /** @type {any} */ (root.querySelector('video'));
+    video.dispatchEvent({ type: 'error', target: video });
+    await flush();
+    assert.equal(fetchCount, 1, 'the one refetch ran and succeeded');
+    assert.ok(root.querySelector('video'), 'the video is still there after a successful refetch');
+    assert.ok(!root.querySelector('.c-video__gone'), 'not given up yet after just one error');
+
+    // The swapped-in variant also fails to play (still a fake/synthetic URL in practice).
+    const stillVideo = /** @type {any} */ (root.querySelector('video'));
+    stillVideo.dispatchEvent({ type: 'error', target: stillVideo });
+    await flush();
+    assert.equal(fetchCount, 1, 'no second fetch');
+    assert.equal(root.querySelector('video'), null, 'gives up: the video is replaced');
+    assert.ok(root.querySelector('.c-video__gone'), 'the sourceGone note is shown');
   } finally {
     mock.restoreAll();
     delete (/** @type {any} */ (globalThis)).document;

@@ -36,11 +36,26 @@ function itemVm(overrides = {}) {
   };
 }
 
-test('composeItem: the media box, credits, pills, cast and bubbles, in order (task-4 brief)', () => {
+test('composeItem: the back row, media box, credits, pills, cast and bubbles, in order (task-4 brief; review round 1, IMPORTANT #1)', () => {
   const markup = String(composeItem(itemVm()));
-  const indices = ['c-media-box', 'k-translation-detail__credits', 'c-chips', 'c-cast__chip', 'c-bubbles__bub'].map((m) => markup.indexOf(m));
+  const indices = ['c-item__back', 'c-media-box', 'k-translation-detail__credits', 'c-chips', 'c-cast__chip', 'c-bubbles__bub'].map((m) => markup.indexOf(m));
   assert.ok(indices.every((i) => i >= 0), markup);
   for (let i = 1; i < indices.length; i++) assert.ok(indices[i - 1] < indices[i], `${indices}`);
+});
+
+test('composeItem: the back row links to the event page via the shared eventUrl helper, with the event name as its text', () => {
+  const markup = String(composeItem(itemVm()));
+  assert.match(markup, /<a class="c-item__back" href="\/e\/solluna-happy-day-2026-10-19">‹ SOLLUNA HAPPY DAY<\/a>/);
+});
+
+test('composeItem: no back row when the item has no event', () => {
+  const markup = String(composeItem(itemVm({ event: null })));
+  assert.ok(!markup.includes('c-item__back'));
+});
+
+test('composeItem: a <select>-free active "home" tab, per pageShell (review round 1, MINOR)', () => {
+  const markup = String(composeItem(itemVm()));
+  assert.match(markup, /<a\s+class="c-tabbar__item c-tabbar__item--on"\s+href="\/"\s+aria-current="page"\s*>/);
 });
 
 test('composeItem: prev/next links when ItemView carries neighbours', () => {
@@ -65,6 +80,17 @@ test('composeItem: the footer -- original tweet, follows on, added by, copy link
   assert.match(markup, /<a class="c-item__footer-link" href="\/takedown\/">report<\/a>/);
 });
 
+test('composeItem: a quoted source gets its own "quoted tweet" label, distinct from "original tweet" (review round 1, MINOR)', () => {
+  const markup = String(composeItem(itemVm({
+    sources: [
+      { role: 'primary', url: 'https://x.com/tl_alpha/status/1900000000000000004', status: 'live' },
+      { role: 'quoted', url: 'https://x.com/solsunny_x/status/1900000000000000010', status: 'live' },
+    ],
+  })));
+  assert.match(markup, /<a class="c-item__footer-link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">original tweet<\/a>/);
+  assert.match(markup, /<a class="c-item__footer-link" href="https:\/\/x\.com\/solsunny_x\/status\/1900000000000000010">quoted tweet<\/a>/);
+});
+
 test('composeItem: "added by" shows a fan, a chosen name, or nothing for the engine\'s own writes', () => {
   assert.match(String(composeItem(itemVm({ addedBy: { kind: 'fan' } }))), /added by a fan/);
   assert.match(String(composeItem(itemVm({ addedBy: { kind: 'name', name: 'a reader' } }))), /added by a reader/);
@@ -82,6 +108,97 @@ test('composeItem: includes the compact page shell (header + tabs + footer)', ()
   assert.match(markup, /c-header--compact/);
   assert.match(markup, /c-tabbar/);
   assert.match(markup, /c-footer__links/);
+});
+
+/** A tiny fake localStorage backed by a Map the test can clear between presses. */
+function fakeLocalStorage() {
+  const store = new Map();
+  return {
+    store,
+    api: {
+      getItem: (/** @type {string} */ k) => store.get(k) ?? null,
+      setItem: (/** @type {string} */ k, /** @type {string} */ v) => store.set(k, v),
+    },
+  };
+}
+
+test('bind: a successful check reloads only .c-item__body -- the video is the same node across reloads, and the refresh listener never piles up (review round 1, IMPORTANT #2)', async () => {
+  const future = new Date(Date.now() + 60_000).toISOString();
+  const data = itemVm({ editOpenUntil: future });
+  const root = new MiniElement('div');
+  mount(root, composeItem(data));
+  globalThis.document = fakeDocument();
+  const { store, api } = fakeLocalStorage();
+  globalThis.localStorage = /** @type {any} */ (api);
+  let postCount = 0;
+  let getCount = 0;
+  mock.method(globalThis, 'fetch', async (/** @type {string} */ _url, /** @type {any} */ opts) => {
+    if ((opts?.method ?? 'GET') === 'POST') {
+      postCount += 1;
+      return new Response(JSON.stringify({ updated: 1, editOpenUntil: future }), { status: 200 });
+    }
+    getCount += 1;
+    return new Response(JSON.stringify(itemVm({ editOpenUntil: future })), { status: 200 });
+  });
+  try {
+    bind(root, data);
+    const videoBefore = root.querySelector('video');
+    assert.ok(videoBefore, 'the video rendered on first mount');
+
+    // 1st press -> reload #1.
+    /** @type {any} */ (root.querySelector('.c-refresh__btn')).click();
+    await flush(); await flush(); await flush();
+    assert.equal(postCount, 1);
+    assert.equal(getCount, 1, 'the body reload fetched fresh item data');
+    assert.equal(root.querySelector('video'), videoBefore, 'the video element was not replaced');
+
+    // Clear the backoff lock (tested on its own in refreshButton.test.js) so a 2nd press is
+    // allowed -- the countdown also disabled the button itself, which only its own real-time
+    // tick() would re-enable, so that's reset by hand too (this test is about listener
+    // pileup, not backoff timing).
+    store.clear();
+    /** @type {any} */ (root.querySelector('.c-refresh__btn')).disabled = false;
+
+    // 2nd press -> reload #2.
+    /** @type {any} */ (root.querySelector('.c-refresh__btn')).click();
+    await flush(); await flush(); await flush();
+    assert.equal(postCount, 2);
+    assert.equal(getCount, 2);
+    assert.equal(root.querySelector('video'), videoBefore, 'still the same video element after a 2nd reload');
+
+    // A 3rd press, after two reloads: exactly one more POST, not 2 or 3 -- proves the
+    // click listener (bound once on root) never piled up across the two body re-renders.
+    store.clear();
+    /** @type {any} */ (root.querySelector('.c-refresh__btn')).disabled = false;
+    /** @type {any} */ (root.querySelector('.c-refresh__btn')).click();
+    await flush(); await flush(); await flush();
+    assert.equal(postCount, 3, 'exactly one more POST per click, even after two reloads');
+  } finally {
+    mock.restoreAll();
+    delete (/** @type {any} */ (globalThis)).document;
+    delete (/** @type {any} */ (globalThis)).localStorage;
+  }
+});
+
+test('bind: a 409 on a real page bind (not an isolated refreshButton.bind() call) still removes the button (review round 1, CRITICAL #2)', async () => {
+  const future = new Date(Date.now() + 60_000).toISOString();
+  const data = itemVm({ editOpenUntil: future });
+  const root = new MiniElement('div');
+  mount(root, composeItem(data));
+  globalThis.document = fakeDocument();
+  const { api } = fakeLocalStorage();
+  globalThis.localStorage = /** @type {any} */ (api);
+  mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ error: 'edit_window_closed' }), { status: 409 }));
+  try {
+    bind(root, data);
+    /** @type {any} */ (root.querySelector('.c-refresh__btn')).click();
+    await flush();
+    assert.equal(root.querySelector('.c-refresh'), null);
+  } finally {
+    mock.restoreAll();
+    delete (/** @type {any} */ (globalThis)).document;
+    delete (/** @type {any} */ (globalThis)).localStorage;
+  }
 });
 
 test('bind: the copy-link button copies the absolute item URL and shows "copied"', async () => {

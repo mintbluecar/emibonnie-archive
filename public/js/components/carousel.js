@@ -40,7 +40,7 @@ export function render({ images }) {
       ${many ? html`
         <button type="button" class="c-carousel__prev" aria-label="${t('item.prevImage')}">‹</button>
         <button type="button" class="c-carousel__next" aria-label="${t('item.nextImage')}">›</button>
-        <span class="c-carousel__count">1 / ${images.length}</span>
+        <span class="c-carousel__count" aria-live="polite">1 / ${images.length}</span>
       ` : ''}
     </div>
   `;
@@ -87,24 +87,35 @@ export function bind(el, { images }) {
   if (!box) return;
   showSlide(box, 0);
   const openZoom = mountZoomDialog(box);
+  // Shared with bindSwipe(): a drag (|delta| >= SWIPE_THRESHOLD) sets this,
+  // so the click a pointerup also fires doesn't also open the zoom dialog
+  // (review round 1, IMPORTANT #3).
+  const drag = { justDragged: false };
   on(box, '.c-carousel__prev', 'click', () => showSlide(box, currentIndex(box) - 1));
   on(box, '.c-carousel__next', 'click', () => showSlide(box, currentIndex(box) + 1));
   on(box, '.c-carousel__slide', 'click', (_e, target) => {
+    if (drag.justDragged) return;
     const index = Number(target.getAttribute('data-index') ?? '0');
     if (images[index]) openZoom(images[index], target);
   });
-  bindSwipe(box);
+  bindSwipe(box, drag);
 }
 
-/** @param {Element} box @returns {void} */
-function bindSwipe(box) {
+/**
+ * @param {Element} box @param {{ justDragged: boolean }} drag shared with
+ *   the slide click handler in `bind()`, so a drag can suppress the click
+ *   that follows it
+ * @returns {void}
+ */
+function bindSwipe(box, drag) {
   const track = box.querySelector('.c-carousel__track');
   if (!track) return;
   let startX = 0;
-  track.addEventListener('pointerdown', (/** @type {any} */ e) => { startX = e.clientX; });
+  track.addEventListener('pointerdown', (/** @type {any} */ e) => { startX = e.clientX; drag.justDragged = false; });
   track.addEventListener('pointerup', (/** @type {any} */ e) => {
     const delta = e.clientX - startX;
     if (Math.abs(delta) < SWIPE_THRESHOLD) return;
+    drag.justDragged = true;
     showSlide(box, currentIndex(box) + (delta < 0 ? 1 : -1));
   });
 }

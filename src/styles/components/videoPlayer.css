@@ -23,9 +23,10 @@
 }
 
 .c-video__full {
+  /* top-right, clear of the native control bar along the bottom (review round 1, MINOR). */
   position: absolute;
+  top: 8px;
   right: 8px;
-  bottom: 8px;
   width: 36px;
   height: 36px;
   display: flex;

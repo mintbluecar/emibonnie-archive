@@ -21,6 +21,11 @@ test('render: every image has alt="", lazy loading, and async decoding', () => {
   }
 });
 
+test('render: the counter announces itself (aria-live="polite")', () => {
+  const markup = String(render({ images: IMAGES }));
+  assert.match(markup, /<span class="c-carousel__count" aria-live="polite">1 \/ 3<\/span>/);
+});
+
 test('bind: the next/prev buttons move the shown slide and update the counter', () => {
   const root = new MiniElement('div');
   mount(root, render({ images: IMAGES }));
@@ -60,6 +65,33 @@ test('bind: prev from the first slide wraps to the last', () => {
   }
 });
 
+test('bind: a swipe (pointerdown/pointerup past the threshold) moves the slide and suppresses the click that follows it, so it doesn\'t also open the zoom dialog (review round 1, IMPORTANT #3)', () => {
+  const root = new MiniElement('div');
+  mount(root, render({ images: IMAGES }));
+  globalThis.document = fakeDocument();
+  try {
+    bind(root, { images: IMAGES });
+    const track = /** @type {any} */ (root.querySelector('.c-carousel__track'));
+    track.dispatchEvent({ type: 'pointerdown', target: track, clientX: 200 });
+    track.dispatchEvent({ type: 'pointerup', target: track, clientX: 100 });
+    assert.equal(root.querySelector('.c-carousel__count')?.textContent, '2 / 3', 'the swipe moved the slide');
+
+    // The browser also fires a click on pointerup; it must not open the zoom dialog.
+    const slide = /** @type {any} */ (root.querySelector('.c-carousel__slide[data-index="1"]'));
+    slide.click();
+    assert.equal(root.querySelector('.c-zoom'), null, 'no zoom dialog from a drag-ending click');
+
+    // A later plain tap -- pointerdown/pointerup with a negligible delta, then click,
+    // the real sequence a tap fires -- still opens it.
+    track.dispatchEvent({ type: 'pointerdown', target: track, clientX: 150 });
+    track.dispatchEvent({ type: 'pointerup', target: track, clientX: 151 });
+    slide.click();
+    assert.ok(root.querySelector('.c-zoom'), 'a real tap still opens the zoom dialog');
+  } finally {
+    delete (/** @type {any} */ (globalThis)).document;
+  }
+});
+
 test('bind: tapping a slide opens the zoom dialog with that image', () => {
   const root = new MiniElement('div');
   mount(root, render({ images: IMAGES }));
@@ -71,6 +103,7 @@ test('bind: tapping a slide opens the zoom dialog with that image', () => {
     const dialog = root.querySelector('.c-zoom');
     assert.ok(dialog, 'a zoom dialog was mounted');
     assert.match(dialog?.querySelector('.c-zoom__img')?.getAttribute('src') ?? '', /a\.jpg/);
+    assert.equal(dialog?.getAttribute('aria-label'), 'full-screen image');
   } finally {
     delete (/** @type {any} */ (globalThis)).document;
   }

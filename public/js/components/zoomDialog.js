@@ -16,7 +16,7 @@ import { t } from '../core/site.js';
  */
 function dialogMarkup(image) {
   return html`
-    <dialog class="c-zoom">
+    <dialog class="c-zoom" aria-label="${t('item.zoomLabel')}">
       <button type="button" class="c-zoom__close" aria-label="${t('item.zoomClose')}">✕</button>
       <img class="c-zoom__img" src="${image.url}" alt="" loading="lazy" decoding="async">
     </dialog>
@@ -42,7 +42,9 @@ export function mountZoomDialog(container) {
     if (lastOpener && 'focus' in lastOpener) /** @type {any} */ (lastOpener).focus();
   };
   on(host, '.c-zoom__close', 'click', close);
-  on(host, 'dialog', 'cancel', close);
+  // `cancel` (the dialog's own Escape event) doesn't bubble, so a
+  // delegated listener on `host` would never see it (review round 1,
+  // MINOR) -- `keydown` does bubble, and already covers Escape here.
   on(host, 'dialog', 'keydown', (e) => { if (e.key === 'Escape') close(); });
 
   return (image, opener) => {

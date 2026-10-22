@@ -8,8 +8,14 @@
 import { html } from '../core/html.js';
 import { t } from '../core/site.js';
 
-/** @type {Record<string, string>} the copy key for one source link's role */
-const SOURCE_LABEL = { primary: 'item.originalTweet', media: 'item.originalMedia', quoted: 'item.originalTweet' };
+/**
+ * The copy key for one source link's role. `quoted` gets its own label
+ * (review round 1, MINOR) -- an item whose primary post also quotes
+ * another otherwise showed two identically worded "original tweet"
+ * links with no way to tell them apart.
+ * @type {Record<string, string>}
+ */
+const SOURCE_LABEL = { primary: 'item.originalTweet', media: 'item.originalMedia', quoted: 'item.quotedTweet' };
 
 /** @param {import('../../../src/http/contracts.js').SourceLinkVM[]} sources @returns {import('../core/html.js').SafeHtml} */
 function sourceLinks(sources) {

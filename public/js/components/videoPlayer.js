@@ -45,6 +45,11 @@ function fullScreenButton() {
 }
 
 /**
+ * A `src` attribute directly on `<video>`, never a `<source>` child: per
+ * the HTML Standard's resource-selection algorithm, a failed `<source>`
+ * fires `error` *at the `<source>` element*, not at the `<video>` --
+ * review round 1, CRITICAL #1 -- so a `<source>`-based player's `error`
+ * listener on the `<video>` itself would never fire in a real browser.
  * @param {{ variants: import('../../../src/http/contracts.js').VariantVM[], width: number, height: number }} props
  * @returns {import('../core/html.js').SafeHtml}
  */
@@ -53,9 +58,7 @@ export function render({ variants, width, height }) {
   const aspect = height > 0 ? width / height : 1;
   return html`
     <div class="c-video" data-aspect="${aspect}">
-      <video class="c-video__el" controls playsinline preload="metadata" width="${width}" height="${height}">
-        ${best ? html`<source src="${best.url}">` : ''}
-      </video>
+      <video class="c-video__el" controls playsinline preload="metadata" width="${width}" height="${height}" ${best ? html`src="${best.url}"` : ''}></video>
       ${fullScreenButton()}
     </div>
   `;
@@ -80,7 +83,8 @@ function isSmallScreen() {
 /**
  * Refetches `/api/video/:kind/:sourceId` once after the `<video>` fires
  * `error`; a 404 (or any other failure) swaps the whole box for the
- * `sourceGone` note. Never retries past the one refetch.
+ * `sourceGone` note. Sets the `src` attribute directly on the `<video>`
+ * (never a `<source>` child -- see `render()`'s doc comment).
  * @param {Element} el @param {{ kind: string, sourceId: string }} target @param {boolean} isSmall
  * @returns {Promise<void>}
  */
@@ -90,9 +94,8 @@ async function recover(el, { kind, sourceId }, isSmall) {
     const variants = /** @type {import('../../../src/http/contracts.js').VariantVM[]} */ (data.variants ?? []);
     const best = pickVariant(variants, isSmall);
     const video = /** @type {HTMLVideoElement|null} */ (el.querySelector('video'));
-    const source = video?.querySelector('source');
-    if (!best || !video || !source) throw new ApiError(404);
-    source.setAttribute('src', best.url);
+    if (!best || !video) throw new ApiError(404);
+    video.setAttribute('src', best.url);
     video.load();
   } catch {
     mount(el, goneMarkup());
@@ -110,12 +113,16 @@ async function recover(el, { kind, sourceId }, isSmall) {
 function applyScreenVariant(el, variants) {
   if (!isSmallScreen() || variants.length === 0) return;
   const best = pickVariant(variants, true);
-  const video = el.querySelector('.c-video__el');
-  const source = video?.querySelector('source');
-  if (source) source.setAttribute('src', best.url);
+  const video = /** @type {HTMLVideoElement|null} */ (el.querySelector('.c-video__el'));
+  if (video) video.setAttribute('src', best.url);
 }
 
 /**
+ * Wires the `<video>`'s `error` recovery (once, then gives up for good on
+ * a second failure -- review round 1, IMPORTANT #4) and the full-screen
+ * button. `error` on a `<video>` never bubbles (unlike `click`), so it's
+ * listened for directly on the element itself, not through `on()`'s
+ * delegation.
  * @param {Element} el the element containing the rendered `.c-video` box
  * @param {{ kind: string, sourceId: string, variants?: import('../../../src/http/contracts.js').VariantVM[] }} target
  * @returns {void}
@@ -125,14 +132,14 @@ export function bind(el, target) {
   const aspect = box?.getAttribute('data-aspect');
   if (box && aspect) /** @type {HTMLElement} */ (box).style.setProperty('--aspect', aspect);
   applyScreenVariant(el, target.variants ?? []);
-  // `error` on a <video> never bubbles (unlike `click`), so it's listened
-  // for directly on the element itself, not through `on()`'s delegation.
   const video = el.querySelector('.c-video__el');
   if (video) {
-    let recovering = false;
+    // false: no attempt yet. true: the one refetch already ran (whether
+    // it succeeded or not) -- a further error gives up for good.
+    let attempted = false;
     video.addEventListener('error', () => {
-      if (recovering) return;
-      recovering = true;
+      if (attempted) { mount(el, goneMarkup()); return; }
+      attempted = true;
       recover(el, target, isSmallScreen());
     });
   }

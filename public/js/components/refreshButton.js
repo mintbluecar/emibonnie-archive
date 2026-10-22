@@ -114,24 +114,64 @@ function registerPress(target) {
 }
 
 /**
- * @param {Element} el the element containing the rendered `.c-refresh`
+ * Re-applies the lock countdown to whatever `.c-refresh__btn` currently
+ * exists under `el`, if the stored state is still locked. Exported so a
+ * caller that re-renders just the button's container (e.g. the item
+ * page's body re-render after a successful check) can resync a freshly
+ * rendered button against the standing lock, without re-registering any
+ * listeners.
+ * @param {Element} el @param {{ kind: string, sourceId: string }} target
+ * @returns {void}
+ */
+export function syncLock(el, target) {
+  const existing = loadState(storageKey(target.kind, target.sourceId));
+  const button = /** @type {HTMLButtonElement|null} */ (el.querySelector('.c-refresh__btn'));
+  if (existing && existing.lockedUntil > Date.now() && button) startCountdown(button, existing.lockedUntil);
+}
+
+/**
+ * Posts the refresh request; a network failure (not a server error
+ * response -- `fetch` itself rejecting) still leaves the press-lock
+ * applied (already set by the caller before this runs) and shows a
+ * gentle "couldn't check" message instead of leaving the countdown
+ * silently hanging.
+ * @param {HTMLButtonElement} button @param {{ kind: string, sourceId: string }} target
+ * @param {(result: { updated: number }) => void} onUpdated
+ * @returns {Promise<void>}
+ */
+async function postRefresh(button, target, onUpdated) {
+  try {
+    const response = await fetch(`/api/item/${encodeURIComponent(target.kind)}/${encodeURIComponent(target.sourceId)}/refresh`, { method: 'POST' });
+    // `button.closest('.c-refresh')`, not `el.querySelector(...)`: `el` (the
+    // element `bind()` was called on) may be the `.c-refresh` element
+    // itself, whose own descendants a querySelector search would miss
+    // (review round 1, CRITICAL #2).
+    if (response.status === 409) { button.closest('.c-refresh')?.remove(); return; }
+    if (!response.ok) return;
+    const result = await response.json();
+    if (result.updated > 0) onUpdated(result);
+  } catch {
+    button.textContent = t('item.checkFailed');
+  }
+}
+
+/**
+ * Delegates the click at `el` (meant to be called exactly once, on a
+ * stable ancestor such as the page's root -- never re-called after a
+ * re-render of just the button's container, or its listener would pile
+ * up; see `syncLock()` for resyncing after such a re-render).
+ * @param {Element} el
  * @param {{ kind: string, sourceId: string }} target
  * @param {(result: { updated: number }) => void} onUpdated
  * @returns {void}
  */
 export function bind(el, target, onUpdated) {
-  const existing = loadState(storageKey(target.kind, target.sourceId));
-  const initialButton = /** @type {HTMLButtonElement|null} */ (el.querySelector('.c-refresh__btn'));
-  if (existing && existing.lockedUntil > Date.now() && initialButton) startCountdown(initialButton, existing.lockedUntil);
-
-  on(el, '.c-refresh__btn', 'click', async (_e, button) => {
-    if (/** @type {HTMLButtonElement} */ (button).disabled) return;
+  syncLock(el, target);
+  on(el, '.c-refresh__btn', 'click', (_e, target_) => {
+    const button = /** @type {HTMLButtonElement} */ (target_);
+    if (button.disabled) return;
     const { lockedUntil } = registerPress(target);
-    startCountdown(/** @type {HTMLButtonElement} */ (button), lockedUntil);
-    const response = await fetch(`/api/item/${encodeURIComponent(target.kind)}/${encodeURIComponent(target.sourceId)}/refresh`, { method: 'POST' });
-    if (response.status === 409) { el.querySelector('.c-refresh')?.remove(); return; }
-    if (!response.ok) return;
-    const result = await response.json();
-    if (result.updated > 0) onUpdated(result);
+    startCountdown(button, lockedUntil);
+    postRefresh(button, target, onUpdated);
   });
 }

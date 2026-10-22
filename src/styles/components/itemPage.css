@@ -1,16 +1,41 @@
 /*
- * public/js/pages/item.js's own layout (task-4 brief): a sticky pinned
- * media column (phone: sticky to the top of the viewport as the
- * translation scrolls beneath it; web, via `.cols` from layout.css: the
- * left column, sticky within the grid) plus prev/next, the body, and
- * the footer below both columns.
+ * public/js/pages/item.js's own layout (task-4 brief; review round 1,
+ * IMPORTANT #1 adds the back-to-event row). A dedicated grid (not the
+ * shared `.cols` from layout.css, which is only a grid at >=860px) so
+ * `grid-template-areas` can reposition the back row between phone
+ * ("back" above "media") and web ("back" at the top of the "body"
+ * column, "media" spanning both rows and staying sticky) without
+ * rendering it twice -- matching
+ * docs/superpowers/specs/mockups/screens-v2.html's phone and web
+ * translation screens.
  */
 
+.c-item {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-areas: 'back' 'media' 'body';
+  row-gap: 8px;
+}
+
+.c-item__back {
+  grid-area: back;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+
 .c-item__media {
+  grid-area: media;
   position: sticky;
   top: 0;
   z-index: 2;
   background: var(--color-bg);
+}
+
+.c-item__body {
+  grid-area: body;
 }
 
 .c-item__prevnext {
@@ -65,7 +90,18 @@
 }
 
 @media (min-width: 860px) {
+  .c-item {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: 'media back' 'media body';
+    column-gap: 24px;
+    row-gap: 0;
+  }
+
   .c-item__media {
     align-self: start;
+  }
+
+  .c-item__back {
+    margin-bottom: 4px;
   }
 }

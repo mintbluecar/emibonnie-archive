@@ -52,6 +52,9 @@ export class MiniElement {
       setProperty: (/** @type {string} */ name, /** @type {string} */ value) => { this.styleProps[name] = value; },
       getPropertyValue: (/** @type {string} */ name) => this.styleProps[name] ?? '',
     };
+    // A no-op stand-in for HTMLMediaElement.load(), which public/js/components/videoPlayer.js
+    // calls after swapping a <video>'s src attribute.
+    this.load = () => {};
   }
 
   get classList() {

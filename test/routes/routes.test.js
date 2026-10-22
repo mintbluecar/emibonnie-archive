@@ -81,6 +81,31 @@ test('video: stored variants of a visible item with a live clip; TOMB and items 
   }
 });
 
+test('video: given the outer item\'s own sourceId, resolves the quoted post\'s inner clip variants when the item\'s own media is a quote (review round 1, "quote card inner clip refetch")', async () => {
+  // IDS.POST's media is a quote card whose quoted post (solsunny_x) currently
+  // carries a picture; this swaps in a clip for just this test, to prove
+  // GET /api/video/:kind/:sourceId -- addressed by the *outer* item's own
+  // sourceId, exactly how videoPlayer.js's bind()/recover() call it for a
+  // quote's inner clip -- resolves to the *quoted* post's variants, not a 404.
+  const id = await itemIdOf(deps.db, IDS.POST);
+  const before = await rows(deps.db, "select media from item_sources where item_id = $1 and role = 'quoted'", [id]);
+  const innerVariants = [{ bitrate: 632000, url: 'https://video.twimg.com/amplify_video/innerv/pl/632000.mp4' }];
+  const withVideo = { ...before[0].media, video: { variants: innerVariants, width: 720, height: 1280 } };
+  await deps.db.transaction(
+    (/** @type {any} */ tx) => tx.query("update item_sources set media = $1::jsonb where item_id = $2 and role = 'quoted'", [JSON.stringify(withVideo), id]),
+    SYSTEM,
+  );
+  try {
+    const { variants } = await videoRoute.run(input({ kind: 'translation', sourceId: IDS.POST }), routeDeps());
+    assert.deepEqual(variants, innerVariants);
+  } finally {
+    await deps.db.transaction(
+      (/** @type {any} */ tx) => tx.query("update item_sources set media = $1::jsonb where item_id = $2 and role = 'quoted'", [JSON.stringify(before[0].media), id]),
+      SYSTEM,
+    );
+  }
+});
+
 test('filters lists only visible accounts', async () => {
   await deps.db.transaction((/** @type {any} */ tx) => tx.query("update accounts set opted_out_at = now() where handle = 'tl_gamma'"), SYSTEM);
   try {
