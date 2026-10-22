@@ -105,7 +105,7 @@ What review checks on every PR, on top of each recipe's own list: the layer rule
      - `followUpOf` with `appendFollowUp`
      - `refresh` and `checkFollowUps`
      - `profileUrl(handle)`, the translator page's "open profile" link. Left out, the page shows none.
-  6. `npm run build` regenerates both kinds registries and adds the kind's `<urlPrefix>:id` rewrite. `npm run setup` (or `npm run migrate`) applies the migration, and setup checks that the registry matches the `item_kinds` rows.
+  6. `npm run build` regenerates both kinds registries and adds the kind's `<urlPrefix>:id` rewrite. `npm run setup` (or `npm run migrate`; locally with `PGLITE_DIR=.devdb`) applies the migration, and setup checks that the registry matches the `item_kinds` rows.
 - **Copy from:** `src/kinds/translation/` (the full example).
 - **Review checks:**
   - The diff touches only `src/kinds/<name>/`, `public/js/kinds/<name>/`, `test/kinds/<name>/`, its migration, and regenerated `vercel.json` and `public/*.html`. `test/kinds/scaffoldedKind.test.js` proves this is possible.
@@ -176,7 +176,7 @@ Weverse is already a `platforms` row (`001_initial.sql`), so only the pattern is
   "extraLivePatterns": [{ "code": "weverse live", "platformCode": "weverse", "pattern": "weverse\\s*live" }]
   ```
 
-  Then run `npm run build && npm run setup`.
+  Then run `npm run build`, and `npm run setup` with that site's `DATABASE_URL` (or `PGLITE_DIR=.devdb` for a local dev database; setup refuses to run with neither).
 - **A platform the engine doesn't know yet** (say `bilibili`): first add `insert into platforms values ('bilibili');` in a migration, at engine or site level as above, then add the pattern.
 
 ### Worked example: add a youtube kind

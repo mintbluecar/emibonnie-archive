@@ -148,7 +148,7 @@ The merge should be conflict-free as long as you've only changed `site/`.
 
 | You see | What it means | Fix |
 |---|---|---|
-| `migrated …` lines, but your Neon database is still empty | `DATABASE_URL` wasn't set for that command. Outside Vercel the engine then uses a throwaway local database. | Run it as `DATABASE_URL='…' npm run setup`, quoting the string. |
+| `DATABASE_URL is not set (set PGLITE_DIR to migrate a local dev database)` | `setup` and `migrate` were run with no database to write to. They refuse rather than use a throwaway one. | Run it as `DATABASE_URL='…' npm run setup`, quoting the string. For a local dev database, use `PGLITE_DIR=.devdb npm run setup`. |
 | `DATABASE_URL is not set: a deployed function needs the Postgres connection string` | A deployed function (or a run with `VERCEL` set) has no database URL. | Add `DATABASE_URL` to that Vercel environment (step 7) and redeploy. |
 | `settings invalid` / a list of `site.json` field errors | `site.json` doesn't validate. Each error names the exact field (e.g. `region: must be one of the Vercel region codes (…)`). | Fix that field. [`site-settings.md`](site-settings.md) has every field's rules. |
 | `item_kinds is missing a row for: <kind>` | A kind folder exists with no migration inserting its `item_kinds` row. | Add the migration (`npm run new kind <name>` scaffolds one), then rerun. |

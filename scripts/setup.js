@@ -6,12 +6,12 @@
  * -- `migrate` and `seedFromSite` are both idempotent.
  */
 import { fileURLToPath } from 'node:url';
-import { createDb, dbOptionsFromEnv } from '../src/db/client.js';
+import { createDb } from '../src/db/client.js';
 import { loadSite } from '../src/site/loadSite.js';
 import { seedFromSite } from '../src/services/seedFromSite.js';
 import { listItemKindCodes } from '../src/repo/kinds.js';
 import { kindsRegistry } from '../src/kinds/_registry.js';
-import { runMigrate } from './migrate.js';
+import { errorText, migrateTargetOf, runMigrate } from './migrate.js';
 
 /**
  * The registry codes that have no matching `item_kinds` row.
@@ -51,7 +51,8 @@ export async function runSetup(options = {}) {
   const site = options.site ?? loadSite(siteDir);
   const log = options.log ?? console.log;
   const ownDb = !options.db;
-  const db = options.db ?? createDb(dbOptionsFromEnv(process.env));
+  // Like `npm run migrate`: no DATABASE_URL and no PGLITE_DIR is refused, never a throwaway in-memory database.
+  const db = options.db ?? createDb(migrateTargetOf(process.env));
 
   try {
     await runMigrate({ db, siteDir, log });
@@ -69,7 +70,7 @@ async function main() {
   try {
     await runSetup();
   } catch (/** @type {any} */ err) {
-    console.error(err.message ?? String(err));
+    console.error(errorText(err));
     process.exitCode = 1;
   }
 }
