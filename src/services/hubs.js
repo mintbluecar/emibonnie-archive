@@ -106,6 +106,16 @@ export async function personView(deps, ig, params = {}) {
 }
 
 /**
+ * `AccountView.account`, with `profileUrl` left out entirely when the
+ * matched kind doesn't define one (review round 1, I3).
+ * @param {{ handle: string, displayName: string|null }} account @param {string|undefined} profileUrl
+ * @returns {{ handle: string, displayName: string|null, profileUrl?: string }}
+ */
+function accountChipOf(account, profileUrl) {
+  return profileUrl ? { handle: account.handle, displayName: account.displayName, profileUrl } : { handle: account.handle, displayName: account.displayName };
+}
+
+/**
  * A translator's page. The account is looked up on each kind's platform;
  * one with no visible items has no page (null).
  * @param {ViewDeps} deps @param {string} handle @param {PageParams} [params]
@@ -113,14 +123,17 @@ export async function personView(deps, ig, params = {}) {
  */
 export async function accountView(deps, handle, params = {}) {
   const page = hubPage(params);
-  for (const platform of new Set(Object.values(kindsOf(deps)).map((k) => k.platform))) {
-    const account = await findAccountForView(deps.db, platform, handle.replace(/^@/, ''));
+  const seenPlatforms = new Set();
+  for (const kind of Object.values(kindsOf(deps))) {
+    if (seenPlatforms.has(kind.platform)) continue;
+    seenPlatforms.add(kind.platform);
+    const account = await findAccountForView(deps.db, kind.platform, handle.replace(/^@/, ''));
     if (!account) continue;
     if (account.optedOut) return { account: { handle: account.current ? account.handle : handle, optedOut: true } };
     const { sections, totals } = await sectionsOf(deps, { scope: { accountId: account.id }, order: 'desc', page, withEvent: true });
     const items = Object.values(totals).reduce((n, count) => n + count, 0);
     if (items === 0) return null;
-    const view = { account: { handle: account.handle, displayName: account.displayName }, counts: { items }, sections };
+    const view = { account: accountChipOf(account, kind.profileUrl?.(account.handle)), counts: { items }, sections };
     return account.handle !== handle ? { ...view, redirectTo: account.handle } : view;
   }
   return null;

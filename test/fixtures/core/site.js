@@ -12,4 +12,6 @@ export const site = {
 export const copy = {
   'nav.home': 'home',
   'search.showN': 'show {n}',
+  'demo.count.one': '{n} thing',
+  'demo.count.other': '{n} things',
 };

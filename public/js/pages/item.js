@@ -21,6 +21,7 @@ import * as refreshButton from '../components/refreshButton.js';
 import * as headerLinks from '../components/headerLinks.js';
 import { KIND_UI } from '../kinds/_registry.js';
 import { footerBlock } from './itemFooter.js';
+import { mountLoadError } from './pageError.js';
 
 const APP_SELECTOR = 'app';
 
@@ -189,7 +190,8 @@ export async function start() {
       mountNotFound(root);
       return;
     }
-    throw err;
+    mountLoadError(root);
+    return;
   }
   document.title = `${site.name}`;
   mount(root, composeItem(data));

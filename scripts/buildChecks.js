@@ -71,7 +71,22 @@ export function findUsedCopyKeys(jsText) {
 }
 
 /**
- * Every `t('key')` used across `jsSources` that `copy` doesn't define.
+ * `tCount('key', …)` calls in a JS source (review round 1, M1) -- the
+ * plural-aware form always takes further args (`n`, maybe `vars`), so
+ * unlike `findUsedCopyKeys` this doesn't require the call to end right
+ * after the key.
+ * @param {string} jsText
+ * @returns {string[]}
+ */
+export function findUsedCountKeys(jsText) {
+  const matches = [...jsText.matchAll(/\btCount\(\s*['"]([a-zA-Z0-9_.]+)['"]/g)];
+  return [...new Set(matches.map((match) => match[1]))];
+}
+
+/**
+ * Every `t('key')` used across `jsSources` that `copy` doesn't define,
+ * plus every `tCount('key', …)` whose `key.one`/`key.other` aren't both
+ * defined (review round 1, M1).
  * @param {{ path: string, text: string }[]} jsSources
  * @param {Record<string, string>} copy
  * @returns {string[]}
@@ -81,6 +96,11 @@ export function findMissingCopyKeys(jsSources, copy) {
   for (const { text } of jsSources) {
     for (const key of findUsedCopyKeys(text)) {
       if (!(key in copy)) missing.add(key);
+    }
+    for (const key of findUsedCountKeys(text)) {
+      for (const suffix of ['one', 'other']) {
+        if (!(`${key}.${suffix}` in copy)) missing.add(`${key}.${suffix}`);
+      }
     }
   }
   return [...missing];

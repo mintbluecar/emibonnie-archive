@@ -15,7 +15,7 @@ import { readFileSync } from 'node:fs';
 import { mount } from '../../public/js/core/dom.js';
 import { MiniElement, fakeDocument } from '../helpers/miniDom.js';
 // Dynamic import: see test/components/header.test.js for why.
-const { composeEvent, bind } = await import('../../public/js/pages/event.js');
+const { composeEvent, bind, start } = await import('../../public/js/pages/event.js');
 
 const EVENT = JSON.parse(readFileSync(new URL('../snapshots/event.json', import.meta.url), 'utf8'));
 const EVENT_PAGED = JSON.parse(readFileSync(new URL('../snapshots/event-paged.json', import.meta.url), 'utf8'));
@@ -143,5 +143,22 @@ test('bind: an active filter re-applies to entries "more" appends, not just the 
   } finally {
     mock.restoreAll();
     delete (/** @type {any} */ (globalThis)).document;
+  }
+});
+
+test('start: a non-404 failure renders the generic page.loadFailed fallback, never throws (review round 1, I5)', async () => {
+  const root = new MiniElement('div');
+  globalThis.document = /** @type {any} */ ({
+    createElement: (/** @type {any} */ tag) => new MiniElement(tag), getElementById: (/** @type {string} */ id) => (id === 'app' ? root : null), title: '',
+  });
+  globalThis.window = /** @type {any} */ ({ location: { pathname: `/e/${EVENT.event.slug}`, href: `http://localhost/e/${EVENT.event.slug}` } });
+  mock.method(globalThis, 'fetch', async () => { throw new Error('network down'); });
+  try {
+    await start();
+    assert.match(root.querySelector('.c-empty-state__message')?.children?.[0]?.textContent ?? '', /something went wrong, try again/);
+  } finally {
+    mock.restoreAll();
+    delete (/** @type {any} */ (globalThis)).document;
+    delete (/** @type {any} */ (globalThis)).window;
   }
 });

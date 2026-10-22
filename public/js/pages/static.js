@@ -30,6 +30,7 @@ function aboutContent() {
     <p class="c-static__p">${t('about.whatIsThis')}</p>
     <p class="c-static__p">${t('about.credits')}</p>
     <p class="c-static__p">${t('footer.unofficial')}</p>
+    ${site.logo ? html`<p class="c-static__p">${t('about.logoCredit')}</p>` : ''}
   `;
 }
 

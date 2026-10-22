@@ -1,7 +1,8 @@
 {
   "account": {
     "handle": "tl_alpha",
-    "displayName": "alpha clips"
+    "displayName": "alpha clips",
+    "profileUrl": "https://x.com/tl_alpha"
   },
   "counts": {
     "items": 4
@@ -119,13 +120,21 @@
             },
             {
               "kind": "speech",
-              "emoji": "🪇",
-              "name": "speaker",
+              "emoji": "🌙",
+              "name": "luna",
+              "colour": "#6a5cd6",
               "text": "(shakes a maraca happily)",
               "cont": false
             }
           ],
           "people": [
+            {
+              "id": 2,
+              "name": "luna",
+              "emoji": "🌙",
+              "colour": "#6a5cd6",
+              "igHandle": "lunamoon"
+            },
             {
               "id": 4,
               "name": "star guest",

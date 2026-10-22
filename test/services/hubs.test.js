@@ -82,6 +82,8 @@ test('accountView: the translator\'s items; an old handle after a handle change 
   const view = /** @type {any} */ (await accountView(deps, 'tl_gamma'));
   assert.equal(view.account.handle, 'tl_gamma');
   assert.equal(view.redirectTo, undefined);
+  // review round 1, I3: the translation kind's own profileUrl(handle), never hardcoded by a page.
+  assert.equal(view.account.profileUrl, 'https://x.com/tl_gamma');
   assert.deepEqual(view.sections[0].items.map((/** @type {any} */ i) => i.sourceId), [IDS.EVENT_B]);
   assert.equal(view.counts.items, 1);
 

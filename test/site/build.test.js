@@ -7,6 +7,7 @@ import path from 'node:path';
 import {
   findMissingCssTokens,
   findMissingCopyKeys,
+  findUsedCountKeys,
 } from '../../scripts/buildChecks.js';
 import {
   buildPublicSiteModule,
@@ -61,6 +62,27 @@ test('findMissingCopyKeys: passes when every t() key exists in copy', () => {
   const missing = findMissingCopyKeys(
     [{ path: 'fixture.js', text: "t('nav.home')" }],
     { 'nav.home': 'home' },
+  );
+  assert.deepEqual(missing, []);
+});
+
+test('findUsedCountKeys: finds tCount(\'key\', …) calls regardless of their further args', () => {
+  assert.deepEqual(findUsedCountKeys("tCount('person.translations', n, { x: 1 })"), ['person.translations']);
+  assert.deepEqual(findUsedCountKeys("tCount('a.b', 1)"), ['a.b']);
+});
+
+test('findMissingCopyKeys: requires both .one and .other for a tCount() key (review round 1, M1)', () => {
+  const missing = findMissingCopyKeys(
+    [{ path: 'fixture.js', text: "tCount('person.translations', n)" }],
+    { 'nav.home': 'home' },
+  );
+  assert.deepEqual(missing.sort(), ['person.translations.one', 'person.translations.other']);
+});
+
+test('findMissingCopyKeys: a tCount() key with both suffixes defined passes', () => {
+  const missing = findMissingCopyKeys(
+    [{ path: 'fixture.js', text: "tCount('person.translations', n)" }],
+    { 'person.translations.one': '{n} translation', 'person.translations.other': '{n} translations' },
   );
   assert.deepEqual(missing, []);
 });

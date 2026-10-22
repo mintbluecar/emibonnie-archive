@@ -18,6 +18,11 @@ function followUpOf(tweet) {
   return tweet.replyToId ? { platform: 'x', externalId: tweet.replyToId } : null;
 }
 
+/** @param {string} handle @returns {string} */
+function profileUrl(handle) {
+  return `https://x.com/${encodeURIComponent(handle)}`;
+}
+
 export default defineKind({
   name: 'translation',
   table: 'translations',
@@ -34,4 +39,5 @@ export default defineKind({
   search,
   refresh: refreshEdits,
   checkFollowUps,
+  profileUrl,
 });

@@ -18,7 +18,7 @@
 import { html } from '../core/html.js';
 import { mount, on } from '../core/dom.js';
 import { getJson, ApiError } from '../core/api.js';
-import { site, t } from '../core/site.js';
+import { site, t, tCount } from '../core/site.js';
 import { dayLabel } from '../core/format.js';
 import * as chips from '../components/chips.js';
 import * as emptyState from '../components/emptyState.js';
@@ -26,6 +26,7 @@ import * as pageShell from '../components/pageShell.js';
 import * as headerLinks from '../components/headerLinks.js';
 import { slugFromEventPath } from '../core/routes.js';
 import { KIND_UI, renderSections } from '../kinds/_registry.js';
+import { mountLoadError } from './pageError.js';
 
 const APP_SELECTOR = 'app';
 const ALL = 'all';
@@ -63,7 +64,7 @@ function metaLine(data) {
   const total = Object.values(data.counts).reduce((sum, n) => sum + n, 0);
   return html`
     <p class="c-event__meta">
-      ${dayLabel(data.event.occurredOn)} · ${total} ${t('event.translations')} · ${data.accountCount} ${t('event.translators')}
+      ${dayLabel(data.event.occurredOn)} · ${tCount('event.translations', total)} · ${tCount('event.translators', data.accountCount)}
     </p>
   `;
 }
@@ -298,7 +299,8 @@ export async function start() {
       mountNotFound(root);
       return;
     }
-    throw err;
+    mountLoadError(root, { active: 'home' });
+    return;
   }
   document.title = `${data.event.name} · ${site.name}`;
   mount(root, composeEvent(data));

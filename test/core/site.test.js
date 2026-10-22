@@ -20,7 +20,7 @@ registerHooks({
   },
 });
 
-const { site, t } = await import('../../public/js/core/site.js');
+const { site, t, tCount } = await import('../../public/js/core/site.js');
 
 test('site: re-exports the public site object from /site/site.js', () => {
   assert.equal(site.name, 'fixture archive');
@@ -33,6 +33,16 @@ test('t: looks up a known copy key', () => {
 
 test('t: substitutes {vars} into the template', () => {
   assert.equal(t('search.showN', { n: 3 }), 'show 3');
+});
+
+test('tCount: picks .one for n === 1, .other otherwise, and n is always available as {n} (review round 1, M1)', () => {
+  assert.equal(tCount('demo.count', 1), '1 thing');
+  assert.equal(tCount('demo.count', 0), '0 things');
+  assert.equal(tCount('demo.count', 2), '2 things');
+});
+
+test('tCount: extra vars are merged alongside n', () => {
+  assert.equal(tCount('demo.count', 1, { ignored: 'x' }), '1 thing');
 });
 
 test('t: a missing key warns on the console and returns the key itself', () => {

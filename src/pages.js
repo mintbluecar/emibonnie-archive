@@ -22,9 +22,12 @@ export const pages = [
   { path: '/', file: 'index.html' },
   { path: '/e/:slug', file: 'event.html', meta: '/meta/e/:slug' },
   { path: '/search', file: 'search.html' },
-  // Task 6: person/translator have no meta route of their own (unlike /e/:slug),
-  // so they rewrite straight to their file, same as a static page -- see
-  // task-6-report.md for why one wasn't added.
+  // Task 6: no meta route for these yet. src/routes/meta.js only defines
+  // eventMeta/itemMeta, and src/routes/index.js's pageMetaRoutes() only
+  // wires those two -- there's no /api/meta/p/:ig or /api/meta/tl/:handle
+  // to point a `meta:` entry at, so these two rewrite straight to their
+  // file instead, same as a static page. If a later task adds person/
+  // account link-preview meta, give these a `meta:` string then.
   { path: '/p/:ig', file: 'person.html' },
   { path: '/tl/:handle', file: 'account.html' },
   { path: '/about', file: 'about.html' },

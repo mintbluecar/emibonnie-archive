@@ -32,3 +32,20 @@ export function t(key, vars) {
   }
   return vars ? substitute(template, vars) : template;
 }
+
+/**
+ * The plural-aware form of `t()` (review round 1, M1): looks up
+ * `${key}.one` when `n === 1`, else `${key}.other` -- both literal copy
+ * keys, so a site can translate/reword either independently, the same
+ * as every other key. `n` is always available in the template as `{n}`,
+ * alongside any `vars`. `scripts/buildChecks.js`'s missing-key scan
+ * recognises a `tCount(…)` call site by its first argument and requires
+ * both of that key's suffixes to exist.
+ * @param {string} key
+ * @param {number} n
+ * @param {Record<string, string|number>} [vars]
+ * @returns {string}
+ */
+export function tCount(key, n, vars) {
+  return t(`${key}.${n === 1 ? 'one' : 'other'}`, { n, ...vars });
+}

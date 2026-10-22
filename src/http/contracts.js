@@ -112,12 +112,15 @@
  *   current IG handle, when the one asked for isn't it (case included).
  *
  * @typedef {{
- *   account: { handle: string, displayName: string|null }, counts: { items: number },
+ *   account: { handle: string, displayName: string|null, profileUrl?: string }, counts: { items: number },
  *   sections: DatedSection[], redirectTo?: string,
  * }} AccountView
  *   Items newest first, paged per section; `counts.items` counts every
  *   visible item (a count query). `redirectTo`: the current
  *   handle, when the one asked for isn't it (an old handle, or other case).
+ *   `profileUrl`: the matched kind's own `profileUrl(handle)`, when it
+ *   defines one (a kind-specific link, e.g. an X profile -- left out
+ *   entirely for a kind that doesn't).
  * @typedef {{ account: { handle: string, optedOut: true } }} OptedOutAccountView
  *   All an opted-out account's page gets: `handle` is the one asked for.
  *

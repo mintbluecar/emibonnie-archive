@@ -83,3 +83,11 @@ test('refresh and checkFollowUps are optional, but must be functions when given'
   assert.throws(() => defineKind(/** @type {any} */ ({ ...spec(), refresh: 'nope' })), /refresh must be a function/);
   assert.throws(() => defineKind(/** @type {any} */ ({ ...spec(), checkFollowUps: {} })), /checkFollowUps must be a function/);
 });
+
+test('profileUrl is optional, but must be a function when given (review round 1, I3)', () => {
+  const kind = defineKind(spec());
+  assert.equal(kind.profileUrl, undefined);
+  const withProfile = defineKind({ ...spec(), profileUrl: (handle) => `https://example.com/${handle}` });
+  assert.equal(withProfile.profileUrl?.('someone'), 'https://example.com/someone');
+  assert.throws(() => defineKind(/** @type {any} */ ({ ...spec(), profileUrl: 'nope' })), /profileUrl must be a function/);
+});

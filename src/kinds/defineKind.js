@@ -117,7 +117,13 @@ import { pages } from '../pages.js';
  *   search: { textClause(paramIndex: number): string, rank(paramIndex: number): string, matchLines(details: any, q: string): string[] },
  *   refresh?: (deps: UpkeepDeps, itemId: number, options: { actor: string }) => Promise<{ updated: number, editableUntil: string|null }>,
  *   checkFollowUps?: (deps: UpkeepDeps, itemId: number, options: { actor: string }) => Promise<{ added: number }>,
+ *   profileUrl?: (handle: string) => string,
  * }} Kind
+ *   `profileUrl(handle)` (optional): the kind's own public profile link
+ *   for a credited handle (e.g. an X profile) -- `accountView`
+ *   (src/services/hubs.js) sets `AccountView.account.profileUrl` from it
+ *   when the kind defines one, so the translator page never hardcodes a
+ *   platform itself.
  *
  * `present.preview(card, details, ctx)` / `present.detail(card, details, ctx)`
  * build the `Preview` / `DetailVM` of src/http/contracts.js from a
@@ -157,7 +163,7 @@ export const RESERVED_URL_PREFIXES = Object.freeze([
 const OWNED_URL_PREFIXES = Object.freeze({ '/t/': 'translation' });
 const REQUIRED_FUNCTIONS = ['matchesUrl', 'fetchSource', 'draft', 'persist', 'loadDetails'];
 const REQUIRED_GROUPS = { present: ['preview', 'detail'], search: ['textClause', 'rank', 'matchLines'] };
-const OPTIONAL_FUNCTIONS = ['refresh', 'checkFollowUps'];
+const OPTIONAL_FUNCTIONS = ['refresh', 'checkFollowUps', 'profileUrl'];
 
 /**
  * Each string field of the spec, the pattern it must match, and the problem when it doesn't.

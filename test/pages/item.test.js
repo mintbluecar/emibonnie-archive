@@ -11,10 +11,22 @@
 import '../helpers/siteFixture.js';
 import assert from 'node:assert/strict';
 import { test, mock } from 'node:test';
+import { writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import { MiniElement, fakeDocument } from '../helpers/miniDom.js';
 import { mount } from '../../public/js/core/dom.js';
+import { buildFrontendKindsRegistryModule, listKindFolders } from '../../scripts/buildOutputs.js';
+
+// Regenerate public/js/kinds/_registry.js with its real urlPrefix before
+// importing item.js (same guard test/components/registry.test.js uses):
+// other test files share and rewrite this one generated file, some of
+// them without a urlPrefix, so this file's own start()-level tests
+// (which route a pathname through it) can't trust whatever is on disk.
+const KINDS_DIR = fileURLToPath(new URL('../../public/js/kinds/', import.meta.url));
+writeFileSync(path.join(KINDS_DIR, '_registry.js'), buildFrontendKindsRegistryModule(listKindFolders(KINDS_DIR), { translation: '/t/' }));
 // Dynamic import: see test/components/header.test.js for why.
-const { composeItem, bind } = await import('../../public/js/pages/item.js');
+const { composeItem, bind, start } = await import('../../public/js/pages/item.js');
 
 const flush = () => new Promise((resolve) => { setTimeout(resolve, 0); });
 
@@ -232,5 +244,22 @@ test('bind: the copy-link button copies the absolute item URL and shows "copied"
     delete (/** @type {any} */ (globalThis)).navigator;
     delete (/** @type {any} */ (globalThis)).window;
     delete (/** @type {any} */ (globalThis)).localStorage;
+  }
+});
+
+test('start: a non-404 failure renders the generic page.loadFailed fallback, never throws (review round 1, I5)', async () => {
+  const root = new MiniElement('div');
+  globalThis.document = /** @type {any} */ ({
+    createElement: (/** @type {any} */ tag) => new MiniElement(tag), getElementById: (/** @type {string} */ id) => (id === 'app' ? root : null), title: '',
+  });
+  globalThis.window = /** @type {any} */ ({ location: { pathname: '/t/1900000000000000004', href: 'http://localhost/t/1900000000000000004' } });
+  mock.method(globalThis, 'fetch', async () => { throw new Error('network down'); });
+  try {
+    await start();
+    assert.match(root.querySelector('.c-empty-state__message')?.children?.[0]?.textContent ?? '', /something went wrong, try again/);
+  } finally {
+    mock.restoreAll();
+    delete (/** @type {any} */ (globalThis)).document;
+    delete (/** @type {any} */ (globalThis)).window;
   }
 });
