@@ -56,7 +56,7 @@ function soloBubble(marker, text, speakers, ctx) {
  * @param {PresentContext} ctx
  * @returns {{emoji: string, name: string|null}}
  */
-function componentOf(marker, speakers, ctx) {
+export function componentOf(marker, speakers, ctx) {
   const speaker = Object.hasOwn(speakers, marker) ? speakers[marker] : undefined;
   const person = speaker && 'person' in speaker ? ctx.people.get(speaker.person) : undefined;
   if (person) return { emoji: person.emoji, name: ctx.formatName(person.displayName) };

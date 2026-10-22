@@ -2,7 +2,8 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { IDS } from '../helpers/fixtures.js';
-import { seededDeps, itemIdOf, ingest, rows, SYSTEM } from '../helpers/ingest.js';
+import { seededDeps, itemIdOf, ingest, rows, SYSTEM, LONG_REFS } from '../helpers/ingest.js';
+import { itemView } from '../../src/services/itemView.js';
 import { search } from '../../src/services/search.js';
 import { searchSql } from '../../src/repo/search.js';
 import { kindsRegistry } from '../../src/kinds/_registry.js';
@@ -36,6 +37,19 @@ test('"hug" finds LONG, with its matching lines and event', async () => {
   assert.ok(long.matchLines.length > 0 && long.matchLines.length <= 3);
   assert.ok(long.matchLines.every((line) => line.toLowerCase().includes('hug')));
   assert.equal(long.lines.length, 2);
+});
+
+test('"hug": match lines show speakers as the item page does, by standard emoji, never the translator\'s marker (Task 9a item 4)', async () => {
+  const { results: [long] } = await search(deps, { q: 'hug' });
+  const view = /** @type {any} */ (await itemView(deps, 'translation', IDS.LONG));
+  const speakerEmoji = new Set(view.bubbles.filter((/** @type {any} */ b) => b.kind === 'speech').map((/** @type {any} */ b) => b.emoji));
+  const rawMarkers = Object.keys(LONG_REFS).filter((marker) => !speakerEmoji.has(marker));
+  assert.ok(rawMarkers.length > 0, 'LONG has markers that resolve to a different standard emoji');
+  for (const line of long.matchLines) {
+    assert.ok(!rawMarkers.some((marker) => line.startsWith(marker)), `raw marker shown: ${line}`);
+    assert.ok(!/^\S+:/u.test(line), `marker colon shown: ${line}`);
+  }
+  assert.ok(long.matchLines.some((line) => [...speakerEmoji].some((emoji) => line.startsWith(`${emoji} `))), long.matchLines.join(' | '));
 });
 
 test('Thai: "ครบ" ranks LONG first', async () => {

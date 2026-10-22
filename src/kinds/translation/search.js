@@ -7,6 +7,11 @@
  * pattern (served by the `translation_parts_body_trgm` index); `rank` is
  * the best-matching part's `word_similarity` to the raw query.
  */
+import { splitLines } from '../../domain/lines.js';
+import { componentOf } from './presenter.js';
+
+/** @typedef {import('../defineKind.js').PresentContext} PresentContext */
+/** @typedef {import('../../domain/speakers.js').SpeakerMap} SpeakerMap */
 
 const MAX_MATCH_LINES = 3;
 
@@ -39,18 +44,36 @@ function rank(queryIndex) {
 }
 
 /**
- * The verbatim lines (trimmed) containing `q`, case-insensitively, at most 3.
- * @param {{ body: string }} details
+ * How a matching line reads in a result: a speech line's marker becomes
+ * the emoji its bubble shows on the item page (a known person's standard
+ * emoji; a generic role's or an unmapped marker's own), with no colon,
+ * as the search mockup shows it. Any other line stays as written.
+ * @param {string} line @param {SpeakerMap} speakers @param {PresentContext} ctx
+ * @returns {string}
+ */
+function shownLine(line, speakers, ctx) {
+  const [parsed] = splitLines(line);
+  if (parsed?.kind !== 'speech') return line;
+  return `${parsed.markers.map((marker) => componentOf(marker, speakers, ctx).emoji).join('')} ${parsed.text}`;
+}
+
+/**
+ * The lines (trimmed) containing `q`, case-insensitively, at most 3.
+ * Matched on the verbatim text; with `ctx` (the search service always
+ * passes it), each is shown with its speaker resolved (`shownLine`).
+ * @param {{ body: string, speakers?: SpeakerMap }} details
  * @param {string} q
+ * @param {PresentContext} [ctx]
  * @returns {string[]}
  */
-function matchLines(details, q) {
+function matchLines(details, q, ctx) {
   const needle = q.normalize('NFC').toLowerCase();
-  return details.body
+  const found = details.body
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && line.normalize('NFC').toLowerCase().includes(needle))
     .slice(0, MAX_MATCH_LINES);
+  return ctx ? found.map((line) => shownLine(line, details.speakers ?? {}, ctx)) : found;
 }
 
 export const search = { textClause, rank, matchLines };

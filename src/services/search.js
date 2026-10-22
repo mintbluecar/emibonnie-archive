@@ -116,9 +116,10 @@ export async function search(deps, params) {
   const kinds = names.map((name) => registry[name]);
   const { count, ids } = await searchItems(deps.db, { q, kinds, filters: filtersOf(params), limit, offset });
   if (ids.length === 0) return { count, results: [] };
-  const entries = await previewsFor(deps, ids, await presenterContext(deps));
+  const ctx = await presenterContext(deps);
+  const entries = await previewsFor(deps, ids, ctx);
   const results = entries.map(({ card, details, preview }) => ({
-    ...preview, event: eventRefOf(card.event), matchLines: q === null ? [] : registry[card.kind].search.matchLines(details, q),
+    ...preview, event: eventRefOf(card.event), matchLines: q === null ? [] : registry[card.kind].search.matchLines(details, q, ctx),
   }));
   return { count, results };
 }

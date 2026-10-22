@@ -45,3 +45,4 @@ The first release: a read-only archive (browse, search, item pages) with intake 
   - The dev server no longer corrupts its PGlite directory when an item page's background edit refresh overlaps later requests: every `Db` on one `PGLITE_DIR` now shares one PGlite instance, closed by its last user. Postgres (Neon) is unchanged.
   - `npm run new kind t` gives its refusal reason once, not twice.
   - `lowercaseNames` lowercases people's names only. Person and translator pages no longer lowercase event names in their group labels.
+  - Search results show each matching line's speaker as the item page does: a known person's standard emoji, not the translator's own marker. A kind's `search.matchLines` now gets the presenter context as an optional third argument.

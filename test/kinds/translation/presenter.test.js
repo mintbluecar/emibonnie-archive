@@ -262,6 +262,21 @@ test('search.matchLines returns the verbatim lines containing q (case-insensitiv
   assert.deepEqual(translation.search.matchLines(details, 'nothing'), []);
 });
 
+test('search.matchLines with the present context shows each speaker as the item page does: a known person\'s standard emoji, a role\'s own marker (Task 9a item 4)', () => {
+  const people = new Map([[1, { id: 1, emoji: '☀️', displayName: 'Sol', colour: '#d9a400', igHandle: 'solsunny' }]]);
+  const ctx = /** @type {any} */ ({ people, formatName: (/** @type {string} */ n) => n.toLowerCase() });
+  const details = {
+    body: 'A HEADER about hugs\n🐶: a hug from sol\n🌧️: a fan wants a hug\n🐶🌧️: hug together\n🐸: an unmapped hug',
+    speakers: { '🐶': { person: 1 }, '🌧️': { role: 'fan' } },
+  };
+  assert.deepEqual(translation.search.matchLines(details, 'hug', ctx), [
+    'A HEADER about hugs', '☀️ a hug from sol', '🌧️ a fan wants a hug',
+  ]);
+  assert.deepEqual(translation.search.matchLines({ ...details, body: '🐶🌧️: hug together\n🐸: an unmapped hug' }, 'hug', ctx), [
+    '☀️🌧️ hug together', '🐸 an unmapped hug',
+  ]);
+});
+
 test('search.textClause and rank only interpolate their placeholder index', () => {
   assert.match(translation.search.textClause(3), /\$3\b/);
   assert.match(translation.search.rank(4), /word_similarity\(\$4, tp\.body\)/);

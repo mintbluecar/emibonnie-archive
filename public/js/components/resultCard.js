@@ -1,8 +1,9 @@
 // @ts-check
 /**
  * A search `SearchResult` card (src/http/contracts.js): the event it
- * happened in, its `matchLines` (verbatim, so `q`'s matches are
- * highlighted against the raw text), and a meta line. The raw line is
+ * happened in, its `matchLines` (verbatim text, with each speaker shown
+ * by display emoji, so `q`'s matches are highlighted against the text
+ * itself), and a meta line. The raw line is
  * split on `q` *before* escaping, so a match inside what would otherwise
  * become an HTML entity (e.g. `q: 'amp'` against `'a & amp'`) marks only
  * the real word, never text that only looks like it once escaped.

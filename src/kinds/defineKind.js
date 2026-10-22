@@ -114,7 +114,7 @@ import { pages } from '../pages.js';
  *   persist(tx: Db, draft: any, meta: object): Promise<number>,
  *   loadDetails(db: Db, itemIds: number[]): Promise<Map<number, object>>,
  *   present: { preview(item: any, details: any, ctx: any): object, detail(item: any, details: any, ctx: any): object },
- *   search: { textClause(paramIndex: number): string, rank(paramIndex: number): string, matchLines(details: any, q: string): string[] },
+ *   search: { textClause(paramIndex: number): string, rank(paramIndex: number): string, matchLines(details: any, q: string, ctx?: any): string[] },
  *   refresh?: (deps: UpkeepDeps, itemId: number, options: { actor: string }) => Promise<{ updated: number, editableUntil: string|null }>,
  *   checkFollowUps?: (deps: UpkeepDeps, itemId: number, options: { actor: string }) => Promise<{ added: number }>,
  *   profileUrl?: (handle: string) => string,
@@ -132,7 +132,9 @@ import { pages } from '../pages.js';
  * on the item aliased `i` matching the bound `ilike` pattern `$n`;
  * `search.rank(n)` a SQL number expression scoring `i` against the bound
  * raw query `$n` (higher first); both interpolate only `n`.
- * `search.matchLines(details, q)` picks the lines a result shows.
+ * `search.matchLines(details, q, ctx)` picks the lines a result shows; with
+ * the presenter context, it shows speakers the way `present` does (e.g.
+ * a person's standard emoji, never a translator's own marker).
  */
 
 const NAME = /^[a-z][a-z0-9_]*$/;
