@@ -6,11 +6,12 @@ This repository is the **template/engine**. It contains no fandom-specific conte
 
 ## Status
 
-Early scaffolding. See `docs/architecture.md` for the layered architecture and code rules, and `docs/decisions/` for the reasoning behind the major choices.
+v0.1.0: a read-only archive (browse, search, item pages) with command-line intake. See `CHANGELOG.md`, `docs/architecture.md` for the layered architecture and code rules, and `docs/decisions/` for the reasoning behind the major choices.
 
 ## Getting started
 
-See `CONTRIBUTING.md` for setup, workflow, and testing conventions.
+- **Run your own archive:** `docs/start-your-own.md` (and `docs/limits.md` for the free-tier limits).
+- **Work on the engine:** `CONTRIBUTING.md` for setup, workflow, testing conventions and a recipe for each extension point (`npm run new …`).
 
 ## License
 

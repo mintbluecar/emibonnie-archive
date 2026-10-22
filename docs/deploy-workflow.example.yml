@@ -1,0 +1,110 @@
+# Example deploy workflow for an archive whose repo is owned by a GitHub ORGANISATION
+# (Vercel Hobby's Git integration can't deploy org repos; see docs/start-your-own.md, step 6).
+# Copy it to .github/workflows/deploy.yml in YOUR site's repo -- not into the engine.
+#
+# Pushes to main: test, migrate the production database, deploy to production.
+# Pull requests:  test, migrate the preview database, deploy a preview.
+#
+# The Vercel CLI steps follow Vercel's guide, "How can I use GitHub Actions with Vercel?"
+# (https://vercel.com/kb/guide/how-can-i-use-github-actions-with-vercel).
+#
+# Secrets, each stored in a GitHub *environment* (Settings -> Environments), never as a plain repo secret:
+#   environment "production": DATABASE_URL          (Neon main branch)
+#                             VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+#   environment "preview":    DATABASE_URL_PREVIEW  (Neon `preview` branch)
+#                             VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+# Why environments: a job only receives the secrets of the environment it names, so the preview job --
+# which runs code from a pull request -- can never read the production DATABASE_URL, even by mistake.
+# Give "production" a deployment-branch rule (main only) so nothing else can use it either.
+#
+# Actions are pinned to full commit SHAs (the tag in the trailing comment), the same pins as the
+# engine's own .github/workflows/ci.yml. The Vercel CLI is pinned to an exact npm version.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Never pull_request_target: it would run fork code with this repo's secrets.
+permissions:
+  contents: read
+
+# One run per branch or PR at a time, queued rather than cancelled, so a migration is never cut off
+# halfway and two deploys never race (the migration runner also takes an advisory lock).
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run check
+      - run: npm test
+
+  production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Migrate the production database
+        run: npm run migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - run: npx --yes vercel@65.1.0 pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      - run: npx --yes vercel@65.1.0 build --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - run: npx --yes vercel@65.1.0 deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+  preview:
+    # Fork PRs get no secrets at all; only branches of this repo deploy previews.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: preview
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Migrate the preview database
+        run: npm run migrate
+        env:
+          # The preview branch's URL, under the name npm run migrate reads. This job's environment
+          # ("preview") holds no DATABASE_URL secret, so production's is out of reach here.
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PREVIEW }}
+      - run: npx --yes vercel@65.1.0 pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+      - run: npx --yes vercel@65.1.0 build --token=${{ secrets.VERCEL_TOKEN }}
+      - run: npx --yes vercel@65.1.0 deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
