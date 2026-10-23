@@ -89,3 +89,18 @@ test('every page includes the page shell\'s compact header, tab bar and footer l
     assert.match(markup, /c-footer__links/, page);
   }
 });
+
+test('privacy (Task 10b): the X embed notice and its link to X\'s privacy policy show only when embedSources is on', () => {
+  const off = String(composeStatic('privacy'));
+  assert.ok(!off.includes('c-static__embed-notice'), 'off by default: no notice');
+  assert.ok(!off.includes(htmlEscaped(COPY['privacy.embedNotice'])));
+  /** @type {any} */ (SITE).embedSources = true;
+  try {
+    const on = String(composeStatic('privacy'));
+    assert.ok(on.includes(htmlEscaped(COPY['privacy.embedNotice'])), on);
+    assert.match(on, /<a href="https:\/\/x\.com\/en\/privacy" rel="noopener">X(&#39;|&#x27;|')s privacy policy<\/a>/);
+    assert.ok(on.indexOf('c-static__embed-notice') > on.indexOf(htmlEscaped(COPY['privacy.thirdParties'])), 'sits with the third parties');
+  } finally {
+    delete (/** @type {any} */ (SITE)).embedSources;
+  }
+});

@@ -34,6 +34,22 @@ function aboutContent() {
   `;
 }
 
+/** X's own privacy policy, linked from the embed notice. */
+const X_PRIVACY_URL = 'https://x.com/en/privacy';
+
+/**
+ * Task 10b: only a site that turns `embedSources` on loads anything from
+ * X, so only its privacy page says so.
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+function embedNotice() {
+  if (!site.embedSources) return html``;
+  return html`
+    <p class="c-static__p c-static__embed-notice">${t('privacy.embedNotice')}
+      <a href="${X_PRIVACY_URL}" rel="noopener">${t('privacy.embedPolicyLinkLabel')}</a></p>
+  `;
+}
+
 /** @returns {import('../core/html.js').SafeHtml} */
 function privacyContent() {
   const keys = [
@@ -42,7 +58,7 @@ function privacyContent() {
   ];
   return html`
     <h1 class="c-static__title">${t('privacy.title')}</h1>
-    ${keys.map((key) => html`<p class="c-static__p">${t(key)}</p>`)}
+    ${keys.map((key) => html`<p class="c-static__p">${t(key)}</p>${key === 'privacy.thirdParties' ? embedNotice() : ''}`)}
     <h2 class="c-static__subtitle">${t('privacy.contactLabel')}</h2>
     ${contactLink('privacy.contactLinkLabel')}
   `;
