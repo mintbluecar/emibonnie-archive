@@ -264,8 +264,29 @@ tasks:
       - npm run e2e:site
 
   dev:
-    desc: "Local dev server (npm run dev)"
+    desc: "Local site at http://localhost:3000 with this archive's real data (no Neon, no Vercel)"
+    summary: |
+      Runs the site on this Mac against a local database in .devdb
+      (gitignored), seeded from site/seed the first time. Nothing touches
+      Neon or Vercel. After changing files, stop it (Ctrl-C) and run it
+      again to rebuild; `task dev:fresh` also resets the local data.
+    env:
+      PGLITE_DIR: .devdb
+      DATABASE_URL: ''
+      VERCEL: ''
     cmds:
+      - test -d .devdb || npm run seed-dev
+      - npm run dev
+
+  dev:fresh:
+    desc: "Like dev, but wipes and re-seeds the local data first"
+    env:
+      PGLITE_DIR: .devdb
+      DATABASE_URL: ''
+      VERCEL: ''
+    cmds:
+      - rm -rf .devdb
+      - npm run seed-dev
       - npm run dev
 
   takedown:
