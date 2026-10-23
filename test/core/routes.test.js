@@ -71,3 +71,21 @@ test('accountHref/accountFromAccountPath: builds and parses the translator page 
   assert.equal(accountFromAccountPath('/p/lunamoon'), null);
   assert.equal(accountFromAccountPath(accountHref('tl_alpha')), 'tl_alpha');
 });
+
+test('Task 10b: every static page path in routes.js is exactly a src/pages.js route -- no trailing slash', async () => {
+  const routes = await import('../../public/js/core/routes.js');
+  const paths = new Set(pages.map((p) => p.path));
+  for (const name of ['HOME_PATH', 'SEARCH_PATH', 'ABOUT_PATH', 'PRIVACY_PATH', 'TAKEDOWN_PATH', 'ADD_PATH', 'ME_PATH']) {
+    const value = /** @type {any} */ (routes)[name];
+    assert.ok(paths.has(value), `${name} (${value}) is a src/pages.js route`);
+    assert.ok(value === '/' || !value.endsWith('/'), `${name} has no trailing slash`);
+  }
+});
+
+test('Task 10b: searchHref builds the search page path, with or without a query', async () => {
+  const { searchHref } = await import('../../public/js/core/routes.js');
+  assert.equal(searchHref(), '/search');
+  assert.equal(searchHref(''), '/search');
+  assert.equal(searchHref('filters=1'), '/search?filters=1');
+  assert.equal(searchHref(new URLSearchParams({ event: 'a b' })), '/search?event=a+b');
+});

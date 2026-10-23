@@ -237,6 +237,33 @@ test('header (Task 10b): pinned on a long page -- after scrolling to the bottom 
   await expect(page.getByRole('banner')).toHaveCount(1);
 });
 
+for (const [label, path] of [['about', '/about'], ['privacy', '/privacy'], ['takedown', '/takedown']]) {
+  test(`footer (Task 10b): clicking "${label}" reaches ${path} -- a 200 and its page, not "page not found"`, async ({ page }, testInfo) => {
+    test.skip(DARK_PROJECTS.includes(testInfo.project.name), 'links, not colour: light projects only');
+    await gotoReady(page, '/');
+    const [response] = await Promise.all([
+      page.waitForResponse((res) => res.request().isNavigationRequest()),
+      page.locator('.c-footer__links a', { hasText: label }).click(),
+    ]);
+    expect(response.status(), response.url()).toBe(200);
+    await page.waitForSelector('#app[data-ready]', { state: 'attached' });
+    expect(new URL(page.url()).pathname).toBe(path);
+    await expect(page.locator('.c-static__title')).toBeVisible();
+    await expect(page.locator('.c-empty-state')).toHaveCount(0);
+  });
+}
+
+test('LONG (Task 10b): "show original" keeps the stored line breaks (white-space: pre-wrap)', async ({ page }, testInfo) => {
+  test.skip(DARK_PROJECTS.includes(testInfo.project.name), 'layout, not colour: light projects only');
+  await stubSyntheticMedia(page);
+  await gotoReady(page, `/t/${IDS.LONG}`);
+  await page.locator('.k-translation-detail__original-toggle').click();
+  const text = page.locator('.k-translation-detail__original-text');
+  await expect(text).toBeVisible();
+  expect(await text.evaluate((el) => getComputedStyle(el).whiteSpace)).toBe('pre-wrap');
+  expect(await text.evaluate((el) => (el.textContent ?? '').includes('\n'))).toBe(true);
+});
+
 test('video (Task 9b): before play, the poster and a centred play button, no native controls; pressing play brings the controls', async ({ page }, testInfo) => {
   test.skip(DARK_PROJECTS.includes(testInfo.project.name), 'item-page extras only run in light mode (I1)');
   await stubSyntheticMedia(page);

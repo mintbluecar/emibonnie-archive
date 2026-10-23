@@ -14,6 +14,7 @@ import * as pageShell from '../components/pageShell.js';
 import * as resultCard from '../components/resultCard.js';
 import * as emptyState from '../components/emptyState.js';
 import { EMPTY_STATE, toQuery, filterCount, isBlank } from '../state/searchState.js';
+import { searchHref } from '../core/routes.js';
 
 /** @param {number} id @param {import('../../../src/http/contracts.js').PersonChip[]} people @returns {string} */
 function personLabel(id, people) {
@@ -80,7 +81,7 @@ function quickChips(people) {
   return html`
     <p class="c-search__quick-label">${t('search.quickChips')}</p>
     <div class="c-search__quick-chips">
-      ${people.map((p) => html`<a class="c-search__quick-chip" href="/search?${toQuery({ ...EMPTY_STATE, people: [p.id] }).toString()}">${p.emoji} ${p.name}</a>`)}
+      ${people.map((p) => html`<a class="c-search__quick-chip" href="${searchHref(toQuery({ ...EMPTY_STATE, people: [p.id] }))}">${p.emoji} ${p.name}</a>`)}
     </div>
   `;
 }
@@ -91,7 +92,7 @@ function recentSearchesBlock(recent) {
   return html`
     <p class="c-search__recent-label">${t('search.recentSearches')}</p>
     <div class="c-search__recent-chips">
-      ${recent.map((q) => html`<a class="c-search__recent-chip" href="/search?${toQuery({ ...EMPTY_STATE, q }).toString()}">${q}</a>`)}
+      ${recent.map((q) => html`<a class="c-search__recent-chip" href="${searchHref(toQuery({ ...EMPTY_STATE, q }))}">${q}</a>`)}
     </div>
   `;
 }

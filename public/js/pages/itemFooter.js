@@ -8,6 +8,7 @@
 import { html } from '../core/html.js';
 import { site, t } from '../core/site.js';
 import * as sourceEmbed from '../components/sourceEmbed.js';
+import { TAKEDOWN_PATH } from '../core/routes.js';
 
 /**
  * The original post: X's embed when the site turns `embedSources` on
@@ -51,7 +52,7 @@ export function footerBlock(data) {
       ${followsOnLine(data.followsOnFrom)}
       ${addedByLine(data.addedBy)}
       <button type="button" class="c-item__copy-link">${t('item.copyLink')}</button>
-      <a class="c-item__footer-link" href="/takedown/">${t('item.report')}</a>
+      <a class="c-item__footer-link" href="${TAKEDOWN_PATH}">${t('item.report')}</a>
     </div>
   `;
 }

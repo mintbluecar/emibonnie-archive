@@ -132,7 +132,7 @@ test('embedSources on, X blocked: the blockquote fallback shows our text, author
   await expect(quote.locator('a.c-embed__link')).toHaveAttribute('href', primary.url);
   await expect(page.locator('.c-item__footer > a.c-item__footer-link[href^="https://x.com/"]')).toHaveCount(0);
   await expect(page.locator('.c-item__copy-link')).toBeVisible();
-  await expect(page.locator('.c-item__footer a[href="/takedown/"]')).toBeVisible();
+  await expect(page.locator('.c-item__footer a[href="/takedown"]')).toBeVisible();
 
   await expect.poll(() => asked.length).toBe(1);
   expect(asked[0]).toBe(`${X_HOST}/widgets.js`);

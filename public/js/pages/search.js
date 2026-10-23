@@ -20,6 +20,7 @@ import * as filterSheet from '../components/filterSheet.js';
 import {
   EMPTY_STATE, parseState, toQuery, toApiParams, filterCount, isBlank, sanitizeTypes, withoutFilter,
 } from '../state/searchState.js';
+import { searchHref } from '../core/routes.js';
 import {
   composeSearch, searchAreaMarkup, errorMarkup, errorPage,
 } from './searchView.js';
@@ -130,7 +131,7 @@ async function refetchAndRender(root, ctx) {
 async function commit(root, ctx, next) {
   ctx.state = next;
   const qs = toQuery(next).toString();
-  history.replaceState(null, '', qs ? `/search?${qs}` : '/search');
+  history.replaceState(null, '', searchHref(qs));
   updateFilterBadge(root, filterCount(next));
   await refetchAndRender(root, ctx);
 }

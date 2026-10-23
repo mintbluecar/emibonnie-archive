@@ -71,7 +71,7 @@ test('composeEvent: a "more" button with the right data-kind/data-offset when a 
 test('composeEvent: the newest-first toggle and the report link', () => {
   const markup = String(composeEvent(EVENT));
   assert.match(markup, /<button type="button" class="c-event__newest-toggle" aria-pressed="false">newest first<\/button>/);
-  assert.match(markup, /<a class="c-event__report" href="\/soon">report<\/a>/);
+  assert.match(markup, /<a class="c-event__report" href="\/takedown">report<\/a>/);
 });
 
 test('composeEvent: the search icon links to the event-scoped search, as an SVG (not an emoji), matching the header\'s icon style', () => {

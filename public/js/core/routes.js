@@ -75,3 +75,31 @@ export function accountFromAccountPath(pathname) {
   const match = ACCOUNT_PATH_PATTERN.exec(pathname);
   return match ? decodeURIComponent(match[1]) : null;
 }
+
+/*
+ * Every other page path the front end links to (Task 10b: links had
+ * drifted to `/about/`, `/privacy/`, `/takedown/` -- trailing slashes no
+ * route in `src/pages.js` has, so they 404'd). Each mirrors a
+ * `src/pages.js` entry exactly, with no trailing slash, and
+ * `test/core/routes.test.js` pins each one to it, so no page or
+ * component types a page path itself. `/add` and `/me` are reserved
+ * there for pages a later plan builds.
+ */
+export const HOME_PATH = '/';
+export const SEARCH_PATH = '/search';
+export const ABOUT_PATH = '/about';
+export const PRIVACY_PATH = '/privacy';
+export const TAKEDOWN_PATH = '/takedown';
+export const ADD_PATH = '/add';
+export const ME_PATH = '/me';
+
+/**
+ * The search page, with an optional query string (no leading `?`).
+ * `searchHref(new URLSearchParams({ event: 'x' }))` -> `'/search?event=x'`.
+ * @param {string|URLSearchParams} [query]
+ * @returns {string}
+ */
+export function searchHref(query = '') {
+  const qs = String(query);
+  return qs ? `${SEARCH_PATH}?${qs}` : SEARCH_PATH;
+}

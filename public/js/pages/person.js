@@ -23,7 +23,7 @@ import * as emptyState from '../components/emptyState.js';
 import * as pageShell from '../components/pageShell.js';
 import * as headerLinks from '../components/headerLinks.js';
 import { EMPTY_STATE, toQuery } from '../state/searchState.js';
-import { igFromPersonPath, personHref } from '../core/routes.js';
+import { igFromPersonPath, personHref, searchHref } from '../core/routes.js';
 import { activeView, bindMore, bindSections, segmentedControl } from './hubGroups.js';
 import { mountLoadError } from './pageError.js';
 
@@ -132,7 +132,7 @@ function bindPicker(dialog, data, ctx) {
   on(dialog, '.c-hub__picker-close', 'click', () => { /** @type {any} */ (dialog).close?.(); });
   on(dialog, '.c-hub__picker-apply', 'click', () => {
     const people = [data.person.id, ...ctx.selected];
-    window.location.href = `/search?${toQuery({ ...EMPTY_STATE, people, peopleMode: 'all' }).toString()}`;
+    window.location.href = searchHref(toQuery({ ...EMPTY_STATE, people, peopleMode: 'all' }));
   });
 }
 

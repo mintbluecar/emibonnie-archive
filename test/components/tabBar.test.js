@@ -8,8 +8,8 @@ const { render } = await import('../../public/js/components/tabBar.js');
 test('tabBar: shows home, search, + add and me, each linking to its route', () => {
   const markup = String(render({ active: 'search' }));
   assert.match(markup, /href="\/"[^>]*>[\s\S]*?home/);
-  assert.match(markup, /href="\/add\/"[^>]*>[\s\S]*?＋[\s\S]*?add/);
-  assert.match(markup, /href="\/me\/"[^>]*>[\s\S]*?me/);
+  assert.match(markup, /href="\/add"[^>]*>[\s\S]*?＋[\s\S]*?add/);
+  assert.match(markup, /href="\/me"[^>]*>[\s\S]*?me/);
 });
 
 test('tabBar: marks only the active tab', () => {

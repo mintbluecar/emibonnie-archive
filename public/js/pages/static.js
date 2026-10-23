@@ -16,6 +16,7 @@ import { site, t } from '../core/site.js';
 import * as pageShell from '../components/pageShell.js';
 import * as emptyState from '../components/emptyState.js';
 import * as headerLinks from '../components/headerLinks.js';
+import { HOME_PATH } from '../core/routes.js';
 
 const APP_SELECTOR = 'app';
 
@@ -79,7 +80,7 @@ function takedownContent() {
 function notFoundContent() {
   return html`
     ${emptyState.render({ message: t('static.notFound'), icon: '🧭' })}
-    <p class="c-static__back"><a href="/">${t('static.notFoundBack')}</a></p>
+    <p class="c-static__back"><a href="${HOME_PATH}">${t('static.notFoundBack')}</a></p>
   `;
 }
 
