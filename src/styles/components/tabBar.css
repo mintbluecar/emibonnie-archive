@@ -24,10 +24,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: var(--tap-target);
+  min-height: var(--tap-target);
   padding: 4px 10px;
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--color-ink-muted);
 }
 
@@ -47,7 +47,7 @@
   }
 
   .c-tabbar__item {
-    font-size: 12px;
+    font-size: var(--text-12);
     padding: 4px 6px;
   }
 

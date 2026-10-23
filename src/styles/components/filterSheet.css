@@ -42,7 +42,7 @@
 }
 
 .c-filter-sheet__title {
-  font-size: 14px;
+  font-size: var(--text-14);
   font-weight: 800;
   margin: 0 0 12px;
 }
@@ -54,7 +54,7 @@
 }
 
 .c-filter-sheet__section legend {
-  font-size: 11px;
+  font-size: var(--text-11);
   font-weight: 700;
   color: var(--color-ink-muted);
   margin-bottom: 4px;
@@ -76,7 +76,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 11px;
+  font-size: var(--text-11);
   font-weight: 700;
   color: var(--color-ink-muted);
 }
@@ -89,7 +89,7 @@
   border-radius: 14px;
   padding: 0 10px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--text-13);
   color: var(--color-ink);
 }
 
@@ -98,7 +98,7 @@
   width: 100%;
   min-height: 48px;
   border-radius: 14px;
-  font-size: 14px;
+  font-size: var(--text-14);
   font-weight: 800;
   color: var(--color-accent-text);
   /* Review round 2, fix round 2 item 3: same light-mode-only darkened start stop as header.css's .c-header__filter-count. */

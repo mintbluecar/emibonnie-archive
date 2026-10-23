@@ -32,7 +32,7 @@ function detailVm(overrides = {}) {
     bubbles: [{ kind: 'speech', emoji: '🧡', name: 'sol', colour: '#ff8a3d', text: 'hello', cont: false }],
     cast: [{ kind: 'person', id: 1, emoji: '🧡', name: 'sol', colour: '#ff8a3d', igHandle: null }],
     original: 'first paragraph\n\nsecond paragraph',
-    credits: { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, postedAt: null, occurredOn: '2026-10-14' },
+    credits: { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, occurredOn: '2026-10-14' },
     sources: [],
     media: null,
     ...overrides,
@@ -54,11 +54,11 @@ test('translation detail: Thai-script text in the original gets lang="th", same 
   assert.match(markup, /<span lang="th">ครบ<\/span>/);
 });
 
-test('translation detail: credits show when the post was made (timePair) alongside the event date (dayLabel)', () => {
-  const credits = { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, postedAt: '2026-10-19T08:00:00.000Z', occurredOn: '2026-10-19' };
+test('translation detail (Task 10b): credits show the event date (dayLabel) and no time -- not the post time, never the viewer\'s local time', () => {
+  const credits = { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, occurredOn: '2026-10-19' };
   const markup = String(detail.render(detailVm({ credits })));
-  assert.match(markup, /bangkok/);
   assert.match(markup, /19 Oct 2026/);
+  assert.ok(!/\d:\d\d|\b(am|pm)\b|bangkok/.test(markup), markup);
 });
 
 test('translation detail: renders no media -- that is the item page\'s own mediaBox component\'s job', () => {
@@ -91,4 +91,26 @@ test('translation section (Task 9b): ctx.compact renders compact preview cards (
   const sectionVm = { kind: 'translation', total: 1, hasMore: false, items: [preview()] };
   assert.match(String(section.render(sectionVm, { compact: true })), /c-preview-card--compact/);
   assert.ok(!String(section.render(sectionVm, {})).includes('c-preview-card--compact'));
+});
+
+test('translation detail (Task 10b): "show original" is one escaped element, with the class that keeps line breaks (pre-wrap), the stored newlines and blank lines intact, no <br>', async () => {
+  const { MiniElement } = await import('../helpers/miniDom.js');
+  const { mount } = await import('../../public/js/core/dom.js');
+  const original = 'line one\nline two <b>\n\nsecond part https://example.com/a/very/long/url';
+  const root = new MiniElement('div');
+  mount(/** @type {any} */ (root), detail.render(detailVm({ original })));
+  const els = root.querySelectorAll('details p');
+  assert.equal(els.length, 1, 'one element for the whole text, thread parts included');
+  assert.ok(els[0].classList.contains('k-translation-detail__original-text'));
+  const markup = String(detail.render(detailVm({ original })));
+  assert.match(markup, /<p class="k-translation-detail__original-text">line one\nline two &lt;b&gt;\n\nsecond part https:\/\/example\.com\/a\/very\/long\/url<\/p>/);
+  assert.ok(!markup.includes('<br'));
+});
+
+test('kindTranslation.css (Task 10b): the original-text class keeps line breaks and wraps long URLs', async () => {
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(new URL('../../src/styles/components/kindTranslation.css', import.meta.url), 'utf8');
+  const rule = /\.k-translation-detail__original-text\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+  assert.match(rule, /white-space:\s*pre-wrap/);
+  assert.match(rule, /overflow-wrap:\s*anywhere/);
 });

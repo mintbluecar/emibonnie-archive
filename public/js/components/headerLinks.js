@@ -1,4 +1,6 @@
 // @ts-check
+import { searchHref } from '../core/routes.js';
+
 /**
  * Wires the shared header's search box and filter button to the search
  * page, for every page that has no live search of its own (spec: "the
@@ -13,6 +15,6 @@
 export function bind(root) {
   const searchBox = root.querySelector('.c-header__search-box');
   const filterBtn = root.querySelector('.c-header__filter-btn');
-  searchBox?.addEventListener('focus', () => { window.location.href = '/search'; });
-  filterBtn?.addEventListener('click', () => { window.location.href = '/search?filters=1'; });
+  searchBox?.addEventListener('focus', () => { window.location.href = searchHref(); });
+  filterBtn?.addEventListener('click', () => { window.location.href = searchHref('filters=1'); });
 }

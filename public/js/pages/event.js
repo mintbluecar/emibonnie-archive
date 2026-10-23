@@ -24,7 +24,7 @@ import * as chips from '../components/chips.js';
 import * as emptyState from '../components/emptyState.js';
 import * as pageShell from '../components/pageShell.js';
 import * as headerLinks from '../components/headerLinks.js';
-import { slugFromEventPath } from '../core/routes.js';
+import { slugFromEventPath, HOME_PATH, TAKEDOWN_PATH, searchHref } from '../core/routes.js';
 import { KIND_UI, renderSections } from '../kinds/_registry.js';
 
 /** Entries are compact previews, as on the person and translator pages (spec: "Entries show their opening lines ... as its preview"; mockups/screens-v2.html's event screen; fix round 1, I2). */
@@ -36,7 +36,7 @@ const ALL = 'all';
 /** @typedef {{ order: 'asc'|'desc', person: string, account: string }} EventPageState */
 
 /** @param {string} slug @returns {import('../core/html.js').SafeHtml} */
-const backLink = (slug) => html`<a class="c-event__back" href="/" data-slug="${slug}">${t('event.back')}</a>`;
+const backLink = (slug) => html`<a class="c-event__back" href="${HOME_PATH}" data-slug="${slug}">${t('event.back')}</a>`;
 
 /**
  * @param {import('../../../src/http/contracts.js').EventView['event']} event
@@ -46,7 +46,7 @@ function headRow(event) {
   return html`
     <div class="c-event__head">
       <h1 class="c-event__name">${event.name}</h1>
-      <a class="c-event__search" href="/search?event=${event.slug}" aria-label="${t('event.search')}">
+      <a class="c-event__search" href="${searchHref(new URLSearchParams({ event: event.slug }))}" aria-label="${t('event.search')}">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="11" cy="11" r="7"></circle>
           <path d="M21 21l-4.3-4.3"></path>
@@ -149,7 +149,7 @@ export function composeEvent(data) {
     ${accountFilterRow(uniqueAccounts(data.sections))}
     <button type="button" class="c-event__newest-toggle" aria-pressed="false">${t('event.newestFirst')}</button>
     <div class="c-event-sections">${data.sections.map(sectionBlock)}</div>
-    <a class="c-event__report" href="/soon">${t('event.report')}</a>
+    <a class="c-event__report" href="${TAKEDOWN_PATH}">${t('event.report')}</a>
   `;
   return pageShell.render({ active: 'home', compact: true, content });
 }

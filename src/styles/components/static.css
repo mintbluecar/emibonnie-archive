@@ -4,20 +4,20 @@
  */
 
 .c-static__title {
-  font-size: 20px;
+  font-size: var(--text-20);
   font-weight: 800;
   margin: 8px 0 4px;
 }
 
 .c-static__subtitle {
-  font-size: 14px;
+  font-size: var(--text-14);
   font-weight: 800;
   margin: 18px 0 4px;
 }
 
 .c-static__badge {
   display: inline-block;
-  font-size: 10px;
+  font-size: var(--text-10);
   font-weight: 800;
   letter-spacing: 0.04em;
   color: var(--color-ink-muted);
@@ -25,7 +25,7 @@
 }
 
 .c-static__p {
-  font-size: 13px;
+  font-size: var(--text-13);
   line-height: 1.5;
   margin: 0 0 12px;
 }
@@ -43,4 +43,11 @@
 .c-static__back {
   margin-top: 16px;
   text-align: center;
+}
+
+/* A link inside a paragraph (the X embed notice's privacy-policy link,
+   Task 10b) is underlined, so it doesn't rely on colour alone. */
+.c-static__p a {
+  color: var(--color-label);
+  text-decoration: underline;
 }

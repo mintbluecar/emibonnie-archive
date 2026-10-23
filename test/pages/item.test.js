@@ -20,6 +20,7 @@ import { mount } from '../../public/js/core/dom.js';
 // item B). This file's own start()-level tests route a pathname through it via item.js's import.
 // Dynamic import: see test/components/header.test.js for why.
 const { composeItem, bind, start } = await import('../../public/js/pages/item.js');
+const { site } = await import('../../public/js/core/site.js');
 
 const flush = () => new Promise((resolve) => { setTimeout(resolve, 0); });
 
@@ -33,7 +34,7 @@ function itemVm(overrides = {}) {
     bubbles: [{ kind: 'speech', emoji: '🧡', name: 'sol', colour: '#ff8a3d', text: 'hello', cont: false }],
     cast: [{ kind: 'person', id: 1, emoji: '🧡', name: 'sol', colour: '#ff8a3d', igHandle: null }],
     original: 'hello',
-    credits: { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, postedAt: '2026-10-19T08:00:00.000Z', occurredOn: '2026-10-19' },
+    credits: { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, occurredOn: '2026-10-19' },
     sources: [{ role: 'primary', url: 'https://x.com/tl_alpha/status/1900000000000000004', status: 'live' }],
     media: { type: 'video', variants: [{ bitrate: 632000, url: 'https://video.twimg.com/a/632000.mp4' }], width: 720, height: 1280 },
     editOpenUntil: null,
@@ -82,18 +83,62 @@ test('composeItem: the footer -- original tweet, follows on, added by, copy link
   assert.match(markup, /<a class="c-item__footer-link" href="\/t\/3">follows on from<\/a>/);
   assert.match(markup, /added by @tl_alpha/);
   assert.match(markup, /<button type="button" class="c-item__copy-link">copy link<\/button>/);
-  assert.match(markup, /<a class="c-item__footer-link" href="\/takedown\/">report<\/a>/);
+  assert.match(markup, /<a class="c-item__footer-link" href="\/takedown">report<\/a>/);
 });
 
-test('composeItem: a quoted source gets its own "quoted tweet" label, distinct from "original tweet" (review round 1, MINOR)', () => {
+test('composeItem (Task 10b): with embedSources off, one "original tweet" link -- no "original media" or "quoted tweet"', () => {
   const markup = String(composeItem(itemVm({
     sources: [
       { role: 'primary', url: 'https://x.com/tl_alpha/status/1900000000000000004', status: 'live' },
+      { role: 'media', url: 'https://x.com/solsunny_x/status/1900000000000000011', status: 'live' },
       { role: 'quoted', url: 'https://x.com/solsunny_x/status/1900000000000000010', status: 'live' },
     ],
   })));
+  assert.equal(markup.match(/c-item__footer-link" href="https:\/\/x\.com/g)?.length, 1, markup);
   assert.match(markup, /<a class="c-item__footer-link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">original tweet<\/a>/);
-  assert.match(markup, /<a class="c-item__footer-link" href="https:\/\/x\.com\/solsunny_x\/status\/1900000000000000010">quoted tweet<\/a>/);
+  assert.ok(!markup.includes('original media') && !markup.includes('quoted tweet'));
+  assert.ok(!markup.includes('twitter-tweet'), 'no embed while the setting is off');
+});
+
+/** Runs `fn` with the fixture site's `embedSources` on, restoring it afterwards. @param {() => void|Promise<void>} fn */
+async function withEmbedSources(fn) {
+  /** @type {any} */ (site).embedSources = true;
+  try { await fn(); } finally { delete (/** @type {any} */ (site)).embedSources; }
+}
+
+test('composeItem (Task 10b): with embedSources on, X\'s embed blockquote replaces the link -- our escaped text, the author and the canonical link inside; copy link and report stay', async () => {
+  await withEmbedSources(() => {
+    const markup = String(composeItem(itemVm({
+      original: 'hi <b>there</b>',
+      credits: { account: { handle: 'tl_alpha', displayName: 'TL <alpha>' }, clipBy: null, occurredOn: '2026-10-19' },
+    })));
+    assert.match(markup, /<blockquote class="twitter-tweet c-embed" data-dnt="true">/);
+    assert.match(markup, /hi &lt;b&gt;there&lt;\/b&gt;/);
+    assert.match(markup, /&mdash; TL &lt;alpha&gt; \(@tl_alpha\)/);
+    assert.match(markup, /<a class="c-embed__link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">/);
+    assert.ok(!markup.includes('class="c-item__footer-link" href="https://x.com'), 'the embed replaces the footer link');
+    assert.match(markup, /class="c-item__copy-link"/);
+    assert.match(markup, /href="\/takedown">report<\/a>/);
+  });
+});
+
+test('composeItem (Task 10b): a deleted/unavailable post skips the embed -- the stored text with the sourceGone note', async () => {
+  await withEmbedSources(() => {
+    for (const status of /** @type {const} */ (['deleted', 'unavailable'])) {
+      const markup = String(composeItem(itemVm({ original: 'kept text', sources: [{ role: 'primary', url: 'https://x.com/tl_alpha/status/1900000000000000004', status }] })));
+      assert.ok(!markup.includes('twitter-tweet'), status);
+      assert.match(markup, /c-embed--gone[\s\S]*kept text[\s\S]*Original tweet is no longer available/i);
+      assert.match(markup, /c-embed__gone">Original tweet is no longer available\. The text above is the archived copy\./, 'the sourceGoneEmbed wording -- not "kept below" (fix round 1, M6)');
+    }
+  });
+});
+
+test('composeItem (Task 10b): a source URL that isn\'t a canonical x.com post is never embedded, only linked', async () => {
+  await withEmbedSources(() => {
+    const markup = String(composeItem(itemVm({ sources: [{ role: 'primary', url: 'https://x.com/i/web/status/abc', status: 'live' }] })));
+    assert.ok(!markup.includes('twitter-tweet'));
+    assert.match(markup, />original tweet<\/a>/);
+  });
 });
 
 test('composeItem: "added by" shows a fan, a chosen name, or nothing for the engine\'s own writes', () => {

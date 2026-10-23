@@ -23,7 +23,7 @@ import * as emptyState from '../components/emptyState.js';
 import * as pageShell from '../components/pageShell.js';
 import * as headerLinks from '../components/headerLinks.js';
 import { EMPTY_STATE, toQuery } from '../state/searchState.js';
-import { igFromPersonPath, personHref } from '../core/routes.js';
+import { igFromPersonPath, personHref, searchHref } from '../core/routes.js';
 import { activeView, bindMore, bindSections, segmentedControl } from './hubGroups.js';
 import { mountLoadError } from './pageError.js';
 
@@ -39,7 +39,7 @@ const countsLine = (counts) => html`<p class="c-hub__counts">${t('person.countsL
 
 /** The person's card: their header, with the counts line and the scoped-search icon inside it (Task 9b). @param {PersonView} data @returns {import('../core/html.js').SafeHtml} */
 function headRow(data) {
-  const href = `/search?${toQuery({ ...EMPTY_STATE, people: [data.person.id] }).toString()}`;
+  const href = searchHref(toQuery({ ...EMPTY_STATE, people: [data.person.id] }));
   const action = html`
     <a class="c-person__search" href="${href}" aria-label="${t('person.search')}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -132,7 +132,7 @@ function bindPicker(dialog, data, ctx) {
   on(dialog, '.c-hub__picker-close', 'click', () => { /** @type {any} */ (dialog).close?.(); });
   on(dialog, '.c-hub__picker-apply', 'click', () => {
     const people = [data.person.id, ...ctx.selected];
-    window.location.href = `/search?${toQuery({ ...EMPTY_STATE, people, peopleMode: 'all' }).toString()}`;
+    window.location.href = searchHref(toQuery({ ...EMPTY_STATE, people, peopleMode: 'all' }));
   });
 }
 

@@ -20,6 +20,8 @@ import * as filterSheet from '../components/filterSheet.js';
 import {
   EMPTY_STATE, parseState, toQuery, toApiParams, filterCount, isBlank, sanitizeTypes, withoutFilter,
 } from '../state/searchState.js';
+import { searchHref } from '../core/routes.js';
+import { shouldAutofocus } from '../state/searchFocus.js';
 import {
   composeSearch, searchAreaMarkup, errorMarkup, errorPage,
 } from './searchView.js';
@@ -130,7 +132,7 @@ async function refetchAndRender(root, ctx) {
 async function commit(root, ctx, next) {
   ctx.state = next;
   const qs = toQuery(next).toString();
-  history.replaceState(null, '', qs ? `/search?${qs}` : '/search');
+  history.replaceState(null, '', searchHref(qs));
   updateFilterBadge(root, filterCount(next));
   await refetchAndRender(root, ctx);
 }
@@ -243,12 +245,18 @@ function bindSearchBox(root, ctx) {
   on(root, '.c-header__search-box', 'input', (_e, input) => handleInput(input.value));
 }
 
+/** A touch device: a coarse pointer, or no hover (Task 10b fix round 1, O3). @returns {boolean} */
+function isCoarsePointer() {
+  if (typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(hover: none)').matches;
+}
+
 /** @param {Element} root @param {Ctx} ctx @returns {void} */
 export function bind(root, ctx) {
   const searchBox = /** @type {HTMLInputElement|null} */ (root.querySelector('.c-header__search-box'));
   if (searchBox) {
     searchBox.value = ctx.state.q;
-    searchBox.focus?.();
+    if (shouldAutofocus({ state: ctx.state, urlSearch: window.location?.search ?? '', coarsePointer: isCoarsePointer() })) searchBox.focus?.();
   }
   bindSearchBox(root, ctx);
   on(root, '.c-header__filter-btn', 'click', () => openSheet(root, ctx));

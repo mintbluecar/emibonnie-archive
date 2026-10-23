@@ -7,15 +7,16 @@
  */
 import { html } from '../core/html.js';
 import { t } from '../core/site.js';
+import { HOME_PATH, SEARCH_PATH, ADD_PATH, ME_PATH } from '../core/routes.js';
 
 /** @typedef {'home'|'search'|'add'|'me'} TabKey */
 
 /** @type {{ key: TabKey, href: string }[]} */
 const TABS = [
-  { key: 'home', href: '/' },
-  { key: 'search', href: '/search' },
-  { key: 'add', href: '/add/' },
-  { key: 'me', href: '/me/' },
+  { key: 'home', href: HOME_PATH },
+  { key: 'search', href: SEARCH_PATH },
+  { key: 'add', href: ADD_PATH },
+  { key: 'me', href: ME_PATH },
 ];
 
 /** @param {TabKey} key @returns {string} */

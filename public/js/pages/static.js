@@ -16,6 +16,7 @@ import { site, t } from '../core/site.js';
 import * as pageShell from '../components/pageShell.js';
 import * as emptyState from '../components/emptyState.js';
 import * as headerLinks from '../components/headerLinks.js';
+import { HOME_PATH } from '../core/routes.js';
 
 const APP_SELECTOR = 'app';
 
@@ -34,15 +35,33 @@ function aboutContent() {
   `;
 }
 
+/** X's own privacy policy, linked from the embed notice. */
+const X_PRIVACY_URL = 'https://x.com/en/privacy';
+
+/**
+ * Task 10b: only a site that turns `embedSources` on loads anything from
+ * X, so only its privacy page says so.
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+function embedNotice() {
+  if (!site.embedSources) return html``;
+  return html`
+    <p class="c-static__p c-static__embed-notice">${t('privacy.embedNotice')}
+      <a href="${X_PRIVACY_URL}" rel="noopener">${t('privacy.embedPolicyLinkLabel')}</a></p>
+  `;
+}
+
 /** @returns {import('../core/html.js').SafeHtml} */
 function privacyContent() {
   const keys = [
     'privacy.whoRuns', 'privacy.whatCollected', 'privacy.thirdParties', 'privacy.retention',
-    'privacy.publicPrivate', 'privacy.translatorOptOut', 'privacy.accountDeletion', 'privacy.noSaleNoAds',
+    'privacy.publicPrivate', 'privacy.translatorOptOut', 'privacy.accountDeletion',
+    // With X's embed on, "no trackers" would contradict the embed notice (review fix round 1, I1).
+    site.embedSources ? 'privacy.noSaleNoAdsEmbed' : 'privacy.noSaleNoAds',
   ];
   return html`
     <h1 class="c-static__title">${t('privacy.title')}</h1>
-    ${keys.map((key) => html`<p class="c-static__p">${t(key)}</p>`)}
+    ${keys.map((key) => html`<p class="c-static__p">${t(key)}</p>${key === 'privacy.thirdParties' ? embedNotice() : ''}`)}
     <h2 class="c-static__subtitle">${t('privacy.contactLabel')}</h2>
     ${contactLink('privacy.contactLinkLabel')}
   `;
@@ -63,7 +82,7 @@ function takedownContent() {
 function notFoundContent() {
   return html`
     ${emptyState.render({ message: t('static.notFound'), icon: '🧭' })}
-    <p class="c-static__back"><a href="/">${t('static.notFoundBack')}</a></p>
+    <p class="c-static__back"><a href="${HOME_PATH}">${t('static.notFoundBack')}</a></p>
   `;
 }
 

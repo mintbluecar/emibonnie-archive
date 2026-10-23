@@ -18,6 +18,7 @@ const HOME = JSON.parse(readFileSync(new URL('../snapshots/home.json', import.me
 test('composeHome: shows the header, tab bar and footer', () => {
   const markup = String(composeHome(HOME));
   assert.match(markup, /c-header__wordmark/);
+  assert.match(markup, /c-header__below--desktop/, 'home keeps its search box on desktop (Task 10b fix O1)');
   assert.match(markup, /c-tabbar/);
   assert.match(markup, /c-footer__links/);
 });

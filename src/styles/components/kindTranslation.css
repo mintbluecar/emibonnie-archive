@@ -7,13 +7,13 @@
 }
 
 .k-translation-detail__credits {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--color-ink-muted);
   margin: 8px 0;
 }
 
 .k-translation-detail__original-toggle {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--color-ink-muted);
   text-decoration: underline;
   margin-top: 12px;
@@ -23,8 +23,13 @@
   cursor: pointer;
 }
 
-.k-translation-detail__original-para {
-  font-size: 13px;
+/* The stored text's own line breaks and blank lines (thread parts are
+   joined by one), kept as written; a long URL wraps instead of
+   overflowing (Task 10b). */
+.k-translation-detail__original-text {
+  font-size: var(--text-13);
   line-height: 1.5;
   margin-bottom: 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

@@ -38,7 +38,7 @@ function monthGroup(group) {
  */
 export function composeHome(data) {
   const content = data.months.length === 0 ? emptyState.render({ message: t('home.empty') }) : html`${data.months.map(monthGroup)}`;
-  return pageShell.render({ active: 'home', content });
+  return pageShell.render({ active: 'home', headerProps: { desktopSearch: true }, content });
 }
 
 /**

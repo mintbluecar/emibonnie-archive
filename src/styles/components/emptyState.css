@@ -8,10 +8,10 @@
 
 .c-empty-state__icon {
   display: block;
-  font-size: 28px;
+  font-size: var(--text-28);
   margin-bottom: 8px;
 }
 
 .c-empty-state__message {
-  font-size: 13px;
+  font-size: var(--text-13);
 }

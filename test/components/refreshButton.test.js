@@ -26,9 +26,10 @@ test('render: shown only while editOpenUntil is in the future', () => {
   assert.equal(String(render({ editOpenUntil: null, now: NOW })), '');
 });
 
-test('render: shows "editable until" via timePair', () => {
+test('render (Task 10b): the button says "check X for edits" (fix M2) and shows no clock time (never the viewer\'s local time)', () => {
   const markup = String(render({ editOpenUntil: '2026-10-19T09:00:00.000Z', now: NOW }));
-  assert.match(markup, /editable until/);
+  assert.match(markup, /check X for edits/);
+  assert.ok(!/editable until|\d:\d\d|\b(am|pm)\b/.test(markup), markup);
 });
 
 /** @returns {{ root: any, fetchCalls: string[] }} */

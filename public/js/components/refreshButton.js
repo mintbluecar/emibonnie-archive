@@ -12,8 +12,7 @@
  */
 import { html } from '../core/html.js';
 import { on } from '../core/dom.js';
-import { t, site } from '../core/site.js';
-import { timePair } from '../core/format.js';
+import { t } from '../core/site.js';
 import { nextLockMs } from './backoff.js';
 
 /** @typedef {{ count: number, lockedUntil: number }} ThrottleState */
@@ -62,7 +61,7 @@ export function render({ editOpenUntil, now = new Date() }) {
   return html`
     <div class="c-refresh">
       <button type="button" class="c-refresh__btn">
-        ${t('item.checkUpdate')} · ${t('item.editableUntil', { time: timePair(editOpenUntil, site.timezone) })}
+        ${t('item.checkUpdate')}
       </button>
     </div>
   `;

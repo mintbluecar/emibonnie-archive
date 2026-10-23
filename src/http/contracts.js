@@ -68,12 +68,12 @@
  * @typedef {{ role: string, url: string, status: 'live'|'deleted'|'unavailable' }} SourceLinkVM
  * @typedef {{
  *   bubbles: BubbleVM[], cast: CastVM[], original: string,
- *   credits: { account: { handle: string, displayName: string|null }|null, clipBy: string|null,
- *     postedAt: string|null, occurredOn: string },
+ *   credits: { account: { handle: string, displayName: string|null }|null, clipBy: string|null, occurredOn: string },
  *   sources: SourceLinkVM[], media: MediaVM|null,
  * }} DetailVM
  *   `original` is the verbatim text (every part, joined by a blank line).
  *   `clipBy`: the clip/picture account, when it isn't the translator.
+ *   No post time (Task 10b): pages show the event date only.
  *
  * @typedef {{ kind: 'handle', handle: string } | { kind: 'name', name: string } | { kind: 'fan' }} AddedByVM
  *   Who added an item: an X user's handle, else the display name they

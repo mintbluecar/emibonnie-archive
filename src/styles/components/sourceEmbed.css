@@ -1,0 +1,55 @@
+/*
+ * public/js/components/sourceEmbed.js (Task 10b). The blockquote is
+ * X's embed markup *and* its fallback: styled here as a plain quote, so
+ * it reads well before widgets.js swaps it for X's iframe, or when X
+ * never loads (blocked, offline, a deleted post). Once X renders, its
+ * own `.twitter-tweet-rendered` container replaces the blockquote.
+ */
+
+.c-item__embed {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.c-embed {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: var(--radius-card);
+  font-size: var(--text-13);
+  color: var(--color-ink);
+  overflow-wrap: anywhere;
+}
+
+.c-embed__text {
+  line-height: 1.45;
+  margin-bottom: 6px;
+  white-space: pre-wrap;
+  /* A long post's full text is already on the page ("show original");
+     the fallback shows its opening, like X's own card would. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 8;
+  line-clamp: 8;
+  overflow: hidden;
+}
+
+.c-embed__by {
+  font-size: var(--text-11);
+  color: var(--color-ink-muted);
+}
+
+.c-embed__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  color: var(--color-ink-muted);
+  text-decoration: underline;
+}
+
+.c-embed__gone {
+  margin-top: 6px;
+  font-size: var(--text-11);
+  color: var(--color-ink-muted);
+}

@@ -14,11 +14,16 @@ html, body {
   padding: 0;
 }
 
+/* Keyboard focus and in-page jumps never land under the pinned header (Task 10b). */
+html {
+  scroll-padding-top: var(--sticky-top);
+}
+
 body {
   background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-latin);
-  font-size: 16px;
+  font-size: var(--text-16);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }

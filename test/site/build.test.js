@@ -14,6 +14,7 @@ import {
   buildKindsRegistryModule,
   buildVercelConfig,
   SECURITY_HEADERS,
+  contentSecurityPolicy,
 } from '../../scripts/buildOutputs.js';
 import { runBuild } from '../../scripts/build.js';
 import { loadSite } from '../../src/site/loadSite.js';
@@ -112,6 +113,29 @@ test('buildKindsRegistryModule: default-imports each kind, so entries are Kind o
   assert.ok(source.includes("import kind0 from './translation/index.js';"));
   assert.ok(source.includes('  "translation": kind0,'));
   assert.ok(!source.includes('* as'));
+});
+
+/** The CSP every site had before Task 10b -- and still has with embedSources off. */
+const CSP_OFF = "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; " +
+  "img-src 'self' https://pbs.twimg.com; media-src 'self' https://video.twimg.com; " +
+  "frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+
+test('contentSecurityPolicy (Task 10b): embedSources off is byte-for-byte the pre-10b CSP; on adds only X\'s widgets.js and its iframe host', () => {
+  assert.equal(contentSecurityPolicy({ embedSources: false }), CSP_OFF);
+  assert.equal(contentSecurityPolicy({}), CSP_OFF);
+  assert.equal(
+    contentSecurityPolicy({ embedSources: true }),
+    "default-src 'self'; script-src 'self' https://platform.twitter.com; style-src 'self'; font-src 'self'; " +
+      "img-src 'self' https://pbs.twimg.com; media-src 'self' https://video.twimg.com; " +
+      "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; frame-src https://platform.twitter.com",
+  );
+});
+
+test('buildVercelConfig (Task 10b): the generated vercel.json CSP follows the site\'s embedSources', () => {
+  const site = loadSite('examples/solluna');
+  const cspOf = (/** @type {any} */ config) => config.headers[0].headers.find((/** @type {any} */ h) => h.key === 'Content-Security-Policy').value;
+  assert.equal(cspOf(buildVercelConfig({ ...site, embedSources: false }, [])), CSP_OFF);
+  assert.equal(cspOf(buildVercelConfig({ ...site, embedSources: true }, [])), contentSecurityPolicy({ embedSources: true }));
 });
 
 test('buildVercelConfig: region, security headers (Referrer-Policy: no-referrer), buildCommand', () => {

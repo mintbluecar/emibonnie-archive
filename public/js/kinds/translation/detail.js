@@ -9,15 +9,16 @@
  */
 import { html } from '../../core/html.js';
 import { site, t } from '../../core/site.js';
-import { dayLabel, timePair } from '../../core/format.js';
+import { dayLabel } from '../../core/format.js';
 import { thaiSpans } from '../../core/thai.js';
 import * as cast from '../../components/cast.js';
 import * as bubbles from '../../components/bubbles.js';
 
 /**
- * `tl @handle · clip by @source · 4:00 pm bangkok · 14 Oct 2026`
- * (task-4 brief): the account credits, then when the post was made
- * (`timePair`) and the event date it happened on (`dayLabel`).
+ * `tl @handle · clip by @source · 14 Oct 2026` (task-4 brief): the
+ * account credits, then the event date it happened on (`dayLabel`). No
+ * time (Task 10b, owner's rule): never the viewer's local time, and the
+ * post time isn't the event's.
  * @param {import('../../../../src/http/contracts.js').DetailVM['credits']} credits
  * @returns {import('../../core/html.js').SafeHtml}
  */
@@ -26,17 +27,22 @@ function creditsLine(credits) {
     <p class="k-translation-detail__credits">
       ${credits.account ? html`${t('item.translatedBy')} <b>@${credits.account.handle}</b>` : ''}
       ${credits.clipBy ? html` · ${t('item.clipBy')} <b>@${credits.clipBy}</b>` : ''}
-      ${credits.postedAt ? html` · ${timePair(credits.postedAt, site.timezone)}` : ''}
       · ${dayLabel(credits.occurredOn)}
     </p>
   `;
 }
 
-/** @param {string} text @returns {import('../../core/html.js').SafeHtml[]} */
-function originalParagraphs(text) {
-  return text
-    .split(/\n\s*\n/)
-    .map((para) => html`<p class="k-translation-detail__original-para">${thaiSpans(para, site.sourceLanguage)}</p>`);
+/**
+ * The verbatim original, as one element whose CSS (`white-space:
+ * pre-wrap`, kindTranslation.css) keeps every line break and blank line
+ * the stored text has -- a thread's parts are joined by a blank line, so
+ * they stay apart too (Task 10b). Escaped by `html`; no `<br>`s. No
+ * whitespace inside the element besides the text's own.
+ * @param {string} text
+ * @returns {import('../../core/html.js').SafeHtml}
+ */
+function originalText(text) {
+  return html`<p class="k-translation-detail__original-text">${thaiSpans(text, site.sourceLanguage)}</p>`;
 }
 
 /**
@@ -59,7 +65,7 @@ export function render(detail, extra = {}) {
       ${bubbles.render({ bubbles: detail.bubbles })}
       <details class="k-translation-detail__original">
         <summary class="k-translation-detail__original-toggle">${t('item.showOriginal')}</summary>
-        ${originalParagraphs(detail.original)}
+        ${originalText(detail.original)}
       </details>
     </div>
   `;

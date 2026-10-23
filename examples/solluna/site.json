@@ -26,5 +26,6 @@
   "ignoredHashtags": ["solluna"],
   "categories": ["show / interview", "fan meet / fan day", "live"],
   "extraLivePatterns": [],
-  "contactUrl": "https://github.com/mintbluecar/fan-archive/issues"
+  "contactUrl": "https://github.com/mintbluecar/fan-archive/issues",
+  "embedSources": false
 }

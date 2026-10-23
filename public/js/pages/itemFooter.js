@@ -1,25 +1,32 @@
 // @ts-check
 /**
- * The item page's footer (task-4 brief): links to the original tweet
- * and original media, "follows on from", who added it, a copy-link
+ * The item page's footer (task-4 brief): the original post (a link, or
+ * X's embed -- Task 10b), "follows on from", who added it, a copy-link
  * button, and the report link. Split out of `item.js` to keep that file
  * under the lint line limits (ruling 6's splits are pre-approved).
  */
 import { html } from '../core/html.js';
-import { t } from '../core/site.js';
+import { site, t } from '../core/site.js';
+import * as sourceEmbed from '../components/sourceEmbed.js';
+import { TAKEDOWN_PATH } from '../core/routes.js';
 
 /**
- * The copy key for one source link's role. `quoted` gets its own label
- * (review round 1, MINOR) -- an item whose primary post also quotes
- * another otherwise showed two identically worded "original tweet"
- * links with no way to tell them apart.
- * @type {Record<string, string>}
+ * The original post: X's embed when the site turns `embedSources` on
+ * (Task 10b) and the post has a canonical URL, else a single "original
+ * tweet" link (Task 10b dropped "original media" and "quoted tweet": the
+ * pinned media area already shows those).
+ * @param {import('../../../src/http/contracts.js').ItemView} data
+ * @returns {import('../core/html.js').SafeHtml}
  */
-const SOURCE_LABEL = { primary: 'item.originalTweet', media: 'item.originalMedia', quoted: 'item.quotedTweet' };
-
-/** @param {import('../../../src/http/contracts.js').SourceLinkVM[]} sources @returns {import('../core/html.js').SafeHtml} */
-function sourceLinks(sources) {
-  return html`${sources.map((s) => html`<a class="c-item__footer-link" href="${s.url}">${t(SOURCE_LABEL[s.role] ?? 'item.originalTweet')}</a>`)}`;
+function originalPost(data) {
+  const primary = data.sources.find((s) => s.role === 'primary');
+  if (!primary) return html``;
+  if (site.embedSources && sourceEmbed.canEmbed(primary)) {
+    return html`<div class="c-item__embed">${sourceEmbed.render({
+      text: data.original, author: data.credits.account, source: primary, sourceLanguage: site.sourceLanguage,
+    })}</div>`;
+  }
+  return html`<a class="c-item__footer-link" href="${primary.url}">${t('item.originalTweet')}</a>`;
 }
 
 /** @param {import('../../../src/http/contracts.js').ItemLink|null} link @returns {import('../core/html.js').SafeHtml} */
@@ -41,11 +48,11 @@ function addedByLine(addedBy) {
 export function footerBlock(data) {
   return html`
     <div class="c-item__footer">
-      ${sourceLinks(data.sources)}
+      ${originalPost(data)}
       ${followsOnLine(data.followsOnFrom)}
       ${addedByLine(data.addedBy)}
       <button type="button" class="c-item__copy-link">${t('item.copyLink')}</button>
-      <a class="c-item__footer-link" href="/takedown/">${t('item.report')}</a>
+      <a class="c-item__footer-link" href="${TAKEDOWN_PATH}">${t('item.report')}</a>
     </div>
   `;
 }
