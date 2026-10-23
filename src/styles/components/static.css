@@ -44,3 +44,10 @@
   margin-top: 16px;
   text-align: center;
 }
+
+/* A link inside a paragraph (the X embed notice's privacy-policy link,
+   Task 10b) is underlined, so it doesn't rely on colour alone. */
+.c-static__p a {
+  color: var(--color-label);
+  text-decoration: underline;
+}

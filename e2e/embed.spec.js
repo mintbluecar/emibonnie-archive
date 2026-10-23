@@ -151,4 +151,5 @@ test('embedSources on: the privacy page shows the X embed notice, linking X\'s p
   const notice = page.locator('.c-static__embed-notice');
   await expect(notice).toBeVisible();
   await expect(notice.locator('a')).toHaveAttribute('href', 'https://x.com/en/privacy');
+  await assertNoSeriousA11yViolations(page);
 });
