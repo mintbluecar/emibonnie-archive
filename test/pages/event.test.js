@@ -108,13 +108,13 @@ test('bind: the newest-first toggle re-fetches order=desc and reorders the real 
   });
   try {
     bind(root, EVENT, EVENT.event.slug);
-    const before = root.querySelectorAll('.c-preview-card').map((c) => c.getAttribute('href'));
+    const before = root.querySelectorAll('.c-preview-card__link').map((c) => c.getAttribute('href'));
     const toggle = /** @type {any} */ (root.querySelector('.c-event__newest-toggle'));
     assert.ok(toggle);
     toggle.click();
     await flush();
     assert.ok(seenUrls.some((u) => u.includes('order=desc')), seenUrls.join(', '));
-    const after = root.querySelectorAll('.c-preview-card').map((c) => c.getAttribute('href'));
+    const after = root.querySelectorAll('.c-preview-card__link').map((c) => c.getAttribute('href'));
     assert.deepEqual(after, [...before].reverse(), 'the real DOM order changed, not just a CSS class');
     assert.equal(toggle.getAttribute('aria-pressed'), 'true');
     assert.ok(!(root.querySelector('.c-event-sections')?.getAttribute('class') ?? '').includes('is-newest-first'), 'no leftover CSS-flip class');

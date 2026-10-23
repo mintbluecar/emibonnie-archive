@@ -12,6 +12,11 @@
   margin: 8px 0;
 }
 
+.k-translation-detail__credit-link {
+  color: inherit;
+  font-weight: 700;
+}
+
 .k-translation-detail__original-toggle {
   font-size: var(--text-11);
   color: var(--color-ink-muted);

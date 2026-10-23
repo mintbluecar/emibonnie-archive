@@ -13,21 +13,20 @@ import { dayLabel } from '../../core/format.js';
 import { thaiSpans } from '../../core/thai.js';
 import * as cast from '../../components/cast.js';
 import * as bubbles from '../../components/bubbles.js';
-import * as icons from '../../components/icons.js';
 
 /**
- * `文A @handle · clip by @source · 14 Oct 2026` (task-4 brief; the
- * translate icon in place of "tl" since Task 10c): the
- * account credits, then the event date it happened on (`dayLabel`). No
- * time (Task 10b, owner's rule): never the viewer's local time, and the
- * post time isn't the event's.
+ * `translated by: @handle · clip by @source · 14 Oct 2026` (task-4 brief;
+ * owner 2026-10-23: the translator's own dedicated, linked credit line in
+ * place of the translate icon): the account credits, then the event date
+ * it happened on (`dayLabel`). No time (Task 10b, owner's rule): never
+ * the viewer's local time, and the post time isn't the event's.
  * @param {import('../../../../src/http/contracts.js').DetailVM['credits']} credits
  * @returns {import('../../core/html.js').SafeHtml}
  */
 function creditsLine(credits) {
   return html`
     <p class="k-translation-detail__credits">
-      ${credits.account ? html`${icons.translator()} <b>@${credits.account.handle}</b>` : ''}
+      ${credits.account ? html`${t('item.translatedBy')} <a class="k-translation-detail__credit-link" href="${credits.account.url}" target="_blank" rel="noopener noreferrer">@${credits.account.handle}</a>` : ''}
       ${credits.clipBy ? html` · ${t('item.clipBy')} <b>@${credits.clipBy}</b>` : ''}
       · ${dayLabel(credits.occurredOn)}
     </p>

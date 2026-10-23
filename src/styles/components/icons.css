@@ -1,6 +1,0 @@
-/* public/js/components/icons.js: an inline icon sits on the text's baseline like a letter. */
-
-.c-icon {
-  display: inline-flex;
-  vertical-align: -0.2em;
-}

@@ -15,12 +15,19 @@
  * than the text (an event name, a hashtag, a person). Then this card
  * shows at most the item's first two opening lines, compact
  * (`bubbles.renderCompact`, Task 9b), as one run of "emoji text".
+ *
+ * The card root is a non-link `<article>` (owner, 2026-10-23), not an
+ * `<a>`: the translator's own dedicated credit line (`cardCredit.js`)
+ * needs its own link, which can't nest inside another. The main link
+ * (`.c-result-card__link`) wraps the opening content and stretches over
+ * the whole card (resultCard.css's `::after`), so the card stays one big
+ * click target; the credit link sits above that overlay.
  */
 import { html } from '../core/html.js';
 import { dayLabel } from '../core/format.js';
 import * as bubbles from './bubbles.js';
 import * as thumb from './thumb.js';
-import * as icons from './icons.js';
+import * as cardCredit from './cardCredit.js';
 
 /** @param {string} text @returns {string} */
 function escapeRegExp(text) {
@@ -49,7 +56,6 @@ function metaLine(result) {
   return html`
     <div class="c-result-card__meta">
       ${result.people.map((person) => html`<span aria-hidden="true">${person.emoji}</span>`)}
-      ${result.accountHandle ? html` · ${icons.translator()} @${result.accountHandle}` : ''}
     </div>
   `;
 }
@@ -64,14 +70,17 @@ export function render(props) {
     ? html`<div class="c-result-card__text">${result.matchLines.map((line) => html`<div class="c-result-card__line">${highlighted(line, q)}</div>`)}</div>`
     : bubbles.renderCompact({ bubbles: result.lines.filter((b) => b.kind !== 'note').slice(0, FALLBACK_LINES) });
   return html`
-    <a class="c-result-card${result.thumb ? ' c-result-card--thumb' : ''}" href="${result.url}">
-      <div class="c-result-card__body">
-        ${result.event ? html`<div class="c-result-card__event">${result.event.name} · ${dayLabel(result.occurredOn)}</div>` : ''}
-        ${text}
-        ${metaLine(result)}
-      </div>
-      ${thumb.render(result.thumb)}
-    </a>
+    <article class="c-result-card${result.thumb ? ' c-result-card--thumb' : ''}">
+      <a class="c-result-card__link" href="${result.url}">
+        <div class="c-result-card__body">
+          ${result.event ? html`<div class="c-result-card__event">${result.event.name} · ${dayLabel(result.occurredOn)}</div>` : ''}
+          ${text}
+          ${metaLine(result)}
+        </div>
+        ${thumb.render(result.thumb)}
+      </a>
+      ${cardCredit.render(result)}
+    </article>
   `;
 }
 

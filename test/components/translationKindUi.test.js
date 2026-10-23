@@ -13,7 +13,7 @@ function preview() {
   return {
     kind: 'translation', sourceId: '1', url: '/t/1',
     lines: [{ kind: 'speech', emoji: '🦁', name: 'host', colour: '#b5651d', text: 'hi', cont: false }],
-    people: [], accountHandle: 'tl_alpha', hasVideo: false, followsOnFrom: null,
+    people: [], accountHandle: 'tl_alpha', accountUrl: 'https://x.com/tl_alpha', hasVideo: false, followsOnFrom: null,
     occurredOn: '2026-10-14', placement: 'post',
   };
 }
@@ -32,7 +32,7 @@ function detailVm(overrides = {}) {
     bubbles: [{ kind: 'speech', emoji: '🧡', name: 'sol', colour: '#ff8a3d', text: 'hello', cont: false }],
     cast: [{ kind: 'person', id: 1, emoji: '🧡', name: 'sol', colour: '#ff8a3d', igHandle: null }],
     original: 'first paragraph\n\nsecond paragraph',
-    credits: { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, occurredOn: '2026-10-14' },
+    credits: { account: { handle: 'tl_alpha', displayName: null, url: 'https://x.com/tl_alpha' }, clipBy: null, occurredOn: '2026-10-14' },
     sources: [],
     media: null,
     ...overrides,
@@ -41,7 +41,8 @@ function detailVm(overrides = {}) {
 
 test('translation detail: renders credits, cast, bubbles, and a native <details> "show original"', () => {
   const markup = String(detail.render(detailVm()));
-  assert.match(markup, /aria-label="translator" title="translator"><svg[^>]*>.*?<\/svg><\/span> <b>@tl_alpha<\/b>/);
+  assert.match(markup, /<p class="k-translation-detail__credits">\s*translated by: <a class="k-translation-detail__credit-link" href="https:\/\/x\.com\/tl_alpha" target="_blank" rel="noopener noreferrer">@tl_alpha<\/a>/);
+  assert.ok(!markup.includes('c-icon--translator'), 'the translate icon is gone (owner, 2026-10-23)');
   assert.match(markup, /c-cast__chip/);
   assert.match(markup, /c-bubbles__bub/);
   assert.match(markup, /<details class="k-translation-detail__original">/);
@@ -55,7 +56,7 @@ test('translation detail: Thai-script text in the original gets lang="th", same 
 });
 
 test('translation detail (Task 10b): credits show the event date (dayLabel) and no time -- not the post time, never the viewer\'s local time', () => {
-  const credits = { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, occurredOn: '2026-10-19' };
+  const credits = { account: { handle: 'tl_alpha', displayName: null, url: 'https://x.com/tl_alpha' }, clipBy: null, occurredOn: '2026-10-19' };
   const markup = String(detail.render(detailVm({ credits })));
   assert.match(markup, /19 Oct 2026/);
   assert.ok(!/\d:\d\d|\b(am|pm)\b|bangkok/.test(markup), markup);
