@@ -14,13 +14,13 @@ const { render, bind, canEmbed, WIDGETS_SRC, WIDGETS_ID } = await import('../../
 
 /** @type {import('../../src/http/contracts.js').SourceLinkVM} */
 const LIVE = { role: 'primary', url: 'https://x.com/tl_alpha/status/1900000000000000004', status: 'live' };
-const PROPS = { text: 'สวัสดี hello', author: { handle: 'tl_alpha', displayName: null }, postedAt: '2026-10-19T08:00:00.000Z', source: LIVE, sourceLanguage: 'th' };
+const PROPS = { text: 'สวัสดี hello', author: { handle: 'tl_alpha', displayName: null }, source: LIVE, sourceLanguage: 'th' };
 
-test('sourceEmbed: X\'s documented markup -- blockquote.twitter-tweet with data-dnt, the text (Thai in lang="th"), author and canonical link', () => {
+test('sourceEmbed: X\'s documented markup -- blockquote.twitter-tweet with data-dnt, the text (Thai in lang="th"), author and canonical link (labelled, not dated: Task 10b shows no post time)', () => {
   const markup = String(render(PROPS));
   assert.match(markup, /^\s*<blockquote class="twitter-tweet c-embed" data-dnt="true">/);
   assert.match(markup, /<span lang="th">สวัสดี<\/span>/);
-  assert.match(markup, /&mdash; \(@tl_alpha\) <a class="c-embed__link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">/);
+  assert.match(markup, /&mdash; \(@tl_alpha\) <a class="c-embed__link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">original tweet<\/a>/);
   assert.ok(!markup.includes('<script'), 'never an inline script');
 });
 

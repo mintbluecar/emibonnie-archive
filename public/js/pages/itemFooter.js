@@ -22,7 +22,7 @@ function originalPost(data) {
   if (!primary) return html``;
   if (site.embedSources && sourceEmbed.canEmbed(primary)) {
     return html`<div class="c-item__embed">${sourceEmbed.render({
-      text: data.original, author: data.credits.account, postedAt: data.credits.postedAt, source: primary, sourceLanguage: site.sourceLanguage,
+      text: data.original, author: data.credits.account, source: primary, sourceLanguage: site.sourceLanguage,
     })}</div>`;
   }
   return html`<a class="c-item__footer-link" href="${primary.url}">${t('item.originalTweet')}</a>`;

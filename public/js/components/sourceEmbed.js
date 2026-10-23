@@ -22,7 +22,6 @@
  */
 import { html } from '../core/html.js';
 import { t } from '../core/site.js';
-import { dayLabel } from '../core/format.js';
 import { thaiSpans } from '../core/thai.js';
 
 export const WIDGETS_SRC = 'https://platform.twitter.com/widgets.js';
@@ -32,7 +31,7 @@ export const WIDGETS_ID = 'twitter-wjs';
 const CANONICAL_POST = /^https:\/\/x\.com\/[A-Za-z0-9_]{1,15}\/status\/\d{1,20}$/;
 
 /**
- * @typedef {{ text: string, author: { handle: string, displayName: string|null }|null, postedAt: string|null,
+ * @typedef {{ text: string, author: { handle: string, displayName: string|null }|null,
  *   source: import('../../../src/http/contracts.js').SourceLinkVM, sourceLanguage: string }} EmbedProps
  */
 
@@ -54,7 +53,7 @@ function byline(author) {
  * @param {EmbedProps} props
  * @returns {import('../core/html.js').SafeHtml}
  */
-export function render({ text, author, postedAt, source, sourceLanguage }) {
+export function render({ text, author, source, sourceLanguage }) {
   const body = html`<p class="c-embed__text">${thaiSpans(text, sourceLanguage)}</p>`;
   if (source.status !== 'live') {
     return html`
@@ -64,10 +63,9 @@ export function render({ text, author, postedAt, source, sourceLanguage }) {
       </blockquote>
     `;
   }
-  const linkText = postedAt ? dayLabel(postedAt.slice(0, 10)) : t('item.originalTweet');
   return html`
     <blockquote class="twitter-tweet c-embed" data-dnt="true">
-      ${body}<p class="c-embed__by">${byline(author)} <a class="c-embed__link" href="${source.url}">${linkText}</a></p>
+      ${body}<p class="c-embed__by">${byline(author)} <a class="c-embed__link" href="${source.url}">${t('item.originalTweet')}</a></p>
     </blockquote>
   `;
 }

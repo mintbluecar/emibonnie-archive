@@ -116,7 +116,7 @@ test('composeItem (Task 10b): with embedSources on, X\'s embed blockquote replac
     assert.match(markup, /hi &lt;b&gt;there&lt;\/b&gt;/);
     assert.match(markup, /&mdash; TL &lt;alpha&gt; \(@tl_alpha\)/);
     assert.match(markup, /<a class="c-embed__link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">/);
-    assert.ok(!markup.includes('>original tweet</a>'), 'the embed replaces the link');
+    assert.ok(!markup.includes('class="c-item__footer-link" href="https://x.com'), 'the embed replaces the footer link');
     assert.match(markup, /class="c-item__copy-link"/);
     assert.match(markup, /href="\/takedown\/">report<\/a>/);
   });

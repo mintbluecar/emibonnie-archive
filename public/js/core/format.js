@@ -1,8 +1,12 @@
 // @ts-check
 /**
- * Date/time label helpers shared by every page. `monthLabel`/`dayLabel`
+ * Date label helpers shared by every page. `monthLabel`/`dayLabel`
  * read the `YYYY-MM[-DD]` string directly (never parsed as a local-time
  * `Date`), so a label never shifts a day depending on the viewer's zone.
+ * There is no clock-time helper (owner's rule, Task 10b): a time is shown
+ * only where the event happened, in that place's local time, and the
+ * engine doesn't store that yet -- so pages show dates only, never the
+ * viewer's device-local time.
  */
 
 const MONTHS_LONG = [
@@ -21,47 +25,4 @@ export function monthLabel(yearMonth) {
 export function dayLabel(isoDate) {
   const [year, month, day] = isoDate.split('-');
   return `${Number(day)} ${MONTHS_SHORT[Number(month) - 1]} ${year}`;
-}
-
-/**
- * The last segment of a time-zone name, lowercased, `_` → space.
- * `'Asia/Bangkok'` → `'bangkok'`; `'America/Los_Angeles'` → `'los angeles'`.
- * @param {string} tz
- * @returns {string}
- */
-export function cityOf(tz) {
-  const parts = tz.split('/');
-  return parts[parts.length - 1].toLowerCase().replace(/_/g, ' ');
-}
-
-/**
- * `'4:00 pm'`: hour with no leading zero, lowercase am/pm. Some ICU
- * builds use a narrow no-break space before am/pm; normalised to a plain
- * space either way.
- * @param {string} iso
- * @param {string} tz
- * @returns {string}
- */
-function clockTime(iso, tz) {
-  const formatted = new Intl.DateTimeFormat('en-US', {
-    timeZone: tz,
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(new Date(iso));
-  return formatted.replace(/[\u202f\u2009]/g, ' ').toLowerCase();
-}
-
-/**
- * `'4:00 pm paris · 10:00 pm bangkok'` (the viewer's zone first, then the
- * site's), or a single value when the viewer and the site share a zone.
- * @param {string} iso
- * @param {string} siteTz
- * @param {string} [viewerTz]
- * @returns {string}
- */
-export function timePair(iso, siteTz, viewerTz = Intl.DateTimeFormat().resolvedOptions().timeZone) {
-  const viewerLabel = `${clockTime(iso, viewerTz)} ${cityOf(viewerTz)}`;
-  if (viewerTz === siteTz) return viewerLabel;
-  return `${viewerLabel} · ${clockTime(iso, siteTz)} ${cityOf(siteTz)}`;
 }
