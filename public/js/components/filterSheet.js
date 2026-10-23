@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * The search page's filter sheet (task-5-brief.md): who's in it (any-of
+ * The in-place search's filter sheet (task-5-brief.md; Task 10d): who's in it (any-of
  * / all-of over people), type chips (categories from `/api/filters` plus
  * the two placement chips), and selects for event, translator, client
  * and date. A native `<dialog>`, opened by the page with `showModal()`

@@ -172,7 +172,7 @@ function applyMorePage(opts, kind, page) {
  * separately), guarded by `opts.ctx.seq` against a response landing
  * after a newer "more" click, segment switch, or (person page) picker
  * fetch -- the same shared sequence number every async action on the
- * page bumps and checks, review-pattern shared with `search.js`'s own
+ * page bumps and checks, review-pattern shared with `components/inlineSearch.js`'s own
  * refetch/loadMore.
  * @param {MoreOpts} opts @param {HTMLButtonElement} button
  * @returns {Promise<void>}
@@ -196,7 +196,7 @@ async function loadMore(opts, button) {
 /**
  * Wires every `.c-hub__more` button inside `root` once, delegated (so a
  * re-render of `.c-hub__content` never stacks a duplicate listener --
- * the same discipline `search.js`'s own `.c-search__more` already
+ * the same discipline `components/inlineSearch.js`'s own `.c-search__more` already
  * follows, and the exact bug review round 1, I2 found in this page's
  * own "with…" picker).
  * @param {Element} root @param {string} apiPath @param {{ sections: DatedSection[] }} data @param {HubCtx} ctx

@@ -13,7 +13,8 @@ test('pageShell (Task 9b): the tab bar renders inside the header, so desktop get
   assert.equal(markup.match(/class="c-tabbar"/g)?.length, 1);
 });
 
-test('pageShell (Task 9b): headerProps reach the header (the search page keeps its live box on desktop)', () => {
-  const markup = String(render({ active: 'search', compact: true, headerProps: { liveSearch: true }, content: html`` }));
-  assert.match(markup, /c-header--live/);
+test('pageShell (Task 9b, 10d): headerProps reach the header (an in-place search page gets its search row)', () => {
+  const markup = String(render({ active: 'home', compact: true, headerProps: { search: { placeholder: 'search this event…' } }, content: html`` }));
+  assert.match(markup, /c-header__below--live[\s\S]*placeholder="search this event…"/);
+  assert.ok(!String(render({ active: 'home', content: html`` })).includes('c-header__search-box'), 'no headerProps, no box');
 });

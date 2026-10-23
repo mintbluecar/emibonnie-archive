@@ -8,7 +8,8 @@
  *
  * The rules every page follows (see account.js, the fullest example):
  * - `compose__Pascal__(data)` is pure (data -> SafeHtml), so tests need no DOM;
- * - the chrome is `pageShell`, and `headerLinks.bind` wires the header;
+ * - the chrome is `pageShell` (no search box: only home and the event,
+ *   person and translator pages search in place, `components/inlineSearch.js`);
  * - the first paint is `mountPage` (it sets `#app[data-ready]` for e2e),
  *   whether that is the page, its 404 or its load error;
  * - the initial load is wrapped in try/catch: a 404 shows the page's own
@@ -24,7 +25,6 @@ import { getJson, ApiError } from '../core/api.js';
 import { site, t } from '../core/site.js';
 import * as pageShell from '../components/pageShell.js';
 import * as emptyState from '../components/emptyState.js';
-import * as headerLinks from '../components/headerLinks.js';
 import { mountLoadError } from './pageError.js';
 
 const APP_SELECTOR = 'app';
@@ -53,7 +53,6 @@ export async function load(root, state) {
   const data = await getJson(API_PATH);
   if (mine !== state.seq) return;
   mountPage(root, compose__Pascal__(data));
-  headerLinks.bind(root);
 }
 
 /** @returns {Promise<void>} */
@@ -69,7 +68,6 @@ export async function start() {
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) {
       mountPage(root, pageShell.render({ compact: true, content: emptyState.render({ message: t('static.notFound') }) }));
-      headerLinks.bind(root);
       return;
     }
     mountLoadError(root);

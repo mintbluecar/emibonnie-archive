@@ -18,7 +18,7 @@ const HOME = JSON.parse(readFileSync(new URL('../snapshots/home.json', import.me
 test('composeHome: shows the header, tab bar and footer', () => {
   const markup = String(composeHome(HOME));
   assert.match(markup, /c-header__wordmark/);
-  assert.match(markup, /c-header__below--desktop/, 'home keeps its search box on desktop (Task 10b fix O1)');
+  assert.match(markup, /c-header__below--live[\s\S]*placeholder="search what they said…"/, 'home is the search (Task 10d): its box, pinned under the bar');
   assert.match(markup, /c-tabbar/);
   assert.match(markup, /c-footer__links/);
 });
@@ -42,4 +42,13 @@ test('composeHome: an empty months list shows the empty state instead', () => {
   const markup = String(composeHome({ months: [] }));
   assert.match(markup, /c-empty-state/);
   assert.match(markup, /no events yet/);
+});
+
+test('composeHome (Task 10d): the event list sits in the in-place search region, shown until something is typed or filtered', async () => {
+  const { prepare } = await import('../../public/js/components/inlineSearch.js');
+  const blank = String(composeHome(HOME));
+  assert.match(blank, /<div class="c-search" hidden><\/div>\s*<div class="c-search__list">[\s\S]*c-home-month/);
+  assert.ok(blank.indexOf('c-search__filters') < blank.indexOf('c-search__list'), 'the chips sit above, under the box');
+  const searching = String(composeHome(HOME, prepare({ search: 'q=hug' })));
+  assert.match(searching, /<div class="c-search"><\/div>\s*<div class="c-search__list" hidden>/, 'a ?q= link never flashes the list');
 });

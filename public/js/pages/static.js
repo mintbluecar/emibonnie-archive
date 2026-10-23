@@ -15,7 +15,6 @@ import { mountPage } from '../core/dom.js';
 import { site, t } from '../core/site.js';
 import * as pageShell from '../components/pageShell.js';
 import * as emptyState from '../components/emptyState.js';
-import * as headerLinks from '../components/headerLinks.js';
 import { HOME_PATH } from '../core/routes.js';
 
 const APP_SELECTOR = 'app';
@@ -118,7 +117,6 @@ export function start() {
   const page = document.body.getAttribute('data-page') ?? 'notFound';
   document.title = `${titleFor(page)} · ${site.name}`;
   mountPage(root, composeStatic(page));
-  headerLinks.bind(root);
 }
 
 if (typeof document !== 'undefined') start();

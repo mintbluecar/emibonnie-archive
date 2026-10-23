@@ -68,7 +68,7 @@ test("public/js importing the absolute '/site/site.js' is not an unresolved-impo
 test('public/js/state is pure data: no components, pages or kinds (review round 1, M5)', async () => {
   const file = 'public/js/state/zzfake/x.js';
   assert.deepEqual(await rulesHit(file, "export { render } from '../../components/chips.js';"), ['no-restricted-imports']);
-  assert.deepEqual(await rulesHit(file, "export { start } from '../../pages/search.js';"), ['no-restricted-imports']);
+  assert.deepEqual(await rulesHit(file, "export { start } from '../../pages/home.js';"), ['no-restricted-imports']);
   assert.deepEqual(await rulesHit(file, "export { KIND_UI } from '../../kinds/_registry.js';"), ['no-restricted-imports']);
   assert.deepEqual(await rulesHit(file, "export { html } from '../../core/html.js';"), []);
 });

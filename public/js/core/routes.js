@@ -83,10 +83,10 @@ export function accountFromAccountPath(pathname) {
  * `src/pages.js` entry exactly, with no trailing slash, and
  * `test/core/routes.test.js` pins each one to it, so no page or
  * component types a page path itself. `/add` and `/me` are reserved
- * there for pages a later plan builds.
+ * there for pages a later plan builds. There is no search page (Task
+ * 10d): search happens in place, and `/search` only redirects home.
  */
 export const HOME_PATH = '/';
-export const SEARCH_PATH = '/search';
 export const ABOUT_PATH = '/about';
 export const PRIVACY_PATH = '/privacy';
 export const TAKEDOWN_PATH = '/takedown';
@@ -94,12 +94,23 @@ export const ADD_PATH = '/add';
 export const ME_PATH = '/me';
 
 /**
- * The search page, with an optional query string (no leading `?`).
- * `searchHref(new URLSearchParams({ event: 'x' }))` -> `'/search?event=x'`.
+ * `path` with an optional query string (no leading `?`) -- how an
+ * in-place search writes its state onto the page's own URL.
+ * `withQuery('/e/x', 'q=hi')` -> `'/e/x?q=hi'`; an empty query leaves `path` bare.
+ * @param {string} path @param {string|URLSearchParams} [query]
+ * @returns {string}
+ */
+export function withQuery(path, query = '') {
+  const qs = String(query);
+  return qs ? `${path}?${qs}` : path;
+}
+
+/**
+ * A whole-archive search: home, with the search's query string (Task
+ * 10d -- home is the search). `searchHref(new URLSearchParams({ q: 'x' }))` -> `'/?q=x'`.
  * @param {string|URLSearchParams} [query]
  * @returns {string}
  */
 export function searchHref(query = '') {
-  const qs = String(query);
-  return qs ? `${SEARCH_PATH}?${qs}` : SEARCH_PATH;
+  return withQuery(HOME_PATH, query);
 }

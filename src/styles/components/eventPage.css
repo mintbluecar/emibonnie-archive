@@ -1,6 +1,6 @@
 /*
  * public/js/pages/event.js: the event page's own layout -- the back
- * link, name/search row, meta line, filters, the newest-first toggle,
+ * link, name row, meta line, filters, the newest-first toggle,
  * and the sections wrapper. "Newest first" re-fetches and re-renders
  * (Task 3 review #1), so there's no CSS-only reorder rule here.
  */
@@ -24,15 +24,6 @@
   font-weight: 800;
   font-size: var(--text-16);
   line-height: 1.25;
-}
-
-.c-event__search {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  flex: none;
 }
 
 .c-event__meta {

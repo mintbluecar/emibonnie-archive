@@ -1,20 +1,20 @@
 // @ts-check
 /**
- * The phone tab bar / web top nav: home · search · ＋ add · me. Same
+ * The phone tab bar / web top nav: home · ＋ add · me (Task 10d: no
+ * search tab -- search happens in place, and home is the search). Same
  * markup for both; `src/styles/components/tabBar.css` swaps the layout at
  * the 860px breakpoint (see docs/.../1b plan, "Additional constraints" →
  * Layout breakpoint), so there is no JS branch here for "web" vs "phone".
  */
 import { html } from '../core/html.js';
 import { t } from '../core/site.js';
-import { HOME_PATH, SEARCH_PATH, ADD_PATH, ME_PATH } from '../core/routes.js';
+import { HOME_PATH, ADD_PATH, ME_PATH } from '../core/routes.js';
 
-/** @typedef {'home'|'search'|'add'|'me'} TabKey */
+/** @typedef {'home'|'add'|'me'} TabKey */
 
 /** @type {{ key: TabKey, href: string }[]} */
 const TABS = [
   { key: 'home', href: HOME_PATH },
-  { key: 'search', href: SEARCH_PATH },
   { key: 'add', href: ADD_PATH },
   { key: 'me', href: ME_PATH },
 ];
@@ -22,7 +22,6 @@ const TABS = [
 /** @param {TabKey} key @returns {string} */
 function labelFor(key) {
   if (key === 'home') return t('nav.home');
-  if (key === 'search') return t('nav.search');
   if (key === 'add') return t('nav.add');
   return t('nav.me');
 }

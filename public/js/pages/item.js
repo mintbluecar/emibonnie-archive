@@ -18,7 +18,6 @@ import * as emptyState from '../components/emptyState.js';
 import * as pageShell from '../components/pageShell.js';
 import * as mediaBox from '../components/mediaBox.js';
 import * as refreshButton from '../components/refreshButton.js';
-import * as headerLinks from '../components/headerLinks.js';
 import * as sourceEmbed from '../components/sourceEmbed.js';
 import { KIND_UI } from '../kinds/_registry.js';
 import { footerBlock } from './itemFooter.js';
@@ -93,7 +92,7 @@ export function composeItem(data) {
     </div>
     ${footerBlock(data)}
   `;
-  return pageShell.render({ active: 'home', compact: true, headerProps: { noSearch: true }, content });
+  return pageShell.render({ active: 'home', compact: true, content });
 }
 
 /**
@@ -140,7 +139,6 @@ async function reloadBody(root, target) {
  * @returns {void}
  */
 export function bind(root, data) {
-  headerLinks.bind(root);
   const bodyEl = root.querySelector('.c-item__body') ?? root;
   bindBody(root, bodyEl, data);
   const mediaEl = root.querySelector('.c-item__media') ?? root;
@@ -175,7 +173,7 @@ function kindFromPath(path) {
 
 /** @param {Element} root @returns {void} */
 function mountNotFound(root) {
-  mountPage(root, pageShell.render({ compact: true, headerProps: { noSearch: true }, content: emptyState.render({ message: t('item.notFound') }) }));
+  mountPage(root, pageShell.render({ compact: true, content: emptyState.render({ message: t('item.notFound') }) }));
 }
 
 /** @returns {Promise<void>} */

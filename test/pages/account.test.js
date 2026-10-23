@@ -182,3 +182,12 @@ test('composeAccount (Task 9b): entries are compact previews, not full bubbles',
   assert.match(markup, /c-preview-card--compact/);
   assert.ok(!markup.includes('c-bubbles__bub'));
 });
+
+test('composeAccount (Task 10d): searches within this translator -- the box names them, preset as a removable chip; the opted-out page has no box', () => {
+  const markup = String(composeAccount(ACCOUNT));
+  const handle = ACCOUNT.account.handle;
+  assert.ok(markup.includes(`placeholder="search @${handle}…"`));
+  assert.ok(markup.includes(`data-field="account" data-value="${handle}"`));
+  assert.match(markup, /<div class="c-search__list">[\s\S]*c-hub__seg/);
+  assert.ok(!String(composeOptedOut()).includes('c-header__search-box'));
+});
