@@ -2,37 +2,49 @@
 /**
  * The database half of `site/scripts/create-app-role.sh`: checks whether
  * the `app` role exists, then creates it (or, with ROTATE=1, re-passwords
- * it) from a SCRAM-SHA-256 verifier computed on this machine, and prints
- * the app-role connection string on stdout -- nothing else ever goes to
- * stdout. See the shell script's header comment, and `scram.mjs`, for why
- * the verifier (never the plaintext password) is what reaches Postgres.
+ * it) with a freshly generated password, and prints the app-role
+ * connection string on stdout -- nothing else ever goes to stdout.
  *
  * Moved out of a heredoc inside the shell script in fix round 4 (N1), so
  * its error handling can be tested directly (site/test/appRole.test.js).
  *
- * Fix round 4, N1 -- error redaction. When the DDL fails (say, `app` was
- * created by someone else between the existence check and the `create
- * role`), Postgres reports the failing statement in the error's `where`
- * field (its CONTEXT), and that statement is the expanded `create role
- * app login password 'SCRAM-SHA-256$...'` -- the verifier. node's default
- * handler for an uncaught error prints every field, `where` included. So
- * every error here is caught and reduced to `err.code` plus the first line
- * of its message, with anything shaped like a verifier redacted; `where`,
- * `detail`, `internalQuery` and the stack are never printed.
+ * Fix round 5 (live failure): the password goes to Neon in plaintext.
+ * Rounds 3-4 sent a SCRAM-SHA-256 verifier instead, and the real preview
+ * branch refused it: "Neon only supports being given plaintext passwords".
+ * Neon's docs: "Passwords must be supplied in plain text but are encrypted
+ * when stored. Hashed passwords are not supported."
+ * (https://neon.com/docs/manage/roles). The role is still created with SQL,
+ * never the Neon console/API, because the same page says SQL-created roles
+ * "are not granted membership in the neon_superuser role like roles created
+ * with the Neon Console, CLI, or API."
  *
- * The server log can still record that CONTEXT line when the statement
- * fails (Postgres logs an error's context with it). That's the verifier,
- * not the password, and RFC 5802 is built for exactly that case: "The
- * authentication information stored in the authentication database is not
- * sufficient by itself to impersonate the client" (section 1); recovering
- * the password from it takes "an offline dictionary or brute-force attack"
- * (section 9) -- against a 33-byte random password, not feasible.
- * https://www.rfc-editor.org/rfc/rfc5802
- * We still keep it out of this script's own output, which is the part we
- * control.
+ * Where the plaintext goes, plainly:
+ *   - Over TLS to Neon: the Neon serverless driver connects over a secure
+ *     WebSocket by default, and Neon connection strings carry
+ *     `sslmode=require`. Neon stores it encrypted (and Postgres's
+ *     `password_encryption`, scram-sha-256, hashes a plaintext password on
+ *     storage).
+ *   - Into the server's error log, if the statement fails: Postgres logs a
+ *     failed statement's CONTEXT, which is the expanded `create role app
+ *     login password '<plaintext>'`.
+ *   - Never printed locally, never in argv (it's a bind parameter, then a
+ *     server-side setting), and never on disk except the chmod-600
+ *     fallback file create-app-role.sh writes the connection string to.
+ *
+ * Quoting stays server-side: the password is a bind parameter to a plain
+ * `select set_config('app.pw', $1, true)`, and only then spliced into
+ * `create/alter role ... password %L` with `format()`, in one transaction.
+ *
+ * Error redaction (fix round 4, N1; widened in round 5). A failed DDL puts
+ * the expanded statement -- now the plaintext password -- in the error's
+ * `where` field, and node's default handler for an uncaught error prints
+ * every field. So every error here is caught and reduced to `err.code`
+ * plus the first line of its message, with the password itself and any
+ * `password '...'` text redacted; `where`, `detail`, `internalQuery` and
+ * the stack are never read.
  */
 import { pathToFileURL } from 'node:url';
-import { scramSha256Verifier, randomPassword } from './scram.mjs';
+import { randomPassword } from './password.mjs';
 
 export const EXIT_FAILED = 1;
 export const EXIT_ROLE_EXISTS = 2;
@@ -41,19 +53,22 @@ export const EXIT_ROLE_MISSING = 3;
 /**
  * A one-line, secret-free description of an error: its `code` (a Postgres
  * SQLSTATE, or a node error code) and the first line of its message, with
- * anything shaped like a SCRAM verifier redacted. Never reads `where`,
- * `detail`, `internalQuery` or `stack`.
+ * `secret` (the generated password, when there is one) replaced wherever
+ * it appears, and any `password '...'` text redacted too. Never reads
+ * `where`, `detail`, `internalQuery` or `stack`.
  * @param {unknown} err
+ * @param {string} [secret]
  * @returns {string}
  */
-export function safeErrorSummary(err) {
+export function safeErrorSummary(err, secret) {
   const e = /** @type {{ code?: unknown, message?: unknown }} */ (err ?? {});
   const code = typeof e.code === 'string' && /^[A-Za-z0-9_]{1,40}$/.test(e.code) ? e.code : 'unknown';
-  const firstLine = (typeof e.message === 'string' ? e.message : String(err)).split('\n')[0] ?? '';
-  const message = firstLine
-    .replace(/SCRAM-SHA-256\$\S*/g, 'SCRAM-SHA-256$<redacted>')
-    .slice(0, 200);
-  return `code ${code}: ${message}`;
+  let text = typeof e.message === 'string' ? e.message : String(err);
+  // Redact before cutting to the first line, so a secret can't straddle the cut.
+  if (secret) text = text.split(secret).join('<redacted>');
+  text = text.replace(/password\s+E?'(?:[^']|'')*'?/gi, "password '<redacted>'");
+  const firstLine = text.split('\n')[0] ?? '';
+  return `code ${code}: ${firstLine.slice(0, 200)}`;
 }
 
 /**
@@ -67,6 +82,8 @@ export function safeErrorSummary(err) {
  * @returns {Promise<number>} the process exit code
  */
 export async function setAppRolePassword({ db, rotate, ownerUrl, stdout, stderr }) {
+  /** @type {string | undefined} */
+  let password;
   try {
     // Parse the owner URL before changing anything, so a malformed one
     // can't leave the role re-passworded with no connection string to show for it.
@@ -81,11 +98,10 @@ export async function setAppRolePassword({ db, rotate, ownerUrl, stdout, stderr 
       stderr('ROLE_EXISTS');
       return EXIT_ROLE_EXISTS;
     }
-    const password = randomPassword();
-    const verifier = scramSha256Verifier(password);
+    password = randomPassword();
     const stmt = rotate ? 'alter role app password %L' : 'create role app login password %L';
     await db.transaction(async (tx) => {
-      await tx.query("select set_config('app.pw', $1, true)", [verifier]);
+      await tx.query("select set_config('app.pw', $1, true)", [password]);
       await tx.exec(`do $$ begin execute format('${stmt}', current_setting('app.pw')); end $$;`);
     }, { actor: 'system' });
     url.username = 'app';
@@ -94,7 +110,7 @@ export async function setAppRolePassword({ db, rotate, ownerUrl, stdout, stderr 
     stdout(url.toString());
     return 0;
   } catch (err) {
-    stderr(`ROLE_FAILED (${safeErrorSummary(err)})`);
+    stderr(`ROLE_FAILED (${safeErrorSummary(err, password)})`);
     return EXIT_FAILED;
   }
 }

@@ -37,40 +37,37 @@
 # `site/scripts/check-app-role.sh` re-confirms this after every migrate.
 #
 # -----------------------------------------------------------------------
-# Fix round 3, C1: how the password reaches Postgres without ever being
-# sent as SQL text
+# How the password reaches Postgres (fix round 3, C1; fix round 5)
 # -----------------------------------------------------------------------
-# An earlier round of this script ran `create role app with login
-# password $1`, a bind parameter -- which is not valid SQL. Postgres only
-# accepts bind parameters inside SELECT/INSERT/UPDATE/DELETE/MERGE/VALUES
-# (the "Parameters" paragraph of
+# `create role app with login password $1` -- a bind parameter -- is not
+# valid SQL. Postgres only accepts bind parameters inside SELECT/INSERT/
+# UPDATE/DELETE/MERGE/VALUES (the "Parameters" paragraph of
 # https://www.postgresql.org/docs/current/sql-prepare.html), never inside
 # a DDL statement such as CREATE ROLE or ALTER ROLE; it fails with
-# `syntax error at or near "$1"` (reproduced against PGlite).
+# `syntax error at or near "$1"` (reproduced against PGlite). So the
+# password is passed as a bind parameter to a plain `select set_config(...)`
+# (valid: SELECT accepts parameters), and only then quoted into the DDL
+# server-side with `format('%L')`, inside one transaction:
 #
-# Instead, `site/scripts/scram.mjs` computes a SCRAM-SHA-256 *verifier*
-# for the generated password entirely on this machine (RFC 5802/7677,
-# node's own `crypto`), in exactly the text Postgres stores in
-# `pg_authid.rolpassword`
-# (https://www.postgresql.org/docs/current/auth-password.html). That
-# verifier -- never the plaintext password -- is then passed as a bind
-# parameter to a plain `select set_config(...)` (valid: SELECT accepts
-# parameters), and only *that* already-computed, already-constrained
-# value is spliced into `create/alter role ... password %L` with
-# `format()`, inside one transaction:
-#
-#   select set_config('app.pw', $1, true);        -- $1 = the verifier
+#   select set_config('app.pw', $1, true);        -- $1 = the password
 #   do $$ begin
 #     execute format('create role app login password %L', current_setting('app.pw'));
 #   end $$;
 #
-# The plaintext password is generated on this machine (`scram.mjs`'s
-# `randomPassword`) and never leaves it except inside the app-role
-# connection string this script builds afterwards -- it's never sent to
-# Postgres at all, encrypted or not; only the verifier reaches the server.
-# Confirmed against PGlite: `pg_authid.rolpassword` ends up byte-for-byte
-# equal to the verifier this script computed
-# (site/test/scram.test.js).
+# Fix round 5: $1 is the *plaintext* password. Rounds 3-4 sent a
+# pre-computed SCRAM-SHA-256 verifier instead, and the real Neon preview
+# branch refused it ("Neon only supports being given plaintext passwords").
+# Neon's docs: "Passwords must be supplied in plain text but are encrypted
+# when stored. Hashed passwords are not supported."
+# (https://neon.com/docs/manage/roles). So, plainly:
+#   - the plaintext password travels to Neon over TLS (the Neon serverless
+#     driver's secure WebSocket; Neon connection strings carry
+#     `sslmode=require`), and Neon stores it encrypted;
+#   - if the statement fails, it can appear in the server's error log
+#     (Postgres logs a failed statement's context, which holds it);
+#   - it is never printed locally, never in argv, and never on disk except
+#     inside the app-role connection string in the chmod-600 fallback file
+#     (step 6 below).
 #
 # What this script does, in order:
 #   1. Connects as the owner role (EMIBONNIE_DB or EMIBONNIE_DB_PREVIEW)
@@ -81,19 +78,18 @@
 #        - With --rotate: refuses if it does *not* already exist, and
 #          says to run this again without --rotate first.
 #   2. Generates a strong, URL-safe password locally
-#      (`site/scripts/scram.mjs`'s `randomPassword`, node's own `crypto`
-#      -- no dependency on the `openssl` binary) and never prints it.
-#   3. Computes its SCRAM-SHA-256 verifier (`scram.mjs`'s
-#      `scramSha256Verifier`) and runs `create role app login password
-#      %L` (or, with --rotate, `alter role app password %L`) exactly as
-#      shown above, through the engine's own db client
+#      (`site/scripts/password.mjs`'s `randomPassword`: 44 characters,
+#      about 264 bits, node's own `crypto`) and never prints it.
+#   3. Runs `create role app login password %L` (or, with --rotate,
+#      `alter role app password %L`) with that plaintext password, exactly
+#      as shown above, through the engine's own db client
 #      (src/db/client.js), inside one transaction. Steps 1-4 live in
 #      `site/scripts/app-role.mjs` (fix round 4, N1), which also catches
-#      every error and prints only its code and a redacted first line:
-#      a failed DDL's `where` field holds the expanded statement, verifier
-#      included, and is never printed. (The server log may still record
-#      it -- that's the verifier, not the password; see app-role.mjs's
-#      header for RFC 5802's rationale.)
+#      every error and prints only its code and a redacted first line (the
+#      password and any `password '...'` text replaced): a failed DDL's
+#      `where` field holds the expanded statement, password included, and
+#      is never printed. (The server's error log may still record it --
+#      see above.)
 #   4. Builds the app-role connection string from the owner URL: same
 #      host, database and query parameters, with the username replaced by
 #      `app` and the password by the one just generated.
@@ -151,7 +147,7 @@
 #
 # --dry-run prints the steps this run would take, with every secret
 # redacted, and makes no database connection, runs no `node` (for the
-# password/verifier/role steps), and calls no `vercel` command. Covered by
+# password/role steps), and calls no `vercel` command. Covered by
 # site/test/createAppRoleScript.test.js, run with `node --test site/test/`.
 
 set -euo pipefail
@@ -268,14 +264,14 @@ if [ "$DRY_RUN" -eq 1 ]; then
   else
     log "would check whether role 'app' already exists on the $TARGET database (select 1 from pg_roles where rolname = 'app'); would refuse if it does, and say to use --rotate instead"
   fi
-  log "would generate a strong password locally (site/scripts/scram.mjs's randomPassword, node's own crypto) -- never printed"
-  log "would compute its SCRAM-SHA-256 verifier locally (site/scripts/scram.mjs) -- the plaintext password is never sent to Postgres, encrypted or not"
+  log "would generate a strong password locally (site/scripts/password.mjs's randomPassword, node's own crypto) -- never printed, never in argv"
+  log "would send that plaintext password to Neon over TLS as a bind parameter (Neon requires plaintext and stores it encrypted: https://neon.com/docs/manage/roles); it can appear in the server's error log if the statement fails"
   if [ "$ROTATE" -eq 1 ]; then
     log "would run, in one transaction: select set_config('app.pw', '<redacted>', true); do \$\$ ... execute format('alter role app password %L', current_setting('app.pw')); end \$\$;"
   else
     log "would run, in one transaction: select set_config('app.pw', '<redacted>', true); do \$\$ ... execute format('create role app login password %L', current_setting('app.pw')); end \$\$;"
   fi
-  log "would print only an error code and a redacted message if that fails (never the statement, which holds the verifier)"
+  log "would print only an error code and a redacted message if that fails (never the statement, which holds the password)"
   log "would build the app-role URL from the owner URL: same host/database/parameters, user 'app', the new password"
   if [ "$SET_VERCEL" -eq 1 ]; then
     log "would run: vercel ${VERCEL_ENV_CMD[*]} (value piped through stdin, never in argv or output)"

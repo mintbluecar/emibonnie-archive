@@ -75,14 +75,19 @@ site/scripts/create-app-role.sh --prod
 
 Run the first one against `preview`, the second against the main branch.
 Each one:
-- connects as the owner role and generates a strong, URL-safe password
-  locally, then creates `app` with SQL — without ever sending that
-  plaintext password to Postgres: it computes the password's
-  SCRAM-SHA-256 verifier itself and gives *that* to `create role app
-  login password %L`, the same way Postgres stores it internally. Never
-  prints the password, never goes through the Neon console. (See
-  `site/scripts/scram.mjs` and `site/scripts/create-app-role.sh`'s own
-  header comment for exactly why and how.)
+- connects as the owner role, generates a strong, URL-safe password
+  locally (44 characters, about 264 bits), and creates `app` with SQL
+  (`create role app login password %L`, quoted server-side) — never
+  through the Neon console, which would make it a `neon_superuser` member.
+  The password goes to Neon **in plaintext**, over TLS (the Neon driver's
+  secure WebSocket; Neon connection strings carry `sslmode=require`):
+  "Passwords must be supplied in plain text but are encrypted when stored.
+  Hashed passwords are not supported."
+  ([Neon: Manage roles](https://neon.com/docs/manage/roles)). If the
+  statement fails, the password can appear in the server's error log. It
+  is never printed locally, never in argv, and never on disk except the
+  `chmod 600` fallback file in (b). (See `site/scripts/app-role.mjs` and
+  `site/scripts/create-app-role.sh`'s own header comment for how.)
 - refuses if `app` already exists on that branch (so you can't run this
   twice by accident) and tells you to run it again with `--rotate`
   instead (`task role:rotate:preview` / `task role:rotate:prod` —
@@ -432,7 +437,7 @@ pasted somewhere public, shown on a screen share:
   ```
   or directly: `site/scripts/create-app-role.sh --rotate [--prod]`. This
   generates a new password, replaces `app`'s password in the database
-  with its SCRAM-SHA-256 verifier (never the Neon console — see section
+  with SQL (plaintext over TLS, as in 1(a); never the Neon console — see section
   1(a)/"Least privilege", above, for why: a console reset would make
   `app` a `neon_superuser` member), and updates the existing
   `DATABASE_URL` Secret in Vercel's matching scope for you, in one step

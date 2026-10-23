@@ -1,10 +1,10 @@
 // @ts-check
 /**
  * Offline tests for `site/scripts/create-app-role.sh` (--rotate included),
- * run entirely through its `--dry-run` flag: no `node`-side
- * password/verifier generation, no database connection, no `vercel`
- * command. See site/test/scram.test.js for the SCRAM-SHA-256 verifier
- * itself, checked against a real (local) PGlite database. Run with
+ * run entirely through its `--dry-run` flag: no `node`-side password
+ * generation, no database connection, no `vercel` command. See
+ * site/test/appRole.test.js for the role creation itself, checked against
+ * a real (local) PGlite database. Run with
  * `node --test site/test/`.
  */
 import assert from 'node:assert/strict';
@@ -54,13 +54,13 @@ test('refuses when the needed production env var is empty, before printing any s
   assert.doesNotMatch(output, /would check/);
 });
 
-test('preview dry run announces the full order: check existence, generate password, compute verifier, create role, build URL, add to Vercel, fallback', () => {
+test('preview dry run announces the full order: check existence, generate password, send it in plaintext over TLS, create role, build URL, add to Vercel, fallback', () => {
   const { status, output } = runDryRun([], { EMIBONNIE_DB_PREVIEW: PREVIEW_URL });
   assert.equal(status, 0);
   const order = [
     "role 'app' already exists",
     'generate a strong password',
-    'compute its SCRAM-SHA-256 verifier',
+    'send that plaintext password to Neon over TLS',
     "create role app login password %L",
     'build the app-role URL',
     'vercel env add DATABASE_URL --environment preview --sensitive --yes',
@@ -76,6 +76,8 @@ test('preview dry run announces the full order: check existence, generate passwo
   assert.doesNotMatch(output, /--environment production/);
   // Fix round 3, C1: never the old (invalid) bind-parameter form.
   assert.doesNotMatch(output, /password \$1/);
+  // Fix round 5: Neon refuses hashed passwords, so no verifier step.
+  assert.doesNotMatch(output, /verifier|never sent to Postgres/i);
   assert.doesNotMatch(output, /vercel env (rm|update)/, 'a first run only ever adds');
   assert.doesNotMatch(output, /redeploy finishes/, 'only --rotate changes a live password');
 });

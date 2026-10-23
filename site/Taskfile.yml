@@ -92,6 +92,9 @@ tasks:
       Runs site/scripts/create-app-role.sh. Needs EMIBONNIE_DB_PREVIEW set.
       Refuses if the role already exists; see site/docs/deploy.md,
       section 6(a), to rotate its password instead.
+      The new password goes to Neon in plaintext over TLS (Neon requires
+      it and stores it encrypted); it is never printed. See
+      site/docs/deploy.md, section 1(a).
     preconditions:
       - sh: 'test -n "$EMIBONNIE_DB_PREVIEW"'
         msg: "EMIBONNIE_DB_PREVIEW is not set -- export the preview branch's owner-role connection string first."
@@ -103,6 +106,9 @@ tasks:
     summary: |
       Runs site/scripts/create-app-role.sh --prod. Needs EMIBONNIE_DB set.
       Asks for confirmation first.
+      The new password goes to Neon in plaintext over TLS (Neon requires
+      it and stores it encrypted); it is never printed. See
+      site/docs/deploy.md, section 1(a).
     prompt: "This creates the 'app' role on the PRODUCTION branch. Continue?"
     preconditions:
       - sh: 'test -n "$EMIBONNIE_DB"'
@@ -120,6 +126,9 @@ tasks:
       deploy:preview` straight after. Use this for a leaked secret (fix
       round 3, C1) -- never reset the password from the Neon console,
       which would put 'app' back into neon_superuser.
+      The new password goes to Neon in plaintext over TLS (Neon requires
+      it and stores it encrypted); it is never printed. See
+      site/docs/deploy.md, section 1(a).
     prompt: "This rotates the 'app' role's password on preview, and replaces the Vercel Secret. Continue?"
     preconditions:
       - sh: 'test -n "$EMIBONNIE_DB_PREVIEW"'
@@ -137,6 +146,9 @@ tasks:
       after. Use this for a leaked secret (fix round 3, C1) -- never reset
       the password from the Neon console, which would put 'app' back
       into neon_superuser.
+      The new password goes to Neon in plaintext over TLS (Neon requires
+      it and stores it encrypted); it is never printed. See
+      site/docs/deploy.md, section 1(a).
     prompt: "This rotates the 'app' role's password on PRODUCTION, and replaces the Vercel Secret. Continue?"
     preconditions:
       - sh: 'test -n "$EMIBONNIE_DB"'
