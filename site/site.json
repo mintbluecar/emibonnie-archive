@@ -1,6 +1,9 @@
 {
   "name": "emibonnie archive",
-  "wordmark": { "accent": "emibonnie", "rest": " archive" },
+  "wordmark": {
+    "accent": "emibonnie",
+    "rest": " archive"
+  },
   "tagline": "fan translations, kept",
   "ownerXUserId": "1957464086339534848",
   "sourceLanguage": "th",
@@ -13,24 +16,50 @@
       "displayName": "emi",
       "emoji": "🧡",
       "colour": "#ff8a3d",
-      "otherAccounts": [{ "platform": "x", "handle": "emiamily" }]
+      "otherAccounts": [
+        {
+          "platform": "x",
+          "handle": "emiamily"
+        }
+      ]
     },
     {
       "igHandle": "beonnnie",
       "displayName": "bonnie",
       "emoji": "💜",
       "colour": "#9b6cff",
-      "otherAccounts": [{ "platform": "x", "handle": "beonnnie" }]
+      "otherAccounts": [
+        {
+          "platform": "x",
+          "handle": "beonnnie"
+        }
+      ]
     }
   ],
   "defaultMarkers": {
-    "💜": { "personHandle": "beonnnie" },
-    "🧡": { "personHandle": "emiamily" },
-    "🗣️": { "role": "crowd" },
-    "💬": { "role": "fan" }
+    "💜": {
+      "personHandle": "beonnnie"
+    },
+    "🧡": {
+      "personHandle": "emiamily"
+    },
+    "🗣️": {
+      "role": "crowd"
+    },
+    "💬": {
+      "role": "fan"
+    }
   },
-  "ignoredHashtags": ["emibonnie", "namtanfilm"],
-  "categories": ["show / interview", "fan meet / fan day", "live"],
+  "ignoredHashtags": [
+    "emibonnie",
+    "namtanfilm"
+  ],
+  "categories": [
+    "show / interview",
+    "fan meet / fan day",
+    "live"
+  ],
   "extraLivePatterns": [],
-  "contactUrl": "https://x.com/mintbluetoyota"
+  "contactUrl": "https://x.com/mintbluetoyota",
+  "embedSources": true
 }
