@@ -17,8 +17,7 @@
 /* Task 10c (d): two chip groups in a row (hashtags, then people) never touch. */
 .c-chips + .c-chips,
 .c-chips + .c-cast,
-.c-cast + .c-chips,
-* + .c-event__people-filter {
+.c-cast + .c-chips {
   margin-top: 12px;
 }
 

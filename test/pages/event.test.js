@@ -43,20 +43,6 @@ test('composeEvent: hashtag pills, and no type/client pill when the event has no
   assert.match(markup, /#fanclip/);
 });
 
-test('composeEvent: a chip per person, plus "all"', () => {
-  const markup = String(composeEvent(EVENT));
-  assert.match(markup, /c-event__people-filter/);
-  assert.match(markup, /data-value="1"[^>]*><span class="c-chips__emoji c-emoji" aria-hidden="true">☀️<\/span><span>sol</);
-  assert.match(markup, /data-value="2"[^>]*><span class="c-chips__emoji c-emoji" aria-hidden="true">🌙<\/span><span>luna</);
-});
-
-test('composeEvent: a translator filter listing the accounts actually on the page', () => {
-  const markup = String(composeEvent(EVENT));
-  assert.match(markup, /<select class="c-event__account-filter"/);
-  assert.match(markup, /<option value="tl_beta">@tl_beta<\/option>/);
-  assert.match(markup, /<option value="tl_gamma">@tl_gamma<\/option>/);
-});
-
 test('composeEvent: no "more" button when a section has no further page', () => {
   const markup = String(composeEvent(EVENT));
   assert.ok(!markup.includes('c-event-section__more'));
@@ -80,7 +66,7 @@ test('composeEvent (Task 10d): searches within the event -- its box says so, its
   assert.match(markup, /placeholder="search this event…"/);
   assert.ok(!markup.includes('c-event__search'), 'no icon to a search page');
   assert.ok(!markup.includes('/search'));
-  assert.match(markup, /<div class="c-search__list">[\s\S]*c-event__people-filter[\s\S]*c-event-sections/, 'the list is the entries and their own controls');
+  assert.match(markup, /<div class="c-search__list">[\s\S]*c-event-sections/, 'the list is the entries and their own controls');
   assert.ok(markup.indexOf('c-event__name') < markup.indexOf('c-search__list'), 'the event\'s head stays above the results');
   const search = eventSearch(EVENT.event, 'q=hug');
   assert.equal(search.state.event, EVENT.event.slug, 'the event is preset');
@@ -118,34 +104,6 @@ test('bind: the newest-first toggle re-fetches order=desc and reorders the real 
     assert.deepEqual(after, [...before].reverse(), 'the real DOM order changed, not just a CSS class');
     assert.equal(toggle.getAttribute('aria-pressed'), 'true');
     assert.ok(!(root.querySelector('.c-event-sections')?.getAttribute('class') ?? '').includes('is-newest-first'), 'no leftover CSS-flip class');
-  } finally {
-    mock.restoreAll();
-    delete (/** @type {any} */ (globalThis)).document;
-  }
-});
-
-test('bind: an active filter re-applies to entries "more" appends, not just the ones already on the page (review #4)', async () => {
-  const root = new MiniElement('div');
-  mount(root, composeEvent(EVENT_PAGED));
-  globalThis.document = fakeDocument();
-  const nextPage = { ...EVENT_PAGED, sections: [{ ...EVENT_PAGED.sections[0], items: [EVENT.sections[0].items[1]], hasMore: false }] };
-  mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify(nextPage), { status: 200 }));
-  try {
-    bind(root, EVENT_PAGED, EVENT.event.slug);
-    const select = /** @type {any} */ (root.querySelector('.c-event__account-filter'));
-    assert.ok(select);
-    select.value = 'tl_beta';
-    select.dispatchEvent({ type: 'change', target: select });
-    const moreBtn = /** @type {any} */ (root.querySelector('.c-event-section__more'));
-    assert.ok(moreBtn);
-    moreBtn.click();
-    await flush();
-    const cards = root.querySelectorAll('.c-preview-card');
-    assert.equal(cards.length, 2, 'the appended card is actually in the DOM');
-    const byAccount = Object.fromEntries(cards.map((c) => [c.getAttribute('data-account'), c.hidden]));
-    assert.equal(byAccount.tl_beta, false, 'still matches the standing filter');
-    assert.equal(byAccount.tl_gamma, true, 'newly appended, but filtered out just the same');
-    assert.ok(cards.every((c) => c.getAttribute('class')?.includes('c-preview-card--compact')), 'appended entries are compact too (fix round 1, I2)');
   } finally {
     mock.restoreAll();
     delete (/** @type {any} */ (globalThis)).document;
