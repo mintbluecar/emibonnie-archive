@@ -7,7 +7,7 @@
 import { BARE_MARKER, splitLines } from '../../domain/lines.js';
 import { parseHeader } from '../../domain/header.js';
 import { LIVE_PATTERNS, ROLE_EMOJI } from '../../domain/constants.js';
-import { resolveMedia, hasVideo, clipByOf, publicSources } from './media.js';
+import { resolveMedia, hasVideo, thumbOf, clipByOf, publicSources } from './media.js';
 
 /** @typedef {import('../../http/contracts.js').BubbleVM} BubbleVM */
 /** @typedef {import('../../http/contracts.js').CastVM} CastVM */
@@ -185,9 +185,10 @@ function preview(card, details, ctx) {
   const sources = publicSources(details.sources);
   const sourceId = card.sourceId;
   const followsOn = card.followsOn;
+  const media = resolveMedia(sources);
   return {
     kind: KIND, sourceId, url: ctx.urlFor(KIND, sourceId), lines: previewLines(details, ctx), people: ctx.chips(card.people),
-    accountHandle: card.account?.handle ?? null, hasVideo: hasVideo(resolveMedia(sources)),
+    accountHandle: card.account?.handle ?? null, hasVideo: hasVideo(media), thumb: thumbOf(media),
     followsOnFrom: followsOn ? { sourceId: followsOn.sourceId, url: ctx.urlFor(followsOn.kind, followsOn.sourceId) } : null,
   };
 }

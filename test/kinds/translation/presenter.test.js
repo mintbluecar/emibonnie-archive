@@ -379,3 +379,15 @@ test('Task 10c (a): search shows a mapped bare ":" line with its role\'s default
   assert.deepEqual(translation.search.matchLines({ body: ': luna, I have news\n🐶: what news?', speakers: { ':': { role: 'fan' } } }, 'news', ctx), ['💬 luna, I have news', '🐶 what news?']);
   assert.deepEqual(translation.search.matchLines({ body: ': luna, I have news', speakers: {} }, 'news', ctx), [': luna, I have news']);
 });
+
+test('Task 10c (c): the preview thumbnail is the clip poster (video), else the first picture, else a quote\'s own; none for text only or a posterless clip', async () => {
+  const { thumbOf } = await import('../../../src/kinds/translation/media.js');
+  const video = { type: 'video', variants: [{ bitrate: 1, url: 'https://video.twimg.com/a.mp4' }], width: 720, height: 1280, poster: 'https://pbs.twimg.com/p.jpg' };
+  const images = { type: 'images', images: [{ url: 'https://pbs.twimg.com/1.jpg', width: 4, height: 3 }, { url: 'https://pbs.twimg.com/2.jpg', width: 1, height: 1 }] };
+  assert.deepEqual(thumbOf(/** @type {any} */ (video)), { url: 'https://pbs.twimg.com/p.jpg', width: 720, height: 1280, video: true });
+  assert.deepEqual(thumbOf(/** @type {any} */ (images)), { url: 'https://pbs.twimg.com/1.jpg', width: 4, height: 3, video: false });
+  assert.deepEqual(thumbOf(/** @type {any} */ ({ type: 'quote', inner: images })), { url: 'https://pbs.twimg.com/1.jpg', width: 4, height: 3, video: false });
+  assert.equal(thumbOf(/** @type {any} */ ({ ...video, poster: null })), null);
+  assert.equal(thumbOf(/** @type {any} */ ({ type: 'quote', inner: null })), null);
+  assert.equal(thumbOf(null), null);
+});

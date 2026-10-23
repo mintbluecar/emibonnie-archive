@@ -72,6 +72,8 @@
   "item.translatedBy": "tl",
   "item.clipBy": "clip by",
   "item.hasVideo": "video",
+  "item.thumbClip": "clip still",
+  "item.thumbPhoto": "photo",
   "item.unknownSpeaker": "unknown speaker",
   "speaker.noEmoji": "(no emoji)",
   "home.empty": "no events yet",

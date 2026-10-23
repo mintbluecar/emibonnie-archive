@@ -1,0 +1,36 @@
+/*
+ * public/js/components/thumb.js (Task 10c): a card's small picture. A
+ * fixed height (--thumb-size) with the width following the picture's own
+ * aspect ratio (its width/height attributes), capped so a wide still
+ * doesn't crowd the text; object-fit crops anything beyond the cap.
+ */
+
+.c-thumb {
+  position: relative;
+  display: block;
+  flex: none;
+  align-self: start;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--color-card-shadow);
+}
+
+.c-thumb__img {
+  display: block;
+  height: var(--thumb-size);
+  width: auto;
+  max-width: calc(var(--thumb-size) * 1.5);
+  min-width: calc(var(--thumb-size) * 0.5);
+  object-fit: cover;
+}
+
+.c-thumb__play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-16);
+  color: #fff;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 70%);
+}

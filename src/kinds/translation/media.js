@@ -68,6 +68,21 @@ export function resolveMedia(sources) {
   return quoted ? quoteOf(quoted) : null;
 }
 
+/**
+ * The preview card's thumbnail (ThumbVM, Task 10c) from the same media
+ * the item page pins: a clip's poster, else the first picture; a quote's
+ * own clip or pictures the same way. Null for a text-only quote or a
+ * clip with no poster.
+ * @param {MediaVM|null} media
+ * @returns {import('../../http/contracts.js').ThumbVM|null}
+ */
+export function thumbOf(media) {
+  const shown = media?.type === 'quote' ? media.inner : media;
+  if (shown?.type === 'video') return shown.poster ? { url: shown.poster, width: shown.width, height: shown.height, video: true } : null;
+  const first = shown?.type === 'images' ? shown.images[0] : undefined;
+  return first ? { url: first.url, width: first.width, height: first.height, video: false } : null;
+}
+
 /** @param {MediaVM|null} media */
 export function hasVideo(media) {
   return media?.type === 'video' || (media?.type === 'quote' && media.inner?.type === 'video');

@@ -60,6 +60,9 @@
      for its own --gradient-to instead. */
   --color-accent-text: #fff;
   --radius-card: 16px;
+  /* A card's thumbnail height (Task 10c, thumb.css); its width follows
+     the picture, between half and one and a half times this. */
+  --thumb-size: 56px;
   --font-latin: 'Nunito', sans-serif;
   --font-script: 'IBM Plex Sans Thai', sans-serif;
 
