@@ -101,10 +101,12 @@ function peopleFilterRow(people) {
 function accountFilterRow(accounts) {
   if (accounts.length === 0) return html``;
   return html`
-    <select class="c-event__account-filter" aria-label="${t('event.translatorFilterLabel')}">
-      <option value="${ALL}">${t('event.translatorAll')}</option>
-      ${accounts.map((handle) => html`<option value="${handle}">@${handle}</option>`)}
-    </select>
+    <span class="c-select c-event__account-select">
+      <select class="c-event__account-filter" aria-label="${t('event.translatorFilterLabel')}">
+        <option value="${ALL}">${t('event.translatorAll')}</option>
+        ${accounts.map((handle) => html`<option value="${handle}">@${handle}</option>`)}
+      </select>
+    </span>
   `;
 }
 

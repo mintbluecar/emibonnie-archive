@@ -67,25 +67,25 @@ function selectsSection(options, state) {
   return html`
     <label class="c-filter-sheet__field">
       ${t('search.eventLabel')}
-      <select class="c-filter-sheet__event">
+      <span class="c-select"><select class="c-filter-sheet__event">
         <option value="">${t('search.allEvents')}</option>
         ${options.events.map((e) => html`<option value="${e.slug}"${selectedAttr(e.slug, state.event)}>${e.name}</option>`)}
-      </select>
+      </select></span>
     </label>
     <label class="c-filter-sheet__field">
       ${t('search.accountLabel')}
-      <select class="c-filter-sheet__account">
+      <span class="c-select"><select class="c-filter-sheet__account">
         <option value="">${t('search.allAccounts')}</option>
         ${options.accounts.map((a) => html`<option value="${a.handle}"${selectedAttr(a.handle, state.account)}>@${a.handle}</option>`)}
-      </select>
+      </select></span>
     </label>
     ${options.clients.length > 0 ? html`
       <label class="c-filter-sheet__field">
         ${t('search.clientLabel')}
-        <select class="c-filter-sheet__client">
+        <span class="c-select"><select class="c-filter-sheet__client">
           <option value="">${t('search.allClients')}</option>
           ${options.clients.map((c) => html`<option value="${c.id}"${selectedAttr(c.id, state.client)}>${c.name}</option>`)}
-        </select>
+        </select></span>
       </label>
     ` : ''}
   `;
