@@ -160,9 +160,9 @@ export async function writeKindsRegistries(repoRoot) {
 }
 
 /**
- * The one function (`api/[...route].js`), bundled with the built pages its
- * link-preview meta routes read. The key is a glob, so `api/*.js` rather
- * than the literal name, whose brackets a glob reads as a character class.
+ * The one function (`api/index.js`), bundled with the built pages its
+ * link-preview meta routes read. The key is a glob (`api/*.js`) that
+ * matches it.
  */
 export const FUNCTIONS = { 'api/*.js': { includeFiles: 'public/{item,event}.html' } };
 
@@ -170,8 +170,8 @@ export const FUNCTIONS = { 'api/*.js': { includeFiles: 'public/{item,event}.html
  * `vercel.json`'s content: region, security headers (plus an immutable
  * long-lived cache header on `/build/*`, Plan 1b's hashed esbuild
  * output), build command, the function's bundled pages, and the
- * rewrites (the route table's meta rewrites, then any `src/pages.js`
- * page rewrites from Plan 1b).
+ * rewrites (the route table's function rewrites, all to `/api`, then the
+ * `src/pages.js` static-file rewrites from Plan 1b).
  * @param {import('../src/site/schema.js').Site} site
  * @param {{ source: string, destination: string }[]} rewrites
  * @returns {object}

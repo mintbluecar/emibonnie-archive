@@ -118,7 +118,7 @@ test('JavaScript reserved words and names src/routes/index.js already binds are 
     assert.throws(() => scaffold({ kind: 'route', name: 'class', root }), /reserved word/);
     assert.throws(() => scaffold({ kind: 'route', name: 'home', root }), /already binds the name home/);
     assert.throws(() => scaffold({ kind: 'route', name: 'kinds_registry', root }), /already binds the name kindsRegistry/);
-    assert.throws(() => scaffold({ kind: 'route', name: 'page_meta_routes', root }), /already binds the name pageMetaRoutes/);
+    assert.throws(() => scaffold({ kind: 'route', name: 'meta_routes', root }), /already binds the name metaRoutes/);
     assert.deepEqual(filesUnder(root), before);
   });
 });

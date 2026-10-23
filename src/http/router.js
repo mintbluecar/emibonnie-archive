@@ -17,7 +17,7 @@ function segmentsOf(path) {
 /**
  * Finds the route whose method and path pattern match a request. Path
  * patterns use `:param` segments (e.g. `/api/event/:slug`). Shared by the
- * Vercel function (`api/[...route].js`) and the dev server.
+ * Vercel function (`api/index.js`) and the dev server.
  * @template {RouteLike} T
  * @param {T[]} routes
  * @param {string} method
@@ -49,4 +49,22 @@ export function matchRoute(routes, method, pathname) {
     if (matched) return { route, params };
   }
   return null;
+}
+
+/**
+ * The `vercel.json` rewrite `source` for a route or page pattern, with
+ * every `:param` segment made an unnamed group (`/e/:slug` -> `/e/(.*)`).
+ * A named param in a rewrite `source` is added to the destination's
+ * query string: Vercel's rewrites doc says so ("This converts a request
+ * like /resize/800/600 to /api/sharp?width=800&height=600",
+ * https://vercel.com/docs/routing/rewrites), and a scratch-project echo
+ * function confirmed it on 2026-10-23 (`/t/:id` arrived as `/t/123?id=123`,
+ * while `/api/(.*)` added nothing). The handler refuses unknown query
+ * params, so every generated source is unnamed. The function still sees
+ * the original URL, which is why `matchRoute` matches page paths.
+ * @param {string} pattern
+ * @returns {string}
+ */
+export function unnamedSource(pattern) {
+  return pattern.replace(/\/:[A-Za-z_]\w*/g, '/(.*)');
 }

@@ -6,7 +6,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { matchRoute } from '../src/http/router.js';
 
 /**
  * The dev stand-in for Vercel's request context, which `waitUntil` from
@@ -104,19 +103,46 @@ function resolveStaticPath(root, pathname) {
   return resolvedPath;
 }
 
+/** The one function's path (`api/index.js`): a rewrite to it calls the handler. */
+const FUNCTION_PATH = '/api';
+
 /**
- * Applies the first matching rewrite to `pathname`, if any, filling the
- * destination's `:param`s from the match (as Vercel does).
+ * The first rewrite whose `source` matches `pathname`, if any. Sources
+ * are read as anchored regexes, the same way `applyHeaderRules` reads a
+ * header `source`; the build only writes exact paths and unnamed groups
+ * (`/api/(.*)`, `/p/(.*)`), and `createServer` refuses a named param.
  * @param {Rewrite[]} rewrites
  * @param {string} pathname
- * @returns {string}
+ * @returns {Rewrite|null}
  */
-function applyRewrites(rewrites, pathname) {
-  for (const rewrite of rewrites) {
-    const hit = matchRoute([{ method: 'GET', path: rewrite.source }], 'GET', pathname);
-    if (hit) return rewrite.destination.replace(/:([A-Za-z_]\w*)/g, (whole, name) => (Object.hasOwn(hit.params, name) ? encodeURIComponent(hit.params[name]) : whole));
-  }
-  return pathname;
+function matchRewrite(rewrites, pathname) {
+  return rewrites.find((rewrite) => new RegExp(`^${rewrite.source}$`).test(pathname)) ?? null;
+}
+
+/**
+ * Where Vercel sends `pathname`: the function (`null`), for `/api` itself
+ * or a rewrite to it, else the static file path to serve.
+ * @param {Rewrite[]} rewrites
+ * @param {string} pathname
+ * @returns {string|null}
+ */
+function staticTargetOf(rewrites, pathname) {
+  if (pathname === FUNCTION_PATH) return null;
+  const rewrite = matchRewrite(rewrites, pathname);
+  if (!rewrite) return pathname;
+  return rewrite.destination === FUNCTION_PATH ? null : rewrite.destination;
+}
+
+/**
+ * Refuses a rewrite `source` with a named param (`/t/:id`): on Vercel it
+ * adds `?id=...` to the request, which the handler refuses as an unknown
+ * query param (https://vercel.com/docs/routing/rewrites). Dev would not
+ * reproduce that, so it fails loudly instead.
+ * @param {Rewrite[]} rewrites
+ */
+function assertUnnamedSources(rewrites) {
+  const named = rewrites.find((rewrite) => /\/:[A-Za-z_]/.test(rewrite.source));
+  if (named) throw new Error(`dev: rewrite source ${named.source} has a named param; use an unnamed group, e.g. (.*)`);
 }
 
 /**
@@ -168,7 +194,7 @@ async function serveNotFound(root, res) {
  * Serves a static file from `root` for `pathname`, or `root/404.html`
  * (else plain text) when it's missing or would escape `root`. No
  * extension-guessing here: a page route like `/search` only resolves
- * through `applyRewrites` (the same `vercel.json` rewrites production
+ * through a rewrite (the same `vercel.json` rewrites production
  * uses -- `scripts/build.js`'s `pageRewriteOf` emits one per static page
  * with a `file`, review round 1, C1), so dev and production resolve a
  * URL exactly the same way.
@@ -194,15 +220,20 @@ async function serveStatic(root, pathname, res) {
 }
 
 /**
- * Creates a dev HTTP server that serves static files from `root`, applies
- * page rewrites, and sends `/api/*` requests to `handle`. Used both for
- * local development and, through the same contract, by tests exercising the
- * Vercel function's behaviour without Vercel.
+ * Creates a dev HTTP server that mirrors Vercel's routing for the
+ * generated `vercel.json`: the first matching rewrite wins; one whose
+ * destination is `/api` (or a request for `/api` itself) calls `handle`
+ * with the *original* request URL, unchanged and with no query params
+ * added, exactly what Vercel hands `api/index.js`; any other rewrite
+ * serves its destination file; no match serves the path as a static
+ * file. Used both for local development and, through the same contract,
+ * by tests exercising the Vercel function's behaviour without Vercel.
  * @param {{ root: string, routes?: unknown[], rewrites?: Rewrite[], headers?: HeaderRule[], handle: ApiHandler }} options
  * @returns {import('node:http').Server}
  */
 export function createServer({ root, rewrites = [], headers = [], handle }) {
   installRequestContext();
+  assertUnnamedSources(rewrites);
   /** @type {import('node:http').Server} */
   const server = http.createServer(async (req, res) => {
     try {
@@ -212,13 +243,12 @@ export function createServer({ root, rewrites = [], headers = [], handle }) {
       // `headers` config (review round 2, "also, small"): a `source` names what the browser
       // actually requested, regardless of which file or function answers it.
       applyHeaderRules(headers, url.pathname, res);
-      const target = url.pathname.startsWith('/api/') ? url : new URL(applyRewrites(rewrites, url.pathname), url);
-      if (target.pathname.startsWith('/api/')) {
-        await serveApi(handle, toWebRequest(req, target), res).then((results) => server.emit('waitUntilSettled', results));
+      const file = staticTargetOf(rewrites, url.pathname);
+      if (file === null) {
+        await serveApi(handle, toWebRequest(req, url), res).then((results) => server.emit('waitUntilSettled', results));
         return;
       }
-
-      await serveStatic(root, target.pathname, res);
+      await serveStatic(root, file, res);
     } catch (/** @type {any} */ err) {
       res.statusCode = err && err.code === 'ENOENT' ? 404 : 500;
       res.end(res.statusCode === 404 ? 'Not Found' : 'Internal Server Error');
@@ -261,7 +291,7 @@ async function main() {
     process.exitCode = 1;
     return;
   }
-  const { default: api } = await import('../api/[...route].js');
+  const { default: api } = await import('../api/index.js');
   const vercel = JSON.parse(await readFile('vercel.json', 'utf8'));
   const srv = createServer({ root: 'public', rewrites: vercel.rewrites ?? [], headers: vercel.headers ?? [], handle: (request) => api.fetch(request) });
   srv.listen(port, () => {

@@ -74,14 +74,13 @@ async function representativeCalls() {
   const ids = [...Object.values(IDS), '1'];
   /** @type {[string, string][]} */
   const calls = [['GET', '/api/home'], ['GET', '/api/filters']];
-  for (const slug of [...slugs, 'no-such-event']) calls.push(['GET', `/api/event/${slug}`], ['GET', `/api/meta/e/${slug}`], ['GET', `/e/${slug}`]);
+  for (const slug of [...slugs, 'no-such-event']) calls.push(['GET', `/api/event/${slug}`], ['GET', `/e/${slug}`]);
   // Every kind's item routes (an id of another kind's item must leak nothing either).
   for (const kind of Object.values(kindsRegistry)) {
-    const prefix = kind.urlPrefix.slice(1, -1);
     for (const id of ids) {
       calls.push(
         ['GET', `/api/item/${kind.name}/${id}`], ['POST', `/api/item/${kind.name}/${id}/refresh`],
-        ['GET', `/api/video/${kind.name}/${id}`], ['GET', `/api/meta/${prefix}/${id}`], ['GET', `${kind.urlPrefix}${id}`],
+        ['GET', `/api/video/${kind.name}/${id}`], ['GET', `${kind.urlPrefix}${id}`],
       );
     }
   }
@@ -140,8 +139,8 @@ test('the hidden items answer exactly like missing ones', async () => {
     const missing = await api.call('GET', '/api/item/translation/1');
     assert.equal(item.status, 404);
     assert.equal(item.text, missing.text);
-    const meta = await api.call('GET', `/api/meta/t/${id}`);
-    assert.equal(meta.text, (await api.call('GET', '/api/meta/t/1')).text);
+    const meta = await api.call('GET', `/t/${id}`);
+    assert.equal(meta.text, (await api.call('GET', '/t/1')).text);
     assert.equal((await api.call('POST', `/api/item/translation/${id}/refresh`)).status, 404);
   }
   await api.settle();

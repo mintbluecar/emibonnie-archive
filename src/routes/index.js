@@ -1,14 +1,16 @@
 // @ts-check
 /**
- * The one route table: `api/[...route].js` dispatches through it, the
- * dev server shares it, and the build writes `vercel.json`'s rewrites from
- * `rewrites`. First match wins, so the event meta route precedes the
- * generic item meta route. The meta routes are also registered on the
- * original page paths (`/e/:slug`, `/t/:sourceId`), so they answer
- * whether the function sees the rewritten path or the original one.
+ * The one route table: `api/index.js` dispatches through it, the dev
+ * server shares it, and the build writes `vercel.json`'s function
+ * rewrites from `rewrites`. First match wins. The function sees the
+ * original request URL, so `/api/*` routes match `/api/...` and the
+ * link-preview meta routes match their page paths (`/e/:slug`, and
+ * `<urlPrefix>:sourceId` per kind), derived from `src/pages.js` and the
+ * kinds registry.
  */
 import { kindsRegistry } from '../kinds/_registry.js';
-import { metaRewrites } from '../services/meta.js';
+import { pages } from '../pages.js';
+import { unnamedSource } from '../http/router.js';
 import { route as home } from './home.js';
 import { route as event } from './event.js';
 import { route as item } from './item.js';
@@ -18,15 +20,28 @@ import { route as filters } from './filters.js';
 import { route as person } from './person.js';
 import { route as account } from './account.js';
 import { route as video } from './video.js';
-import { eventMeta, itemMeta, pageMetaRoutes } from './meta.js';
+import { metaRoutes } from './meta.js';
 // scaffold:route-imports (`npm run new route <name>` adds its import above this line)
 
 /** @type {import('../http/handler.js').Route[]} */
 export const routes = [
-  home, event, item, refresh, search, filters, person, account, video, eventMeta, itemMeta,
+  home, event, item, refresh, search, filters, person, account, video,
   // scaffold:routes (`npm run new route <name>` adds its route above this line)
-  ...pageMetaRoutes(Object.values(kindsRegistry)),
+  ...metaRoutes(pages, Object.values(kindsRegistry)),
 ];
 
-/** Page rewrites to the meta routes (`/e/:slug`, and `<urlPrefix>:id` per kind). */
-export const rewrites = metaRewrites(kindsRegistry);
+/** The one function's path (`api/index.js`): every function rewrite's destination. */
+export const FUNCTION_PATH = '/api';
+
+/**
+ * `vercel.json`'s rewrites to the function: every `/api/*` path, then one
+ * per route on a page path (the meta routes). Unnamed sources only (see
+ * `unnamedSource`), so Vercel adds no query params, and the destination
+ * is always exactly `/api`: the function gets the original URL either way.
+ * @type {{ source: string, destination: string }[]}
+ */
+export const rewrites = [
+  { source: '/api/(.*)', destination: FUNCTION_PATH },
+  ...[...new Set(routes.filter((r) => !r.path.startsWith('/api/')).map((r) => unnamedSource(r.path)))]
+    .map((source) => ({ source, destination: FUNCTION_PATH })),
+];

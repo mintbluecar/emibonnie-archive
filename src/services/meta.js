@@ -111,16 +111,3 @@ export async function eventMetaPage(deps, { slug, origin }) {
   const description = [event.occurredOn, ...(event.hashtags[0] ? [`#${event.hashtags[0]}`] : [])].join(' · ');
   return { html: injectMeta(html, metaOf(deps, origin, titled(deps, event.name), description)), found: true };
 }
-
-/**
- * The page rewrites the meta routes serve: the event page, and each
- * kind's item page under its `urlPrefix` (`/t/:id` → `/api/meta/t/:id`).
- * @param {Record<string, Readonly<import('../kinds/defineKind.js').Kind>>} kinds
- * @returns {{ source: string, destination: string }[]}
- */
-export function metaRewrites(kinds) {
-  return [
-    { source: '/e/:slug', destination: '/api/meta/e/:slug' },
-    ...Object.values(kinds).map((k) => ({ source: `${k.urlPrefix}:id`, destination: `/api/meta${k.urlPrefix}:id` })),
-  ];
-}

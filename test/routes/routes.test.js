@@ -131,7 +131,7 @@ test('every public GET has s-maxage=300 (video 600), no Set-Cookie and no Vary: 
   const api = apiFor(deps);
   const paths = [
     '/api/home', `/api/event/${SLUG}`, `/api/item/translation/${IDS.LONG}`, '/api/search', '/api/search?q=everyone',
-    '/api/filters', '/api/person/solsunny', '/api/account/tl_alpha', `/api/meta/t/${IDS.LONG}`, `/api/meta/e/${SLUG}`,
+    '/api/filters', '/api/person/solsunny', '/api/account/tl_alpha', `/t/${IDS.LONG}`, `/e/${SLUG}`,
   ];
   for (const path of paths) {
     const res = await api.call('GET', path);
@@ -191,22 +191,23 @@ test('unknown query params on API GETs are a no-store 400; meta pages ignore tra
   for (const path of [`/api/event/${SLUG}?limit=0`, '/api/person/solsunny?limit=51', '/api/account/tl_alpha?offset=x', `/api/event/${SLUG}?limit=1&limit=2`, `/api/event/${SLUG}?order=newest`]) {
     assert.equal((await api.call('GET', path)).status, 400, path);
   }
-  assert.equal((await api.call('GET', `/api/meta/t/${IDS.LONG}?s=20&utm_source=share`)).status, 200);
-  assert.equal((await api.call('GET', `/t/${IDS.LONG}?s=20`)).status, 200);
+  assert.equal((await api.call('GET', `/t/${IDS.LONG}?s=20&utm_source=share`)).status, 200);
+  assert.equal((await api.call('GET', `/e/${SLUG}?s=20`)).status, 200);
 });
 
-test('the meta routes also answer on the original page paths (/t/:id, /e/:slug), with the same HTML', async () => {
+test('the meta routes answer on the page paths the function sees (/t/:id, /e/:slug); there is no /api/meta/*', async () => {
   const api = apiFor(deps);
-  const viaRewrite = await api.call('GET', `/api/meta/t/${IDS.LONG}`);
-  const original = await api.call('GET', `/t/${IDS.LONG}`);
-  assert.equal(original.status, 200);
-  assert.equal(original.headers.get('cache-control'), PUBLIC);
-  assert.equal(original.text, viaRewrite.text);
-  assert.match(original.text, /og:title/);
+  const item = await api.call('GET', `/t/${IDS.LONG}`);
+  assert.equal(item.status, 200);
+  assert.equal(item.headers.get('cache-control'), PUBLIC);
+  assert.match(item.text, /og:title/);
   const event = await api.call('GET', `/e/${SLUG}`);
-  assert.equal(event.text, (await api.call('GET', `/api/meta/e/${SLUG}`)).text);
+  assert.equal(event.status, 200);
   assert.match(event.text, /SOLLUNA HAPPY DAY/);
+  assert.equal((await api.call('GET', `/api/meta/t/${IDS.LONG}`)).status, 404, 'the old rewritten path is gone');
+  assert.equal((await api.call('GET', `/api/meta/e/${SLUG}`)).status, 404);
   assert.equal((await api.call('GET', `/zz/${IDS.LONG}`)).status, 404, 'only registered kind prefixes');
+  assert.equal((await api.call('GET', `/t/${IDS.LONG}/extra`)).status, 404, 'one segment only');
   assert.equal((await api.call('GET', '/api/nope')).status, 404);
 });
 
