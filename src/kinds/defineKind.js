@@ -1,5 +1,5 @@
 // @ts-check
-import { pages } from '../pages.js';
+import { pages, redirects } from '../pages.js';
 
 /**
  * The item-kind plugin contract. Generic code (ingest, search, hub views)
@@ -171,11 +171,12 @@ function prefixOf(pagePath) {
 /**
  * Item-page prefixes no kind may take: every `src/pages.js` page's
  * prefix (the engine's own pages, including ones later Plan 1b tasks
- * still have to build), plus the API. `/t/` belongs to the translation
+ * still have to build), every redirected old page path's (`/search`,
+ * Task 10d), plus the API. `/t/` belongs to the translation
  * kind alone (see `OWNED_URL_PREFIXES` below).
  */
 export const RESERVED_URL_PREFIXES = Object.freeze([
-  ...new Set(pages.map((page) => prefixOf(page.path)).filter((prefix) => prefix !== null)),
+  ...new Set([...pages.map((page) => page.path), ...redirects.map((r) => r.source)].map(prefixOf).filter((prefix) => prefix !== null)),
   '/api/',
 ]);
 /** @type {Readonly<Record<string, string>>} prefix -> the one kind that owns it */

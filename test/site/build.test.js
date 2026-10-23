@@ -152,18 +152,24 @@ test('buildVercelConfig: region, security headers (Referrer-Policy: no-referrer)
   assert.equal(config.rewrites, undefined);
 });
 
-test('runBuild: vercel.json rewrites /search to search.html, so the static page resolves in production (cleanUrls is off, review round 1, C1)', async () => {
+test('runBuild (Task 10d): vercel.json redirects /search home (308, unnamed source), with no search page or rewrite left', async () => {
   const { repoRoot, siteDir } = makeBuildRepoRoot();
   try {
     await runBuild({ repoRoot, siteDir });
     const vercelJson = JSON.parse(readFileSync(path.join(repoRoot, 'vercel.json'), 'utf8'));
-    assert.ok(
-      vercelJson.rewrites.some((/** @type {any} */ r) => r.source === '/search' && r.destination === '/search.html'),
-      JSON.stringify(vercelJson.rewrites),
-    );
+    assert.deepEqual(vercelJson.redirects, [{ source: '/search', destination: '/', permanent: true }]);
+    assert.ok(!vercelJson.rewrites.some((/** @type {any} */ r) => r.source === '/search' || r.destination === '/search.html'), JSON.stringify(vercelJson.rewrites));
+    assert.ok(!existsSync(path.join(repoRoot, 'public/search.html')), 'no search page is built');
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }
+});
+
+test('buildVercelConfig (Task 10d): redirects go in as given, and are left out when there are none', () => {
+  const site = loadSite('examples/solluna');
+  const redirects = [{ source: '/old', destination: '/', permanent: true }];
+  assert.deepEqual(buildVercelConfig(site, [], redirects).redirects, redirects);
+  assert.equal(buildVercelConfig(site, []).redirects, undefined);
 });
 
 test('runBuild: builds examples/solluna end to end into a temp repo root', async () => {
@@ -211,7 +217,6 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
       { source: '/api/(.*)', destination: '/api' },
       { source: '/e/(.*)', destination: '/api' },
       { source: '/t/(.*)', destination: '/api' },
-      { source: '/search', destination: '/search.html' },
       { source: '/p/(.*)', destination: '/person.html' },
       { source: '/tl/(.*)', destination: '/account.html' },
       { source: '/about', destination: '/about.html' },

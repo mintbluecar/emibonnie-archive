@@ -224,12 +224,16 @@ export const FUNCTIONS = { 'api/*.js': { includeFiles: 'public/{item,event}.html
  * long-lived cache header on `/build/*`, Plan 1b's hashed esbuild
  * output), build command, the function's bundled pages, and the
  * rewrites (the route table's function rewrites, all to `/api`, then the
- * `src/pages.js` static-file rewrites from Plan 1b).
+ * `src/pages.js` static-file rewrites from Plan 1b), and `src/pages.js`'s
+ * redirects (Task 10d; Vercel runs redirects before rewrites:
+ * "`redirects` are always processed before `rewrites`",
+ * https://vercel.com/docs/project-configuration/vercel-json).
  * @param {import('../src/site/schema.js').Site} site
  * @param {{ source: string, destination: string }[]} rewrites
+ * @param {{ source: string, destination: string, permanent: boolean }[]} [redirects]
  * @returns {object}
  */
-export function buildVercelConfig(site, rewrites = []) {
+export function buildVercelConfig(site, rewrites = [], redirects = []) {
   /** @type {any} */
   const config = {
     regions: [site.region],
@@ -237,6 +241,7 @@ export function buildVercelConfig(site, rewrites = []) {
     functions: FUNCTIONS,
     headers: [{ source: '/(.*)', headers: securityHeaders(site) }, ...BUILD_CACHE_HEADERS],
   };
+  if (redirects.length > 0) config.redirects = redirects;
   if (rewrites.length > 0) config.rewrites = rewrites;
   return config;
 }

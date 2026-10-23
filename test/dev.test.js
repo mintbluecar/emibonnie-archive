@@ -152,3 +152,28 @@ test('dev server: names the build output it needs when there is none yet (a fres
   const { missingBuildOutput } = await import('../scripts/dev.js');
   assert.deepEqual(missingBuildOutput('test/fixtures'), ['vercel.json', 'src/site/generated.js', 'public/index.html']);
 });
+
+test('dev server (Task 10d): a redirect answers before any rewrite, 308, keeping the query string (as Vercel passes it on)', async () => {
+  /** @type {string[]} */
+  const seen = [];
+  const handle = async (/** @type {Request} */ req) => { seen.push(req.url); return new Response('ok'); };
+  const redirects = [{ source: '/search', destination: '/', permanent: true }];
+  const srv = createServer({ root: 'test/fixtures/static', rewrites: [...REWRITES, { source: '/search', destination: '/api' }], redirects, handle });
+  const base = await listen(srv);
+  for (const [path, location] of [['/search?q=x', '/?q=x'], ['/search', '/'], ['/search?people=1&people=2&q=%E0%B8%84', '/?people=1&people=2&q=%E0%B8%84']]) {
+    const res = await fetch(base + path, { redirect: 'manual' });
+    assert.equal(res.status, 308, path);
+    assert.equal(res.headers.get('location'), location, path);
+  }
+  assert.equal((await fetch(base + '/search/x', { redirect: 'manual' })).status, 404, 'only the exact path redirects');
+  assert.deepEqual(seen, [], 'the redirect never reaches the function');
+  srv.close();
+});
+
+test('redirectOf (Task 10d): 307 when not permanent, an explicit statusCode wins, a destination query is joined with &', async () => {
+  const { redirectOf } = await import('../scripts/dev.js');
+  const url = new URL('http://x/old?q=1');
+  assert.deepEqual(redirectOf([{ source: '/old', destination: '/new', permanent: false }], url), { location: '/new?q=1', status: 307 });
+  assert.deepEqual(redirectOf([{ source: '/old', destination: '/new?a=b', statusCode: 301 }], url), { location: '/new?a=b&q=1', status: 301 });
+  assert.equal(redirectOf([{ source: '/other', destination: '/' }], url), null);
+});

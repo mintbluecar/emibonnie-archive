@@ -92,6 +92,25 @@ async function readPageRewrites(repoRoot, knownSources) {
 }
 
 /**
+ * `src/pages.js`'s redirects (Task 10d: `/search` -> `/`), written into
+ * `vercel.json` as they are. Each `source` must be a plain path: a
+ * `:param` would be copied into the query (`unnamedSource`).
+ * @param {string} repoRoot
+ * @returns {Promise<import('../src/pages.js').PageRedirect[]>}
+ */
+async function readPageRedirects(repoRoot) {
+  const pagesPath = path.join(repoRoot, 'src/pages.js');
+  if (!existsSync(pagesPath)) return [];
+  const mod = await import(pathToFileURL(pagesPath).href);
+  /** @type {import('../src/pages.js').PageRedirect[]} */
+  const list = mod.redirects ?? [];
+  for (const r of list) {
+    if (unnamedSource(r.source) !== r.source) throw new Error(`build failed: redirect source ${r.source} has a :param; use a plain path`);
+  }
+  return list.map(({ source, destination, permanent }) => ({ source, destination, permanent }));
+}
+
+/**
  * `siteDir` may be relative (to `process.cwd()`, as `loadSite` resolves
  * it) or absolute; either way it's used as-is, never re-joined onto
  * `repoRoot`.
@@ -194,7 +213,7 @@ export async function runBuild(options = {}) {
 
   const routeRewrites = await readRouteRewrites();
   const rewrites = [...routeRewrites, ...(await readPageRewrites(repoRoot, new Set(routeRewrites.map((r) => r.source))))];
-  const vercelConfig = buildVercelConfig(site, rewrites);
+  const vercelConfig = buildVercelConfig(site, rewrites, await readPageRedirects(repoRoot));
   writeFileSync(path.join(repoRoot, 'vercel.json'), `${JSON.stringify(vercelConfig, null, 2)}\n`);
 }
 
