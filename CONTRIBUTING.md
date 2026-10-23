@@ -46,7 +46,7 @@ What review checks on every PR, on top of each recipe's own list: the layer rule
 - **Then:**
   1. Build the view in `compose<Name>(data)` (pure, so tests need no DOM).
   2. Keep the page rules the template follows:
-     - `pageShell` provides the chrome; call `headerLinks.bind` after mounting.
+     - `pageShell` provides the chrome. The header has no search box unless the page searches in place: to add one, follow home or the event page (`components/inlineSearch.js`: `prepare`, `filtersSlot`/`region`/`headerProps`, then `bind`).
      - Paint first with `mountPage`.
      - Set a synchronous default `document.title`.
      - Wrap the initial load in try/catch: a 404 shows the page's own not-found state, anything else `mountLoadError`.
