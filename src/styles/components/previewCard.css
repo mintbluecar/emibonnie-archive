@@ -115,3 +115,22 @@
   padding: 12px;
   font-size: var(--text-13);
 }
+
+/* The translator's credit line sits at the very bottom of every card, so
+   cards side by side in a grid line their credits up (owner, 2026-10-23):
+   the card is a column, the main link takes the free height, and the
+   credit (cardCredit.css) follows it. */
+.c-preview-card,
+.c-preview-card--compact,
+.c-preview-card--compact.c-preview-card--thumb {
+  display: flex;
+  flex-direction: column;
+}
+
+.c-preview-card > .c-preview-card__link {
+  flex: 1 0 auto;
+}
+
+.c-preview-card > .c-card-credit {
+  margin-top: auto;
+}
