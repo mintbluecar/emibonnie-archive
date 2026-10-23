@@ -354,7 +354,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
   log "step 9: would run: site/scripts/check-app-role.sh$PROD_FLAG_TEXT"
 else
   log "step 9: running: site/scripts/check-app-role.sh$PROD_FLAG_TEXT"
-  DATABASE_URL="$DB_URL" "$REPO_ROOT/site/scripts/check-app-role.sh" "${CHECK_ARGS[@]}"
+  DATABASE_URL="$DB_URL" "$REPO_ROOT/site/scripts/check-app-role.sh" ${CHECK_ARGS[@]+"${CHECK_ARGS[@]}"}
 fi
 
 if [ "$DRY_RUN" -eq 1 ]; then
