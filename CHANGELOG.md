@@ -4,7 +4,7 @@ All notable changes to this project are documented here. Versions are semver tag
 
 ## 0.1.2
 
-A pinned header, an optional X embed of each translation's original post, working footer links, and dates without clock times.
+A pinned header, all text 2px bigger, an optional X embed of each translation's original post, working footer links, and dates without clock times.
 
 **Upgrade steps:**
 
@@ -17,6 +17,7 @@ A pinned header, an optional X embed of each translation's original post, workin
 No migrations.
 
 - **Pinned header.** On desktop the whole one-line header stays at the top while scrolling, on every page. On a phone a slim bar stays (logo, wordmark and a search icon that goes to `/search`), while the tagline and search box scroll away; the bottom tab bar is unchanged. The bar's height is the `--sticky-top` token, which the item page's pinned clip uses for its own `top` (so it sits just below the bar), and `html`'s `scroll-padding-top` keeps keyboard focus out from under it. Nothing animates. The search row is now its own `search` landmark after the `<header>`.
+- **All text 2px bigger.** Every font size is now a type-scale token in `src/styles/tokens.css` (`--text-10` … `--text-40`, named after the 1b mockup sizes), each the mockup size plus `--text-bump: 2px`; no component hard-codes a `font-size` any more, and a test keeps it that way. A site's `theme.css` that sets its own font sizes on engine classes should move them onto these tokens (or retune `--text-bump`).
 - **`embedSources` (site setting, default `false`).** When on, a translation page shows its original post as X's official embed in place of the footer's link: a `<blockquote class="twitter-tweet" data-dnt="true">` holding the archived text, author and the post's `https://x.com/<handle>/status/<id>` link, which X's `widgets.js` (added only on pages with an embed, once) replaces with the post. If X doesn't load, the blockquote stays as the fallback. A post already marked deleted or unavailable gets no embed: the archived text with the "no longer available" note. Dark mode sets `data-theme="dark"`. The build's CSP then adds only `script-src https://platform.twitter.com` and `frame-src https://platform.twitter.com`, and the page sets X's `twitter:widgets:csp` switch so widgets.js doesn't probe for inline styles. Off, the CSP is unchanged. The privacy page shows a notice about X's embed, linking X's privacy policy, only when the setting is on.
 - **One "original tweet" link.** With `embedSources` off, the footer's "original media" and "quoted tweet" links are gone (the pinned media area shows those); "copy link" and "report" stay.
 - **Item pages no longer show the viewer's local time or the post time; only the date.** A time will only be shown where an event happened, in that place's local time, once the engine stores that. The check-for-update button no longer says "editable until" a time. `timePair()` and `cityOf()` are removed from `public/js/core/format.js`.

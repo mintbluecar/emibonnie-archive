@@ -196,3 +196,19 @@ test('runBuild: an unresolved asset placeholder fails the build loudly', async (
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });
+
+test('type scale (Task 10b): every font size in src/styles is a --text-* token (none hard-coded), and each token is defined in tokens.css with the bump', async () => {
+  const { readdirSync, readFileSync: read } = await import('node:fs');
+  const stylesDir = new URL('../../src/styles/', import.meta.url);
+  const files = [...readdirSync(stylesDir).filter((f) => f.endsWith('.css')).map((f) => new URL(f, stylesDir)),
+    ...readdirSync(new URL('components/', stylesDir)).filter((f) => f.endsWith('.css')).map((f) => new URL(`components/${f}`, stylesDir))];
+  const tokens = read(new URL('tokens.css', stylesDir), 'utf8');
+  assert.match(tokens, /--text-bump: 2px;/);
+  for (const file of files) {
+    for (const [, value] of read(file, 'utf8').matchAll(/font-size:\s*([^;]+);/g)) {
+      const token = /^var\((--text-[\w-]+)\)$/.exec(value.trim())?.[1];
+      assert.ok(token, `${file.pathname.split('/styles/')[1]}: font-size ${value} is not a --text-* token`);
+      assert.match(tokens, new RegExp(`${token}: calc\\([\\d.]+px \\+ var\\(--text-bump\\)\\);`), token);
+    }
+  }
+});

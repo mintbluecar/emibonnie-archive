@@ -27,7 +27,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
+  font-size: var(--text-15);
   flex: none;
   background: color-mix(in srgb, var(--c) 22%, var(--color-card));
 }
@@ -57,13 +57,13 @@
 .c-bubbles__avatars .c-bubbles__avatar {
   width: 20px;
   height: 20px;
-  font-size: 11px;
+  font-size: var(--text-11);
 }
 
 .c-bubbles__bub {
   padding: 6px 10px;
   border-radius: 4px 14px 14px 14px;
-  font-size: 13px;
+  font-size: var(--text-13);
   line-height: 1.45;
   max-width: 320px;
   background: color-mix(in srgb, var(--c) 12%, var(--color-card));
@@ -84,7 +84,7 @@
  * e.g. #ff8a3d only reaches 4.14:1 against --color-bg at 60%).
  */
 .c-bubbles__name {
-  font-size: 10px;
+  font-size: var(--text-10);
   font-weight: 800;
   color: var(--c-text, color-mix(in srgb, var(--c) 60%, var(--color-ink)));
   margin-bottom: 1px;
@@ -92,13 +92,13 @@
 
 .c-bubbles__crowd {
   margin: 7px 0 7px 35px;
-  font-size: 12px;
+  font-size: var(--text-12);
   color: var(--color-ink-muted);
   font-style: italic;
 }
 
 .c-bubbles__plain {
-  font-size: 13px;
+  font-size: var(--text-13);
   line-height: 1.45;
 }
 
@@ -109,14 +109,14 @@
 }
 
 .c-bubbles__note {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--color-ink-muted);
 }
 
 /* bubbles.js's renderCompact(): a hub entry's opening lines as one run of
    "emoji text", clamped to two lines (Task 9b; mockups/people-me-v1.html). */
 .c-bubbles-compact {
-  font-size: 12.5px;
+  font-size: var(--text-12-5);
   line-height: 1.45;
   display: -webkit-box;
   -webkit-box-orient: vertical;

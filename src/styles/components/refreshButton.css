@@ -9,7 +9,7 @@
   align-items: center;
   min-height: 44px;
   padding: 0 14px;
-  font-size: 12px;
+  font-size: var(--text-12);
   font-weight: 700;
   color: var(--color-ink);
   background: var(--color-card);

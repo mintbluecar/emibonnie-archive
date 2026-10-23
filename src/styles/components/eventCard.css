@@ -14,16 +14,16 @@
 
 .c-event-card__name {
   display: block;
-  font-size: 13px;
+  font-size: var(--text-13);
 }
 
 .c-event-card__meta {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--color-ink-muted);
 }
 
 .c-event-card__count {
-  font-size: 11px;
+  font-size: var(--text-11);
   font-weight: 700;
   border-radius: 999px;
   padding: 2px 8px;

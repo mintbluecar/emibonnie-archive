@@ -17,7 +17,7 @@
   background: var(--color-card);
   border: 1.5px solid var(--color-card-shadow);
   border-radius: var(--radius-card);
-  font-size: 13px;
+  font-size: var(--text-13);
   color: var(--color-ink);
   overflow-wrap: anywhere;
 }
@@ -36,7 +36,7 @@
 }
 
 .c-embed__by {
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--color-ink-muted);
 }
 
@@ -50,6 +50,6 @@
 
 .c-embed__gone {
   margin-top: 6px;
-  font-size: 11px;
+  font-size: var(--text-11);
   color: var(--color-ink-muted);
 }

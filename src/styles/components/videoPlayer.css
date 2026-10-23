@@ -56,12 +56,12 @@
   background: rgba(0, 0, 0, 0.5);
   color: #fff;
   border-radius: 10px;
-  font-size: 16px;
+  font-size: var(--text-16);
 }
 
 .c-video__gone {
   padding: 16px;
-  font-size: 12px;
+  font-size: var(--text-12);
   color: var(--color-ink-muted);
   background: var(--color-bg);
   border-radius: var(--radius-card);

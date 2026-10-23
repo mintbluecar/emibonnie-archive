@@ -4,7 +4,7 @@
  */
 
 .c-home-month__label {
-  font-size: 11px;
+  font-size: var(--text-11);
   font-weight: 800;
   color: var(--color-label);
   text-transform: lowercase;

@@ -9,14 +9,14 @@
 }
 
 .c-result-card__event {
-  font-size: 10.5px;
+  font-size: var(--text-10-5);
   font-weight: 800;
   color: var(--color-label);
   margin-bottom: 3px;
 }
 
 .c-result-card__line {
-  font-size: 13px;
+  font-size: var(--text-13);
   line-height: 1.45;
 }
 
@@ -28,7 +28,7 @@
 }
 
 .c-result-card__meta {
-  font-size: 10.5px;
+  font-size: var(--text-10-5);
   color: var(--color-ink-muted);
   margin-top: 5px;
 }

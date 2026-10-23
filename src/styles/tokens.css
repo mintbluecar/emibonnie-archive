@@ -62,6 +62,29 @@
   --radius-card: 16px;
   --font-latin: 'Nunito', sans-serif;
   --font-script: 'IBM Plex Sans Thai', sans-serif;
+
+  /* Type scale (Task 10b). Every font size in the engine's CSS is one of
+     these tokens, never a literal px value. Each is named after its size
+     in the 1b mockups, plus --text-bump: the owner asked for all text
+     2px bigger than the mockups, applied here once. A site's theme.css
+     can retune --text-bump (or any one step). */
+  --text-bump: 2px;
+  --text-10: calc(10px + var(--text-bump));
+  --text-10-5: calc(10.5px + var(--text-bump));
+  --text-11: calc(11px + var(--text-bump));
+  --text-11-5: calc(11.5px + var(--text-bump));
+  --text-12: calc(12px + var(--text-bump));
+  --text-12-5: calc(12.5px + var(--text-bump));
+  --text-13: calc(13px + var(--text-bump));
+  --text-14: calc(14px + var(--text-bump));
+  --text-15: calc(15px + var(--text-bump));
+  --text-16: calc(16px + var(--text-bump));
+  --text-18: calc(18px + var(--text-bump));
+  --text-19: calc(19px + var(--text-bump));
+  --text-20: calc(20px + var(--text-bump));
+  --text-22: calc(22px + var(--text-bump));
+  --text-28: calc(28px + var(--text-bump));
+  --text-40: calc(40px + var(--text-bump));
   /* Per-person/per-item accent, set per element by a component's `bind()`
      (`el.style.setProperty('--c', …)`, from that element's own `data-c`
      attribute -- see docs/superpowers/plans/2026-10-21-1b-pages-and-launch.md,

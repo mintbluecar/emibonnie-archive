@@ -74,7 +74,7 @@
 
 .c-header__wordmark {
   font-weight: 800;
-  font-size: 19px;
+  font-size: var(--text-19);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -88,18 +88,18 @@
 }
 
 .c-header--compact .c-header__wordmark {
-  font-size: 16px;
+  font-size: var(--text-16);
 }
 
 .c-header__tagline {
-  font-size: 12px;
+  font-size: var(--text-12);
   color: var(--color-ink-muted);
   margin: 0 0 8px;
 }
 
 .c-header__badge {
   display: inline-block;
-  font-size: 10px;
+  font-size: var(--text-10);
   font-weight: 800;
   letter-spacing: 0.04em;
   border: 1.5px solid var(--color-card-shadow);
@@ -140,7 +140,7 @@
   border-radius: 14px;
   padding: 10px 12px 10px 34px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--text-13);
   color: var(--color-ink);
   min-height: 44px;
 }
@@ -169,7 +169,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: var(--text-10);
   font-weight: 800;
   line-height: 1;
   border-radius: 999px;
@@ -217,7 +217,7 @@
 
   .c-header__wordmark,
   .c-header--compact .c-header__wordmark {
-    font-size: 16px;
+    font-size: var(--text-16);
   }
 
   .c-header__find,
