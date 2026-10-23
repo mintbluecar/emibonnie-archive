@@ -46,8 +46,8 @@ test('composeEvent: hashtag pills, and no type/client pill when the event has no
 test('composeEvent: a chip per person, plus "all"', () => {
   const markup = String(composeEvent(EVENT));
   assert.match(markup, /c-event__people-filter/);
-  assert.match(markup, /data-value="1"[^>]*>☀️ sol/);
-  assert.match(markup, /data-value="2"[^>]*>🌙 luna/);
+  assert.match(markup, /data-value="1"[^>]*><span class="c-chips__emoji" aria-hidden="true">☀️<\/span><span>sol</);
+  assert.match(markup, /data-value="2"[^>]*><span class="c-chips__emoji" aria-hidden="true">🌙<\/span><span>luna</);
 });
 
 test('composeEvent: a translator filter listing the accounts actually on the page', () => {

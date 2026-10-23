@@ -93,7 +93,7 @@ function pillsRow(event) {
 function peopleFilterRow(people) {
   const items = [
     { label: t('event.allPeople'), active: true, value: ALL },
-    ...people.map((person) => ({ label: `${person.emoji} ${person.name}`, colour: person.colour, value: String(person.id) })),
+    ...people.map((person) => ({ emoji: person.emoji, label: person.name, colour: person.colour, value: String(person.id) })),
   ];
   return html`<div class="c-event__people-filter">${chips.render({ items })}</div>`;
 }

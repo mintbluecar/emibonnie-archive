@@ -60,6 +60,10 @@
      for its own --gradient-to instead. */
   --color-accent-text: #fff;
   --radius-card: 16px;
+  /* A chip's padding (Task 10c, chips.css and cast.css): its size is its
+     content plus this, never a fixed height. */
+  --chip-pad-x: 10px;
+  --chip-pad-y: 4px;
   /* A card's thumbnail height (Task 10c, thumb.css); its width follows
      the picture, between half and one and a half times this. */
   --thumb-size: 56px;

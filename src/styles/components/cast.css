@@ -1,21 +1,25 @@
-/* public/js/components/cast.js. `min-height: 44px` (see chips.css's comment) keeps the tap target to spec; `line-height: 1` + tight padding keep the chip visually compact. */
+/* public/js/components/cast.js. Task 10c (g): sized like chips.css's chips -- content plus --chip-pad-y/--chip-pad-x, no fixed height -- with the emoji 0.3em from the name. A cast chip does nothing on click, so it needs no hit area. */
 
 .c-cast {
   display: flex;
-  gap: 5px;
+  gap: 6px 5px;
   flex-wrap: wrap;
   margin: 8px 0;
 }
 
 .c-cast__chip {
   font-size: var(--text-11);
-  line-height: 1;
+  line-height: 1.25;
   border-radius: 999px;
-  padding: 0 10px;
-  min-height: 44px;
+  padding: var(--chip-pad-y) var(--chip-pad-x);
   display: inline-flex;
   align-items: center;
+  gap: 0.3em;
   border: 1.5px solid var(--c);
   background: var(--color-card);
   color: var(--color-ink);
+}
+
+.c-cast__emoji {
+  line-height: 1;
 }

@@ -50,7 +50,7 @@
 
 /* The view switch reads as one pill track with the active view tinted,
    as in mockups/people-me-v1.html (Task 9b). Each option keeps chips.css's
-   44px tap height. */
+   padding and its 24px-minimum hit area (Task 10c). */
 .c-hub__seg .c-chips {
   flex-wrap: nowrap;
   gap: 2px;

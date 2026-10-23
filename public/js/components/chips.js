@@ -14,7 +14,9 @@ import { html } from '../core/html.js';
 import { applyColours } from '../core/dom.js';
 
 /**
- * @typedef {{ label: string, active?: boolean, colour?: string|null, value?: string|number }} ChipVM
+ * @typedef {{ label: string, emoji?: string, active?: boolean, colour?: string|null, value?: string|number }} ChipVM
+ *   `emoji` (optional, Task 10c): shown before the label in its own
+ *   element (decorative, `aria-hidden`), spaced by the chip's gap.
  *   `value` (optional): a caller-chosen identifier for a clickable
  *   (filter) chip, carried as `data-value` -- this component never reads
  *   or acts on it itself, only a page's own click handler does.
@@ -27,8 +29,9 @@ import { applyColours } from '../core/dom.js';
 function oneChip(item) {
   const classes = `c-chips__chip${item.active ? ' c-chips__chip--on' : ''}`;
   const colourAttr = item.colour ? html` data-c="${item.colour}"` : '';
-  if (item.value === undefined) return html`<span class="${classes}"${colourAttr}>${item.label}</span>`;
-  return html`<button type="button" class="${classes}" aria-pressed="${item.active ? 'true' : 'false'}" data-value="${item.value}"${colourAttr}>${item.label}</button>`;
+  const content = item.emoji ? html`<span class="c-chips__emoji" aria-hidden="true">${item.emoji}</span><span>${item.label}</span>` : item.label;
+  if (item.value === undefined) return html`<span class="${classes}"${colourAttr}>${content}</span>`;
+  return html`<button type="button" class="${classes}" aria-pressed="${item.active ? 'true' : 'false'}" data-value="${item.value}"${colourAttr}>${content}</button>`;
 }
 
 /**

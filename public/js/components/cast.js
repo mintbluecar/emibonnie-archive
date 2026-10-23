@@ -18,7 +18,7 @@ function chip(member) {
   const colour = member.kind === 'person' ? member.colour : null;
   return html`
     <span class="c-cast__chip"${colour ? html` data-c="${colour}"` : ''}>
-      <span aria-hidden="true">${member.emoji}</span> ${member.name}
+      <span class="c-cast__emoji" aria-hidden="true">${member.emoji}</span><span>${member.name}</span>
     </span>
   `;
 }

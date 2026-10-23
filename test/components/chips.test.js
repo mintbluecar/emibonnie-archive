@@ -41,7 +41,17 @@ test('bind: an invalid data-c is never applied', () => {
   assert.equal(chip.styleProps['--c'], undefined);
 });
 
-test('CSS: the chip is at least a 44px tap target', () => {
+test('CSS (Task 10c g): a chip is its content plus the --chip-pad-y/--chip-pad-x tokens, never a fixed or minimum height; a clickable one keeps a >= 24px hit area', () => {
   const css = readFileSync('src/styles/components/chips.css', 'utf8');
-  assert.match(css, /\.c-chips__chip\s*\{[^}]*min-height:\s*44px/);
+  const rule = /\.c-chips__chip\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+  assert.match(rule, /padding:\s*var\(--chip-pad-y\)\s+var\(--chip-pad-x\)/);
+  assert.match(rule, /gap:\s*0\.3em/);
+  assert.doesNotMatch(rule, /(^|[^-])(min-)?height:/);
+  assert.match(css, /button\.c-chips__chip::before[^{]*\{[^}]*min-height:\s*24px/);
+  assert.match(css, /\.c-chips\s*\{[^}]*gap:\s*6px 4px/, 'wrapped rows get a row gap (d)');
+});
+
+test('render (Task 10c g): a chip with an emoji puts it in its own decorative element before the label', () => {
+  const markup = String(render({ items: [{ emoji: '🌙', label: 'luna', value: 2 }] }));
+  assert.match(markup, /<span class="c-chips__emoji" aria-hidden="true">🌙<\/span><span>luna<\/span><\/button>/);
 });
