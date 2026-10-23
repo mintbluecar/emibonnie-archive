@@ -52,14 +52,24 @@
         "🦊": {
           "person": "emiamily"
         }
+      },
+      "overrides": {
+        "eventName": "EMIBONNIE LOVE SESSION"
       }
     },
-    "2108532547101856124": {},
+    "2108532547101856124": {
+      "overrides": {
+        "eventName": "EmiBonnie Fansign 9 Oct 2026"
+      }
+    },
     "2108748780564816034": {
       "chosen": {
         ":": {
           "role": "fan"
         }
+      },
+      "overrides": {
+        "eventName": "EmiBonnie Fansign 9 Oct 2026"
       }
     },
     "2110438810274414709": {
@@ -70,6 +80,9 @@
         "🌧️": {
           "person": "fonkanittha.k"
         }
+      },
+      "overrides": {
+        "eventName": "Moonshadow: The Afterglow Fan Party and After Party"
       }
     }
   }
