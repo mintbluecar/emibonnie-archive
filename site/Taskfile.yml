@@ -184,8 +184,8 @@ tasks:
     desc: "Deploy to production (the first deploy, or a release)"
     summary: |
       Runs site/scripts/deploy.sh --prod. Asks for confirmation here, on top
-      of deploy.sh's own typed confirmation before it migrates
-      production. See site/docs/deploy.md, section 2.
+      of deploy.sh's own 'yes' confirmation, which it asks before any check
+      runs (a typo just asks again). See site/docs/deploy.md, section 2.
     prompt: "This deploys to PRODUCTION and migrates the production database. Continue?"
     preconditions:
       - sh: 'test -n "$EMIBONNIE_DB"'

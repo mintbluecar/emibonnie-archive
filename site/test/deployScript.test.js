@@ -111,16 +111,18 @@ test('--prod dry run selects the production target, environment, confirmation, a
   assert.match(output, /environment=production/);
   assert.match(output, /vercel build --prod/);
   assert.match(output, /vercel deploy --prebuilt --prod/);
-  assert.match(output, /typed confirmation \('yes, migrate production'\)/);
+  assert.match(output, /would ask for confirmation \('yes'\) before any step runs/);
   assert.match(output, /check-app-role\.sh --prod/);
   // No preview-only "first deploy" reminder when --prod is already selected.
   assert.doesNotMatch(output, /FIRST deployment is always production/);
 
-  // Full order, fix round 1 M6: doctor, then the confirmation, migrate, the
-  // least-privilege check, then pull, build and deploy -- all for production.
+  // Full order: the confirmation first (before any check, so a typo costs
+  // nothing), then npm ci, doctor, migrate, the least-privilege check, then
+  // pull, build and deploy -- all for production.
   const order = [
+    "would ask for confirmation ('yes') before any step runs",
+    'npm ci',
     'npm run doctor',
-    "would ask for typed confirmation ('yes, migrate production')",
     'npm run migrate',
     'site/scripts/check-app-role.sh --prod',
     'vercel pull --yes --environment=production',
@@ -236,3 +238,25 @@ for (const toStderr of [false, true]) {
     assert.equal(r.npmArgs, 'ci\n', 'it should reach step 1 (the fake npm then stops it)');
   });
 }
+
+test('--prod asks before any step: a typo asks again, and "no" stops with nothing run', () => {
+  let output = '';
+  let status = 0;
+  try {
+    output = execFileSync('bash', [DEPLOY_SH, '--prod'], {
+      cwd: REPO_ROOT,
+      env: { PATH: process.env.PATH ?? '', EMIBONNIE_DB: PROD_URL },
+      encoding: 'utf8',
+      input: 'yse\nno\n',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+  } catch (/** @type {any} */ err) {
+    status = err.status ?? 1;
+    output = `${err.stdout ?? ''}${err.stderr ?? ''}`;
+  }
+  assert.equal(status, 1);
+  assert.match(output, /please type 'yes' or 'no'/);
+  assert.match(output, /not confirmed -- stopping before any step runs/);
+  assert.doesNotMatch(output, /step 1: running/);
+  assert.doesNotMatch(output, /prod-secret-token/);
+});

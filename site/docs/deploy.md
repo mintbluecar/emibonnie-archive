@@ -240,7 +240,7 @@ In order:
    ```sh
    site/scripts/deploy.sh --prod
    ```
-   `--prod` asks you to type a confirmation phrase before it touches the
+   `--prod` first asks you to type `yes` (before any check runs; a typo just asks again) before it touches the
    production database — read the prompt before answering. `task
    deploy:prod` asks its own yes/no `prompt:` first, on top of that.
 5. **Later releases go through preview first:** once this project has a

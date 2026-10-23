@@ -267,6 +267,30 @@ step() {
 
 log "starting (target: $TARGET)"
 
+# Production confirmation comes first, before any check runs, so a typo
+# never costs a re-run of the checks (owner, 2026-10-23). It accepts 'yes'
+# and asks again on anything else; 'no', an empty answer or three misses
+# stop the run with nothing changed.
+if [ "$PROD" -eq 1 ]; then
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "would ask for confirmation ('yes') before any step runs, since this deploys and migrates PRODUCTION"
+  else
+    echo "This run migrates the PRODUCTION database ($DB_VAR_NAME) and deploys to production."
+    CONFIRMED=0
+    for attempt in 1 2 3; do
+      read -r -p "Type 'yes' to continue (or 'no' to stop): " CONFIRM
+      CONFIRM="$(printf '%s' "$CONFIRM" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+      if [ "$CONFIRM" = "yes" ]; then CONFIRMED=1; break; fi
+      if [ "$CONFIRM" = "no" ] || [ -z "$CONFIRM" ]; then break; fi
+      echo "Didn't catch that -- please type 'yes' or 'no'."
+    done
+    if [ "$CONFIRMED" -ne 1 ]; then
+      echo "deploy.sh: not confirmed -- stopping before any step runs (nothing changed)" >&2
+      exit 1
+    fi
+  fi
+fi
+
 step 1 "npm ci" npm ci
 step 2 "npm run build" npm run build
 step 3 "npm run check" npm run check
@@ -279,19 +303,6 @@ if [ "$DRY_RUN" -eq 1 ]; then
 else
   log "step 7: running: npm run doctor"
   DATABASE_URL="$DB_URL" npm run doctor
-fi
-
-if [ "$PROD" -eq 1 ]; then
-  if [ "$DRY_RUN" -eq 1 ]; then
-    log "step 8: would ask for typed confirmation ('yes, migrate production') before touching the production database"
-  else
-    echo "About to run migrations against the PRODUCTION database ($DB_VAR_NAME)."
-    read -r -p "Type 'yes, migrate production' to continue: " CONFIRM
-    if [ "$CONFIRM" != "yes, migrate production" ]; then
-      echo "deploy.sh: confirmation text did not match -- stopping before migrating" >&2
-      exit 1
-    fi
-  fi
 fi
 
 if [ "$DRY_RUN" -eq 1 ]; then
