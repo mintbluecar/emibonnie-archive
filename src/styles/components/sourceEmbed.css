@@ -25,7 +25,7 @@
 .c-embed__text {
   line-height: 1.45;
   margin-bottom: 6px;
-  white-space: pre-line;
+  white-space: pre-wrap;
   /* A long post's full text is already on the page ("show original");
      the fallback shows its opening, like X's own card would. */
   display: -webkit-box;

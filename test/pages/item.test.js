@@ -34,7 +34,7 @@ function itemVm(overrides = {}) {
     bubbles: [{ kind: 'speech', emoji: '🧡', name: 'sol', colour: '#ff8a3d', text: 'hello', cont: false }],
     cast: [{ kind: 'person', id: 1, emoji: '🧡', name: 'sol', colour: '#ff8a3d', igHandle: null }],
     original: 'hello',
-    credits: { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, postedAt: '2026-10-19T08:00:00.000Z', occurredOn: '2026-10-19' },
+    credits: { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, occurredOn: '2026-10-19' },
     sources: [{ role: 'primary', url: 'https://x.com/tl_alpha/status/1900000000000000004', status: 'live' }],
     media: { type: 'video', variants: [{ bitrate: 632000, url: 'https://video.twimg.com/a/632000.mp4' }], width: 720, height: 1280 },
     editOpenUntil: null,
@@ -110,7 +110,7 @@ test('composeItem (Task 10b): with embedSources on, X\'s embed blockquote replac
   await withEmbedSources(() => {
     const markup = String(composeItem(itemVm({
       original: 'hi <b>there</b>',
-      credits: { account: { handle: 'tl_alpha', displayName: 'TL <alpha>' }, clipBy: null, postedAt: '2026-10-19T08:00:00.000Z', occurredOn: '2026-10-19' },
+      credits: { account: { handle: 'tl_alpha', displayName: 'TL <alpha>' }, clipBy: null, occurredOn: '2026-10-19' },
     })));
     assert.match(markup, /<blockquote class="twitter-tweet c-embed" data-dnt="true">/);
     assert.match(markup, /hi &lt;b&gt;there&lt;\/b&gt;/);
@@ -128,6 +128,7 @@ test('composeItem (Task 10b): a deleted/unavailable post skips the embed -- the 
       const markup = String(composeItem(itemVm({ original: 'kept text', sources: [{ role: 'primary', url: 'https://x.com/tl_alpha/status/1900000000000000004', status }] })));
       assert.ok(!markup.includes('twitter-tweet'), status);
       assert.match(markup, /c-embed--gone[\s\S]*kept text[\s\S]*Original tweet is no longer available/i);
+      assert.match(markup, /c-embed__gone">Original tweet is no longer available\. The text above is the archived copy\./, 'the sourceGoneEmbed wording -- not "kept below" (fix round 1, M6)');
     }
   });
 });

@@ -30,7 +30,7 @@ test('composePerson: the person header, in their colour, and the counts line', (
   assert.match(markup, /c-person-header/);
   assert.match(markup, /data-c="#c47a12"/);
   assert.match(markup, /<h1 class="c-person-header__name">sol<\/h1>/);
-  assert.match(markup, /in 6 translations · 3 events · 0 shared stories/);
+  assert.match(markup, /in 6\u00a0translations · 3\u00a0events · 0\u00a0shared\u00a0stories/);
 });
 
 test('composePerson: a search icon scoped to this person, as an SVG (not an emoji)', () => {

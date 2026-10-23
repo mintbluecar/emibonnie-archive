@@ -78,3 +78,9 @@ test('sourceEmbed.bind: light mode leaves data-theme unset; a page with no embed
   assert.equal(second.head.querySelectorAll('script').length, 0);
   assert.equal(head.querySelectorAll('script').length, 1);
 });
+
+test('sourceEmbed.css (fix round 1, M6): the fallback text keeps line breaks like "show original" (pre-wrap)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(new URL('../../src/styles/components/sourceEmbed.css', import.meta.url), 'utf8');
+  assert.match(/\.c-embed__text\s*\{([^}]*)\}/.exec(css)?.[1] ?? '', /white-space:\s*pre-wrap/);
+});

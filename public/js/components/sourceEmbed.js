@@ -49,7 +49,7 @@ function byline(author) {
 /**
  * X's embed markup with our archived text as its fallback -- or, for a
  * post already marked deleted/unavailable, the same text and author with
- * the `sourceGone` note and no embed at all.
+ * the `sourceGoneEmbed` note (the text is above it, not below) and no embed at all.
  * @param {EmbedProps} props
  * @returns {import('../core/html.js').SafeHtml}
  */
@@ -59,7 +59,7 @@ export function render({ text, author, source, sourceLanguage }) {
     return html`
       <blockquote class="c-embed c-embed--gone">
         ${body}<p class="c-embed__by">${byline(author)}</p>
-        <p class="c-embed__gone">${t('item.sourceGone')}</p>
+        <p class="c-embed__gone">${t('item.sourceGoneEmbed')}</p>
       </blockquote>
     `;
   }

@@ -55,7 +55,9 @@ function embedNotice() {
 function privacyContent() {
   const keys = [
     'privacy.whoRuns', 'privacy.whatCollected', 'privacy.thirdParties', 'privacy.retention',
-    'privacy.publicPrivate', 'privacy.translatorOptOut', 'privacy.accountDeletion', 'privacy.noSaleNoAds',
+    'privacy.publicPrivate', 'privacy.translatorOptOut', 'privacy.accountDeletion',
+    // With X's embed on, "no trackers" would contradict the embed notice (review fix round 1, I1).
+    site.embedSources ? 'privacy.noSaleNoAdsEmbed' : 'privacy.noSaleNoAds',
   ];
   return html`
     <h1 class="c-static__title">${t('privacy.title')}</h1>
