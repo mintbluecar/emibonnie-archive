@@ -14,7 +14,7 @@
   display: grid;
   grid-template-columns: 1fr;
   grid-template-areas: 'back' 'media' 'body';
-  row-gap: 8px;
+  row-gap: var(--item-media-gap);
 }
 
 .c-item__back {
@@ -29,10 +29,15 @@
 .c-item__media {
   grid-area: media;
   position: sticky;
-  /* Just below the pinned header (Task 10b), never under it. */
-  top: var(--sticky-top);
+  /* Just below the pinned header (Task 10b), never under it, and as far
+     below it as it starts (Task 10c, k: --item-media-gap), so it pins
+     without jumping up. The shadow paints the page background over that
+     gap, so text scrolling up disappears under the bar's edge rather
+     than showing through between the bar and the media. */
+  top: calc(var(--sticky-top) + var(--item-media-gap));
   z-index: 2;
   background: var(--color-bg);
+  box-shadow: 0 calc(-1 * var(--item-media-gap)) 0 var(--color-bg);
 }
 
 .c-item__body {
@@ -96,8 +101,9 @@
     grid-template-areas: 'media back' 'media body';
     column-gap: 24px;
     row-gap: 0;
-    /* Clear of the one-line top bar (Task 9b), as in the mockup's web screen. */
-    padding-top: 16px;
+    /* Clear of the one-line top bar (Task 9b), as in the mockup's web
+       screen; the media pins at this same distance (Task 10c). */
+    padding-top: var(--item-media-gap);
   }
 
   .c-item__media {
