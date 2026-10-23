@@ -36,11 +36,14 @@
   margin-bottom: 6px;
 }
 
+.c-event__account-select {
+  margin-bottom: 10px;
+}
+
 .c-event__account-filter {
   display: block;
   width: 100%;
   min-height: 44px;
-  margin-bottom: 10px;
   background: var(--color-card);
   border: 1.5px solid var(--color-card-shadow);
   border-radius: 14px;
