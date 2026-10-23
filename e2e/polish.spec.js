@@ -98,7 +98,7 @@ test('a long URL in a bubble (Task 10c p): wraps inside the bubble, which stays 
   test.skip(testInfo.project.name !== 'phone', 'phone layout');
   await stubSyntheticMedia(page);
   await gotoReady(page, `/t/${LONG}`);
-  const url = `https://x.com/example_user/status/1900000000000000099/video/1?${'x'.repeat(61)}`;
+  const url = `https://x.com/example_user/status/1900000000000000099/video/1?${'x'.repeat(58)}`;
   expect(url.length).toBe(120);
   const r = await page.locator('.c-bubbles__bub').first().evaluate((el, text) => {
     el.append(` …${text}`);
