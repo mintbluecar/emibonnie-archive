@@ -33,3 +33,19 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* The event, person and translator pages (compact entries) browse as a
+   grid of cards led by the picture (owner, 2026-10-23): 2 across on a
+   phone, as many as fit on wider screens. */
+.k-translation-section--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+@media (min-width: 860px) {
+  .k-translation-section--grid {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 12px;
+  }
+}
