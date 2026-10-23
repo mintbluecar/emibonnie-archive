@@ -199,7 +199,7 @@ A known personality: emi, bonnie, leo (a host), and others as they appear.
 
 ### Speaker mapping
 
-**Principle (owner, 2026-10-23):** translations are handwritten and formats vary without end. The site recognises only basic, common patterns and never tries to cover every variation. **The person adding the tweet is the source of truth**: anything the parser misses or gets wrong is fixed by them in the add flow (speaker mapping, event choice, overrides), not by more parser rules.
+**Principle (owner, 2026-10-23):** translations are handwritten and formats vary without end. The goal is to **cater for as many possibilities as possible, not to identify every pattern**. The parser recognises only basic, common patterns as a head start. Any other format must still be possible to archive, because **the person adding the tweet is the source of truth**: they can map, correct or override whatever the parser missed or got wrong in the add flow. Nothing in intake may depend on the parser being right. Flexibility comes from the adder's tools, not from more parser rules.
 
 Translators each use their own speaker markers: 🐰/🦊/🦁/🌧️ for one, 💜/🧡 for others, and sometimes a line has no marker at all. When an entry is submitted:
 
