@@ -82,7 +82,7 @@ for (const width of [390, 700, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await stubSyntheticMedia(page);
     await gotoReady(page, `/t/${LONG}`);
-    await page.locator('.c-bubbles__bub').first().evaluate((el) => { el.append(` https://x.com/phannii_p/status/2108523935654670719/video/1?${'q'.repeat(60)}`); });
+    await page.locator('.c-bubbles__bub').first().evaluate((el) => { el.append(` https://x.com/example_user/status/1900000000000000099/video/1?${'q'.repeat(60)}`); });
     const m = await page.evaluate(() => {
       const w = (/** @type {string} */ s) => document.querySelector(s)?.getBoundingClientRect().width ?? -1;
       return { client: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth, bar: w('.c-header__bar'), tabs: w('.c-tabbar'), footer: w('footer') };
@@ -98,7 +98,7 @@ test('a long URL in a bubble (Task 10c p): wraps inside the bubble, which stays 
   test.skip(testInfo.project.name !== 'phone', 'phone layout');
   await stubSyntheticMedia(page);
   await gotoReady(page, `/t/${LONG}`);
-  const url = `https://x.com/phannii_p/status/2108523935654670719/video/1?${'x'.repeat(61)}`;
+  const url = `https://x.com/example_user/status/1900000000000000099/video/1?${'x'.repeat(61)}`;
   expect(url.length).toBe(120);
   const r = await page.locator('.c-bubbles__bub').first().evaluate((el, text) => {
     el.append(` …${text}`);

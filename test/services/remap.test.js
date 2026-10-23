@@ -65,7 +65,7 @@ test('remap refuses: a marker not in the text, an unknown person or role, an una
     await assert.rejects(run([IDS.LONG, '🐸=role:fan']), (err) => err instanceof BadRequest && /not a marker in this item's text: 🐸/u.test(err.message));
     await assert.rejects(run([IDS.LONG, '🌧️=person:nobody_here']), (err) => err instanceof BadRequest && /unknown person for 🌧️: @nobody_here/u.test(err.message));
     await assert.rejects(run([IDS.LONG, '🌧️=role:mc']), (err) => err instanceof BadRequest && /unknown role/u.test(err.message));
-    await assert.rejects(run(['1999999999999999999', '🌧️=role:fan']), (err) => err instanceof BadRequest && /no archived translation item for 1999999999999999999/u.test(err.message));
+    await assert.rejects(run(['1900000000000000098', '🌧️=role:fan']), (err) => err instanceof BadRequest && /no archived translation item for 1900000000000000098/u.test(err.message));
     await assert.rejects(run([IDS.LONG]), /usage: npm run remap/u);
     await assert.rejects(run([IDS.LONG, '🌧️=fan']), /want <marker>=person:<igHandle> or <marker>=role:<role>/u);
     await deps.db.transaction((tx) => tx.query("update items set deleted_at = now(), deleted_reason = 'hidden_by_owner' where id = $1", [long.itemId]), SYSTEM);
