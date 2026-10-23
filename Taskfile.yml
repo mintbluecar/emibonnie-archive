@@ -1,0 +1,228 @@
+version: '3'
+
+# A discoverable front end over scripts/deploy.sh, scripts/create-app-role.sh,
+# scripts/check-app-role.sh and the usual npm scripts, for the owner to
+# browse with `task --list` and run from the repo root. Nothing here does
+# anything those scripts don't already do on their own -- see
+# site/docs/deploy.md for the step-by-step runbook, which shows the `task`
+# command for each step with the raw command underneath it.
+#
+# Secrets: no task below ever puts a database URL into a Task `vars:` entry,
+# or into any text Task would run through its own `{{ }}` templating.
+# Task's templating engine is Go's text/template, and only applies inside
+# `{{` / `}}`: "Most string values in Task can be templated using double
+# curly braces `{{` and `}}`" (https://taskfile.dev/reference/schema). A
+# plain shell-style reference such as `$EMIBONNIE_DB` has no `{{ }}` in it,
+# so Task's templating never touches it -- it's passed straight through as
+# literal text to the shell that runs the command, and *that* shell (never
+# Task) expands it, only once the command is actually executed. That also
+# means it's the literal, unexpanded text Task prints before running a
+# command (unless `silent: true`): confirmed directly against the
+# installed `task` 3.53.1 (`MY_SECRET=topsecret task default_echo` with
+# `cmds: [echo "value is $MY_SECRET"]` prints `task: [default_echo] echo
+# "value is $MY_SECRET"`, then the command's own output -- the echoed
+# command line itself never shows the value), since the schema reference
+# page doesn't spell this out explicitly. Every task below that references
+# `$EMIBONNIE_DB`/`$EMIBONNIE_DB_PREVIEW` directly in its own `cmds:` text
+# still sets `silent: true`, as defence in depth -- Task's own CLI
+# reference warns "silent mode is not a substitute for secret masking"
+# (https://taskfile.dev/reference/cli) -- but the real protection is never
+# letting Task template a secret in the first place, same rule
+# scripts/deploy.sh's own header comment follows.
+#
+# Every task that needs a database URL guards it with `preconditions:`, so
+# `task <name>` fails with a clear message instead of running the
+# underlying script and letting *that* refuse (which it still would).
+#
+# The four tasks that touch a real database destructively --
+# `setup:prod`, `role:prod`, `deploy:prod` and `takedown` -- also set
+# `prompt:`, on top of each script's own typed confirmation. In a
+# non-interactive shell (no TTY, as in a test), Task cancels a prompted
+# task unless `--yes`/`-y` is passed: "Task ... cancelled because it has a
+# prompt and the environment is not a terminal. Use --yes (-y) to run
+# anyway." (confirmed directly against the installed `task`, and matches
+# `-y, --yes`: "Automatically answer 'yes' to all prompts" in
+# https://taskfile.dev/reference/cli).
+
+tasks:
+  setup:preview:
+    desc: "Setup + seed-dev against the preview branch, granting app"
+    summary: |
+      Runs `npm run setup` then `npm run seed-dev` against the Neon
+      `preview` branch, with APP_DB_ROLE=app so the app role is
+      (re-)granted. Needs EMIBONNIE_DB_PREVIEW set in your shell. See
+      site/docs/deploy.md, section 2, step 2.
+    silent: true
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB_PREVIEW"'
+        msg: "EMIBONNIE_DB_PREVIEW is not set -- export the preview branch's owner-role connection string first."
+    cmds:
+      - DATABASE_URL="$EMIBONNIE_DB_PREVIEW" APP_DB_ROLE=app npm run setup
+      - DATABASE_URL="$EMIBONNIE_DB_PREVIEW" APP_DB_ROLE=app npm run seed-dev
+
+  setup:prod:
+    desc: "Setup + seed-dev against the main branch, granting app"
+    summary: |
+      Same as setup:preview, against the main branch. Needs EMIBONNIE_DB
+      set in your shell. Asks for confirmation first -- this touches the
+      production database.
+    silent: true
+    prompt: "This runs setup/seed-dev against the PRODUCTION database. Continue?"
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB"'
+        msg: "EMIBONNIE_DB is not set -- export the main branch's owner-role connection string first."
+    cmds:
+      - DATABASE_URL="$EMIBONNIE_DB" APP_DB_ROLE=app npm run setup
+      - DATABASE_URL="$EMIBONNIE_DB" APP_DB_ROLE=app npm run seed-dev
+
+  role:preview:
+    desc: "Create the least-privilege 'app' role on the preview branch"
+    summary: |
+      Runs scripts/create-app-role.sh. Needs EMIBONNIE_DB_PREVIEW set.
+      Refuses if the role already exists; see site/docs/deploy.md,
+      section 6(a), to rotate its password instead.
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB_PREVIEW"'
+        msg: "EMIBONNIE_DB_PREVIEW is not set -- export the preview branch's owner-role connection string first."
+    cmds:
+      - scripts/create-app-role.sh
+
+  role:prod:
+    desc: "Create the least-privilege 'app' role on the main branch"
+    summary: |
+      Runs scripts/create-app-role.sh --prod. Needs EMIBONNIE_DB set.
+      Asks for confirmation first.
+    prompt: "This creates the 'app' role on the PRODUCTION branch. Continue?"
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB"'
+        msg: "EMIBONNIE_DB is not set -- export the main branch's owner-role connection string first."
+    cmds:
+      - scripts/create-app-role.sh --prod
+
+  check-role:preview:
+    desc: "Least-privilege check for 'app' on the preview branch"
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB_PREVIEW"'
+        msg: "EMIBONNIE_DB_PREVIEW is not set -- export the preview branch's owner-role connection string first."
+    cmds:
+      - scripts/check-app-role.sh
+
+  check-role:prod:
+    desc: "Least-privilege check for 'app' on the main branch"
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB"'
+        msg: "EMIBONNIE_DB is not set -- export the main branch's owner-role connection string first."
+    cmds:
+      - scripts/check-app-role.sh --prod
+
+  deploy:preview:
+    desc: "Deploy a preview build against the preview branch"
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB_PREVIEW"'
+        msg: "EMIBONNIE_DB_PREVIEW is not set -- export the preview branch's owner-role connection string first."
+    cmds:
+      - scripts/deploy.sh
+
+  deploy:prod:
+    desc: "Deploy to production (the first deploy, or a release)"
+    summary: |
+      Runs scripts/deploy.sh --prod. Asks for confirmation here, on top
+      of deploy.sh's own typed confirmation before it migrates
+      production. See site/docs/deploy.md, section 2.
+    prompt: "This deploys to PRODUCTION and migrates the production database. Continue?"
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB"'
+        msg: "EMIBONNIE_DB is not set -- export the main branch's owner-role connection string first."
+    cmds:
+      - scripts/deploy.sh --prod
+
+  deploy:dry:
+    desc: "Dry run of the preview deploy (no network, no real commands)"
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB_PREVIEW"'
+        msg: "EMIBONNIE_DB_PREVIEW is not set -- export the preview branch's owner-role connection string first."
+    cmds:
+      - scripts/deploy.sh --dry-run
+
+  deploy:dry-prod:
+    desc: "Dry run of the production deploy (no network, no real commands)"
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB"'
+        msg: "EMIBONNIE_DB is not set -- export the main branch's owner-role connection string first."
+    cmds:
+      - scripts/deploy.sh --prod --dry-run
+
+  backup:
+    desc: "pg_dump the main branch into ~/emibonnie-backups"
+    summary: |
+      Runs the manual backup command from site/docs/deploy.md, section 5.
+      Needs EMIBONNIE_DB set. Uses Postgres 17 client tools (pg_dump).
+    silent: true
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB"'
+        msg: "EMIBONNIE_DB is not set -- export the main branch's owner-role connection string first."
+    cmds:
+      - mkdir -p "$HOME/emibonnie-backups"
+      - chmod 700 "$HOME/emibonnie-backups"
+      - pg_dump --format=custom --file="$HOME/emibonnie-backups/$(date +%F)-main.dump" --dbname="$EMIBONNIE_DB"
+
+  test:
+    desc: "npm test, plus this site's own test/ (name-leak guard, deploy scripts)"
+    cmds:
+      - npm test
+      - node --test site/test/
+
+  check:
+    desc: "tsc + eslint (npm run check)"
+    cmds:
+      - npm run check
+
+  e2e:site:
+    desc: "Build site/ and check its real pages (npm run e2e:site)"
+    cmds:
+      - npm run e2e:site
+
+  dev:
+    desc: "Local dev server (npm run dev)"
+    cmds:
+      - npm run dev
+
+  takedown:
+    desc: "Hide one item by its /t/<id> numeric id: task takedown -- <id> (or ID=<id>)"
+    summary: |
+      Runs the exact statement from site/docs/deploy.md, section 6(b),
+      against $EMIBONNIE_DB, passing the id as a psql variable (-v
+      id=...) -- never interpolated into the SQL text. Prints the
+      UPDATE result and reminds you to purge the CDN cache for an
+      urgent request. Needs EMIBONNIE_DB set, and the id: either
+      `task takedown -- <id>` or `ID=<id> task takedown`.
+    silent: true
+    prompt: "This hides an item on PRODUCTION. Continue?"
+    vars:
+      ITEM_ID: '{{.ID | default .CLI_ARGS}}'
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB"'
+        msg: "EMIBONNIE_DB is not set -- export the main branch's owner-role connection string first."
+      - sh: 'test -n "{{.ITEM_ID}}"'
+        msg: "Pass the tweet id: task takedown -- <id>, or ID=<id> task takedown."
+    cmds:
+      - |
+        psql "$EMIBONNIE_DB" -v ON_ERROR_STOP=1 -v id="{{.ITEM_ID}}" <<'SQL'
+        begin;
+        select set_config('app.actor', 'system', true);
+
+        update items
+        set deleted_at = now(),
+            deleted_by = 'system',
+            deleted_reason = 'hidden_by_owner'
+        where kind = 'translation'
+          and id = (
+            select item_id from item_sources
+            where platform = 'x'
+              and external_id = :'id'
+              and role = 'primary'
+          );
+
+        commit;
+        SQL
+      - echo "If this is urgent, also purge the Vercel CDN cache now (site/docs/deploy.md, section 6(b))."

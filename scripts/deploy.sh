@@ -18,13 +18,29 @@
 #   5. node --test site/test/   -- the name-leak guard
 #   6. npm run e2e:site
 #   7. npm run doctor
-#   8. npm run migrate      -- APP_DB_ROLE=app, against the target branch
-#   9. vercel deploy --prebuilt [--prod]
-#  10. print the deployment URL
+#   8. npm run migrate              -- APP_DB_ROLE=app, against the target
+#                                       branch (requires the `app` role to
+#                                       already exist: scripts/create-app-role.sh)
+#   9. scripts/check-app-role.sh    -- the least-privilege check (fix round 1)
+#  10. vercel pull / vercel build / vercel deploy --prebuilt  [--prod]
+#  11. print the deployment URL
 #
 # Without --prod: deploys a PREVIEW build against the Neon `preview` branch.
 # With --prod: asks for a typed confirmation before touching the production
 # database, then migrates and deploys production.
+#
+# -----------------------------------------------------------------------
+# First deploy of a brand-new Vercel project is always production
+# (fix round 1, I2)
+# -----------------------------------------------------------------------
+# "The first deployment of a new project is always a production deployment.
+# This happens even when you... Run `vercel` or `vercel deploy` from the CLI
+# without `--prod`... Run `vercel deploy --target=preview`."
+# https://vercel.com/docs/deployments/environments#first-deployment
+# So this script warns in preview mode (below) and, when it can tell,
+# detects a project with no deployments yet. See `site/docs/deploy.md`,
+# section 2, for the owner's actual first-deploy order (which is run with
+# `--prod` for exactly this reason).
 #
 # -----------------------------------------------------------------------
 # Deploy mechanism (controller ruling, 2026-10-23): local prebuilt, not a
@@ -70,7 +86,7 @@
 #   pull/build/deploy --prebuilt sequence, for the same documented reason
 #   ("vercel.json is build output (gitignored): `vercel build` reads it
 #   before running any builder"). This script mirrors it for the manual
-#   path.
+#   path, including the engine example's exact CLI pin (fix round 1, M4).
 # - `vercel pull` cannot fetch the value of a Secret-type environment
 #   variable -- https://vercel.com/docs/cli/env#exporting-development-environment-variables:
 #   "For Secret variables whose values cannot be read from Vercel, the CLI
@@ -78,8 +94,17 @@
 #   has no real value for that key, the CLI writes a placeholder." That's
 #   fine here: this build is static (esbuild bundling plus HTML
 #   generation) and never touches the database, so `vercel build` needs no
-#   working `DATABASE_URL`. Only step 7 (doctor) and step 8 (migrate), below,
-#   need one, and they get it from this script, not from `vercel pull`.
+#   working `DATABASE_URL`. Only step 7 (doctor), step 8 (migrate) and step
+#   9 (the least-privilege check), below, need one, and they get it from
+#   this script, not from `vercel pull`.
+# - (fix round 1, M5) `vercel build`'s own build step re-runs `npm run
+#   build` itself (`vercel.json`'s `buildCommand`), so step 2 below looks
+#   redundant with that -- it isn't. Step 2 has to run *before* `vercel
+#   build` even starts, because (a) `vercel.json` must already exist on
+#   disk for `vercel build` to read it at all (see
+#   docs/start-your-own.md, "Make site/ yours"), and (b) steps 3-7 below
+#   (check, test, the name-leak guard, e2e:site, doctor) all run against
+#   this same build's output, before `vercel build` ever runs.
 #
 # -----------------------------------------------------------------------
 # Secrets
@@ -89,10 +114,15 @@
 # echoed -- there is no `set -x` anywhere in this file):
 #   EMIBONNIE_DB           Neon main branch       (used with --prod)
 #   EMIBONNIE_DB_PREVIEW   Neon `preview` branch  (used without --prod)
-# The chosen one is exported as `DATABASE_URL` only on the single command
-# line of the doctor step (7) and the migrate step (8) below -- never for
-# the whole script, and never for build or deploy. If the needed variable
-# is empty, this script stops before running anything.
+# deploy.sh reads the one it needs into its own, unexported shell variable,
+# then immediately `unset`s EMIBONNIE_DB, EMIBONNIE_DB_PREVIEW and
+# DATABASE_URL (fix round 1, I1) so no step after that point -- including
+# `npm run build`, the test runs, and the Vercel CLI -- can inherit any of
+# the three from this process's environment by accident. The chosen value
+# is re-exported as `DATABASE_URL` only on the single command line of the
+# doctor step (7), the migrate step (8) and the least-privilege check (9)
+# below -- never for the whole script, and never for build or deploy. If
+# the needed variable is empty, this script stops before running anything.
 #
 # -----------------------------------------------------------------------
 # Testing this script offline
@@ -138,12 +168,56 @@ if [ -z "$DB_URL" ]; then
   exit 1
 fi
 
+# Fix round 1, I1: drop every database secret from this process's own
+# environment the moment we've copied the one we need into $DB_URL, so no
+# later step -- a child process, a build tool, the Vercel CLI -- can see it
+# just by inheriting this shell's environment.
+unset EMIBONNIE_DB EMIBONNIE_DB_PREVIEW DATABASE_URL
+
 log() {
   echo "[deploy:$TARGET] $*"
 }
 
+# Diagnostic only (never a secret itself): how many of the three database
+# env var names are still visible in this process's environment, right
+# after the unset above. Should always be 0. Exercised by
+# site/test/deployScript.test.js ("the three database env vars are unset
+# for every later step").
+REMAINING_DB_VARS="$(env | grep -cE '^(EMIBONNIE_DB|EMIBONNIE_DB_PREVIEW|DATABASE_URL)=' || true)"
+log "env check: EMIBONNIE_DB/EMIBONNIE_DB_PREVIEW/DATABASE_URL remaining in this process's environment: $REMAINING_DB_VARS"
+
+# Fix round 1, M4: pin the Vercel CLI to the same version the engine's own
+# Actions-path example uses (docs/deploy-workflow.example.yml), rather than
+# whatever `vercel` happens to resolve to on this machine's PATH.
+VERCEL_CLI_VERSION="65.1.0"
+vercel() {
+  npx --yes "vercel@${VERCEL_CLI_VERSION}" "$@"
+}
+
+# Fix round 1, M4: refuse before doing anything real if this directory
+# isn't linked to a Vercel project yet.
+if [ "$DRY_RUN" -eq 1 ]; then
+  log "would check that .vercel/project.json exists (run 'vercel link' first if it doesn't)"
+else
+  if [ ! -f "$REPO_ROOT/.vercel/project.json" ]; then
+    echo "deploy.sh: $REPO_ROOT/.vercel/project.json is missing -- run 'vercel link' first, then re-run this script." >&2
+    exit 1
+  fi
+fi
+
+# Fix round 1, I3: never ship a stale build from an earlier run.
+if [ "$DRY_RUN" -eq 1 ]; then
+  log "would run: rm -rf .vercel/output"
+else
+  rm -rf "$REPO_ROOT/.vercel/output"
+fi
+
+if [ "$PROD" -eq 0 ]; then
+  log "reminder: a brand-new Vercel project's FIRST deployment is always production, even without --prod (https://vercel.com/docs/deployments/environments#first-deployment). If this is the very first deploy of this project, stop and run 'scripts/deploy.sh --prod' instead -- see site/docs/deploy.md, section 2."
+fi
+
 # Runs a real step (or, under --dry-run, only announces it) and labels it
-# with its place in the fixed 10-step order from the top of this file.
+# with its place in the fixed step order from the top of this file.
 step() {
   local n="$1" label="$2"
   shift 2
@@ -186,35 +260,56 @@ fi
 
 if [ "$DRY_RUN" -eq 1 ]; then
   log "step 8: would run: DATABASE_URL=<redacted> APP_DB_ROLE=app npm run migrate"
+  log "step 8: (this fails with \"role \\\"app\\\" does not exist\" unless scripts/create-app-role.sh already ran for this branch)"
 else
   log "step 8: running: npm run migrate"
   DATABASE_URL="$DB_URL" APP_DB_ROLE=app npm run migrate
 fi
 
+# Fix round 1, C1: the least-privilege check, run after every migrate.
+CHECK_ARGS=()
+PROD_FLAG_TEXT=""
+if [ "$PROD" -eq 1 ]; then
+  CHECK_ARGS+=(--prod)
+  PROD_FLAG_TEXT=" --prod"
+fi
 if [ "$DRY_RUN" -eq 1 ]; then
-  log "step 9: would run: vercel pull --yes --environment=$TARGET"
-  if [ "$PROD" -eq 1 ]; then
-    log "step 9: would run: vercel build --prod"
-    log "step 9: would run: vercel deploy --prebuilt --prod"
-  else
-    log "step 9: would run: vercel build"
-    log "step 9: would run: vercel deploy --prebuilt"
-  fi
-  log "step 10: would print the deployment URL"
+  log "step 9: would run: scripts/check-app-role.sh$PROD_FLAG_TEXT"
 else
-  log "step 9: running: vercel pull --yes --environment=$TARGET"
-  vercel pull --yes --environment="$TARGET"
+  log "step 9: running: scripts/check-app-role.sh$PROD_FLAG_TEXT"
+  DATABASE_URL="$DB_URL" "$REPO_ROOT/scripts/check-app-role.sh" "${CHECK_ARGS[@]}"
+fi
+
+if [ "$DRY_RUN" -eq 1 ]; then
+  log "step 10: would run: vercel pull --yes --environment=$TARGET"
   if [ "$PROD" -eq 1 ]; then
-    log "step 9: running: vercel build --prod"
+    log "step 10: would run: vercel build --prod"
+    log "step 10: would run: vercel deploy --prebuilt --prod"
+  else
+    log "step 10: would run: vercel build"
+    log "step 10: would run: vercel deploy --prebuilt"
+  fi
+  log "step 11: would print the deployment URL"
+else
+  log "step 10: running: vercel pull --yes --environment=$TARGET"
+  vercel pull --yes --environment="$TARGET"
+  if [ "$PROD" -eq 0 ]; then
+    # Best-effort only (fix round 1, I2): never let this block the deploy.
+    if vercel list 2>/dev/null | grep -qi 'no deployments'; then
+      log "this project has no deployments yet -- this run will be PRODUCTION regardless of the flags above (see the reminder near the top of this run)."
+    fi
+  fi
+  if [ "$PROD" -eq 1 ]; then
+    log "step 10: running: vercel build --prod"
     vercel build --prod
-    log "step 9: running: vercel deploy --prebuilt --prod"
+    log "step 10: running: vercel deploy --prebuilt --prod"
     DEPLOY_URL="$(vercel deploy --prebuilt --prod)"
   else
-    log "step 9: running: vercel build"
+    log "step 10: running: vercel build"
     vercel build
-    log "step 9: running: vercel deploy --prebuilt"
+    log "step 10: running: vercel deploy --prebuilt"
     DEPLOY_URL="$(vercel deploy --prebuilt)"
   fi
-  log "step 10: deployed"
+  log "step 11: deployed"
   echo "$DEPLOY_URL"
 fi
