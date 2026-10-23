@@ -199,6 +199,8 @@ A known personality: emi, bonnie, leo (a host), and others as they appear.
 
 ### Speaker mapping
 
+**Principle (owner, 2026-10-23):** translations are handwritten and formats vary without end. The site recognises only basic, common patterns and never tries to cover every variation. **The person adding the tweet is the source of truth**: anything the parser misses or gets wrong is fixed by them in the add flow (speaker mapping, event choice, overrides), not by more parser rules.
+
 Translators each use their own speaker markers: 🐰/🦊/🦁/🌧️ for one, 💜/🧡 for others, and sometimes a line has no marker at all. When an entry is submitted:
 
 1. The site finds speaker markers: an emoji or short label at the start of a line, followed by a colon. **A bare colon with no marker before it** (e.g. `: Bonnie, mommy has sth to tell you`) is its own marker, shown in the add flow as "(no emoji)" and mapped like any other (owner decision, 2026-10-23: @danaNYB uses it for a generic fan). A bare `:` followed by no words, such as `:)`, stays text.
