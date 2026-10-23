@@ -73,9 +73,10 @@ const escapeForRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function offenders(files, terms) {
   const patterns = terms.map((term) => ({ term, re: new RegExp(`\\b${escapeForRegExp(term)}\\b`, 'iu') }));
   return files.flatMap((file) => {
-    const buf = readFileSync(path.join(REPO_ROOT, file));
-    if (buf.includes(0)) return []; // binary (fixture media, fonts)
-    const text = buf.toString('utf8');
+    // Every file is scanned, binary ones included: a NUL byte must not hide a
+    // name (review of Task 9). latin1 maps each byte to one character, so the
+    // ASCII names and handles match the same in text and in media metadata.
+    const text = readFileSync(path.join(REPO_ROOT, file)).toString('latin1');
     return patterns.filter(({ re }) => re.test(text)).map(({ term }) => `${file}: '${term}'`);
   });
 }
