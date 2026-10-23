@@ -25,7 +25,7 @@ path).
 | `region` | Vercel region code | default `"sin1"` | Must be one of the current Vercel serverless function regions (`src/site/regions.js`'s `ALLOWED_REGIONS`, from vercel.com/docs/regions). Pick the one nearest your database and your fans. |
 | `lowercaseNames` | boolean | default `false` | When true, `formatName()` lowercases every display name site-wide. |
 | `featuredPeople` | `FeaturedPerson[]` | required, non-empty | See below. |
-| `defaultMarkers` | `Record<string, { personHandle } \| { role }>` | default `{}` | Maps a speaker marker (e.g. an emoji) to a featured person's `igHandle` or a generic role. |
+| `defaultMarkers` | `Record<string, { personHandle } \| { role }>` | default `{}` | Maps a speaker marker (e.g. an emoji) to a featured person's `igHandle` or a generic role. A line that starts `: ` then words (no emoji before the colon) has the marker `":"`, shown as "(no emoji)" and mapped like any other. |
 | `ignoredHashtags` | string[] | default `[]` | General hashtags never used for event grouping. |
 | `categories` | string[] | default `['show / interview', 'fan meet / fan day', 'live']` | The event/item type list the owner manages. |
 | `extraLivePatterns` | `LivePattern[]` | default `[]` | Extra "who + where + when" live platform phrases (see below). |

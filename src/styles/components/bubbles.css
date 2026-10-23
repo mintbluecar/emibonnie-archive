@@ -32,6 +32,12 @@
   background: color-mix(in srgb, var(--c) 22%, var(--color-card));
 }
 
+/* A speaker with no emoji of its own (a bare ':' marker, fix round 2):
+   the plain neutral circle, empty. */
+.c-bubbles__avatar--none {
+  background: color-mix(in srgb, var(--color-ink-muted) 18%, var(--color-card));
+}
+
 .c-bubbles__avatar--blank {
   visibility: hidden;
 }
@@ -118,4 +124,9 @@
   line-clamp: 2;
   overflow: hidden;
   overflow-wrap: anywhere;
+}
+
+.c-bubbles-compact__who--name {
+  font-weight: 700;
+  color: var(--color-ink-muted);
 }

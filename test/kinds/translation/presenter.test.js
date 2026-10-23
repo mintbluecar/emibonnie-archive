@@ -333,3 +333,28 @@ test('search.matchLines (Task 9b): a long matching line is trimmed to a window a
   assert.match(line, /she hugged me/);
   assert.ok([...line].length < 130, `${[...line].length}`);
 });
+
+test('fix round 2: a bare ":" mapped to role fan is a neutral bubble named "fan", with no emoji of its own (no translator emoji exists)', () => {
+  const details = { body: ': hello there, I have news\n💜: really?', speakers: { ':': { role: 'fan' } }, sources: [] };
+  const card = { sourceId: 'x', followsOn: null, people: [], account: null };
+  const preview = /** @type {any} */ (translation.present.preview(card, details, fakePreviewCtx()));
+  assert.deepEqual(preview.lines[0], { kind: 'speech', emoji: '', name: 'fan', text: 'hello there, I have news', cont: false });
+  assert.ok(!('colour' in preview.lines[0]), 'neutral: no person colour');
+});
+
+test('fix round 2: an unmapped ":" shows no emoji and no name (the client says "unknown speaker"); mapped to a person, it is that person', () => {
+  const card = { sourceId: 'x', followsOn: null, people: [], account: null };
+  const unmapped = /** @type {any} */ (translation.present.preview(card, { body: ': hello', speakers: {}, sources: [] }, fakePreviewCtx()));
+  assert.deepEqual(unmapped.lines[0], { kind: 'speech', emoji: '', name: null, text: 'hello', cont: false });
+  const people = new Map([[1, { id: 1, emoji: '☀️', displayName: 'Sol', colour: '#d9a400', igHandle: 'solsunny' }]]);
+  const ctx = { ...fakePreviewCtx(), people, formatName: (/** @type {string} */ n) => n.toLowerCase() };
+  const person = /** @type {any} */ (translation.present.preview(card, { body: ': hello', speakers: { ':': { person: 1 } }, sources: [] }, ctx));
+  assert.equal(person.lines[0].emoji, '☀️');
+  assert.equal(person.lines[0].name, 'sol');
+});
+
+test('fix round 2: search shows a mapped bare ":" line as "fan: …", an unmapped one as written', () => {
+  const ctx = /** @type {any} */ ({ people: new Map(), formatName: (/** @type {string} */ n) => n.toLowerCase() });
+  assert.deepEqual(translation.search.matchLines({ body: ': luna, I have news\n🐶: what news?', speakers: { ':': { role: 'fan' } } }, 'news', ctx), ['fan: luna, I have news', '🐶 what news?']);
+  assert.deepEqual(translation.search.matchLines({ body: ': luna, I have news', speakers: {} }, 'news', ctx), [': luna, I have news']);
+});

@@ -4,7 +4,7 @@
  * every name, standard emoji, colour and continuation resolved here, the
  * cast, credits and the pinned media. Text stays raw; the page escapes it.
  */
-import { splitLines } from '../../domain/lines.js';
+import { BARE_MARKER, splitLines } from '../../domain/lines.js';
 import { parseHeader } from '../../domain/header.js';
 import { LIVE_PATTERNS } from '../../domain/constants.js';
 import { resolveMedia, hasVideo, clipByOf, publicSources } from './media.js';
@@ -27,6 +27,16 @@ const KIND = 'translation';
 const PREVIEW_LINES = 2;
 
 /**
+ * The emoji a marker shows as itself (a role's, or an unmapped marker's):
+ * the marker, except the bare-colon marker, which has none -- its bubble
+ * gets a blank neutral avatar (fix round 2).
+ * @param {string} marker @returns {string}
+ */
+function ownEmojiOf(marker) {
+  return marker === BARE_MARKER ? '' : marker;
+}
+
+/**
  * The one speaker resolver every display path uses (bubbles, joint
  * parts, search match lines): a known person's standard emoji and
  * name, a generic role's translator emoji and role name, or (never
@@ -42,7 +52,7 @@ function speakerOf(marker, speakers, ctx) {
   const person = speaker && 'person' in speaker ? ctx.people.get(speaker.person) : undefined;
   if (person) return { emoji: person.emoji, name: ctx.formatName(person.displayName), person };
   const name = speaker && 'role' in speaker ? speaker.role : null;
-  return { emoji: marker, name, person: undefined };
+  return { emoji: ownEmojiOf(marker), name, person: undefined };
 }
 
 /**
@@ -184,7 +194,7 @@ function castEntryOf(marker, speaker, ctx) {
     const name = ctx.formatName(person.displayName);
     return [`p:${person.id}`, { kind: 'person', id: person.id, emoji: person.emoji, name, colour: person.colour, igHandle: person.igHandle }];
   }
-  if ('role' in speaker && speaker.role !== 'crowd') return [`m:${marker}`, { kind: 'role', role: speaker.role, emoji: marker, name: speaker.role }];
+  if ('role' in speaker && speaker.role !== 'crowd') return [`m:${marker}`, { kind: 'role', role: speaker.role, emoji: ownEmojiOf(marker), name: speaker.role }];
   return null;
 }
 

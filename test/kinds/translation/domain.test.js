@@ -241,3 +241,12 @@ test('a known event hashtag in a follow-up part matches when the header has noth
   const draft = draftTranslation(tweet, ctx({ events: [HAPPY_DAY] }));
   assert.equal(draft.common.eventId, HAPPY_DAY.id);
 });
+
+test('fix round 2: a bare ":" speaker is a missing marker until mapped, then needs nothing', async () => {
+  const text = 'luna tiktok live\n: luna, I have news\n🌙: really?';
+  const before = draftTranslation(tweetWith(text), ctx());
+  assert.ok(before.missing.some((m) => m.marker === ':'), JSON.stringify(before.missing));
+  const after = draftTranslation(tweetWith(text), ctx({ chosen: { ':': { role: 'fan' }, '🌙': { role: 'host' } } }));
+  assert.ok(!after.missing.some((m) => m.marker === ':'));
+  assert.deepEqual(after.memory[':'], { role: 'fan' }, 'remembered like any other marker');
+});

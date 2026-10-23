@@ -45,6 +45,17 @@ function rank(queryIndex) {
 }
 
 /**
+ * A speaker as a match line shows it: their emoji, or -- for a speaker
+ * with none (a bare ':' marker, fix round 2) -- their name and a colon,
+ * or the bare ':' as written when it was never mapped.
+ * @param {{ emoji: string, name: string|null }} speaker @returns {string}
+ */
+function shownSpeaker({ emoji, name }) {
+  if (emoji) return emoji;
+  return name ? `${name}:` : ':';
+}
+
+/**
  * How a matching line reads in a result: a speech line's marker becomes
  * the emoji its bubble shows on the item page (a known person's standard
  * emoji; a generic role's or an unmapped marker's own), with no colon,
@@ -57,7 +68,7 @@ function rank(queryIndex) {
 function shownLine(line, q, speakers, ctx) {
   const [parsed] = splitLines(line);
   if (parsed?.kind !== 'speech') return excerptAround(line, q);
-  return `${parsed.markers.map((marker) => componentOf(marker, speakers, ctx).emoji).join('')} ${excerptAround(parsed.text, q)}`;
+  return `${parsed.markers.map((marker) => shownSpeaker(componentOf(marker, speakers, ctx))).join('')} ${excerptAround(parsed.text, q)}`;
 }
 
 /**

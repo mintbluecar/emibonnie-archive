@@ -13,6 +13,8 @@ import { createDb, dbOptionsFromEnv } from '../src/db/client.js';
 import { loadSite } from '../src/site/loadSite.js';
 import { ingestItem } from '../src/services/ingest.js';
 import { createPeople, eventIdBySlug, resolveSpeakerRefs } from '../src/services/intakeRefs.js';
+import { loadCopy } from '../src/site/copy.js';
+import { BARE_MARKER } from '../src/domain/lines.js';
 
 const SYSTEM = { actor: 'system' };
 const OPTIONS = /** @type {const} */ ({
@@ -56,13 +58,18 @@ async function overridesOf(db, values) {
 }
 
 /**
+ * Prints the result. A missing bare ':' marker (a speaker with no emoji)
+ * shows as the `speaker.noEmoji` copy, "(no emoji)"; map it with
+ * `--map :=<role>` or `--map :=@<ig>`.
  * @param {import('../src/services/ingest.js').IngestResult} result
  * @param {(line: string) => void} log
+ * @param {Record<string, string>} [copy]
  * @returns {number} the exit code
  */
-function report(result, log) {
+export function report(result, log, copy = loadCopy()) {
+  const shown = (/** @type {string} */ marker) => (marker === BARE_MARKER ? copy['speaker.noEmoji'] : marker);
   log([result.status, result.sourceId, result.itemId ? `item ${result.itemId}` : ''].filter(Boolean).join(' '));
-  for (const m of /** @type {{marker: string, count: number}[]} */ (result.missing ?? [])) log(`  missing ${m.marker} (${m.count} lines)`);
+  for (const m of /** @type {{marker: string, count: number}[]} */ (result.missing ?? [])) log(`  missing ${shown(m.marker)} (${m.count} lines)`);
   for (const t of /** @type {string[]} */ (result.newTags ?? [])) log(`  new tag #${t}`);
   if (result.status === 'needs_date') log('  no date found: pass --date YYYY-MM-DD');
   return result.status === 'needs_speakers' || result.status === 'needs_date' ? 2 : 0;

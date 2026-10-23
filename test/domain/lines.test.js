@@ -29,8 +29,29 @@ test("'E: hi' is speech", () => {
   assert.equal(isSpeechLine('E: hi'), true);
 });
 
-test("':' at the start of a line forces plain, even with a marker-shaped prefix", () => {
-  assert.equal(isSpeechLine(': a note from the translator'), false);
+test("fix round 2 (owner decision): a bare ':' then a space and a word is a speech line with the marker ':'", () => {
+  assert.deepEqual(splitLines(': hello there'), [{ kind: 'speech', marker: ':', markers: [':'], text: 'hello there' }]);
+  assert.deepEqual(splitLines('   : hello there'), [{ kind: 'speech', marker: ':', markers: [':'], text: 'hello there' }], 'after optional whitespace');
+  assert.equal(isSpeechLine(': สวัสดี'), true, 'a word in any script');
+});
+
+test("fix round 2: a bare ':' with no words after it stays text -- ':)', ': ' alone, ':D'-style emoticons without a space", () => {
+  assert.deepEqual(splitLines(':)'), [{ kind: 'plain', text: ':)' }]);
+  assert.deepEqual(splitLines(': '), [{ kind: 'plain', text: ':' }]);
+  assert.deepEqual(splitLines(':D so happy'), [{ kind: 'plain', text: ':D so happy' }]);
+  assert.deepEqual(splitLines(': :)'), [{ kind: 'plain', text: ': :)' }]);
+});
+
+test("fix round 2: ':' never joins a joint marker", () => {
+  const lines = splitLines('🧡💜: hi\n🧡:: hi\n: 🧡💜: hi\n:🧡💜: hi');
+  for (const line of lines) {
+    if (line.kind === 'speech' && line.markers.length > 1) assert.ok(!line.markers.includes(':'), JSON.stringify(line));
+  }
+  assert.deepEqual(lines[0].kind === 'speech' && lines[0].markers, ['🧡', '💜']);
+});
+
+test("fix round 2: findMarkers lists ':' like any other marker", () => {
+  assert.deepEqual(findMarkers(splitLines(': hi\n💜: really?\n: more')), [{ marker: ':', count: 2 }, { marker: '💜', count: 1 }]);
 });
 
 test('a label longer than 3 characters does not count as a marker', () => {

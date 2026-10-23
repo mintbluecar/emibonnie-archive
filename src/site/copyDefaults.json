@@ -75,6 +75,7 @@
   "item.clipBy": "clip by",
   "item.hasVideo": "video",
   "item.unknownSpeaker": "unknown speaker",
+  "speaker.noEmoji": "(no emoji)",
   "home.empty": "no events yet",
   "event.back": "‹ events",
   "event.search": "search this event",

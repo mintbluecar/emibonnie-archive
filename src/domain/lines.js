@@ -14,6 +14,15 @@
 /** A label marker: 1-3 alphanumerics, at least one a letter (M1b: a bare number, e.g. a clock time's "10", is never a marker). */
 const LABEL_MARKER = /^(?=.*[A-Za-z])[A-Za-z0-9]{1,3}$/;
 const FOOTNOTE_PREFIX = /^(\*{1,2})\s(.*)$/;
+/**
+ * The bare-colon marker: a line opened by ':' with no marker before it
+ * is a speaker the translator left without an emoji, mapped like any
+ * other (owner decision, Task 9b fix round 2; spec "Speaker mapping",
+ * step 1). Shown to people as the `speaker.noEmoji` copy, "(no emoji)".
+ */
+export const BARE_MARKER = ':';
+/** ':' then a space and a word: a bare-colon speech line. ':)', ': ' alone, ':D' stay text. */
+const BARE_COLON_SPEECH = /^:\s+(?=[\p{L}\p{N}])/u;
 /** A joint marker is at most this many component markers (review round 1, I1). */
 const MAX_JOINT_MARKERS = 4;
 /** An emoji keycap sequence: digit/`#`/`*`, an optional variation selector, the combining enclosing keycap U+20E3 (Unicode UTS #51 ED-14c). */
@@ -106,7 +115,11 @@ function footnoteOf(line) {
  */
 function classifyLine(raw) {
   const line = raw.trim();
-  if (line.startsWith(':')) return { kind: 'plain', text: line };
+  if (line.startsWith(':')) {
+    // Never part of a joint marker: whatever follows the space is text.
+    if (BARE_COLON_SPEECH.test(line)) return { kind: 'speech', marker: BARE_MARKER, markers: [BARE_MARKER], text: line.replace(BARE_COLON_SPEECH, '').trim() };
+    return { kind: 'plain', text: line };
+  }
 
   const footnote = footnoteOf(line);
   if (footnote) return footnote;

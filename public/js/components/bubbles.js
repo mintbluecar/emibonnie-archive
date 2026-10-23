@@ -42,7 +42,7 @@ function speechBubble(bubble) {
   const name = bubble.name ?? t('item.unknownSpeaker');
   return html`
     <div class="c-bubbles__msg"${bubble.colour ? html` data-c="${bubble.colour}"` : ''}>
-      <div class="c-bubbles__avatar">${bubble.emoji}</div>
+      ${bubble.emoji ? html`<div class="c-bubbles__avatar">${bubble.emoji}</div>` : html`<div class="c-bubbles__avatar c-bubbles__avatar--none" aria-hidden="true"></div>`}
       <div class="c-bubbles__bub">
         <div class="c-bubbles__name">${name}</div>
         ${thaiSpans(bubble.text)}
@@ -125,11 +125,15 @@ export function render(props) {
 /**
  * One compact line's speaker: the emoji (a joint line's, side by side),
  * as an image named for the speaker(s), since there's no visible name
- * here. A continuation, crowd or plain line has none.
+ * here; a speaker with no emoji (a bare ':' marker, fix round 2) shows
+ * its name as text instead. A continuation, crowd or plain line has none.
  * @param {import('../../../src/http/contracts.js').BubbleVM} bubble
  * @returns {import('../core/html.js').SafeHtml|string}
  */
 function compactWho(bubble) {
+  if (bubble.kind === 'speech' && !bubble.cont && !bubble.emoji) {
+    return html`<span class="c-bubbles-compact__who c-bubbles-compact__who--name">${bubble.name ?? t('item.unknownSpeaker')}:</span> `;
+  }
   if (bubble.kind === 'speech' && !bubble.cont) {
     return html`<span class="c-bubbles-compact__who" role="img" aria-label="${bubble.name ?? t('item.unknownSpeaker')}">${bubble.emoji}</span> `;
   }
