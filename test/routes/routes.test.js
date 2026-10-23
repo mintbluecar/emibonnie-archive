@@ -193,6 +193,8 @@ test('unknown query params on API GETs are a no-store 400; meta pages ignore tra
   }
   assert.equal((await api.call('GET', `/t/${IDS.LONG}?s=20&utm_source=share`)).status, 200);
   assert.equal((await api.call('GET', `/e/${SLUG}?s=20`)).status, 200);
+  // Task 10d: the event page's in-place search writes its state on the page's own URL, repeats included.
+  assert.equal((await api.call('GET', `/e/${SLUG}?q=hug&people=1&people=2&scope=all`)).status, 200);
 });
 
 test('the meta routes answer on the page paths the function sees (/t/:id, /e/:slug); there is no /api/meta/*', async () => {

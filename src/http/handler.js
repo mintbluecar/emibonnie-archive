@@ -33,7 +33,9 @@ export const NO_STORE = 'no-store';
  * @typedef {{ method: string, path: string, cache: string, query?: readonly string[]|null, lists?: readonly string[],
  *   run: (input: RouteInput, deps: any) => Promise<unknown> }} Route
  *   `query`: the query params a GET accepts (default none; null accepts any,
- *   for pages reached through shared links that carry tracking params).
+ *   for pages reached through shared links that carry tracking params --
+ *   and, Task 10d, an in-place search's own state, e.g. `?people=1&people=2`:
+ *   such a route's query is never parsed, so a repeated param can't 400 the page).
  *   `lists`: which of them hold lists.
  * @typedef {{ routes: Route[], makeDeps: () => BaseDeps, waitUntil: (promise: Promise<unknown>) => void,
  *   log?: (line: string) => void, env?: Record<string, string|undefined> }} HandlerOptions
@@ -129,7 +131,7 @@ export function createHandler({ routes, makeDeps, waitUntil, log = console.error
       if (!match) return json(404, { error: 'not_found' }, NO_STORE);
       route = match.route;
       if (route.method !== 'GET' && !originAllowed(request, env)) return json(403, { error: 'forbidden' }, NO_STORE);
-      const query = parseQuery(url.searchParams, route.lists);
+      const query = route.query === null ? {} : parseQuery(url.searchParams, route.lists);
       if (route.method === 'GET') assertKnownParams(query, route.query);
       const input = { params: match.params, query, body: await readBody(request), origin: url.origin };
       const onError = (/** @type {unknown} */ err) => log(`[api] ${ctx.method} ${ctx.pathname} background work failed: ${describe(err)}`);
