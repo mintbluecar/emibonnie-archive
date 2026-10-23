@@ -32,3 +32,52 @@
   flex: 1;
   min-width: 0;
 }
+
+/* Grid cards (compact entries): the picture on top, filling the card's
+   width in a portrait frame (most clips are vertical), then up to three
+   lines of the opening text and the meta row. Cards without media keep
+   their text, a little larger. */
+.c-preview-card--compact,
+.c-preview-card--compact.c-preview-card--thumb {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.c-preview-card--compact .c-thumb {
+  order: -1;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  border-radius: 0;
+  align-self: stretch;
+}
+
+.c-preview-card--compact .c-thumb__img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  min-width: 0;
+  object-fit: cover;
+}
+
+.c-preview-card--compact .c-thumb__play {
+  font-size: var(--text-22);
+}
+
+.c-preview-card--compact .c-preview-card__body {
+  padding: 8px 10px 10px;
+}
+
+.c-preview-card--compact .c-preview-card__body > :first-child {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.c-preview-card--compact:not(.c-preview-card--thumb) .c-preview-card__body {
+  padding: 12px;
+  font-size: var(--text-13);
+}

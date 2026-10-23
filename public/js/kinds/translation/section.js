@@ -16,7 +16,7 @@ import * as previewCard from '../../components/previewCard.js';
  */
 export function render(section, ctx = {}) {
   return html`
-    <div class="k-translation-section" data-kind="translation">
+    <div class="k-translation-section${ctx.compact === true ? ' k-translation-section--grid' : ''}" data-kind="translation">
       ${section.items.map((result) => previewCard.render({ result, compact: ctx.compact === true }))}
     </div>
   `;
