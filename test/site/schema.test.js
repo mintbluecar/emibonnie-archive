@@ -159,3 +159,16 @@ test('validateSite (Task 10c): roleEmoji defaults to {}, keeps fan/host/speaker 
   assert.ok(bad.errors.some((e) => e.startsWith('roleEmoji.mc:')), bad.errors.join('\n'));
   assert.equal(validateSite({ ...raw, roleEmoji: ['💬'] }).ok, false);
 });
+
+test('validateSite (Task 10c j): favicon is an optional relative .png/.svg path inside the site folder; anything else names the field', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  const plain = validateSite(raw);
+  assert.ok(plain.ok && plain.site.favicon === null);
+  const ok = validateSite({ ...raw, favicon: 'icons/fav.png' });
+  assert.ok(ok.ok && ok.site.favicon === 'icons/fav.png');
+  for (const bad of ['/etc/fav.png', '../fav.png', 'icons/../../x.svg', 'fav.ico', 'https://x.example/f.png', 42]) {
+    const result = validateSite({ ...raw, favicon: bad });
+    assert.equal(result.ok, false, String(bad));
+    if (!result.ok) assert.ok(result.errors.some((e) => e.startsWith('favicon:')), String(bad));
+  }
+});

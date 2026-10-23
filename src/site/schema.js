@@ -28,7 +28,7 @@ export { ALLOWED_REGIONS } from './regions.js';
  *   sourceLanguage: string, timezone: string, region: string, lowercaseNames: boolean, featuredPeople: FeaturedPerson[],
  *   defaultMarkers: Record<string, { personHandle: string } | { role: string }>, ignoredHashtags: string[],
  *   categories: string[], extraLivePatterns: LivePattern[], contactUrl: string, embedSources: boolean,
- *   roleEmoji: Record<string, string> }} Site
+ *   roleEmoji: Record<string, string>, favicon: string|null }} Site
  */
 
 const DEFAULT_CATEGORIES = ['show / interview', 'fan meet / fan day', 'live'];
@@ -113,6 +113,25 @@ function checkRoleEmoji(errors, raw) {
 }
 
 /**
+ * `favicon` (optional, Task 10c): a .png or .svg file inside the site
+ * folder, as a relative path (no leading '/', no '..'); the build checks
+ * it exists. Without it the favicon is the site's logo.
+ * @param {string[]} errors
+ * @param {any} raw
+ * @returns {string|null}
+ */
+function checkFavicon(errors, raw) {
+  const value = raw.favicon;
+  if (value === undefined) return null;
+  const ok = typeof value === 'string' && /^[\w./-]+\.(png|svg)$/i.test(value) && !value.startsWith('/') && !value.split('/').includes('..');
+  if (!ok) {
+    errors.push('favicon: must be a relative path to a .png or .svg file inside the site folder (e.g. "favicon.png")');
+    return null;
+  }
+  return value;
+}
+
+/**
  * Validates and normalises a site's raw `site.json`. Every error names the
  * field path it came from. `warnings` (e.g. a featured colour that's a bit
  * low-contrast against a card -- review round 2, fix round 2, item 2: the
@@ -148,6 +167,7 @@ export function validateSite(raw) {
   const contactUrl = checkContactUrl(errors, input);
   const embedSources = checkOptionalBoolean(errors, input, 'embedSources');
   const roleEmoji = checkRoleEmoji(errors, input);
+  const favicon = checkFavicon(errors, input);
 
   if (errors.length > 0) return { ok: false, errors, warnings };
 
@@ -171,6 +191,7 @@ export function validateSite(raw) {
       contactUrl,
       embedSources,
       roleEmoji,
+      favicon,
     },
   };
 }

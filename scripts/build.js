@@ -114,6 +114,22 @@ function copySiteAssets(siteDir, outDir) {
 }
 
 /**
+ * The favicon's source (Task 10c, j): the site's `favicon` setting (a
+ * path inside the site folder, checked by the schema), else its logo.
+ * @param {string} siteDir @param {{ favicon: string|null }} site
+ * @returns {string|null}
+ */
+function faviconSourceOf(siteDir, site) {
+  if (site.favicon) {
+    const src = path.join(siteDir, site.favicon);
+    if (!existsSync(src)) throw new Error(`build failed: favicon ${site.favicon} is not in ${siteDir}`);
+    return src;
+  }
+  const logo = ['svg', 'png'].map((ext) => path.join(siteDir, `logo.${ext}`)).find((p) => existsSync(p));
+  return logo ?? null;
+}
+
+/**
  * Copies the engine's `robots.txt` into `public/`, where the platform
  * serves static files from (the repo-root copy is the one to edit).
  * @param {string} repoRoot
@@ -172,7 +188,9 @@ export async function runBuild(options = {}) {
   writeFileSync(path.join(repoRoot, 'src/site/generated.js'), buildGeneratedSiteModule(site, copy, assets));
 
   const siteThemePath = path.join(publicSiteDir, 'theme.css');
-  await runBundling({ repoRoot, engineRoot: REPO_ROOT, siteThemePath: existsSync(siteThemePath) ? siteThemePath : null });
+  await runBundling({
+    repoRoot, engineRoot: REPO_ROOT, siteThemePath: existsSync(siteThemePath) ? siteThemePath : null, faviconPath: faviconSourceOf(siteDir, site),
+  });
 
   const routeRewrites = await readRouteRewrites();
   const rewrites = [...routeRewrites, ...(await readPageRewrites(repoRoot, new Set(routeRewrites.map((r) => r.source))))];
