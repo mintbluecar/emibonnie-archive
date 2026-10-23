@@ -30,6 +30,18 @@ const PATTERNS = [
   /history\.(?:pushState|replaceState)\([^)]*?['"`](\/[^'"`$]*)/g,
 ];
 
+/**
+ * Fix round 1, M3: any template literal that starts with a typed path
+ * (`` `/search?${…}` ``), outside routes.js -- the one file that may spell
+ * page paths. Matches up to the first interpolation or closing backtick.
+ */
+const TEMPLATE_PATH = /`(\/[A-Za-z][^`$]*)/g;
+
+/** Code only: block and line comments (which quote paths in prose) removed. @param {string} source @returns {string} */
+export function stripComments(source) {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+}
+
 /** @param {string} dir @returns {string[]} */
 function jsFiles(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -41,7 +53,18 @@ function jsFiles(dir) {
 
 /** @param {string} source @returns {string[]} */
 export function literalPaths(source) {
-  return PATTERNS.flatMap((pattern) => [...source.matchAll(pattern)].map((m) => m[1]));
+  const code = stripComments(source);
+  return PATTERNS.flatMap((pattern) => [...code.matchAll(pattern)].map((m) => m[1]));
+}
+
+/**
+ * Template literals starting with a typed path, outside routes.js. Only
+ * API calls may be built this way; a page path must come from a
+ * routes.js constant or helper (`searchHref`, `eventHref`, …).
+ * @param {string} source @returns {string[]}
+ */
+export function handTypedPagePaths(source) {
+  return [...stripComments(source).matchAll(TEMPLATE_PATH)].map((m) => m[1]).filter((p) => !p.startsWith('/api/'));
 }
 
 const PAGE_PATTERNS = pages.map((p) => new RegExp(`^${p.path.replace(/:\w+/g, '[^/]+')}$`));
@@ -64,13 +87,23 @@ test('the guard itself: a trailing-slash page path, an unknown path and a bare /
   }
 });
 
+test('fix round 1, M3: a hand-typed page path in a template literal is caught, even one that resolves; API calls and comments are not', () => {
+  assert.deepEqual(handTypedPagePaths('const href = `/search?${q}`;'), ['/search?']);
+  assert.deepEqual(handTypedPagePaths('const href = `/p/${ig}`;'), ['/p/']);
+  assert.deepEqual(handTypedPagePaths('const u = `/api/item/${id}`;'), []);
+  assert.deepEqual(handTypedPagePaths('/** e.g. `/search?q=x` */\n// see `/nowhere`\nconst a = 1;'), []);
+});
+
 test('every internal link path typed in public/js resolves to a route (Task 10b)', () => {
   /** @type {string[]} */
   const broken = [];
   for (const file of jsFiles(PUBLIC_JS)) {
-    for (const found of literalPaths(readFileSync(file, 'utf8'))) {
+    const source = readFileSync(file, 'utf8');
+    for (const found of literalPaths(source)) {
       if (!resolves(found)) broken.push(`${path.relative(PUBLIC_JS, file)}: ${found}`);
     }
+    if (path.basename(file) === 'routes.js') continue;
+    for (const found of handTypedPagePaths(source)) broken.push(`${path.relative(PUBLIC_JS, file)}: hand-typed page path \`${found}…\` (use public/js/core/routes.js)`);
   }
   assert.deepEqual(broken, []);
 });

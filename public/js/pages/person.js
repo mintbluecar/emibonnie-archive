@@ -39,7 +39,7 @@ const countsLine = (counts) => html`<p class="c-hub__counts">${t('person.countsL
 
 /** The person's card: their header, with the counts line and the scoped-search icon inside it (Task 9b). @param {PersonView} data @returns {import('../core/html.js').SafeHtml} */
 function headRow(data) {
-  const href = `/search?${toQuery({ ...EMPTY_STATE, people: [data.person.id] }).toString()}`;
+  const href = searchHref(toQuery({ ...EMPTY_STATE, people: [data.person.id] }));
   const action = html`
     <a class="c-person__search" href="${href}" aria-label="${t('person.search')}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
