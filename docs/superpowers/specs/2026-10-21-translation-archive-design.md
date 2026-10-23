@@ -201,7 +201,7 @@ A known personality: emi, bonnie, leo (a host), and others as they appear.
 
 Translators each use their own speaker markers: 🐰/🦊/🦁/🌧️ for one, 💜/🧡 for others, and sometimes a line has no marker at all. When an entry is submitted:
 
-1. The site finds speaker markers: an emoji or short label at the start of a line, followed by a colon.
+1. The site finds speaker markers: an emoji or short label at the start of a line, followed by a colon. **A bare colon with no marker before it** (e.g. `: Bonnie, mommy has sth to tell you`) is its own marker, shown in the add flow as "(no emoji)" and mapped like any other (owner decision, 2026-10-23: @danaNYB uses it for a generic fan). A bare `:` followed by no words, such as `:)`, stays text.
 2. For each marker, it pre-fills a guess. 💜 → bonnie and 🧡 → emi by default. After that, it uses that translator's previous mappings (e.g. for @vacantvolcanic: 🐰 → bonnie, 🦊 → emi, 🦁 → leo).
 3. The submitter confirms each marker using a dropdown: known people, "add a new person", or a generic role (Host / Fan / Speaker).
 4. The confirmed mapping is saved on the entry and also remembered for that translator.
