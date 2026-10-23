@@ -80,6 +80,18 @@ function firstNonEmpty(...lists) {
 }
 
 /**
+ * A new event takes the adder's typed title when given (owner, 2026-10-23);
+ * its slug stays derived from the keyword, so links don't depend on the
+ * title. An existing event is never renamed here.
+ * @param {Placing} placing @param {string|undefined} eventName
+ * @returns {Placing}
+ */
+function titled(placing, eventName) {
+  const name = eventName?.trim();
+  return name && placing.proposal ? { ...placing, proposal: { ...placing.proposal, name } } : placing;
+}
+
+/**
  * Where the item goes once the submitter's overrides are applied. A
  * proposal made only because of an override is kept distinct from
  * existing slugs (a signal-less one is just `event-<date>`). A forced
@@ -187,7 +199,7 @@ export function draftTranslation(tweet, ctx) {
   const match = matchEvent({ header, postedAt: tweet.createdAt, events, people, formatName, timezone, postAuthorIds, post });
   const tagIds = peopleForTags(header.personTags, ctx.people).map((p) => p.id);
   const speakerIds = personIdsFrom(speakers, markers);
-  const placing = placingOf(match, { ctx, header, tagIds, postAuthorIds });
+  const placing = titled(placingOf(match, { ctx, header, tagIds, postAuthorIds }), ctx.overrides.eventName);
   const sharedStory = placing.placement === 'shared_story' ? sharedStoryOf(tagIds, speakerIds, match.newTags) : null;
   const presentIds = [...new Set([...speakerIds, ...tagIds])];
   const common = {

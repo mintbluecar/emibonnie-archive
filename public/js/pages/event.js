@@ -25,6 +25,7 @@ import { getJson, ApiError } from '../core/api.js';
 import { site, t, tCount } from '../core/site.js';
 import { dayLabel } from '../core/format.js';
 import * as chips from '../components/chips.js';
+import * as eventTags from '../components/eventTags.js';
 import * as emptyState from '../components/emptyState.js';
 import * as pageShell from '../components/pageShell.js';
 import * as inlineSearch from '../components/inlineSearch.js';
@@ -78,7 +79,6 @@ function metaLine(data) {
  */
 function pillsRow(event) {
   const items = [
-    ...event.hashtags.map(chips.hashtagChip),
     ...(event.type ? [{ label: event.type }] : []),
     ...(event.client ? [{ label: event.client }] : []),
   ];
@@ -163,6 +163,7 @@ export function composeEvent(data, search = eventSearch(data.event)) {
     ${backLink(data.event.slug)}
     ${headRow(data.event)}
     ${metaLine(data)}
+    ${eventTags.render(data.event)}
     ${pillsRow(data.event)}
     ${region(search, list)}
     <a class="c-event__report" href="${TAKEDOWN_PATH}">${t('event.report')}</a>

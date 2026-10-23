@@ -39,6 +39,7 @@ import { pages, redirects } from '../pages.js';
  *   placement?: Placement,
  *   eventId?: number,
  *   newEvent?: boolean,
+ *   eventName?: string,
  *   categoryName?: string,
  *   clientName?: string,
  *   text?: string,
