@@ -14,6 +14,10 @@
  * `/api/event/:slug?order=desc` (offset reset) and re-renders every
  * section; "more" always continues in whichever order is currently
  * active (Task 3 review #1).
+ *
+ * Task 10d: the page searches within itself (`components/inlineSearch.js`),
+ * with the event preset as a removable chip; the results replace the
+ * entries (and their own people/translator/order controls) in place.
  */
 import { html } from '../core/html.js';
 import { mount, mountPage, on } from '../core/dom.js';
@@ -23,8 +27,9 @@ import { dayLabel } from '../core/format.js';
 import * as chips from '../components/chips.js';
 import * as emptyState from '../components/emptyState.js';
 import * as pageShell from '../components/pageShell.js';
-import * as headerLinks from '../components/headerLinks.js';
-import { slugFromEventPath, HOME_PATH, TAKEDOWN_PATH, searchHref } from '../core/routes.js';
+import * as inlineSearch from '../components/inlineSearch.js';
+import { filtersSlot, headerProps, region } from '../components/inlineSearchView.js';
+import { slugFromEventPath, HOME_PATH, TAKEDOWN_PATH } from '../core/routes.js';
 import { KIND_UI, renderSections } from '../kinds/_registry.js';
 
 /** Entries are compact previews, as on the person and translator pages (spec: "Entries show their opening lines ... as its preview"; mockups/screens-v2.html's event screen; fix round 1, I2). */
@@ -46,12 +51,6 @@ function headRow(event) {
   return html`
     <div class="c-event__head">
       <h1 class="c-event__name">${event.name}</h1>
-      <a class="c-event__search" href="${searchHref(new URLSearchParams({ event: event.slug }))}" aria-label="${t('event.search')}">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="7"></circle>
-          <path d="M21 21l-4.3-4.3"></path>
-        </svg>
-      </a>
     </div>
   `;
 }
@@ -136,22 +135,37 @@ function uniqueAccounts(sections) {
 }
 
 /**
+ * This event's in-place search (Task 10d), from the page URL's query.
+ * @param {import('../../../src/http/contracts.js').EventView['event']} event @param {string} [query]
+ * @returns {import('../components/inlineSearchView.js').Ctx}
+ */
+export function eventSearch(event, query = '') {
+  const scope = /** @type {const} */ ({ field: 'event', value: event.slug, label: event.name });
+  return inlineSearch.prepare({ search: query, scope, placeholder: t('search.placeholderEvent') });
+}
+
+/**
  * @param {import('../../../src/http/contracts.js').EventView} data
+ * @param {import('../components/inlineSearchView.js').Ctx} [search]
  * @returns {import('../core/html.js').SafeHtml}
  */
-export function composeEvent(data) {
-  const content = html`
-    ${backLink(data.event.slug)}
-    ${headRow(data.event)}
-    ${metaLine(data)}
-    ${pillsRow(data.event)}
+export function composeEvent(data, search = eventSearch(data.event)) {
+  const list = html`
     ${peopleFilterRow(data.people)}
     ${accountFilterRow(uniqueAccounts(data.sections))}
     <button type="button" class="c-event__newest-toggle" aria-pressed="false">${t('event.newestFirst')}</button>
     <div class="c-event-sections">${data.sections.map(sectionBlock)}</div>
+  `;
+  const content = html`
+    ${filtersSlot(search)}
+    ${backLink(data.event.slug)}
+    ${headRow(data.event)}
+    ${metaLine(data)}
+    ${pillsRow(data.event)}
+    ${region(search, list)}
     <a class="c-event__report" href="${TAKEDOWN_PATH}">${t('event.report')}</a>
   `;
-  return pageShell.render({ active: 'home', compact: true, content });
+  return pageShell.render({ active: 'home', compact: true, headerProps: headerProps(search), content });
 }
 
 /**
@@ -255,7 +269,6 @@ async function toggleOrder(root, slug, state, toggle) {
  * @returns {void}
  */
 export function bind(root, data, slug) {
-  headerLinks.bind(root);
   chips.bind(root);
   for (const section of data.sections) KIND_UI[section.kind]?.section.bind?.(root);
   const peopleFilterEl = root.querySelector('.c-event__people-filter');
@@ -310,8 +323,10 @@ export async function start() {
     return;
   }
   document.title = `${data.event.name} · ${site.name}`;
-  mountPage(root, composeEvent(data));
+  const search = eventSearch(data.event, window.location.search);
+  mountPage(root, composeEvent(data, search));
   bind(root, data, slug);
+  inlineSearch.bind(root, search);
 }
 
 if (typeof document !== 'undefined') start();

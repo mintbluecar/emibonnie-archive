@@ -64,7 +64,7 @@ test('Task 9b: the label tint tokens derive from --color-label (so a site that s
     return block.slice(0, block.indexOf('}'));
   };
   for (const [file, selector] of [['eventCard.css', '.c-event-card__count'], ['hub.css', '.c-hub__seg .c-chips .c-chips__chip--on'],
-    ['searchPage.css', '.c-search__active-chip']]) {
+    ['inlineSearch.css', '.c-search__active-chip']]) {
     const block = uses(file, selector);
     assert.match(block, /background:\s*var\(--color-label-tint\)/, `${selector} background`);
     assert.match(block, /color:\s*var\(--color-label-on-tint\)/, `${selector} text`);

@@ -55,7 +55,7 @@ const PAGES = [
   ['event', `/e/${EVENT_SLUG}`],
   ['item (LONG)', `/t/${IDS.LONG}`],
   ['item (JOINT_LIVE, has a joint speaker bubble -- review round 1, M3)', `/t/${IDS.JOINT_LIVE}`],
-  ['search', `/search?q=${SEARCH_Q}`],
+  ['home, searching (Task 10d: search happens in place, e2e/search.spec.js)', `/?q=${SEARCH_Q}`],
   ['person', '/p/solsunny'],
   ['account', '/tl/tl_alpha'],
   ['about', '/about'],
@@ -163,18 +163,6 @@ test('LIVE (vertical clip) at phone width: the media box is capped at 40% of vie
   await expect(page.locator('.c-video__gone')).toHaveCount(0);
 });
 
-test('search: opening the filter sheet and pressing Escape returns focus to the filter icon', async ({ page }, testInfo) => {
-  test.skip(DARK_PROJECTS.includes(testInfo.project.name), 'item-page extras only run in light mode (I1)');
-  await checkPage(page, `/search?q=${SEARCH_Q}`);
-  const filterBtn = page.locator('.c-header__filter-btn');
-  await filterBtn.click();
-  const dialog = page.locator('.c-filter-sheet');
-  await expect(dialog).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(dialog).toBeHidden();
-  await expect(filterBtn).toBeFocused();
-});
-
 test('LONG real playback (requires E2E_REAL_VIDEO_URL -- see this file\'s header)', async ({ page }, testInfo) => {
   test.skip(DARK_PROJECTS.includes(testInfo.project.name), 'item-page extras only run in light mode (I1)');
   const realUrl = process.env.E2E_REAL_VIDEO_URL;
@@ -203,7 +191,7 @@ test('LONG real playback (requires E2E_REAL_VIDEO_URL -- see this file\'s header
   expect(forbidden).toEqual([]);
 });
 
-test('header (Task 9b; 10b fix O1): desktop is one top bar with no search box in it -- home keeps one at the top of its content column, the search page keeps its own, other pages have none; a phone keeps the box and the bottom tab bar', async ({ page }, testInfo) => {
+test('header (Task 9b; 10b fix O1; 10d): desktop is one top bar with no search box in it -- home and the scoped pages keep theirs at the top of the content column, the item page has none; focusing the box never navigates; a phone keeps the box and the bottom tab bar', async ({ page }, testInfo) => {
   test.skip(DARK_PROJECTS.includes(testInfo.project.name), 'layout, not colour: light projects only');
   const desktop = testInfo.project.name === 'desktop';
   await gotoReady(page, '/');
@@ -223,17 +211,20 @@ test('header (Task 9b; 10b fix O1): desktop is one top bar with no search box in
     const r = /** @type {{x: number, y: number, width: number, height: number}[]} */ ([box, barBox]);
     expect(r[0].y).toBeGreaterThanOrEqual(r[1].y + r[1].height);
     expect(r[0].x).toBeGreaterThanOrEqual(b[2].x);
-    // Focus goes to the search page, as on a phone (headerLinks.js).
-    await page.locator('.c-header__search-box').focus();
-    await page.waitForURL('**/search');
   }
-  await gotoReady(page, `/e/${EVENT_SLUG}`);
-  await expect(page.locator('.c-header__search-box')).toBeVisible({ visible: !desktop });
-  await gotoReady(page, `/search?q=${SEARCH_Q}`);
-  await expect(page.locator('.c-header__search-box')).toBeVisible();
+  // Task 10d: focusing (or clicking) the box stays on the page.
+  await page.locator('.c-header__search-box').click();
+  await page.waitForTimeout(300);
+  expect(new URL(page.url()).pathname).toBe('/');
+  for (const path of [`/e/${EVENT_SLUG}`, '/p/solsunny', '/tl/tl_alpha']) {
+    await gotoReady(page, path);
+    await expect(page.locator('.c-header__search-box'), path).toBeVisible();
+  }
+  await gotoReady(page, `/t/${IDS.LONG}`);
+  await expect(page.locator('.c-header__search-box')).toHaveCount(0);
 });
 
-test('header (Task 10b): pinned on a long page -- after scrolling to the bottom of a person page, the header bar is still at the top; on a phone the search row has scrolled away under it, and keyboard focus is kept clear of it', async ({ page }, testInfo) => {
+test('header (Task 10b, 10d): pinned on a long page -- after scrolling to the bottom of a person page, the header bar is still at the top; on a phone the person page\'s search row stays pinned just below it, and keyboard focus is kept clear of both', async ({ page }, testInfo) => {
   test.skip(DARK_PROJECTS.includes(testInfo.project.name), 'layout, not colour: light projects only');
   const desktop = testInfo.project.name === 'desktop';
   await gotoReady(page, '/p/solsunny');
@@ -242,21 +233,24 @@ test('header (Task 10b): pinned on a long page -- after scrolling to the bottom 
   const header = page.locator('header.c-header');
   await expect.poll(() => header.evaluate((el) => Math.round(el.getBoundingClientRect().top))).toBe(0);
   await expect(header.locator('.c-header__wordmark')).toBeInViewport();
-  await expect(page.locator('.c-header__find')).toBeVisible({ visible: !desktop });
+  // Task 10d: the person page searches in place, so its bar has no search icon (the box is right there).
+  await expect(page.locator('.c-header__find')).toHaveCount(0);
   if (!desktop) {
     const searchTop = await page.locator('.c-header__search').evaluate((el) => el.getBoundingClientRect().top);
-    expect(searchTop).toBeLessThan(STICKY_TOP.phone);
-    // The phone bar's search icon goes to the search page.
-    await expect(page.locator('.c-header__find')).toHaveAttribute('href', '/search');
+    expect(searchTop).toBeGreaterThanOrEqual(STICKY_TOP.phone);
+    expect(searchTop).toBeLessThan(STICKY_TOP.phone + 12);
   }
-  expect(await page.evaluate(() => getComputedStyle(document.documentElement).scrollPaddingTop)).toBe(`${STICKY_TOP[desktop ? 'desktop' : 'phone']}px`);
+  // Scroll padding clears the bar -- and on a phone the pinned search row too.
+  const padding = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop));
+  if (desktop) expect(padding).toBe(STICKY_TOP.desktop);
+  else expect(padding).toBeGreaterThan(STICKY_TOP.phone + 44);
   // M4: the bar's content always fits its fixed height (a theme that grows it must grow the tokens).
   expect(await page.locator('.c-header__bar').evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
   // A landmark still (axe and screen readers find the banner).
   await expect(page.getByRole('banner')).toHaveCount(1);
 });
 
-test('header (Task 10b fix O2, M5): on a phone the search row never sits over the pinned bar -- at 0/300/1500px it is below the bar or fully gone, the bar is always on top while it scrolls away, and on the search page it stays pinned just below the bar', async ({ page }, testInfo) => {
+test('header (Task 10b fix O2, M5; 10d): on a phone the search row never sits over the pinned bar -- the bar is always on top, and on every in-place search page the row stays pinned just below it', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'phone', 'the phone layout');
   await stubSyntheticMedia(page);
   const rowVsBar = () => page.evaluate(() => {
@@ -267,7 +261,7 @@ test('header (Task 10b fix O2, M5): on a phone the search row never sits over th
     return { barBottom: bar.bottom, rowTop: row.top, rowBottom: row.bottom, scrollY: window.scrollY, barOnTop: onTop.every(Boolean) };
   });
   // The item page has no search row since Task 10c (r): e2e/polish.spec.js checks that.
-  for (const path of ['/', `/e/${EVENT_SLUG}`, `/search?q=${SEARCH_Q}`]) {
+  for (const path of ['/', `/e/${EVENT_SLUG}`, `/?q=${SEARCH_Q}`]) {
     await gotoReady(page, path);
     for (const y of [0, 10, 20, 40, 60, 80, 120, 300, 1500]) {
       await page.evaluate((target) => window.scrollTo(0, target), y);
@@ -279,31 +273,9 @@ test('header (Task 10b fix O2, M5): on a phone the search row never sits over th
         const gone = m.rowBottom <= m.barBottom + 0.5;
         expect(below || gone, `${where}: row ${m.rowTop}-${m.rowBottom}, bar bottom ${m.barBottom}`).toBe(true);
       }
-      if (path.startsWith('/search')) expect(m.rowTop, `${where}: the live row stays pinned below the bar`).toBeGreaterThanOrEqual(m.barBottom - 0.5);
+      expect(m.rowTop, `${where}: the live row stays pinned below the bar`).toBeGreaterThanOrEqual(m.barBottom - 0.5);
     }
   }
-});
-
-test.describe('search (Task 10b fix O3): touch devices', () => {
-  test.use({ hasTouch: true });
-  test('on a phone, the box is never focused on load -- arriving from a person chip, nor on the blank search page (no keyboard pops up)', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'phone', 'touch devices');
-    for (const path of ['/search?people=1', '/search']) {
-      await gotoReady(page, path);
-      expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches || matchMedia('(hover: none)').matches), 'touch emulated').toBe(true);
-      await page.waitForTimeout(300);
-      expect(await page.evaluate(() => document.activeElement?.classList.contains('c-header__search-box') ?? false), path).toBe(false);
-    }
-  });
-});
-
-test('search (Task 10b fix O3): with a mouse, only the blank search page focuses its box', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop', 'fine pointer');
-  await gotoReady(page, '/search');
-  await expect(page.locator('.c-header__search-box')).toBeFocused();
-  await gotoReady(page, '/search?people=1');
-  await page.waitForTimeout(300);
-  await expect(page.locator('.c-header__search-box')).not.toBeFocused();
 });
 
 for (const [label, path] of [['about', '/about'], ['privacy', '/privacy'], ['takedown', '/takedown']]) {

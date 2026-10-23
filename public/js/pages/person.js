@@ -2,16 +2,16 @@
 /**
  * The person page (task-6-brief.md "Person page"): a `personHeader` in
  * the person's own colour, the "in N translations · M events · K shared
- * stories" line (plural-aware, review round 1, M1), a search icon scoped
- * to this person, the segmented control (by event / all, newest /
- * with…), and the grouped/paged entries themselves (`hubGroups.js`).
- * "with…" opens a people picker (fetched from `/api/filters`, the same
- * roster the search page's own filter sheet uses) and sends the chosen
- * people, plus this page's own person, to a scoped search
- * (`peopleMode=all`) -- built through `state/searchState.js`'s
- * `toQuery`, never by hand. Every delegated listener (segmented control,
- * "more", the picker) is bound once in `bind()`, never re-bound on a
- * re-render (review round 1, I2).
+ * stories" line (plural-aware, review round 1, M1), the segmented
+ * control (by event / all, newest / with…), and the grouped/paged
+ * entries themselves (`hubGroups.js`). The page searches within itself
+ * (Task 10d, `components/inlineSearch.js`): this person is preset as a
+ * removable chip, and results replace the entries in place. "with…"
+ * opens a people picker (fetched from `/api/filters`, the same roster
+ * the filter sheet uses) and searches, in place, for moments with all of
+ * the chosen people plus this page's own (`peopleMode=all`). Every
+ * delegated listener (segmented control, "more", the picker) is bound
+ * once in `bind()`, never re-bound on a re-render (review round 1, I2).
  */
 import { html } from '../core/html.js';
 import { mount, mountPage, on } from '../core/dom.js';
@@ -21,41 +21,44 @@ import * as chips from '../components/chips.js';
 import * as personHeader from '../components/personHeader.js';
 import * as emptyState from '../components/emptyState.js';
 import * as pageShell from '../components/pageShell.js';
-import * as headerLinks from '../components/headerLinks.js';
-import { EMPTY_STATE, toQuery } from '../state/searchState.js';
-import { igFromPersonPath, personHref, searchHref } from '../core/routes.js';
+import * as inlineSearch from '../components/inlineSearch.js';
+import { filtersSlot, headerProps, region } from '../components/inlineSearchView.js';
+import { presetState } from '../state/searchScope.js';
+import { igFromPersonPath, personHref } from '../core/routes.js';
 import { activeView, bindMore, bindSections, segmentedControl } from './hubGroups.js';
 import { mountLoadError } from './pageError.js';
 
 const APP_SELECTOR = 'app';
 /** @typedef {import('../../../src/http/contracts.js').PersonView} PersonView */
 /** @typedef {import('../../../src/http/contracts.js').FilterOptions} FilterOptions */
-/** @typedef {import('./hubGroups.js').HubCtx & { options: FilterOptions|null, selected: Set<number> }} Ctx */
+/** @typedef {import('../components/inlineSearchView.js').Ctx} SearchCtx */
+/** @typedef {import('./hubGroups.js').HubCtx & { options: FilterOptions|null, selected: Set<number>, search: SearchCtx }} Ctx */
 
 /** @param {PersonView['counts']} counts @returns {import('../core/html.js').SafeHtml} */
 const countsLine = (counts) => html`<p class="c-hub__counts">${t('person.countsLine', {
   translations: tCount('person.translations', counts.items), events: tCount('person.events', counts.events), shared: tCount('person.sharedStories', counts.sharedStories),
 })}</p>`;
 
-/** The person's card: their header, with the counts line and the scoped-search icon inside it (Task 9b). @param {PersonView} data @returns {import('../core/html.js').SafeHtml} */
+/** The person's card: their header, with the counts line inside it (Task 9b). @param {PersonView} data @returns {import('../core/html.js').SafeHtml} */
 function headRow(data) {
-  const href = searchHref(toQuery({ ...EMPTY_STATE, people: [data.person.id] }));
-  const action = html`
-    <a class="c-person__search" href="${href}" aria-label="${t('person.search')}">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="11" cy="11" r="7"></circle>
-        <path d="M21 21l-4.3-4.3"></path>
-      </svg>
-    </a>
-  `;
-  return personHeader.render({ person: data.person, counts: countsLine(data.counts), action });
+  return personHeader.render({ person: data.person, counts: countsLine(data.counts) });
+}
+
+/**
+ * This person's in-place search (Task 10d), from the page URL's query.
+ * @param {PersonView['person']} person @param {string} [query]
+ * @returns {SearchCtx}
+ */
+export function personSearch(person, query = '') {
+  const scope = /** @type {const} */ ({ field: 'people', value: person.id, label: `${person.emoji} ${person.name}` });
+  return inlineSearch.prepare({ search: query, scope, placeholder: t('search.placeholderPerson', { name: person.name }) });
 }
 
 /** @param {number} selfId @param {import('../../../src/http/contracts.js').PersonChip[]} people @returns {import('../core/html.js').SafeHtml} */
 function pickerMarkup(selfId, people) {
   const items = people.filter((p) => p.id !== selfId).map((p) => ({ emoji: p.emoji, label: p.name, colour: p.colour, value: p.id }));
   return html`
-    <button type="button" class="c-hub__picker-close" aria-label="${t('person.closePicker')}">✕</button>
+    <button type="button" class="c-hub__picker-close" title="${t('person.closePicker')}" aria-label="${t('person.closePicker')}">✕</button>
     <h2 class="c-hub__picker-title">${t('person.withTitle')}</h2>
     ${chips.render({ items })}
     <button type="button" class="c-hub__picker-apply">${t('person.withApply')}</button>
@@ -65,21 +68,25 @@ function pickerMarkup(selfId, people) {
 /** The picker's error body (review round 1, M3): `/api/filters` failed, but the dialog still opens, with a way to close it. @returns {import('../core/html.js').SafeHtml} */
 function pickerErrorMarkup() {
   return html`
-    <button type="button" class="c-hub__picker-close" aria-label="${t('person.closePicker')}">✕</button>
+    <button type="button" class="c-hub__picker-close" title="${t('person.closePicker')}" aria-label="${t('person.closePicker')}">✕</button>
     <h2 class="c-hub__picker-title">${t('person.withTitle')}</h2>
     <p class="c-hub__picker-error">${t('search.error')}</p>
   `;
 }
 
-/** @param {PersonView} data @returns {import('../core/html.js').SafeHtml} */
-export function composePerson(data) {
-  const content = html`
-    ${headRow(data)}
+/** @param {PersonView} data @param {SearchCtx} [search] @returns {import('../core/html.js').SafeHtml} */
+export function composePerson(data, search = personSearch(data.person)) {
+  const list = html`
     ${segmentedControl('byEvent', true)}
     <div class="c-hub__content">${activeView('byEvent', data.sections, {})}</div>
+  `;
+  const content = html`
+    ${filtersSlot(search)}
+    ${headRow(data)}
+    ${region(search, list)}
     <dialog class="c-hub__picker" aria-label="${t('person.withTitle')}"></dialog>
   `;
-  return pageShell.render({ active: 'home', compact: true, content });
+  return pageShell.render({ active: 'home', compact: true, headerProps: headerProps(search), content });
 }
 
 /**
@@ -118,10 +125,10 @@ async function openPicker(dialog, data, ctx) {
  * I2: `openPicker` used to re-bind three listeners every time it ran).
  * `ctx.selected` is reset by `openPicker` on every open, so a chip
  * toggled in a previous session never leaks into the next.
- * @param {Element} dialog @param {PersonView} data @param {Ctx} ctx
+ * @param {Element} root @param {Element} dialog @param {PersonView} data @param {Ctx} ctx
  * @returns {void}
  */
-function bindPicker(dialog, data, ctx) {
+function bindPicker(root, dialog, data, ctx) {
   on(dialog, '.c-chips__chip', 'click', (_e, chip) => {
     const id = Number(chip.getAttribute('data-value'));
     const already = ctx.selected.has(id);
@@ -132,7 +139,8 @@ function bindPicker(dialog, data, ctx) {
   on(dialog, '.c-hub__picker-close', 'click', () => { /** @type {any} */ (dialog).close?.(); });
   on(dialog, '.c-hub__picker-apply', 'click', () => {
     const people = [data.person.id, ...ctx.selected];
-    window.location.href = searchHref(toQuery({ ...EMPTY_STATE, people, peopleMode: 'all' }));
+    /** @type {any} */ (dialog).close?.();
+    inlineSearch.commit(root, ctx.search, { ...presetState(ctx.search.scope), q: ctx.search.state.q, people, peopleMode: 'all' });
   });
 }
 
@@ -155,17 +163,20 @@ function bindSegment(root, dialog, data, ctx) {
   });
 }
 
-/** @param {Element} root @param {PersonView} data @param {string} ig @returns {void} */
-export function bind(root, data, ig) {
-  headerLinks.bind(root);
+/**
+ * @param {Element} root @param {PersonView} data @param {string} ig
+ * @param {SearchCtx} [search] the page's in-place search, which "with…" starts (`inlineSearch.bind` wires the rest)
+ * @returns {void}
+ */
+export function bind(root, data, ig, search = personSearch(data.person)) {
   chips.bind(root);
   bindSections(root, data.sections);
   const dialog = root.querySelector('.c-hub__picker');
   /** @type {Ctx} */
-  const ctx = { seg: 'byEvent', options: null, seq: 0, offset: {}, selected: new Set() };
+  const ctx = { seg: 'byEvent', options: null, seq: 0, offset: {}, selected: new Set(), search };
   if (dialog) {
     bindSegment(root, dialog, data, ctx);
-    bindPicker(dialog, data, ctx);
+    bindPicker(root, dialog, data, ctx);
   }
   bindMore(root, `/api/person/${encodeURIComponent(ig)}`, data, ctx);
 }
@@ -201,8 +212,10 @@ export async function start() {
     return;
   }
   document.title = `${data.person.name} · ${site.name}`;
-  mountPage(root, composePerson(data));
-  bind(root, data, ig);
+  const search = personSearch(data.person, window.location.search);
+  mountPage(root, composePerson(data, search));
+  bind(root, data, ig, search);
+  inlineSearch.bind(root, search);
 }
 
 if (typeof document !== 'undefined') start();

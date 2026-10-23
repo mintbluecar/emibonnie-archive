@@ -35,6 +35,7 @@ const MIME_TYPES = {
 
 /**
  * @typedef {{ source: string, destination: string }} Rewrite
+ * @typedef {{ source: string, destination: string, permanent?: boolean, statusCode?: number }} Redirect
  * @typedef {{ source: string, headers: { key: string, value: string }[] }} HeaderRule
  * @typedef {(request: Request) => Promise<Response>} ApiHandler
  */
@@ -220,18 +221,40 @@ async function serveStatic(root, pathname, res) {
 }
 
 /**
+ * Where `url` redirects to, as Vercel's `redirects` config would send it
+ * (Task 10d: `/search?q=x` -> `/?q=x`), or `null`. `source` is a plain
+ * path, matched exactly. The request's query string goes on to the
+ * destination, as on Vercel ("By default, all query strings that are
+ * found in the source path will be passed to the destination path",
+ * https://vercel.com/kb/guide/how-do-i-perform-vercel-redirects-based-on-query-strings);
+ * `permanent` is a 308, otherwise 307
+ * (https://vercel.com/docs/project-configuration/vercel-json, "redirects").
+ * @param {Redirect[]} redirects @param {URL} url
+ * @returns {{ location: string, status: number }|null}
+ */
+export function redirectOf(redirects, url) {
+  const match = redirects.find((r) => r.source === url.pathname);
+  if (!match) return null;
+  const query = url.search.slice(1);
+  const joiner = match.destination.includes('?') ? '&' : '?';
+  const location = query ? `${match.destination}${joiner}${query}` : match.destination;
+  return { location, status: match.statusCode ?? (match.permanent === false ? 307 : 308) };
+}
+
+/**
  * Creates a dev HTTP server that mirrors Vercel's routing for the
- * generated `vercel.json`: the first matching rewrite wins; one whose
+ * generated `vercel.json`: a redirect answers first (Vercel runs
+ * `redirects` before `rewrites`); then the first matching rewrite wins; one whose
  * destination is `/api` (or a request for `/api` itself) calls `handle`
  * with the *original* request URL, unchanged and with no query params
  * added, exactly what Vercel hands `api/index.js`; any other rewrite
  * serves its destination file; no match serves the path as a static
  * file. Used both for local development and, through the same contract,
  * by tests exercising the Vercel function's behaviour without Vercel.
- * @param {{ root: string, routes?: unknown[], rewrites?: Rewrite[], headers?: HeaderRule[], handle: ApiHandler }} options
+ * @param {{ root: string, routes?: unknown[], rewrites?: Rewrite[], redirects?: Redirect[], headers?: HeaderRule[], handle: ApiHandler }} options
  * @returns {import('node:http').Server}
  */
-export function createServer({ root, rewrites = [], headers = [], handle }) {
+export function createServer({ root, rewrites = [], redirects = [], headers = [], handle }) {
   installRequestContext();
   assertUnnamedSources(rewrites);
   /** @type {import('node:http').Server} */
@@ -243,6 +266,12 @@ export function createServer({ root, rewrites = [], headers = [], handle }) {
       // `headers` config (review round 2, "also, small"): a `source` names what the browser
       // actually requested, regardless of which file or function answers it.
       applyHeaderRules(headers, url.pathname, res);
+      const redirect = redirectOf(redirects, url);
+      if (redirect) {
+        res.writeHead(redirect.status, { Location: redirect.location });
+        res.end();
+        return;
+      }
       const file = staticTargetOf(rewrites, url.pathname);
       if (file === null) {
         await serveApi(handle, toWebRequest(req, url), res).then((results) => server.emit('waitUntilSettled', results));
@@ -300,7 +329,7 @@ async function main() {
   }
   const { default: api } = await import('../api/index.js');
   const vercel = JSON.parse(await readFile('vercel.json', 'utf8'));
-  const srv = createServer({ root: 'public', rewrites: vercel.rewrites ?? [], headers: vercel.headers ?? [], handle: (request) => api.fetch(request) });
+  const srv = createServer({ root: 'public', rewrites: vercel.rewrites ?? [], redirects: vercel.redirects ?? [], headers: vercel.headers ?? [], handle: (request) => api.fetch(request) });
   srv.listen(port, () => {
     console.log(`dev server listening on http://localhost:${port}`);
   });

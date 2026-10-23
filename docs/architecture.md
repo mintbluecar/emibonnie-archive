@@ -18,7 +18,7 @@ src/sources/             network access to external sources (registry in index.j
 src/db/                  client (per-request pool, date parser, transactions with actor), migrations runner, migrations/
 src/site/                settings schema/validation, regions.js (Vercel regions), copy, generated.js (GENERATED: static import of site config)
 src/domain/              PURE: no I/O, no clock, no imports from other layers
-src/pages.js             the one list of page routes (rewrites, reserved kind prefixes)
+src/pages.js             the one list of page routes and redirects (rewrites, vercel.json redirects, reserved kind prefixes)
 public/js/core|components|pages|state|kinds/<kind>/   browser code (no src/ imports); kinds/_registry.js GENERATED
 scripts/                 build, dev, setup, migrate, doctor, init-site, seed-dev, add, remap, new (scaffolder + templates/)
 site/                    a site's own folder (gitignored in the template); examples/solluna/ is the template example
@@ -75,7 +75,18 @@ There is one function, `api/index.js`, and the build writes every `vercel.json` 
 
 - **Why unnamed:** a named param in a source is added to the request's query string (`/t/:id` arrives as `/t/123?id=123`; [Vercel's rewrites doc](https://vercel.com/docs/routing/rewrites): "This converts a request like /resize/800/600 to /api/sharp?width=800&height=600"), and the handler refuses unknown query params. A catch-all file name (`api/[...route].js`) does the same with its segment, and only matches one level deep.
 - **Why `/api`:** the function sees the original request URL, not the rewrite's destination, so the route table matches `/api/home` and `/t/:sourceId` directly. `src/pages.js` (a page's `meta`) and the kinds registry (`urlPrefix`) decide which page paths have meta; `src/routes/meta.js` builds the routes and `src/routes/index.js` the rewrites from them.
+- **Redirects (v0.1.4):** `src/pages.js`'s `redirects` (today only `/search` → `/`, 308) go into `vercel.json`'s `redirects` as plain-path sources. Vercel runs `redirects` before `rewrites` ([vercel.json doc](https://vercel.com/docs/project-configuration/vercel-json)) and passes the request's query string on to the destination by default ([Vercel KB](https://vercel.com/kb/guide/how-do-i-perform-vercel-redirects-based-on-query-strings): "By default, all query strings that are found in the source path will be passed to the destination path"), so `/search?q=x` lands on `/?q=x`. `scripts/dev.js` answers them the same way, appending the query itself.
 - `test/site/build.test.js` fails on a named source or a function rewrite to anything but `/api`. `scripts/dev.js` routes the same way (a rewrite to `/api` calls the handler with the original URL) and refuses a named source, but it can't reproduce Vercel's own quirks, so the first preview deploy must check `/api/home` and `/t/<id>` (`docs/start-your-own.md`, step 6).
+
+## Search happens in place (v0.1.4)
+
+There is no search page. Home is the search, and the event, person and translator pages each search within themselves (spec, "Search happens in place"). One controller does it for all four:
+
+- `public/js/components/inlineSearch.js`: `prepare()` reads the page URL's query before the first paint (so a `?q=` link never flashes the list), `bind()` wires the header's box and filter button, the chips and "more" once each, loads `/api/filters`, and fetches results when the URL already holds a search. `commit()` applies a new state: `history.replaceState` on the page's own path, the chips and placeholder, then either the page's own list (no fetch) or fresh results. A sequence number drops any response a newer one has overtaken. Nothing here navigates and nothing autofocuses.
+- `inlineSearchView.js` (pure markup): a page places `filtersSlot` (the active-filter chips, right under the box), then its own head, then `region(ctx, list)`, which wraps the page's list and the results area and shows one of them. `headerProps` gives the header its search row (`header.render({ search })`); a page without it has no box, only the phone bar's icon home.
+- `inlineSearchSheet.js` opens the shared `filterSheet.js` on a fresh node each time.
+- `public/js/state/searchScope.js` (pure): a scoped page's own filter (`event`, one of `people`, or `account`) is preset and implied by the path, so the URL reads `/e/x?q=hi`; removing its chip writes `scope=all` so a reload keeps it removed. `viewOf()` decides what shows: the page's own `list` (nothing typed, no filter beyond the page's own), `results`, or a `hint` to type when a scoped page's own filter was removed and nothing else is set. Leaving results for the list or hint empties `.c-search` and forgets its data; a search in flight marks it `aria-busy`. One `role="status"` live region, outside `.c-search`, announces each result count, "no results" or the error.
+- The server API (`/api/search`) is unchanged. The meta routes (`query: null`) never parse their query, so a page URL with repeated params (`?people=1&people=2`) can't 400.
 
 ## File structure (fan-archive, v0.1.1)
 
@@ -86,7 +97,7 @@ CONTRIBUTING.md (recipes)  docs/{architecture,site-settings,start-your-own,limit
 .github/pull_request_template.md  .github/ISSUE_TEMPLATE/{bug,kind-proposal}.md  .github/workflows/ci.yml  .github/dependabot.yml
 examples/solluna/{site.json,theme.css,copy.json,logo.svg,seed/}
 scripts/{dev,build*,setup,migrate,doctor,initSite,add,seedDev,new,newPlans,genRegistries}.js  scripts/templates/{route,page,component,migration,kind}/
-e2e/smoke.spec.js (engine smoke)  e2e/site.spec.js (a site's own pages)  e2e/helpers.js  e2e/fixtures/
+e2e/smoke.spec.js (engine smoke)  e2e/search.spec.js (in-place search, v0.1.4)  e2e/site.spec.js (a site's own pages)  e2e/helpers.js  e2e/fixtures/
 api/index.js
 src/http/{router,handler,errors,query,origin,contracts}.js
 src/routes/{index,home,event,item,search,filters,person,account,video,meta}.js

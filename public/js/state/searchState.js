@@ -1,11 +1,13 @@
 // @ts-check
 /**
- * Scoped search's one piece of state (task-5-brief.md: "The URL is the
- * single source of truth. Scoped search is simply a link."). Pure: no
- * DOM, no network, no components -- the same discipline as
- * `public/js/core/*` (ruling 1), so this module is safe to import from
- * both `public/js/pages/search.js` and `public/js/components/filterSheet.js`
- * without ever reaching back into either.
+ * The in-place search's one piece of state (task-5-brief.md: "The URL is
+ * the single source of truth"; Task 10d moved it from the old search
+ * page onto home and the scoped pages). Pure: no DOM, no network, no
+ * components -- the same discipline as `public/js/core/*` (ruling 1), so
+ * this module is safe to import from both
+ * `public/js/components/inlineSearch.js` and `filterSheet.js` without
+ * ever reaching back into either. `searchScope.js` adds a scoped page's
+ * own preset filter on top.
  *
  * Every function here is immutable: `withFilter`/`withoutFilter` return a
  * new `State`, never mutate the one they're given.
@@ -51,7 +53,7 @@ function dateOrUndefined(value) {
 }
 
 /**
- * The `State` a search page URL's query string carries. Unknown or
+ * The `State` a search URL's query string carries. Unknown or
  * malformed values are dropped rather than thrown on, so a hand-edited
  * or stale URL degrades to "no filter" instead of a broken page --
  * including an invalid `from`/`to` (review round 1, I2). List fields
@@ -91,8 +93,8 @@ export function sanitizeTypes(state, options) {
 
 /**
  * `state` as a URL query string, with every empty/default field left out
- * (so the canonical URL for no filters is just `/search`, not
- * `/search?peopleMode=any&...`). List fields repeat the param (M3),
+ * (so the canonical URL for no filters is just the page's path, not
+ * `/?peopleMode=any&...`). List fields repeat the param (M3),
  * rather than comma-joining, so each value round-trips through
  * `parseState` untouched (a category name may itself contain a comma).
  * @param {State} state
@@ -174,11 +176,6 @@ export function toApiParams(state, options = {}) {
   if (state.people.length > 0) params.people = state.people.join(',');
   if (state.peopleMode === 'all') params.peopleMode = 'all';
   return params;
-}
-
-/** `true` when nothing is typed or filtered yet (the page's blank empty state: recent searches + quick chips). @param {State} state @returns {boolean} */
-export function isBlank(state) {
-  return state.q === '' && filterCount(state) === 0;
 }
 
 /**

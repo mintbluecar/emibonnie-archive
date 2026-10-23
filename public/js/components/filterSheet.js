@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * The search page's filter sheet (task-5-brief.md): who's in it (any-of
+ * The in-place search's filter sheet (task-5-brief.md; Task 10d): who's in it (any-of
  * / all-of over people), type chips (categories from `/api/filters` plus
  * the two placement chips), and selects for event, translator, client
  * and date. A native `<dialog>`, opened by the page with `showModal()`
@@ -110,7 +110,7 @@ function datesSection(state) {
 export function render({ state, options, count }) {
   return html`
     <dialog class="c-filter-sheet" aria-label="${t('search.filters')}">
-      <button type="button" class="c-filter-sheet__close" aria-label="${t('search.closeFilters')}">✕</button>
+      <button type="button" class="c-filter-sheet__close" title="${t('search.closeFilters')}" aria-label="${t('search.closeFilters')}">✕</button>
       <h2 class="c-filter-sheet__title">${t('search.filters')}</h2>
       ${peopleSection(options.people, state)}
       ${typesSection(options.categories, state)}

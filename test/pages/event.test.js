@@ -74,12 +74,17 @@ test('composeEvent: the newest-first toggle and the report link', () => {
   assert.match(markup, /<a class="c-event__report" href="\/takedown">report<\/a>/);
 });
 
-test('composeEvent: the search icon links to the event-scoped search, as an SVG (not an emoji), matching the header\'s icon style', () => {
+test('composeEvent (Task 10d): searches within the event -- its box says so, its entries are the in-place list, and there is no separate search icon', async () => {
+  const { eventSearch } = await import('../../public/js/pages/event.js');
   const markup = String(composeEvent(EVENT));
-  assert.match(markup, /href="\/search\?event=solluna-happy-day-2026-10-19"/);
-  assert.match(markup, /aria-label="search this event"/);
-  assert.match(markup, /<a class="c-event__search"[^>]*>\s*<svg width="16" height="16" viewBox="0 0 24 24"/);
-  assert.ok(!markup.includes('🔍'));
+  assert.match(markup, /placeholder="search this event…"/);
+  assert.ok(!markup.includes('c-event__search'), 'no icon to a search page');
+  assert.ok(!markup.includes('/search'));
+  assert.match(markup, /<div class="c-search__list">[\s\S]*c-event__people-filter[\s\S]*c-event-sections/, 'the list is the entries and their own controls');
+  assert.ok(markup.indexOf('c-event__name') < markup.indexOf('c-search__list'), 'the event\'s head stays above the results');
+  const search = eventSearch(EVENT.event, 'q=hug');
+  assert.equal(search.state.event, EVENT.event.slug, 'the event is preset');
+  assert.match(String(composeEvent(EVENT, search)), /data-field="event"[^>]*aria-label="remove SOLLUNA HAPPY DAY/);
 });
 
 test('composeEvent: includes the page shell\'s compact header, so the wide top bar shows the logo/wordmark too (review #3)', () => {

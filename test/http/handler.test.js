@@ -211,7 +211,10 @@ test('an unknown query param on a GET route is a no-store 400; a route may accep
   assert.equal((await handle(new Request(`${BASE}/api/none?a=1`))).status, 400, 'no declared params: none allowed');
   assert.equal((await handle(new Request(`${BASE}/api/none`))).status, 200);
   assert.equal((await handle(new Request(`${BASE}/api/any?s=20&utm_source=x`))).status, 200);
-  assert.equal(state.ended, 2, 'refused before any deps are built');
+  // Task 10d: a page's in-place search writes repeated params onto its own URL (/e/x?people=1&people=2).
+  assert.equal((await handle(new Request(`${BASE}/api/any?people=1&people=2&q=a`))).status, 200, 'a route that accepts any query never parses it, so a repeat is fine');
+  assert.equal((await handle(new Request(`${BASE}/api/echo/a?x=1&x=2`))).status, 400, 'a declared param given twice is still refused');
+  assert.equal(state.ended, 3, 'refused before any deps are built');
 });
 
 test("a GET route's own Response may shorten its cache to NOT_FOUND_CACHE, and to nothing else; a write never", async () => {

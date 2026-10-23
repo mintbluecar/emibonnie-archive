@@ -18,5 +18,5 @@ test('themeToggle (Task 10c f): an icon button named and titled for the current 
 
 test('header (Task 10c f): the bar carries the theme switch on every page', () => {
   assert.match(String(header.render()), /c-header__tools[\s\S]*c-theme-toggle/);
-  assert.match(String(header.render({ liveSearch: true })), /c-theme-toggle/);
+  assert.match(String(header.render({ search: { placeholder: 'x' } })), /c-theme-toggle/);
 });

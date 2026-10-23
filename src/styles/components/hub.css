@@ -5,15 +5,6 @@
  * group's label, and the person page's "with…" picker dialog.
  */
 
-.c-person__search {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  flex: none;
-}
-
 /* A plain card, like the person page's (mockups/people-me-v1.html, Task 9b). */
 .c-account__head {
   text-align: center;

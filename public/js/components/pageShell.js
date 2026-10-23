@@ -2,7 +2,7 @@
 /**
  * The chrome shared by every page: the site header, the tab bar / top
  * nav, the page's own content, then the footer -- one place, so every
- * page (home, event, and later search/person/account/…) wires
+ * page (home, event, person, account, item, …) wires
  * header+tabs+footer the same way instead of composing them itself
  * (Task 3 review #3). `compact` is passed straight through to `header`
  * (a page with its own title, like the event page, drops the
@@ -19,8 +19,8 @@ import * as tabBar from './tabBar.js';
  * @param {{ active?: import('./tabBar.js').TabKey, compact?: boolean,
  *   headerProps?: Record<string, unknown>, content: import('../core/html.js').SafeHtml }} props
  *   `headerProps`: passed through to `header.render()` alongside `compact`
- *   (e.g. the search page's `filterCount` badge) -- every other page
- *   leaves it out, so `header.render()` sees only `{ compact }`, same as before.
+ *   (an in-place search page's `search` row: `inlineSearchView.headerProps`)
+ *   -- every other page leaves it out, so its header has no search box.
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function render({ active, compact = false, headerProps = {}, content }) {

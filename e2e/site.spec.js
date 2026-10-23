@@ -99,7 +99,7 @@ test('a search for a word from the first item, which finds something', async ({ 
   const q = encodeURIComponent(/** @type {string} */ (word));
   const found = await api(request, `/api/search?q=${q}&limit=0`);
   expect(found.count, `search for ${word}`).toBeGreaterThan(0);
-  await checkPage(page, `/search?q=${q}`);
+  await checkPage(page, `/?q=${q}`);
 });
 
 for (const path of ['/about', '/privacy', '/takedown']) {

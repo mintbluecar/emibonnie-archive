@@ -1,0 +1,105 @@
+/*
+ * public/js/components/inlineSearch.js (Task 10d; was the search page's
+ * searchPage.css): the active-filter chips under the box, the results
+ * that replace a page's own list in place, and "more".
+ *
+ * The chips are slimmed like chips.css (Task 10c, g): their content plus
+ * --chip-pad-y/--chip-pad-x, no fixed or minimum height, with an
+ * invisible hit area keeping the tap target at least 24px tall (WCAG 2.2
+ * SC 2.5.8).
+ */
+
+.c-search__active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.c-search__active-chip,
+.c-search__clear-all {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.25;
+}
+
+.c-search__active-chip::before,
+.c-search__clear-all::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 100%;
+  min-height: 24px;
+  transform: translateY(-50%);
+}
+
+.c-search__active-chip {
+  gap: 4px;
+  font-size: var(--text-11-5);
+  border-radius: 999px;
+  padding: var(--chip-pad-y) var(--chip-pad-x);
+  /* Lavender, like the home badges (mockups/search-v2.html, Task 9b). */
+  background: var(--color-label-tint);
+  border: 1.5px solid color-mix(in srgb, var(--color-label) 30%, var(--color-card));
+  color: var(--color-label-on-tint);
+  font-weight: 700;
+}
+
+.c-search__clear-all {
+  padding: var(--chip-pad-y) 2px;
+  font-size: var(--text-11);
+  color: var(--color-ink-muted);
+  text-decoration: underline;
+}
+
+/* The results take the list's place, so they start where it did. */
+.c-search {
+  padding-top: 4px;
+}
+
+.c-search__count {
+  font-size: var(--text-11);
+  color: var(--color-ink-muted);
+  margin: 2px 2px 6px;
+}
+
+.c-search__results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.c-search__more {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  font-size: var(--text-12);
+  color: var(--color-ink-muted);
+  text-align: center;
+}
+
+/* The live region (fix round 1, I2): read out, never seen. */
+.c-search__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* A scoped page with its own filter removed and nothing typed (fix round 1, M6). */
+.c-search__hint {
+  margin: 12px 2px;
+  font-size: var(--text-12);
+  color: var(--color-ink-muted);
+}

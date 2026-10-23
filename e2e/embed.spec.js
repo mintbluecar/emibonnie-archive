@@ -154,7 +154,7 @@ test('embedSources on: the privacy page shows the X embed notice, linking X\'s p
   await assertNoSeriousA11yViolations(page);
 });
 
-test('embedSources on, X blocked (Task 10c l, q): the smaller embed\'s attributes, an "original tweet" heading, and a crop that only a tall post gets -- the switch opens it, toggling aria-expanded, keyboard reachable', async ({ page }, testInfo) => {
+test('embedSources on, X blocked (Task 10c l, q; 10d extra): the embed\'s attributes, its width (the column up to 550px, centred), an "original tweet" heading, and a crop that only a tall post gets -- the switch opens it, toggling aria-expanded, keyboard reachable', async ({ page }, testInfo) => {
   test.skip(DARK_PROJECTS.includes(testInfo.project.name), 'layout, not colour: light projects only');
   await stubSyntheticMedia(page);
   await blockX(page);
@@ -163,11 +163,26 @@ test('embedSources on, X blocked (Task 10c l, q): the smaller embed\'s attribute
   const quote = page.locator('blockquote.twitter-tweet');
   await expect(quote).toHaveAttribute('data-cards', 'hidden');
   await expect(quote).toHaveAttribute('data-conversation', 'none');
-  await expect(quote).toHaveAttribute('data-width', '350');
+  // Task 10d extra: no data-width -- X's embed fills its container up to 550px (docs.x.com embedded-posts FAQ).
+  await expect(quote).not.toHaveAttribute('data-width', /.*/);
   await expect(page.locator('.c-embed-box h2.c-embed-box__label')).toHaveText('original tweet');
   const box = page.locator('.c-embed-box');
   const more = page.locator('.c-embed-box__more');
-  expect(await box.evaluate((el) => el.getBoundingClientRect().width)).toBeLessThanOrEqual(351);
+  // Task 10d extra: the column's width up to 550px, centred in the column (the box's parent's content box).
+  const m = await box.evaluate((el) => {
+    const parent = /** @type {HTMLElement} */ (el.parentElement);
+    const cs = getComputedStyle(parent);
+    const p = parent.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    return { width: r.width, left: r.left, right: r.right, colLeft: p.left + parseFloat(cs.paddingLeft), colRight: p.right - parseFloat(cs.paddingRight) };
+  });
+  const column = m.colRight - m.colLeft;
+  if (testInfo.project.name === 'phone') {
+    expect(Math.abs(m.width - column), `fills the ${column}px column`).toBeLessThanOrEqual(1);
+  } else {
+    expect(Math.abs(m.width - 550), `550px wide in a ${column}px column`).toBeLessThanOrEqual(1);
+    expect(Math.abs((m.left - m.colLeft) - (m.colRight - m.right)), 'centred in the column').toBeLessThanOrEqual(1);
+  }
   await expect(more).toBeHidden(); // a short post: no switch, no crop
   // A synthetic long post: more text in the fallback than the cap holds.
   await quote.locator('.c-embed__text').evaluate((el) => { el.append('\nline of a very long translated post'.repeat(40)); });

@@ -174,7 +174,7 @@ test('render (Task 9b): before play, a dark box with the poster (when there is o
   const markup = String(render({ variants: VARIANTS, width: 1280, height: 720, poster: 'https://pbs.twimg.com/amplify_video_thumb/1/img/a.jpg' }));
   assert.match(markup, /<video class="c-video__el"[^>]*poster="https:\/\/pbs\.twimg\.com\/amplify_video_thumb\/1\/img\/a\.jpg"/);
   assert.ok(!/<video[^>]*\scontrols/.test(markup), 'no controls before play');
-  assert.match(markup, /<button type="button" class="c-video__play" aria-label="play">/);
+  assert.match(markup, /<button type="button" class="c-video__play" title="play" aria-label="play">/);
   assert.match(markup, /preload="metadata"/, 'still loads metadata, so the box is sized and errors still surface');
   assert.ok(!String(render({ variants: VARIANTS, width: 1280, height: 720, poster: null })).includes('poster='));
 });

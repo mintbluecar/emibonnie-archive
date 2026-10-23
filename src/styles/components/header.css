@@ -8,10 +8,12 @@
  * same value the item page's pinned media uses for its own `top`, so the
  * two stack without overlapping and with no JS measuring. Phone: a slim
  * bar -- logo, wordmark, a search icon -- then the tagline and search row
- * (`.c-header__below`), which scroll away; the nav inside the bar is
- * tabBar.css's fixed bottom bar. Desktop: one top bar -- brand left, nav
- * right, inner content aligned with the centred `.container` column --
- * and no search box, except on the search page (`--live`), as in
+ * (`.c-header__below`): the tagline scrolls away, the search row
+ * (`--live`, Task 10d: every page that searches in place) stays pinned
+ * under the bar. The nav inside the bar is tabBar.css's fixed bottom
+ * bar. Desktop: one top bar -- brand left, nav right, inner content
+ * aligned with the centred `.container` column -- with the search row,
+ * where there is one, at the top of the content column below it, as in
  * mockups/screens-v2.html's web screen. Nothing animates in or out.
  */
 
@@ -92,10 +94,15 @@
   padding: 8px 16px;
 }
 
+/* The tagline's row, then the search row: one gap between them, not two. */
+.c-header__below + .c-header__below {
+  padding-top: 0;
+}
+
 /*
- * The phone search page (fix round 1, M5): its box is the page's own live
- * search, so it stays reachable -- pinned just below the bar (never under
- * it: its top is the bar's bottom), on the page background.
+ * The search row (fix round 1, M5; Task 10d: every in-place search page):
+ * the box stays reachable -- pinned just below the bar (never under it:
+ * its top is the bar's bottom), on the page background.
  */
 .c-header__below--live {
   position: sticky;
@@ -307,10 +314,9 @@
     display: none;
   }
 
-  /* The search page's live box, and (fix round 1, O1) the home page's box:
-     in the page body at the top of the content column, the bar stays clean. */
-  .c-header__below--live .c-header__search,
-  .c-header__below--desktop .c-header__search {
+  /* The in-place search's box (fix round 1, O1; Task 10d): in the page
+     body at the top of the content column, the bar stays clean. */
+  .c-header__below--live .c-header__search {
     display: flex;
     max-width: 960px;
     margin: 16px auto 12px;

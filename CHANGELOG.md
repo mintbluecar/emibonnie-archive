@@ -2,6 +2,34 @@
 
 All notable changes to this project are documented here. Versions are semver tags (`vX.Y.Z`). Each release lists its **upgrade steps**; to take one, see `docs/start-your-own.md`, step 10.
 
+## 0.1.4
+
+Search happens in place. There is no search page any more: home is the search, and the event, person and translator pages each search within themselves. Old `/search?…` links redirect home with the same query.
+
+**Upgrade steps:**
+
+1. `git fetch upstream --tags && git merge v0.1.4`.
+2. **`/search` is gone.** The page (`src/html/search.html`, `public/js/pages/search.js`) is removed, and `vercel.json` now carries a 308 redirect from `/search` to `/` (from `src/pages.js`'s new `redirects`), which keeps the query string, so shared links like `/search?q=hug&people=2` still work. Nothing to do unless your site links to `/search` itself (a custom page or `copy.json` text): point it at `/` (or `/?q=…`).
+3. **Copy keys.** If `site/copy.json` overrides any of these, remove the line (the build refuses unknown keys): `search.recentSearches`, `search.quickChips`, `event.search`, `person.search`. New keys you may override: `search.placeholderEvent` ("search this event…"), `search.placeholderPerson` ("search {name}…"), `search.placeholderAccount` ("search @{handle}…"), `search.typeToSearchAll` ("type to search everything"). `search.placeholder` is still home's, and the box's whenever a page's own filter is removed. `nav.search` now only labels the phone bar's search icon (on pages with no box), which goes home.
+4. A site `theme.css` that styled `.c-search__recent-*`, `.c-search__quick-*`, `.c-search__blank`, `.c-event__search`, `.c-person__search`, `.c-header--live` or `.c-header__below--desktop` can drop those rules: the elements are gone. `src/styles/components/searchPage.css` is now `inlineSearch.css`.
+5. `npm run build`, then redeploy. **Git-integration path:** commit the rebuilt `vercel.json` first (it gains `redirects` and loses the `/search` rewrite).
+
+No migrations. `/api/search` is unchanged.
+
+- **Home is the search.** The event list shows until you type in the box or set a filter; then the results replace it in place, in the same column, and clearing the box and filters brings it back. The URL follows along (`history.replaceState`, so "back" still leaves the page), so a search is a shareable link, and `/?q=…&people=…` opens straight into its results. Debounced 250ms, 2-100 characters for `q`, filters work with an empty box, and a late response never overwrites a newer one, as before.
+- **Scoped search.** The event, person and translator pages have the same box, filter sheet and result cards, searching within that page: the event, person or translator is preset as a removable chip under the box (and shows as already selected in the sheet), and the placeholder says what's searched. Removing the chip searches the whole archive, still on that page; "clear all" brings it back. Results replace the page's entries (and their own people/translator/order controls) in place; the page's head stays. The URL is the page's own path with the query (`/e/x?q=hug`; `scope=all` once the preset filter is removed), so a reload shows the same thing. The person page's "with…" picker now searches in place too.
+- **The box never navigates, and nothing autofocuses.** The old "focus the box → go to `/search`" wiring (`headerLinks.js`) and the autofocus rule (`state/searchFocus.js`) are removed. Pages with no in-place search (the item page, about/privacy/takedown, 404, not-found and error states, an opted-out translator) have no box; the phone bar's search icon there goes home.
+- **Box placement.** On desktop the box sits at the top of the content column under the pinned bar on all four search pages; on a phone the search row stays pinned just below the bar on all four (home's tagline still scrolls away above it).
+- **Tab bar: home · ＋ add · me.** The search tab is gone. The event and person pages' own search icons are gone too (the box is right there).
+- **Recent searches and quick chips are gone.** Home's blank state is its event list. The active-filter chips use the chip padding tokens with no fixed height, and keep a ≥24px hit area.
+- **Meta pages ignore their query entirely.** The event and item pages' function routes accepted any query but still parsed it, so a repeated param (`?people=1&people=2`, which the in-place search writes) would have answered 400. Now a route with `query: null` never parses its query.
+- **Removing the page's own chip with nothing typed** shows a short hint, "type to search everything", in place of the page's list, since the box now searches the whole archive; "clear all" brings the chip and the list back.
+- **Results are announced.** One polite live region (`role="status"`) reads out the count line, "no results" or the error after each search, and goes quiet when the list returns. Going back to the list empties the results, and a new search is `aria-busy` until it lands, so old results never flash up while it loads. One character in the box counts as an empty box.
+- **Icon-only buttons and links have a `title`** matching their `aria-label` (the filter button, the phone bar's search icon, the dialogs' ✕ buttons, the image carousel's arrows, the video's play and full-screen buttons, the remove-filter chips). A test keeps every labelled button or link in `public/js` that way.
+- **robots.txt** no longer lists `/search`; it keeps search results out of crawls with `Disallow: /*?q=` and `Disallow: /*?*scope=`. A site with its own `robots.txt` should do the same.
+- **`npm run dev`** answers `vercel.json`'s `redirects` too (before rewrites, query kept). e2e gains `e2e/search.spec.js`.
+- **The X embed fills the column, up to 550px.** The item page's embed no longer sets `data-width="350"`: X's embed "will adjust to the width of its containing element ... and will fill up to 550 horizontal pixels" (docs.x.com, embedded posts FAQ). Its box (and the fallback card) is `--embed-width: min(100%, 550px)`, centred in the column; the crop at `--embed-max-height`, the fade and the "show full tweet" switch are unchanged. A site `theme.css` that sets `--embed-width` should now use the same form (`min(100%, 400px)`, say): the box takes that width exactly, so a bare px value could overflow a phone's column.
+
 ## 0.1.3
 
 Owner polish: a light/dark switch, thumbnails on cards, slimmer chips, hashtag links to X, a translate icon for translators, default emoji for generic roles, a favicon, a smaller cropped X embed, an owner command to fix a speaker on an archived item, and a dev watch mode. Fixes the item media jumping when it pins, long URLs overflowing (which also made the header stop short of the window's edge), off-centre emoji, and the item page's stray search row.

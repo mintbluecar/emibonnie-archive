@@ -11,16 +11,20 @@
  * brand (Task 9b): on desktop (>=860px) header.css lays the two out as
  * one top bar -- brand left, links right, no search box -- as in
  * mockups/screens-v2.html's web screen; on a phone tabBar.css still fixes
- * the nav to the bottom. `liveSearch` marks the search page's header,
- * whose box is the page's own live search and so stays on desktop too
- * (and whose phone bar has no search icon: the box is right there).
+ * the nav to the bottom.
  *
  * Task 10b pins the bar (header.css). Only the `<header>` landmark holds
  * the bar; the search row follows it as its own `search` landmark.
+ *
+ * Task 10d: a page that searches in place (home, event, person,
+ * translator: `components/inlineSearch.js`) passes `search` and gets the
+ * row -- pinned under the bar on a phone, at the top of the content
+ * column on desktop. Every other page (the item page, the static pages)
+ * has no box, only the phone bar's search icon, which goes home.
  */
 import { html } from '../core/html.js';
 import { site, t } from '../core/site.js';
-import { SEARCH_PATH, HOME_PATH } from '../core/routes.js';
+import { HOME_PATH } from '../core/routes.js';
 import * as themeToggle from './themeToggle.js';
 
 /** @returns {import('../core/html.js').SafeHtml} */
@@ -33,15 +37,22 @@ function searchIcon() {
   `;
 }
 
-/** @param {number|undefined} filterCount @returns {import('../core/html.js').SafeHtml} */
-function searchRow(filterCount) {
+/** @typedef {{ placeholder: string, filterCount?: number }} SearchProps */
+
+/** The filter button's name, as its tooltip too (owner rule: every icon-only control has a `title`). @param {number|undefined} n @returns {string} */
+export function filterLabel(n) {
+  return n ? t('search.filtersActive', { n }) : t('search.filters');
+}
+
+/** @param {SearchProps} props @returns {import('../core/html.js').SafeHtml} */
+function searchRow({ placeholder, filterCount }) {
   return html`
     <div class="c-header__search" role="search">
       <span class="c-header__search-field">
         ${searchIcon()}
-        <input class="c-header__search-box" type="search" placeholder="${t('search.placeholder')}">
+        <input class="c-header__search-box" type="search" placeholder="${placeholder}">
       </span>
-      <button class="c-header__filter-btn" type="button" aria-label="${filterCount ? t('search.filtersActive', { n: filterCount }) : t('search.filters')}">
+      <button class="c-header__filter-btn" type="button" title="${filterLabel(filterCount)}" aria-label="${filterLabel(filterCount)}">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
           <path d="M4 6h16M7 12h10M10 18h4" />
         </svg>
@@ -52,15 +63,13 @@ function searchRow(filterCount) {
 }
 
 /**
- * The phone bar's search icon: a link to the search page (desktop has the
- * nav's own "search" link instead) -- or, on a page with no search row
- * (`noSearch`, the item page: Task 10c r, owner's decision), to home.
- * @param {boolean} noSearch
+ * The phone bar's search icon, on a page with no search row: it goes
+ * home, where the search is (Task 10c r, owner's decision; Task 10d).
  * @returns {import('../core/html.js').SafeHtml}
  */
-function findLink(noSearch) {
+function findLink() {
   return html`
-    <a class="c-header__find" href="${noSearch ? HOME_PATH : SEARCH_PATH}" aria-label="${t('nav.search')}">
+    <a class="c-header__find" href="${HOME_PATH}" title="${t('nav.search')}" aria-label="${t('nav.search')}">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="11" cy="11" r="7"></circle>
         <path d="M21 21l-4.3-4.3"></path>
@@ -94,24 +103,16 @@ function brand(compact) {
   `;
 }
 
-/** @param {boolean} liveSearch @param {boolean} desktopSearch @returns {string} */
-function belowClass(liveSearch, desktopSearch) {
-  return `c-header__below${liveSearch ? ' c-header__below--live' : ''}${desktopSearch ? ' c-header__below--desktop' : ''}`;
-}
-
 /**
- * What follows the bar: the phone tagline and the search row -- neither
- * for a compact page with `noSearch` (the item page).
- * @param {{ compact: boolean, filterCount?: number, liveSearch: boolean, desktopSearch: boolean, noSearch: boolean }} props
+ * What follows the bar: the phone tagline (not on a compact page), which
+ * scrolls away, then the search row, which stays pinned under the bar.
+ * @param {boolean} compact @param {SearchProps|undefined} search
  * @returns {import('../core/html.js').SafeHtml}
  */
-function below({ compact, filterCount, liveSearch, desktopSearch, noSearch }) {
-  if (noSearch && compact) return html``;
+function below(compact, search) {
   return html`
-    <div class="${belowClass(liveSearch, desktopSearch)}">
-      ${compact ? '' : tagline('below')}
-      ${noSearch ? '' : searchRow(filterCount)}
-    </div>
+    ${compact ? '' : html`<div class="c-header__below">${tagline('below')}</div>`}
+    ${search ? html`<div class="c-header__below c-header__below--live">${searchRow(search)}</div>` : ''}
   `;
 }
 
@@ -121,29 +122,27 @@ function below({ compact, filterCount, liveSearch, desktopSearch, noSearch }) {
  * and search row sit *after* it, so on a phone they scroll away; the
  * tagline is rendered in both places, and CSS shows exactly one of them
  * (the hidden one is `display: none`, so a screen reader hears it once).
- * `desktopSearch` (fix round 1, O1: the home page) keeps the search row
- * on desktop too, at the top of the content column under the bar -- the
- * bar itself stays clean. It still goes to /search (headerLinks.js).
- * `noSearch` (Task 10c r: the item page, which has no search box at any
- * width) leaves the search row out entirely.
- * @param {{ compact?: boolean, filterCount?: number, liveSearch?: boolean, desktopSearch?: boolean, noSearch?: boolean, nav?: import('../core/html.js').SafeHtml }} [props]
+ * `search` (Task 10d: a page that searches in place) adds the search
+ * row, with the page's placeholder and active-filter count; the bar then
+ * has no search icon, since the box is right there.
+ * @param {{ compact?: boolean, search?: SearchProps, nav?: import('../core/html.js').SafeHtml }} [props]
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function render(props = {}) {
-  const { compact = false, filterCount, liveSearch = false, desktopSearch = false, noSearch = false, nav } = props;
+  const { compact = false, search, nav } = props;
   return html`
-    <header class="c-header${compact ? ' c-header--compact' : ''}${liveSearch ? ' c-header--live' : ''}">
+    <header class="c-header${compact ? ' c-header--compact' : ''}">
       <div class="c-header__bar">
         <div class="c-header__inner">
           ${brand(compact)}
           <div class="c-header__tools">
             ${themeToggle.render()}
-            ${liveSearch ? '' : findLink(noSearch)}
+            ${search ? '' : findLink()}
           </div>
           ${nav ?? ''}
         </div>
       </div>
     </header>
-    ${below({ compact, filterCount, liveSearch, desktopSearch, noSearch })}
+    ${below(compact, search)}
   `;
 }

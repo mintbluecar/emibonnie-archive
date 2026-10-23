@@ -33,11 +33,13 @@ test('composePerson: the person header, in their colour, and the counts line', (
   assert.match(markup, /in 6\u00a0translations · 3\u00a0events · 0\u00a0shared\u00a0stories/);
 });
 
-test('composePerson: a search icon scoped to this person, as an SVG (not an emoji)', () => {
+test('composePerson (Task 10d): searches within this person -- the box names them, and there is no separate search icon', () => {
   const markup = String(composePerson(PERSON));
-  assert.match(markup, /href="\/search\?people=1"/);
-  assert.match(markup, /aria-label="search for this person"/);
-  assert.ok(!markup.includes('🔍'));
+  assert.match(markup, /placeholder="search sol…"/);
+  assert.ok(!markup.includes('c-person__search'));
+  assert.ok(!markup.includes('/search'));
+  assert.match(markup, /<div class="c-search__list">[\s\S]*c-hub__seg/);
+  assert.match(markup, /data-field="people" data-value="1"[^>]*aria-label="remove ☀️ sol"/, 'the person is a removable chip from the start');
 });
 
 test('composePerson: the segmented control, with "with…" (person only)', () => {
@@ -152,26 +154,27 @@ test('bind: "more" is guarded by a sequence number against a stale response (rev
   }
 });
 
-test('bind: reopening the "with…" picker twice, then applying, navigates exactly once with the right people (review round 1, I2)', async () => {
+test('bind (Task 10d): reopening the "with…" picker twice, then applying, searches in place exactly once with the right people (review round 1, I2)', async () => {
   const root = mountedPerson(PERSON, 'solsunny');
   try {
-    // A plain {href: ''} would hide a pile-up: 3 stacked listeners writing the
-    // *same* final string on one click looks identical to 1 listener writing it
-    // once. A setter that counts writes catches the difference either way.
-    let hrefWrites = 0;
-    let lastHref = '';
-    globalThis.window = /** @type {any} */ ({ location: {} });
-    Object.defineProperty(globalThis.window.location, 'href', {
-      set(value) { hrefWrites += 1; lastHref = value; },
-      get() { return lastHref; },
+    /** @type {string[]} */
+    const urls = [];
+    globalThis.history = /** @type {any} */ ({ replaceState: (/** @type {any} */ _s, /** @type {any} */ _t, /** @type {string} */ url) => { urls.push(url); } });
+    const location = { pathname: '/p/solsunny', search: '' };
+    Object.defineProperty(location, 'href', { get: () => '/p/solsunny', set: (v) => { throw new Error(`navigated to ${v}`); } });
+    globalThis.window = /** @type {any} */ ({ location });
+    /** @type {string[]} */
+    const searches = [];
+    mock.method(globalThis, 'fetch', async (/** @type {any} */ url) => {
+      if (String(url).startsWith('/api/search')) { searches.push(String(url)); return new Response(JSON.stringify({ count: 0, results: [] }), { status: 200 }); }
+      return new Response(JSON.stringify({
+        people: [
+          { id: 1, name: 'sol', emoji: '☀️', colour: '#c47a12', igHandle: 'solsunny' },
+          { id: 2, name: 'luna', emoji: '🌙', colour: '#6a5cd6', igHandle: 'lunamoon' },
+        ],
+        categories: [], clients: [], events: [], accounts: [],
+      }), { status: 200 });
     });
-    mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({
-      people: [
-        { id: 1, name: 'sol', emoji: '☀️', colour: '#c47a12', igHandle: 'solsunny' },
-        { id: 2, name: 'luna', emoji: '🌙', colour: '#6a5cd6', igHandle: 'lunamoon' },
-      ],
-      categories: [], clients: [], events: [], accounts: [],
-    }), { status: 200 }));
     const withChip = /** @type {any} */ (root.querySelector('.c-hub__seg .c-chips__chip[data-value="with"]'));
     withChip.click();
     await flush();
@@ -185,9 +188,13 @@ test('bind: reopening the "with…" picker twice, then applying, navigates exact
     lunaChip.click();
     const applyBtn = /** @type {any} */ (root.querySelector('.c-hub__picker-apply'));
     applyBtn.click();
-    assert.equal(hrefWrites, 1, 'apply navigated exactly once, not once per reopen');
-    assert.equal(lastHref, '/search?people=1&people=2&peopleMode=all');
+    await flush();
+    assert.deepEqual(urls, ['/p/solsunny?people=2&peopleMode=all'], 'one in-place search on the person\'s own page (sol is implied by the path)');
+    assert.equal(searches.length, 1);
+    assert.match(searches[0], /people=1%2C2&peopleMode=all/);
+    assert.ok(root.querySelector('.c-search__list').hidden, 'results replace the list');
   } finally {
+    delete (/** @type {any} */ (globalThis)).history;
     cleanup();
   }
 });
