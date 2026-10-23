@@ -66,3 +66,12 @@ test('canClear / cleared: "clear all" goes back to the page filter, keeping what
   assert.deepEqual(cleared({ ...EMPTY_STATE, q: 'x', types: ['live'] }, ACCOUNT), { ...presetState(ACCOUNT), q: 'x' });
   assert.deepEqual(cleared({ ...EMPTY_STATE, people: [1] }, null), EMPTY_STATE);
 });
+
+test('viewOf (fix round 1, M6): list, results, or -- a scoped page with its own filter removed and nothing else -- a hint', async () => {
+  const { viewOf } = await import('../../public/js/state/searchScope.js');
+  assert.equal(viewOf(presetState(EVENT), EVENT), 'list');
+  assert.equal(viewOf(withoutScope(presetState(EVENT), EVENT), EVENT), 'hint');
+  assert.equal(viewOf({ ...EMPTY_STATE, q: 'hi' }, EVENT), 'results');
+  assert.equal(viewOf({ ...EMPTY_STATE, types: ['live'] }, EVENT), 'results');
+  assert.equal(viewOf(EMPTY_STATE, null), 'list', 'home never hints');
+});

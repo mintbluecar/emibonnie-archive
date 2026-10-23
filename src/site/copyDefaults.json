@@ -46,6 +46,7 @@
   "search.placeholderEvent": "search this event…",
   "search.placeholderPerson": "search {name}…",
   "search.placeholderAccount": "search @{handle}…",
+  "search.typeToSearchAll": "type to search everything",
   "search.showN": "show {n}",
   "search.anyOf": "any of",
   "search.allOf": "all of",

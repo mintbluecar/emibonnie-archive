@@ -22,8 +22,10 @@ import { t } from '../core/site.js';
 import { withQuery } from '../core/routes.js';
 import * as resultCard from './resultCard.js';
 import { toApiParams, filterCount, sanitizeTypes, withoutFilter } from '../state/searchState.js';
-import { cleared, queryOf, showsList, stateFromQuery } from '../state/searchScope.js';
-import { NO_OPTIONS, errorMarkup, filtersRow, placeholderOf, resultsBody } from './inlineSearchView.js';
+import { cleared, queryOf, stateFromQuery, viewOf } from '../state/searchScope.js';
+import {
+  NO_OPTIONS, errorMarkup, filtersRow, hintMarkup, placeholderOf, resultsBody, statusText,
+} from './inlineSearchView.js';
 import { openSheet, updateFilterBadge } from './inlineSearchSheet.js';
 
 const DEBOUNCE_MS = 250;
@@ -39,12 +41,19 @@ function qLength(q) {
   return [...q.normalize('NFC')].length;
 }
 
-/** `q`, trimmed, or `undefined` when it's out of `/api/search`'s 2-100 range (review round 1, I2) -- not just too short. @param {string} value @returns {string|undefined} */
+/**
+ * `q`, trimmed; `''` when it's shorter than `/api/search`'s 2-character
+ * minimum (fix round 1, M4: one character shows the state as if the box
+ * were empty, so a previous search's results don't stay up); `undefined`
+ * when it's over the 100 maximum (review round 1, I2), which leaves the
+ * last search as it was.
+ * @param {string} value @returns {string|undefined}
+ */
 function validQ(value) {
   const q = value.trim();
   const len = qLength(q);
-  if (len === 0) return '';
-  return len >= Q_MIN && len <= Q_MAX ? q : undefined;
+  if (len < Q_MIN) return '';
+  return len <= Q_MAX ? q : undefined;
 }
 
 /**
@@ -71,6 +80,12 @@ function showList(root, listShown) {
   if (results) results.hidden = listShown;
 }
 
+/** Sets the one live region's text (fix round 1, I2): announced politely, `''` says nothing. @param {Element} root @param {string} text */
+function announce(root, text) {
+  const status = root.querySelector('.c-search__status');
+  if (status) status.textContent = text;
+}
+
 /** The chips row and the box's placeholder, after any state change. @param {Element} root @param {Ctx} ctx */
 function renderChrome(root, ctx) {
   const slot = root.querySelector('.c-search__filters');
@@ -90,6 +105,7 @@ function renderChrome(root, ctx) {
 async function refetchAndRender(root, ctx) {
   const mySeq = ++ctx.seq;
   const searchEl = root.querySelector('.c-search');
+  searchEl?.setAttribute('aria-busy', 'true');
   try {
     await ctx.optionsReady;
     const data = await getJson('/api/search', { ...toApiParams(ctx.state, ctx.options), limit: PAGE_SIZE, offset: 0 });
@@ -100,15 +116,50 @@ async function refetchAndRender(root, ctx) {
       mount(searchEl, resultsBody(ctx));
       resultCard.bind(searchEl);
     }
+    announce(root, statusText(ctx));
   } catch {
     if (mySeq !== ctx.seq) return;
     if (searchEl) mount(searchEl, errorMarkup());
+    announce(root, t('search.error'));
+  } finally {
+    if (mySeq === ctx.seq) searchEl?.setAttribute('aria-busy', 'false');
   }
 }
 
 /**
- * Applies `next`: the URL, the chips, then the list (no fetch: an
- * in-flight one is cancelled by bumping `seq`) or fresh results.
+ * Leaves the results behind for the list or the hint (fix round 1, I1):
+ * cancels any search in flight (`seq`), empties `.c-search` and forgets
+ * its data, so the next search never shows the old results -- not even
+ * for a moment while it loads -- and announces the hint, or nothing.
+ * @param {Element} root @param {Ctx} ctx @param {'list'|'hint'} view
+ */
+function leaveResults(root, ctx, view) {
+  ctx.seq += 1;
+  ctx.data = { count: 0, results: [] };
+  ctx.offset = 0;
+  const searchEl = root.querySelector('.c-search');
+  if (searchEl) {
+    mount(searchEl, view === 'hint' ? hintMarkup() : html``);
+    searchEl.setAttribute('aria-busy', 'false');
+  }
+  announce(root, view === 'hint' ? t('search.typeToSearchAll') : '');
+}
+
+/**
+ * Shows what `ctx.state` calls for: the page's own list, the hint, or
+ * fresh results.
+ * @param {Element} root @param {Ctx} ctx @returns {Promise<void>}
+ */
+async function show(root, ctx) {
+  const view = viewOf(ctx.state, ctx.scope);
+  showList(root, view === 'list');
+  if (view === 'results') await refetchAndRender(root, ctx);
+  else leaveResults(root, ctx, view);
+}
+
+/**
+ * Applies `next`: the URL, the chips, then the list or the hint (no
+ * fetch: an in-flight one is cancelled) or fresh results.
  * Exported for a page's own control that starts a search (the person
  * page's "with…" picker).
  * @param {Element} root @param {Ctx} ctx @param {State} next @returns {Promise<void>}
@@ -117,13 +168,7 @@ export async function commit(root, ctx, next) {
   ctx.state = next;
   history.replaceState(null, '', withQuery(window.location.pathname, queryOf(next, ctx.scope)));
   renderChrome(root, ctx);
-  const listShown = showsList(next, ctx.scope);
-  showList(root, listShown);
-  if (listShown) {
-    ctx.seq += 1;
-    return;
-  }
-  await refetchAndRender(root, ctx);
+  await show(root, ctx);
 }
 
 /**
@@ -208,12 +253,12 @@ async function loadOptions(ctx) {
  */
 export async function bind(root, ctx) {
   bindBox(root, ctx);
-  on(root, '.c-header__filter-btn', 'click', () => openSheet(root, ctx, (next) => commit(root, ctx, next)));
+  // Apply keeps whatever is in the box now (fix round 1, M3), not the q the sheet opened with.
+  on(root, '.c-header__filter-btn', 'click', () => openSheet(root, ctx, (next) => commit(root, ctx, { ...next, q: ctx.state.q })));
   bindAreas(root, ctx);
-  const listShown = showsList(ctx.state, ctx.scope);
-  showList(root, listShown);
+  showList(root, viewOf(ctx.state, ctx.scope) === 'list');
   ctx.optionsReady = loadOptions(ctx);
   await ctx.optionsReady;
   renderChrome(root, ctx);
-  if (!listShown) await refetchAndRender(root, ctx);
+  await show(root, ctx);
 }

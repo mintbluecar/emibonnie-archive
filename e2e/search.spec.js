@@ -91,8 +91,44 @@ test('event page: the box searches within the event, preset as a removable chip;
   await page.waitForSelector('#app[data-ready]', { state: 'attached' });
   await expect(countLine(page)).toHaveText('7 translations · best match first');
   await expect(chip).toHaveCount(0);
+  // Fix round 1, M6: with the event's chip still removed, an empty box hints to type -- the
+  // page searches the whole archive now, so its own list isn't shown; "clear all" brings both back.
   await box.fill('');
+  await expect(page.locator('.c-search__hint')).toHaveText('type to search everything');
+  await expect(page.locator('.c-event-sections')).toBeHidden();
+  await page.locator('.c-search__clear-all').click();
   await expect(page.locator('.c-event-sections')).toBeVisible();
+  await expect(chip).toBeVisible();
+});
+
+test('fix round 1, I1: clearing and typing again never flashes the old results, even while the new search is slow; the live region announces the new count', async ({ page }, testInfo) => {
+  test.skip(DARK_PROJECTS.includes(testInfo.project.name), LIGHT_ONLY);
+  await gotoReady(page, `/?q=${Q}`);
+  await expect(countLine(page)).toHaveText('7 translations · best match first');
+  /** @type {string[]} */
+  const seen = [];
+  await page.exposeFunction('noteCount', (/** @type {string} */ text) => { seen.push(text); });
+  await page.evaluate(() => {
+    new MutationObserver(() => {
+      const line = document.querySelector('.c-search__count');
+      const area = document.querySelector('.c-search');
+      if (line && area && !area.hidden) /** @type {any} */ (window).noteCount(line.textContent);
+    }).observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
+  });
+  // The next search answers only after a delay, so any stale content would show meanwhile.
+  await page.route('**/api/search?*q=today*', async (route) => {
+    await new Promise((resolve) => { setTimeout(resolve, 800); });
+    await route.continue();
+  });
+  const box = page.locator('.c-header__search-box');
+  await box.fill('');
+  await expect(page.locator('.c-search__list')).toBeVisible();
+  await box.fill('today');
+  await expect(page.locator('.c-search')).toHaveAttribute('aria-busy', 'true');
+  await expect(countLine(page)).toHaveText('4 translations · best match first');
+  await expect(page.locator('.c-search')).toHaveAttribute('aria-busy', 'false');
+  await expect(page.locator('.c-search__status')).toHaveText('4 translations · best match first');
+  expect(seen.filter((text) => text.startsWith('7 ')), `old count lines seen: ${JSON.stringify(seen)}`).toEqual([]);
 });
 
 test('person page: preset person chip; removing it widens the results; "clear all" brings it back', async ({ page }, testInfo) => {

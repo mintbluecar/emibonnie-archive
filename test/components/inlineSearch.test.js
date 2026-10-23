@@ -378,3 +378,112 @@ test('prepare: a q out of the 2-100 range in a hand-edited URL is dropped', () =
   assert.equal(inlineSearch.prepare({ search: `q=${'x'.repeat(101)}` }).state.q, '');
   assert.equal(inlineSearch.prepare({ search: 'q=ab' }).state.q, 'ab');
 });
+
+/** @param {any} root @returns {string} */
+const status = (root) => root.querySelector('.c-search__status').textContent ?? '';
+
+test('fix round 1, I2: one live region, outside the re-mounted results, announces the count, "no results" and errors, and goes quiet when the list returns', async () => {
+  let body = /** @type {any} */ ({ count: 3, results: [RESULT] });
+  stubFetch(() => { if (body === 'fail') throw new Error('down'); return body; });
+  mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    const { root } = await mountedPage();
+    const live = root.querySelector('.c-search__status');
+    assert.equal(live.getAttribute('role'), 'status');
+    assert.equal(live.getAttribute('aria-live'), 'polite');
+    assert.equal(live.closest('.c-search'), null, 'outside .c-search, so a re-mount never replaces it');
+    await typeAndSettle(root, 'hi');
+    assert.equal(status(root), '3 translations · best match first');
+    body = { count: 0, results: [] };
+    await typeAndSettle(root, 'zz');
+    assert.equal(status(root), 'no results');
+    body = 'fail';
+    await typeAndSettle(root, 'yy');
+    assert.equal(status(root), 'something went wrong, try again');
+    await typeAndSettle(root, '');
+    assert.equal(status(root), '', 'the list is back: nothing to announce');
+  } finally {
+    cleanup();
+  }
+});
+
+test('fix round 1, I1: back to the list empties the results and forgets them; a new search is aria-busy until it lands, with nothing old showing', async () => {
+  /** @type {((body: any) => void)[]} */
+  const resolvers = [];
+  let first = true;
+  stubFetch(() => {
+    if (first) { first = false; return { count: 9, results: [RESULT] }; }
+    return new Promise((resolve) => { resolvers.push((b) => resolve(ok(b))); });
+  });
+  mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    const { root, ctx } = await mountedPage({ query: 'q=old' });
+    const searchEl = root.querySelector('.c-search');
+    assert.equal(root.querySelectorAll('.c-result-card').length, 1);
+    await typeAndSettle(root, '');
+    assert.equal(searchEl.children.length, 0, 'emptied, not just hidden');
+    assert.deepEqual(ctx.data, { count: 0, results: [] });
+    assert.equal(ctx.offset, 0);
+    await typeAndSettle(root, 'new');
+    assert.equal(searchEl.getAttribute('aria-busy'), 'true');
+    assert.equal(root.querySelectorAll('.c-search__count').length, 0, 'the old count line never comes back while loading');
+    resolvers[0]({ count: 1, results: [RESULT] });
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.equal(searchEl.getAttribute('aria-busy'), 'false');
+    assert.equal(root.querySelectorAll('.c-result-card').length, 1);
+  } finally {
+    cleanup();
+  }
+});
+
+test('fix round 1, M4: one character in the box shows the page as if it were empty', async () => {
+  const calls = stubFetch();
+  mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    const { root, urls } = await mountedPage({ query: 'q=hug' });
+    await typeAndSettle(root, 'h');
+    assert.ok(listShown(root), 'the old results do not stay up');
+    assert.equal(urls.at(-1), '/');
+    assert.equal(calls.length, 1, 'no search for one character');
+  } finally {
+    cleanup();
+  }
+});
+
+test('fix round 1, M6: a scoped page with its own chip removed and an empty box shows a hint to type, not its own list; "clear all" brings both back', async () => {
+  const calls = stubFetch();
+  try {
+    const { root, urls } = await mountedPage({ scope: EVENT_SCOPE, path: '/e/starfest' });
+    /** @type {any} */ (root.querySelector('.c-search__active-chip[data-field="event"]')).click();
+    await flush();
+    assert.equal(urls.at(-1), '/e/starfest?scope=all');
+    assert.ok(root.querySelector('.c-search__list').hidden, 'the event\'s own list is not what is searched now');
+    assert.ok(!root.querySelector('.c-search').hidden);
+    assert.match(root.querySelector('.c-search__hint').children[0].textContent, /type to search everything/);
+    assert.equal(calls.length, 0, 'no search for the hint');
+    /** @type {any} */ (root.querySelector('.c-search__clear-all')).click();
+    await flush();
+    assert.equal(urls.at(-1), '/e/starfest');
+    assert.ok(listShown(root));
+    assert.ok(root.querySelector('.c-search__active-chip[data-field="event"]'));
+  } finally {
+    cleanup();
+  }
+});
+
+test('fix round 1, M3: the sheet\'s Apply keeps what is in the box now, not the q it opened with', async () => {
+  stubFetch(() => ({ count: 1, results: [RESULT] }));
+  mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    const { root, urls } = await mountedPage();
+    /** @type {any} */ (root.querySelector('.c-header__filter-btn')).click();
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    await typeAndSettle(root, 'hi');
+    /** @type {any} */ (root.querySelector('.c-filter-sheet__people .c-chips__chip[data-value="2"]')).click();
+    /** @type {any} */ (root.querySelector('.c-filter-sheet__apply')).click();
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.equal(urls.at(-1), '/?q=hi&people=2');
+  } finally {
+    cleanup();
+  }
+});

@@ -78,13 +78,22 @@ export function queryOf(state, scope) {
 }
 
 /**
- * Whether the page shows its own list rather than results: nothing
- * typed, and no filter beyond the page's own (home: no filter at all).
+ * What the page shows for `state`: its own `'list'` (nothing typed, no
+ * filter beyond the page's own -- home: no filter at all), `'results'`,
+ * or, on a scoped page whose own filter was removed with nothing typed
+ * or added, a `'hint'` to type (fix round 1, M6: the page now searches
+ * the whole archive, so its own list would be the wrong thing to show).
  * @param {State} state @param {Scope|null} scope
- * @returns {boolean}
+ * @returns {'list'|'hint'|'results'}
  */
+export function viewOf(state, scope) {
+  if (state.q !== '' || filterCount(withoutScope(state, scope)) > 0) return 'results';
+  return scope && !hasScope(state, scope) ? 'hint' : 'list';
+}
+
+/** Whether the page shows its own list (`viewOf` is `'list'`). @param {State} state @param {Scope|null} scope @returns {boolean} */
 export function showsList(state, scope) {
-  return state.q === '' && filterCount(withoutScope(state, scope)) === 0;
+  return viewOf(state, scope) === 'list';
 }
 
 /**

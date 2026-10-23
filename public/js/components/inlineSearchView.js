@@ -21,7 +21,7 @@ import { t, tCount } from '../core/site.js';
 import * as resultCard from './resultCard.js';
 import * as emptyState from './emptyState.js';
 import { filterCount } from '../state/searchState.js';
-import { canClear, hasScope, showsList } from '../state/searchScope.js';
+import { canClear, hasScope, viewOf } from '../state/searchScope.js';
 
 /** @type {FilterOptions} */
 export const NO_OPTIONS = { people: [], categories: [], clients: [], events: [], accounts: [] };
@@ -89,7 +89,7 @@ export function filtersRow(ctx) {
   if (chips.length === 0 && !clearable) return html``;
   return html`
     <div class="c-search__active-filters">
-      ${chips.map((c) => html`<button type="button" class="c-search__active-chip" data-field="${c.field}" data-value="${c.value}" aria-label="${t('search.removeFilter', { label: c.label })}">${c.label} <span aria-hidden="true">✕</span></button>`)}
+      ${chips.map((c) => html`<button type="button" class="c-search__active-chip" data-field="${c.field}" data-value="${c.value}" title="${t('search.removeFilter', { label: c.label })}" aria-label="${t('search.removeFilter', { label: c.label })}">${c.label} <span aria-hidden="true">✕</span></button>`)}
       ${clearable ? html`<button type="button" class="c-search__clear-all">${t('search.clearAll')}</button>` : ''}
     </div>
   `;
@@ -103,8 +103,32 @@ export function filtersRow(ctx) {
  * @param {Ctx} ctx
  */
 function countLine(ctx) {
+  return html`<p class="c-search__count">${countText(ctx)}</p>`;
+}
+
+/** @param {Ctx} ctx @returns {string} */
+function countText(ctx) {
   const order = ctx.state.q ? t('search.bestFirst') : t('search.newestFirst');
-  return html`<p class="c-search__count">${t('search.countLine', { count: tCount('search.results', ctx.data.count), order })}</p>`;
+  return t('search.countLine', { count: tCount('search.results', ctx.data.count), order });
+}
+
+/**
+ * What the live region announces once results land (fix round 1, I2):
+ * the count line, or "no results".
+ * @param {Ctx} ctx @returns {string}
+ */
+export function statusText(ctx) {
+  return ctx.data.results.length === 0 ? t('search.empty') : countText(ctx);
+}
+
+/**
+ * A scoped page whose own filter was removed, with nothing typed or
+ * added (fix round 1, M6): it now searches the whole archive, so it
+ * says to type rather than showing the page's own list.
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+export function hintMarkup() {
+  return html`<p class="c-search__hint">${t('search.typeToSearchAll')}</p>`;
 }
 
 /** The results, the count line and "more" -- or "no results". @param {Ctx} ctx @returns {import('../core/html.js').SafeHtml} */
@@ -131,23 +155,26 @@ export function filtersSlot(ctx) {
 
 /**
  * The results area and the page's own `list`, one of them shown: the
- * list until something is typed or filtered (`showsList`), then the
- * results in its place. The filter sheet's container rides along.
- * The `hidden` attributes only avoid a flash on first paint;
- * `inlineSearch.bind` sets the real state.
+ * list until something is typed or filtered (`viewOf`), then the
+ * results in its place. The filter sheet's container rides along, and
+ * so does the one live region (fix round 1, I2): it sits outside
+ * `.c-search`, which is re-mounted on every render, so a screen reader
+ * hears each new count. The `hidden` attributes only avoid a flash on
+ * first paint; `inlineSearch.bind` sets the real state.
  * @param {Ctx} ctx @param {import('../core/html.js').SafeHtml} list
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function region(ctx, list) {
-  const listShown = showsList(ctx.state, ctx.scope);
+  const listShown = viewOf(ctx.state, ctx.scope) === 'list';
   return html`
+    <p class="c-search__status" role="status" aria-live="polite"></p>
     <div class="c-search"${listShown ? html` hidden` : ''}></div>
     <div class="c-search__list"${listShown ? '' : html` hidden`}>${list}</div>
     <div class="c-search__sheet"></div>
   `;
 }
 
-/** The box's text: the page's own ("search bonnie…") while its filter is on, else the archive-wide one. @param {Ctx} ctx @returns {string} */
+/** The box's text: the page's own ("search sol…") while its filter is on, else the archive-wide one. @param {Ctx} ctx @returns {string} */
 export function placeholderOf(ctx) {
   return hasScope(ctx.state, ctx.scope) ? ctx.placeholder : t('search.placeholder');
 }
