@@ -23,6 +23,7 @@
 }
 
 .c-embed__text {
+  overflow-wrap: anywhere;
   line-height: 1.45;
   margin-bottom: 6px;
   white-space: pre-wrap;

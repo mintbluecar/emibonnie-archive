@@ -64,6 +64,11 @@
      content plus this, never a fixed height. */
   --chip-pad-x: 10px;
   --chip-pad-y: 4px;
+  /* How far an emoji glyph is moved down to sit optically centred in its
+     circle or chip (Task 10c, bubbles.css's .c-emoji): emoji fonts draw
+     above the centre of their em box. Measured in Chromium (macOS, Apple
+     Color Emoji) with canvas measureText's ink box. */
+  --emoji-nudge-y: 0.05em;
   /* A card's thumbnail height (Task 10c, thumb.css); its width follows
      the picture, between half and one and a half times this. */
   --thumb-size: 56px;

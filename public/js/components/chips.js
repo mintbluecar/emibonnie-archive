@@ -35,7 +35,7 @@ import { hashtagHref } from '../core/links.js';
 function oneChip(item) {
   const classes = `c-chips__chip${item.active ? ' c-chips__chip--on' : ''}`;
   const colourAttr = item.colour ? html` data-c="${item.colour}"` : '';
-  const content = item.emoji ? html`<span class="c-chips__emoji" aria-hidden="true">${item.emoji}</span><span>${item.label}</span>` : item.label;
+  const content = item.emoji ? html`<span class="c-chips__emoji c-emoji" aria-hidden="true">${item.emoji}</span><span>${item.label}</span>` : item.label;
   if (item.href) {
     return html`<a class="${classes}" href="${item.href}" target="_blank" rel="noopener noreferrer"${item.title ? html` title="${item.title}"` : ''}${colourAttr}>${content}</a>`;
   }

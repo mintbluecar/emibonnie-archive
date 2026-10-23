@@ -54,7 +54,7 @@ test('CSS (Task 10c g): a chip is its content plus the --chip-pad-y/--chip-pad-x
 
 test('render (Task 10c g): a chip with an emoji puts it in its own decorative element before the label', () => {
   const markup = String(render({ items: [{ emoji: '🌙', label: 'luna', value: 2 }] }));
-  assert.match(markup, /<span class="c-chips__emoji" aria-hidden="true">🌙<\/span><span>luna<\/span><\/button>/);
+  assert.match(markup, /<span class="c-chips__emoji c-emoji" aria-hidden="true">🌙<\/span><span>luna<\/span><\/button>/);
 });
 
 test('hashtagChip (Task 10c h): links to X\'s hashtag search through the allowlist, in a new tab, noopener noreferrer, with the "search on X" tooltip; a plain chip stays a span', () => {

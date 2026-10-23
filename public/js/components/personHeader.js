@@ -17,7 +17,7 @@ export function render(props) {
   const { person, counts, action } = props;
   return html`
     <div class="c-person-header"${person.colour ? html` data-c="${person.colour}"` : ''}>
-      <span class="c-person-header__emoji" aria-hidden="true">${person.emoji}</span>
+      <span class="c-person-header__emoji c-emoji" aria-hidden="true">${person.emoji}</span>
       <h1 class="c-person-header__name">${person.name}</h1>
       ${person.igHandle ? html`<p class="c-person-header__handle">@${person.igHandle}</p>` : ''}
       ${counts ?? ''}

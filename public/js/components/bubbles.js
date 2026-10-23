@@ -42,7 +42,7 @@ function speechBubble(bubble) {
   const name = bubble.name ?? t('item.unknownSpeaker');
   return html`
     <div class="c-bubbles__msg"${bubble.colour ? html` data-c="${bubble.colour}"` : ''}>
-      ${bubble.emoji ? html`<div class="c-bubbles__avatar">${bubble.emoji}</div>` : html`<div class="c-bubbles__avatar c-bubbles__avatar--none" aria-hidden="true"></div>`}
+      ${bubble.emoji ? html`<div class="c-bubbles__avatar"><span class="c-emoji">${bubble.emoji}</span></div>` : html`<div class="c-bubbles__avatar c-bubbles__avatar--none" aria-hidden="true"></div>`}
       <div class="c-bubbles__bub">
         <div class="c-bubbles__name">${name}</div>
         ${thaiSpans(bubble.text)}
@@ -73,7 +73,7 @@ function jointBubble(bubble) {
   return html`
     <div class="c-bubbles__msg c-bubbles__msg--joint">
       <div class="c-bubbles__avatars">
-        ${bubble.parts.map((p) => html`<div class="c-bubbles__avatar">${p.emoji}</div>`)}
+        ${bubble.parts.map((p) => html`<div class="c-bubbles__avatar"><span class="c-emoji">${p.emoji}</span></div>`)}
       </div>
       <div class="c-bubbles__bub">
         <div class="c-bubbles__name">${name}</div>
@@ -135,11 +135,11 @@ function compactWho(bubble) {
     return html`<span class="c-bubbles-compact__who c-bubbles-compact__who--name">${bubble.name ?? t('item.unknownSpeaker')}:</span> `;
   }
   if (bubble.kind === 'speech' && !bubble.cont) {
-    return html`<span class="c-bubbles-compact__who" role="img" aria-label="${bubble.name ?? t('item.unknownSpeaker')}">${bubble.emoji}</span> `;
+    return html`<span class="c-bubbles-compact__who c-emoji" role="img" aria-label="${bubble.name ?? t('item.unknownSpeaker')}">${bubble.emoji}</span> `;
   }
   if (bubble.kind === 'joint' && !bubble.cont) {
     const names = bubble.parts.map((p) => p.name ?? t('item.unknownSpeaker')).join(' & ');
-    return html`<span class="c-bubbles-compact__who" role="img" aria-label="${names}">${bubble.parts.map((p) => p.emoji)}</span> `;
+    return html`<span class="c-bubbles-compact__who c-emoji" role="img" aria-label="${names}">${bubble.parts.map((p) => p.emoji)}</span> `;
   }
   return '';
 }
