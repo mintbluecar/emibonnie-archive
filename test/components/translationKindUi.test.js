@@ -45,7 +45,7 @@ test('translation detail: renders credits, cast, bubbles, and a native <details>
   assert.match(markup, /c-cast__chip/);
   assert.match(markup, /c-bubbles__bub/);
   assert.match(markup, /<details class="k-translation-detail__original">/);
-  assert.match(markup, /<summary class="k-translation-detail__original-toggle">show original<\/summary>/);
+  assert.match(markup, /<summary class="k-translation-detail__original-toggle">show original text<\/summary>/);
   assert.match(markup, /first paragraph/);
 });
 

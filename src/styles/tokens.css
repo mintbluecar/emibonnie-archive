@@ -70,6 +70,11 @@
      above the centre of their em box. Measured in Chromium (macOS, Apple
      Color Emoji) with canvas measureText's ink box. */
   --emoji-nudge-y: 0.05em;
+  /* The X embed's box (Task 10c, l and q; sourceEmbed.css): as wide as
+     the embed's data-width (sourceEmbed.js EMBED_WIDTH), and cropped at
+     this height, with a fade and a "show full tweet" switch. */
+  --embed-width: 350px;
+  --embed-max-height: 320px;
   /* A card's thumbnail height (Task 10c, thumb.css); its width follows
      the picture, between half and one and a half times this. */
   --thumb-size: 56px;

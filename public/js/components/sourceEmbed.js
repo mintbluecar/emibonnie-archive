@@ -13,6 +13,11 @@
  * author, escaped by `html`. `data-dnt="true"` opts the embed out of X's
  * personalisation (same page, `dnt` parameter); `data-theme="dark"` is
  * set in `bind()` when the visitor is in dark mode (`theme` parameter).
+ * Task 10c (l), same page: `data-cards="hidden"` ("links in a Post are
+ * not expanded to photo, video, or link previews": the pinned player
+ * already shows the clip), `data-conversation="none"` ("only the cited
+ * Post will be displayed even if it is in reply to another Post") and
+ * `data-width` ("between 250 and 550 pixels"; height is automatic).
  *
  * `widgets.js` is an external script, added once (by id, as X's own
  * loader does: docs.x.com/x-for-websites/javascript-api/guides/set-up-x-for-websites),
@@ -24,10 +29,17 @@ import { html } from '../core/html.js';
 import { t } from '../core/site.js';
 import { thaiSpans } from '../core/thai.js';
 import { isDark } from '../core/themeChoice.js';
+import * as embedBox from './embedBox.js';
 
 export const WIDGETS_SRC = 'https://platform.twitter.com/widgets.js';
 /** X's own loader's id for the script (set-up-x-for-websites), so a second call never adds it again. */
 export const WIDGETS_ID = 'twitter-wjs';
+/**
+ * X's embed width in px (`data-width`, 250-550: the parameter reference
+ * above); the same as `--embed-width` (tokens.css), which caps the box so
+ * the fallback is as wide as X's post.
+ */
+export const EMBED_WIDTH = 350;
 /** Only a canonical post URL (what the engine stores: src/kinds/translation/domain.js) is ever embedded. */
 const CANONICAL_POST = /^https:\/\/x\.com\/[A-Za-z0-9_]{1,15}\/status\/\d{1,20}$/;
 
@@ -57,17 +69,38 @@ function byline(author) {
 export function render({ text, author, source, sourceLanguage }) {
   const body = html`<p class="c-embed__text">${thaiSpans(text, sourceLanguage)}</p>`;
   if (source.status !== 'live') {
-    return html`
+    return box(html`
       <blockquote class="c-embed c-embed--gone">
         ${body}<p class="c-embed__by">${byline(author)}</p>
         <p class="c-embed__gone">${t('item.sourceGoneEmbed')}</p>
       </blockquote>
-    `;
+    `);
   }
-  return html`
-    <blockquote class="twitter-tweet c-embed" data-dnt="true">
+  return box(html`
+    <blockquote class="twitter-tweet c-embed" data-dnt="true" data-cards="hidden" data-conversation="none" data-width="${EMBED_WIDTH}">
       ${body}<p class="c-embed__by">${byline(author)} <a class="c-embed__link" href="${source.url}">${t('item.originalTweet')}</a></p>
     </blockquote>
+  `);
+}
+
+/**
+ * The embed's box (Task 10c, q): an "original tweet" heading, then the
+ * embed (or its fallback) cropped at `--embed-max-height` with a fade,
+ * and an expand switch that `bind()` shows only when the content is
+ * taller than that. X sets no maximum height of its own.
+ * @param {import('../core/html.js').SafeHtml} content
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+function box(content) {
+  return html`
+    <section class="c-embed-box">
+      <h2 class="c-embed-box__label">${t('item.embedHeading')}</h2>
+      <div class="c-embed-box__clip"><div class="c-embed-box__inner">${content}</div></div>
+      <button class="c-embed-box__more" type="button" aria-expanded="false" title="${t('item.embedMore')}" aria-label="${t('item.embedMore')}"
+        data-label-more="${t('item.embedMore')}" data-label-less="${t('item.embedLess')}" hidden>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+    </section>
   `;
 }
 
@@ -97,6 +130,7 @@ function cspMeta() {
  * @returns {void}
  */
 export function bind(root) {
+  embedBox.bind(root);
   const quotes = root.querySelectorAll('blockquote.twitter-tweet');
   if (quotes.length === 0) return;
   if (isDark()) for (const quote of quotes) quote.setAttribute('data-theme', 'dark');
