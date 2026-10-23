@@ -16,8 +16,11 @@
  * Task 10c (l), same page: `data-cards="hidden"` ("links in a Post are
  * not expanded to photo, video, or link previews": the pinned player
  * already shows the clip), `data-conversation="none"` ("only the cited
- * Post will be displayed even if it is in reply to another Post") and
- * `data-width` ("between 250 and 550 pixels"; height is automatic).
+ * Post will be displayed even if it is in reply to another Post"). No
+ * `data-width` (Task 10d extra, owner): "An embedded Post will adjust to
+ * the width of its containing element ... and will fill up to 550
+ * horizontal pixels" (docs.x.com/x-for-websites/embedded-posts/faq), so
+ * the box's own width (`--embed-width`, tokens.css) sizes it.
  *
  * `widgets.js` is an external script, added once (by id, as X's own
  * loader does: docs.x.com/x-for-websites/javascript-api/guides/set-up-x-for-websites),
@@ -34,12 +37,6 @@ import * as embedBox from './embedBox.js';
 export const WIDGETS_SRC = 'https://platform.twitter.com/widgets.js';
 /** X's own loader's id for the script (set-up-x-for-websites), so a second call never adds it again. */
 export const WIDGETS_ID = 'twitter-wjs';
-/**
- * X's embed width in px (`data-width`, 250-550: the parameter reference
- * above); the same as `--embed-width` (tokens.css), which caps the box so
- * the fallback is as wide as X's post.
- */
-export const EMBED_WIDTH = 350;
 /** Only a canonical post URL (what the engine stores: src/kinds/translation/domain.js) is ever embedded. */
 const CANONICAL_POST = /^https:\/\/x\.com\/[A-Za-z0-9_]{1,15}\/status\/\d{1,20}$/;
 
@@ -77,7 +74,7 @@ export function render({ text, author, source, sourceLanguage }) {
     `);
   }
   return box(html`
-    <blockquote class="twitter-tweet c-embed" data-dnt="true" data-cards="hidden" data-conversation="none" data-width="${EMBED_WIDTH}">
+    <blockquote class="twitter-tweet c-embed" data-dnt="true" data-cards="hidden" data-conversation="none">
       ${body}<p class="c-embed__by">${byline(author)} <a class="c-embed__link" href="${source.url}">${t('item.originalTweet')}</a></p>
     </blockquote>
   `);

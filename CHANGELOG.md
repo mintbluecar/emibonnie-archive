@@ -24,6 +24,7 @@ No migrations. `/api/search` is unchanged.
 - **Recent searches and quick chips are gone.** Home's blank state is its event list. The active-filter chips use the chip padding tokens with no fixed height, and keep a ≥24px hit area.
 - **Meta pages ignore their query entirely.** The event and item pages' function routes accepted any query but still parsed it, so a repeated param (`?people=1&people=2`, which the in-place search writes) would have answered 400. Now a route with `query: null` never parses its query.
 - **`npm run dev`** answers `vercel.json`'s `redirects` too (before rewrites, query kept). e2e gains `e2e/search.spec.js`.
+- **The X embed fills the column, up to 550px.** The item page's embed no longer sets `data-width="350"`: X's embed "will adjust to the width of its containing element ... and will fill up to 550 horizontal pixels" (docs.x.com, embedded posts FAQ). Its box (and the fallback card) is `--embed-width: min(100%, 550px)`, centred in the column; the crop at `--embed-max-height`, the fade and the "show full tweet" switch are unchanged. A site `theme.css` that sets `--embed-width` should now use the same form (`min(100%, 400px)`, say): the box takes that width exactly, so a bare px value could overflow a phone's column.
 
 ## 0.1.3
 

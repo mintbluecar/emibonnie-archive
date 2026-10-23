@@ -51,14 +51,17 @@
 }
 
 /*
- * Task 10c (l, q): the box around the embed. Its width is the embed's
- * own (--embed-width), so the fallback matches; its height is cut at
+ * Task 10c (l, q): the box around the embed. Its width is
+ * --embed-width (Task 10d extra: the column, up to X's 550px maximum),
+ * centred in the column; X's embed fills it, and the fallback is the
+ * same width, so the two match. Its height is cut at
  * --embed-max-height with a fade made of the page background, until the
  * switch opens it. `embedBox.js` marks it --tall only when the content
  * is taller than the cap.
  */
 .c-embed-box {
-  max-width: var(--embed-width);
+  width: var(--embed-width);
+  margin-inline: auto;
 }
 
 .c-embed-box__label {

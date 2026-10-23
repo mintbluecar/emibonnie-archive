@@ -18,7 +18,7 @@ const PROPS = { text: 'สวัสดี hello', author: { handle: 'tl_alpha', 
 
 test('sourceEmbed: X\'s documented markup -- blockquote.twitter-tweet with data-dnt, the text (Thai in lang="th"), author and canonical link (labelled, not dated: Task 10b shows no post time)', () => {
   const markup = String(render(PROPS));
-  assert.match(markup, /<blockquote class="twitter-tweet c-embed" data-dnt="true" data-cards="hidden" data-conversation="none" data-width="350">/);
+  assert.match(markup, /<blockquote class="twitter-tweet c-embed" data-dnt="true" data-cards="hidden" data-conversation="none">/);
   assert.match(markup, /<span lang="th">สวัสดี<\/span>/);
   assert.match(markup, /&mdash; \(@tl_alpha\) <a class="c-embed__link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">original tweet<\/a>/);
   assert.ok(!markup.includes('<script'), 'never an inline script');
@@ -85,12 +85,13 @@ test('sourceEmbed.css (fix round 1, M6): the fallback text keeps line breaks lik
   assert.match(/\.c-embed__text\s*\{([^}]*)\}/.exec(css)?.[1] ?? '', /white-space:\s*pre-wrap/);
 });
 
-test('sourceEmbed (Task 10c l, q): X\'s smaller embed (cards hidden, no parent post, 350px wide) inside a box with an "original tweet" h2, a crop wrapper and a hidden "show full tweet" switch', () => {
+test('sourceEmbed (Task 10c l, q; 10d extra): X\'s embed (cards hidden, no parent post, no data-width: it fills the box) inside a box with an "original tweet" h2, a crop wrapper and a hidden "show full tweet" switch', () => {
   const markup = String(render(PROPS));
   assert.match(markup, /<section class="c-embed-box">\s*<h2 class="c-embed-box__label">original tweet<\/h2>/);
   assert.match(markup, /<div class="c-embed-box__clip"><div class="c-embed-box__inner">\s*<blockquote class="twitter-tweet c-embed"/);
   assert.match(markup, /<button class="c-embed-box__more" type="button" aria-expanded="false" title="show full tweet" aria-label="show full tweet"[^>]*data-label-less="show less"[^>]*hidden>/);
-  assert.match(markup, /data-cards="hidden" data-conversation="none" data-width="350"/);
+  assert.match(markup, /data-cards="hidden" data-conversation="none">/);
+  assert.ok(!markup.includes('data-width'), 'X sizes the embed to its container, up to 550px (docs.x.com embedded-posts FAQ)');
   const gone = String(render({ ...PROPS, source: { ...PROPS.source, status: 'deleted' } }));
   assert.match(gone, /c-embed-box__clip[\s\S]*c-embed--gone/, 'the fallback for a gone post is cropped the same way');
 });
@@ -103,4 +104,14 @@ test('sourceEmbed.bind (Task 10c f): a forced dark page (data-theme on <html>) t
   bind(/** @type {any} */ (root));
   assert.equal(root.querySelector('blockquote')?.getAttribute('data-theme'), 'dark');
   assert.ok(head);
+});
+
+test('sourceEmbed (Task 10d extra): the box is the column\'s width up to X\'s 550px maximum, centred', async () => {
+  const { readFileSync } = await import('node:fs');
+  const tokens = readFileSync('src/styles/tokens.css', 'utf8');
+  assert.match(tokens, /--embed-width:\s*min\(100%,\s*550px\);/);
+  const css = readFileSync('src/styles/components/sourceEmbed.css', 'utf8');
+  const block = /\.c-embed-box\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+  assert.match(block, /width:\s*var\(--embed-width\)/);
+  assert.match(block, /margin-inline:\s*auto/);
 });
