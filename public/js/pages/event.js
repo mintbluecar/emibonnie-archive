@@ -82,7 +82,7 @@ function pillsRow(event) {
     ...(event.type ? [{ label: event.type }] : []),
     ...(event.client ? [{ label: event.client }] : []),
   ];
-  return items.length > 0 ? chips.render({ items }) : html``;
+  return items.length > 0 ? html`<div class="c-event__pills">${chips.render({ items })}</div>` : html``;
 }
 
 /**
