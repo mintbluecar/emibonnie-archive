@@ -100,7 +100,7 @@ The full schema and conventions are in the implementation plan (Task 9) and ADR 
 - **Every "which day" calculation uses the site's time zone,** never UTC or the viewer's: the posted-date fallback, the ±1-day live window, month grouping, and parsing `12/2` or `[260212]`.
 - **Display:**
   - **Dates** show as stored, so "12 Feb 2026" reads the same for everyone.
-  - **Exact times** show the viewer's own time first (detected from their device and labelled by city), then the site's: "4:00 pm paris · 10:00 pm bangkok". If both zones are the same, it's shown once.
+  - **Exact times are shown only in the event's own local time, and only when it's known** (owner decision, 2026-10-23, replacing "viewer time · site time"): e.g. "8:00 pm paris" for a Paris concert. The viewer's device time is never shown. A tweet's post time isn't the event's time, so it isn't shown either. With no known event time and place, pages show the date only. An optional event time and place, entered by the adder, comes with the add flow (Plan 2).
 
 ### Translation (the first item kind)
 
