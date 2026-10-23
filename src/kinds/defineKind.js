@@ -95,6 +95,8 @@ import { pages } from '../pages.js';
  *   What `fetchSource` returns: the kind's own input for `draft`, with at
  *   least a `status` ingest can read.
  * @typedef {any} Db
+ * @typedef {{ speakers: SpeakerMap, people: ItemPerson[] }} RemapResult
+ *   What `remapSpeakers` left on the item: its whole speaker map and people.
  * @typedef {{ db: Db, fetchImpl: typeof fetch, now?: () => Date }} UpkeepDeps
  * @typedef {{
  *   people: Map<number, import('../repo/people.js').Person>,
@@ -125,7 +127,13 @@ import { pages } from '../pages.js';
  *   refresh?: (deps: UpkeepDeps, itemId: number, options: { actor: string }) => Promise<{ updated: number, editableUntil: string|null }>,
  *   checkFollowUps?: (deps: UpkeepDeps, itemId: number, options: { actor: string }) => Promise<{ added: number }>,
  *   profileUrl?: (handle: string) => string,
+ *   remapSpeakers?: (tx: Db, args: { itemId: number, map: SpeakerMap, ctx: DraftContext }) => Promise<RemapResult>,
  * }} Kind
+ *   `remapSpeakers(tx, …)` (optional, Task 10c): the owner's `npm run
+ *   remap` for an archived item -- sets the given markers' speakers and
+ *   updates the item's people the way intake derives them, inside the
+ *   caller's transaction. Throws `BadRequest` for a marker the item's
+ *   text never uses.
  *   `profileUrl(handle)` (optional): the kind's own public profile link
  *   for a credited handle (e.g. an X profile) -- `accountView`
  *   (src/services/hubs.js) sets `AccountView.account.profileUrl` from it
@@ -172,7 +180,7 @@ export const RESERVED_URL_PREFIXES = Object.freeze([
 const OWNED_URL_PREFIXES = Object.freeze({ '/t/': 'translation' });
 const REQUIRED_FUNCTIONS = ['matchesUrl', 'fetchSource', 'draft', 'persist', 'loadDetails'];
 const REQUIRED_GROUPS = { present: ['preview', 'detail'], search: ['textClause', 'rank', 'matchLines'] };
-const OPTIONAL_FUNCTIONS = ['refresh', 'checkFollowUps', 'profileUrl'];
+const OPTIONAL_FUNCTIONS = ['refresh', 'checkFollowUps', 'profileUrl', 'remapSpeakers'];
 
 /**
  * Each string field of the spec, the pattern it must match, and the problem when it doesn't.

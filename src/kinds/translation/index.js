@@ -8,6 +8,7 @@ import { loadDetails } from './repo.js';
 import { present } from './presenter.js';
 import { search } from './search.js';
 import { refreshEdits, checkFollowUps } from './upkeep.js';
+import { remapSpeakers } from './remap.js';
 
 /**
  * A reply is a candidate follow-up of the tweet it replies to. Whether
@@ -40,4 +41,5 @@ export default defineKind({
   refresh: refreshEdits,
   checkFollowUps,
   profileUrl,
+  remapSpeakers,
 });

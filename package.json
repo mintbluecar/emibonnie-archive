@@ -18,6 +18,7 @@
     "doctor": "node scripts/doctor.js",
     "migrate": "node scripts/migrate.js",
     "add": "node scripts/add.js",
+    "remap": "node scripts/remap.js",
     "init-site": "node scripts/initSite.js",
     "seed-dev": "node scripts/seedDev.js",
     "e2e": "playwright test",

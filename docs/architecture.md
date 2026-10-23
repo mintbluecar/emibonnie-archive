@@ -20,7 +20,7 @@ src/site/                settings schema/validation, regions.js (Vercel regions)
 src/domain/              PURE: no I/O, no clock, no imports from other layers
 src/pages.js             the one list of page routes (rewrites, reserved kind prefixes)
 public/js/core|components|pages|state|kinds/<kind>/   browser code (no src/ imports); kinds/_registry.js GENERATED
-scripts/                 build, dev, setup, migrate, doctor, init-site, seed-dev, add, new (scaffolder + templates/)
+scripts/                 build, dev, setup, migrate, doctor, init-site, seed-dev, add, remap, new (scaffolder + templates/)
 site/                    a site's own folder (gitignored in the template); examples/solluna/ is the template example
 ```
 
