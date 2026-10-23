@@ -26,6 +26,13 @@
   line-height: 1.45;
   margin-bottom: 6px;
   white-space: pre-line;
+  /* A long post's full text is already on the page ("show original");
+     the fallback shows its opening, like X's own card would. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 8;
+  line-clamp: 8;
+  overflow: hidden;
 }
 
 .c-embed__by {

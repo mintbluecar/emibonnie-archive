@@ -69,13 +69,19 @@ test('an unknown path: 404 status, renders, no console errors', async ({ page })
   await checkPage(page, '/this-page-does-not-exist', { status: 404 });
 });
 
-test('LONG: the sticky media area stays at top:0 after scrolling 2000px, the 🐱 line shows 🌙 luna, and the stub clip decodes', async ({ page }, testInfo) => {
+test('LONG: after scrolling 2000px the pinned header and the sticky media area are both in view, media just below the header (Task 10b), the 🐱 line shows 🌙 luna, and the stub clip decodes', async ({ page }, testInfo) => {
   test.skip(DARK_PROJECTS.includes(testInfo.project.name), 'item-page extras only run in light mode (I1)');
   await stubSyntheticMedia(page);
   await gotoReady(page, `/t/${IDS.LONG}`);
   const media = page.locator('.c-item__media');
+  const header = page.locator('header.c-header');
+  // Task 10b: the header is pinned at the top, and the media sticks at
+  // --sticky-top -- the header bar's own height (52px phone, 61px desktop).
+  const stickyTop = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--sticky-top').trim());
+  expect(stickyTop).toBe(testInfo.project.name === 'desktop' ? '61px' : '52px');
+  await expect(header).toHaveCSS('position', 'sticky');
   await expect(media).toHaveCSS('position', 'sticky');
-  await expect(media).toHaveCSS('top', '0px');
+  await expect(media).toHaveCSS('top', stickyTop);
   // A sticky element's containing block is its own grid area (.c-item, which
   // `.c-item__media` spans both rows of) -- it can only stay stuck while that
   // area is still scrolling past, not once the page scrolls into
@@ -90,7 +96,14 @@ test('LONG: the sticky media area stays at top:0 after scrolling 2000px, the �
     return Math.max(0, Math.min(2000, gridBottomInPage - window.innerHeight - 20));
   });
   await page.evaluate((y) => window.scrollTo(0, y), scrollTarget);
-  await expect.poll(() => media.evaluate((el) => Math.abs(el.getBoundingClientRect().top))).toBeLessThanOrEqual(1);
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  const headerBottom = parseFloat(stickyTop);
+  await expect.poll(() => header.evaluate((el) => Math.abs(el.getBoundingClientRect().top))).toBeLessThanOrEqual(1);
+  await expect.poll(() => header.evaluate((el) => el.getBoundingClientRect().bottom)).toBeCloseTo(headerBottom, 0);
+  // Just below the header, not under it: no overlap, no gap.
+  await expect.poll(() => media.evaluate((el) => el.getBoundingClientRect().top)).toBeCloseTo(headerBottom, 0);
+  await expect(header).toBeInViewport();
+  await expect(media).toBeInViewport();
 
   const lunaBubble = await page.locator('.c-bubbles__msg').evaluateAll((msgs) => msgs.some((m) => (
     m.querySelector('.c-bubbles__avatar')?.textContent?.trim() === '🌙' && m.querySelector('.c-bubbles__name')?.textContent?.trim() === 'luna'
@@ -201,6 +214,27 @@ test('header (Task 9b): desktop is one top bar with no search box (the search pa
   }
   await gotoReady(page, `/search?q=${SEARCH_Q}`);
   await expect(page.locator('.c-header__search-box')).toBeVisible();
+});
+
+test('header (Task 10b): pinned on a long page -- after scrolling to the bottom of a person page, the header bar is still at the top; on a phone the search row has scrolled away under it, and keyboard focus is kept clear of it', async ({ page }, testInfo) => {
+  test.skip(DARK_PROJECTS.includes(testInfo.project.name), 'layout, not colour: light projects only');
+  const desktop = testInfo.project.name === 'desktop';
+  await gotoReady(page, '/p/solsunny');
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  const header = page.locator('header.c-header');
+  await expect.poll(() => header.evaluate((el) => Math.round(el.getBoundingClientRect().top))).toBe(0);
+  await expect(header.locator('.c-header__wordmark')).toBeInViewport();
+  await expect(page.locator('.c-header__find')).toBeVisible({ visible: !desktop });
+  if (!desktop) {
+    const searchTop = await page.locator('.c-header__search').evaluate((el) => el.getBoundingClientRect().top);
+    expect(searchTop).toBeLessThan(52);
+    // The phone bar's search icon goes to the search page.
+    await expect(page.locator('.c-header__find')).toHaveAttribute('href', '/search');
+  }
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).scrollPaddingTop)).toBe(desktop ? '61px' : '52px');
+  // A landmark still (axe and screen readers find the banner).
+  await expect(page.getByRole('banner')).toHaveCount(1);
 });
 
 test('video (Task 9b): before play, the poster and a centred play button, no native controls; pressing play brings the controls', async ({ page }, testInfo) => {
