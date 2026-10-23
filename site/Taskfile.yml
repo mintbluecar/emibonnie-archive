@@ -115,9 +115,11 @@ tasks:
     summary: |
       Runs site/scripts/create-app-role.sh --rotate. Needs
       EMIBONNIE_DB_PREVIEW set. Replaces the preview-scope DATABASE_URL
-      Secret in Vercel. Use this for a leaked secret (fix round 3, C1) --
-      never reset the password from the Neon console, which would put
-      'app' back into neon_superuser.
+      Secret in Vercel (one `vercel env update`). The live preview site
+      can't reach the database until a redeploy finishes: run `task
+      deploy:preview` straight after. Use this for a leaked secret (fix
+      round 3, C1) -- never reset the password from the Neon console,
+      which would put 'app' back into neon_superuser.
     prompt: "This rotates the 'app' role's password on preview, and replaces the Vercel Secret. Continue?"
     preconditions:
       - sh: 'test -n "$EMIBONNIE_DB_PREVIEW"'
@@ -130,9 +132,11 @@ tasks:
     summary: |
       Runs site/scripts/create-app-role.sh --rotate --prod. Needs
       EMIBONNIE_DB set. Replaces the production-scope DATABASE_URL Secret
-      in Vercel. Use this for a leaked secret (fix round 3, C1) -- never
-      reset the password from the Neon console, which would put 'app'
-      back into neon_superuser.
+      in Vercel (one `vercel env update`). The live site can't reach the
+      database until a redeploy finishes: run `task deploy:prod` straight
+      after. Use this for a leaked secret (fix round 3, C1) -- never reset
+      the password from the Neon console, which would put 'app' back
+      into neon_superuser.
     prompt: "This rotates the 'app' role's password on PRODUCTION, and replaces the Vercel Secret. Continue?"
     preconditions:
       - sh: 'test -n "$EMIBONNIE_DB"'
@@ -252,15 +256,24 @@ tasks:
     # "` or `$(touch X)` would have been parsed as shell syntax, not data.
     # Confirmed both ways against a scratch Taskfile with the installed
     # `task`: with `{{.ITEM_ID}}`, both payloads ran their embedded
-    # command; with `env: TAKEDOWN_ID` plus the numeric-only precondition
+    # command; with `env: TAKEDOWN_ID` plus the digits-only precondition
     # below plus `"$TAKEDOWN_ID"` (always quoted) in the heredoc, both are
-    # rejected by the precondition and touch nothing.
+    # rejected by the precondition and touch nothing -- as is a multi-line
+    # id (fix round 4, N2; see the precondition's own comment).
     env:
       TAKEDOWN_ID: '{{.ID | default .CLI_ARGS}}'
     preconditions:
       - sh: 'test -n "$EMIBONNIE_DB"'
         msg: "EMIBONNIE_DB is not set -- export the main branch's owner-role connection string first."
-      - sh: 'printf %s "$TAKEDOWN_ID" | grep -Eqx "[0-9]+"'
+      # Fix round 4, N2: a whole-string bash pattern test, not `grep -x`.
+      # grep matches line by line, so `printf %s "$TAKEDOWN_ID" | grep -Eqx
+      # "[0-9]+"` accepted `123<newline>$(touch X)` -- its first line is all
+      # digits. (Through `--`, Task shell-quotes CLI_ARGS, which happened to
+      # stop that; `task takedown ID=...` and `ID=... task takedown` carried
+      # the newline through untouched -- confirmed against task 3.53.1.)
+      # `=~` with `^...$` anchors the whole value; Task's own shell
+      # interpreter (mvdan/sh) supports `[[ ]]`.
+      - sh: '[[ $TAKEDOWN_ID =~ ^[0-9]+$ ]]'
         msg: "Pass a numeric tweet id only: task takedown -- <id>, or ID=<id> task takedown."
     cmds:
       - |

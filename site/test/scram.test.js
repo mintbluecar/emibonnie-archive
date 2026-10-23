@@ -87,6 +87,18 @@ test('randomPassword is URL-safe (no +, /, or = ) and reasonably long', () => {
   }
 });
 
+test('pg_authid is readable in PGlite, so the round-trip checks below can never pass vacuously (fix round 4, R4)', async () => {
+  const { PGlite } = await import('@electric-sql/pglite');
+  const pg = new PGlite();
+  try {
+    await pg.waitReady;
+    const { rows } = await pg.query("select rolname, rolpassword from pg_authid where rolname = current_user");
+    assert.equal(rows.length, 1, 'expected to read the current role from pg_authid');
+  } finally {
+    await pg.close();
+  }
+});
+
 test('PGlite stores a pre-computed SCRAM-SHA-256 verifier verbatim, inside one transaction (fix round 3, C1)', async () => {
   const { PGlite } = await import('@electric-sql/pglite');
   const pg = new PGlite();
@@ -102,20 +114,18 @@ test('PGlite stores a pre-computed SCRAM-SHA-256 verifier verbatim, inside one t
     const roles = await pg.query("select rolname from pg_roles where rolname = 'scram_test_role'");
     assert.equal(roles.rows.length, 1, 'the role must exist');
 
-    // PGlite exposes pg_authid (unlike a real Postgres server, where it's
-    // superuser-only); if a future PGlite version restricts it, fall back
-    // to the role's existence above as the test's proof.
-    try {
-      const authid = await pg.query("select rolpassword from pg_authid where rolname = 'scram_test_role'");
-      assert.equal(authid.rows.length, 1);
-      const stored = /** @type {string} */ (authid.rows[0].rolpassword);
-      assert.ok(stored.startsWith('SCRAM-SHA-256$'), `expected a SCRAM-SHA-256 verifier, got: ${stored}`);
-      // Stored verbatim, not re-hashed as a new plaintext password: proves
-      // Postgres recognised the already-correct shape and kept it as-is.
-      assert.equal(stored, verifier);
-    } catch (/** @type {any} */ err) {
-      if (!/permission denied|pg_authid/i.test(String(err?.message))) throw err;
-    }
+    // Fix round 4, R4: no fallback. PGlite runs as a superuser, so
+    // pg_authid (superuser-only on a real server) must be readable here;
+    // if a future PGlite ever restricts it, this test has to fail loudly
+    // rather than pass on the role's existence alone, which would prove
+    // nothing about the verifier being stored verbatim.
+    const authid = await pg.query("select rolpassword from pg_authid where rolname = 'scram_test_role'");
+    assert.equal(authid.rows.length, 1, 'pg_authid must be readable in PGlite');
+    const stored = /** @type {string} */ (authid.rows[0].rolpassword);
+    assert.ok(stored.startsWith('SCRAM-SHA-256$'), `expected a SCRAM-SHA-256 verifier, got: ${stored}`);
+    // Stored verbatim, not re-hashed as a new plaintext password: proves
+    // Postgres recognised the already-correct shape and kept it as-is.
+    assert.equal(stored, verifier);
   } finally {
     await pg.close();
   }
@@ -138,12 +148,10 @@ test('alter role ... password %L (the --rotate path) replaces the verifier the s
       await tx.exec("do $$ begin execute format('alter role scram_rotate_role password %L', current_setting('app.pw')); end $$;");
     });
 
-    try {
-      const authid = await pg.query("select rolpassword from pg_authid where rolname = 'scram_rotate_role'");
-      assert.equal(authid.rows[0].rolpassword, second);
-    } catch (/** @type {any} */ err) {
-      if (!/permission denied|pg_authid/i.test(String(err?.message))) throw err;
-    }
+    // No fallback (fix round 4, R4): see the test above.
+    const authid = await pg.query("select rolpassword from pg_authid where rolname = 'scram_rotate_role'");
+    assert.equal(authid.rows.length, 1, 'pg_authid must be readable in PGlite');
+    assert.equal(authid.rows[0].rolpassword, second);
   } finally {
     await pg.close();
   }

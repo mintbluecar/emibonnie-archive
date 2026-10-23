@@ -90,7 +90,9 @@ Each one:
   back into `neon_superuser`;
 - builds that branch's app-role connection string (same host, database and
   parameters, user `app`, the new password) and adds it to Vercel as
-  `DATABASE_URL`, type **Secret**, in the matching scope — see (b), below.
+  `DATABASE_URL`, type **Secret**, in the matching scope (`vercel env add
+  DATABASE_URL --environment <scope> --sensitive --yes`, value through
+  stdin; a Preview one covers every preview branch) — see (b), below.
 
 Run this **before** the first `npm run migrate` with `APP_DB_ROLE=app`
 (which `site/scripts/deploy.sh` always uses): if the `app` role doesn't exist
@@ -170,7 +172,11 @@ run first would just become the production deployment anyway, against
 whichever database it happened to be configured for. `site/scripts/deploy.sh`
 also prints a reminder of this every time it runs in preview mode, and, in
 preview mode, checks (before doing anything else) whether this project
-already has a deployment — failing closed and stopping if it can't tell.
+already has a deployment — failing closed: it carries on only if `vercel
+list` succeeds and shows at least one `https://….vercel.app` deployment
+address, and stops on anything else (an error, no output, "No deployments
+found.", or wording it doesn't recognise), telling you to use `task
+deploy:prod` if this really is the first deploy.
 
 In order:
 
@@ -215,11 +221,9 @@ In order:
    task check-role:preview
    task check-role:prod
    ```
-   or directly:
-   ```sh
-   DATABASE_URL="$EMIBONNIE_DB_PREVIEW" site/scripts/check-app-role.sh
-   DATABASE_URL="$EMIBONNIE_DB" site/scripts/check-app-role.sh --prod
-   ```
+   (or `site/scripts/check-app-role.sh` / `site/scripts/check-app-role.sh
+   --prod` directly -- each reads `EMIBONNIE_DB_PREVIEW`/`EMIBONNIE_DB`
+   from your shell itself).
    Both must print "least-privilege check passed". Don't continue if
    either doesn't.
 4. **Make the first deploy `site/scripts/deploy.sh --prod`** (not a plain
@@ -377,21 +381,41 @@ server version — check with `pg_dump --version`.
   keeping.
 - **To restore**, into an **empty** database. The target (an empty branch
   you're restoring into) usually isn't `EMIBONNIE_DB`/`EMIBONNIE_DB_PREVIEW`
-  itself, so read it into its own variable the same no-echo way as the
-  top of this guide, rather than typing or pasting it onto a command line:
+  itself, so read its **owner**-role connection string into its own
+  variable the same no-echo way as the top of this guide, rather than
+  typing or pasting it onto a command line. Then, in this order:
   ```sh
   read -rs RESTORE_TARGET_URL; export RESTORE_TARGET_URL
+
+  # 1. Create the app role on the restore target. --target-env-var reads
+  #    the owner URL from the variable you name, and never touches Vercel:
+  #    it writes the new app-role connection string to a chmod 600 file
+  #    (~/.emibonnie/app-restore_target_url.url) and prints only its path.
+  site/scripts/create-app-role.sh --target-env-var RESTORE_TARGET_URL
+
+  # 2. Restore the dump.
   pg_restore --no-owner --no-privileges --clean --if-exists --dbname="$RESTORE_TARGET_URL" <dump file>
+
+  # 3. Re-grant the app role on the restored schema.
   DATABASE_URL="$RESTORE_TARGET_URL" APP_DB_ROLE=app npm run migrate
   ```
-  `--no-owner --no-privileges` restores every object as the role you're
-  connecting with (never re-creates the dump-time owner or its grants);
-  the `npm run migrate` afterwards re-grants the `app` role on the
-  restored schema, the same way it does after every other migrate --
-  **the `app` role must already exist on the target** before this
-  (`site/scripts/create-app-role.sh`, section 1(a)/2 step 1 above;
-  pointed at `RESTORE_TARGET_URL` the same way, if the target isn't
-  `preview` or main).
+  - Step 1 says `app` **already exists** if the target was branched from
+    a Neon branch that already had it (a child branch starts with its
+    parent's roles). That's fine: skip it, or run it again with
+    `--rotate --target-env-var RESTORE_TARGET_URL` to give the target its
+    own password (and its own file).
+  - `--no-owner --no-privileges` restores every object as the role you're
+    connecting with (never re-creates the dump-time owner or its grants);
+    the `npm run migrate` afterwards re-grants the `app` role on the
+    restored schema, the same way it does after every other migrate. That
+    needs `app` to exist on the target, which is why step 1 comes first
+    (migrate fails with `role "app" does not exist` otherwise).
+  - The site keeps using its current database until you switch it. Only
+    if this restored database is going to serve the site: in Vercel,
+    Settings → Environment Variables → **edit the existing**
+    `DATABASE_URL` in the right scope, paste the contents of the file
+    from step 1 (type **Secret**), redeploy (`task deploy:prod` or `task
+    deploy:preview`), and delete the file.
 
 ## 6. Incident runbook
 
@@ -410,8 +434,28 @@ pasted somewhere public, shown on a screen share:
   generates a new password, replaces `app`'s password in the database
   with its SCRAM-SHA-256 verifier (never the Neon console — see section
   1(a)/"Least privilege", above, for why: a console reset would make
-  `app` a `neon_superuser` member), and replaces the `DATABASE_URL`
-  Secret in Vercel's matching scope for you.
+  `app` a `neon_superuser` member), and updates the existing
+  `DATABASE_URL` Secret in Vercel's matching scope for you, in one step
+  (`vercel env update DATABASE_URL --environment <scope> --sensitive
+  --yes`, value through stdin —
+  [Vercel: `vercel env`](https://vercel.com/docs/cli/env)). If that
+  Vercel step fails, the script writes the new connection string to a
+  `chmod 600` file under `~/.emibonnie/` instead and prints its path:
+  in Vercel, Settings → Environment Variables, **edit the existing
+  `DATABASE_URL`** in that scope and replace its value with the file's
+  contents (don't add a second one), then delete the file.
+
+  > **Outage warning.** The moment the password changes, the live site
+  > can no longer reach the database: the running deployment still has
+  > the old password, and Vercel only gives a changed variable to *new*
+  > deployments. It stays down until the redeploy finishes, so run the
+  > deploy **straight away**, right after the rotation:
+  > ```sh
+  > task deploy:prod       # after task role:rotate:prod
+  > task deploy:preview    # after task role:rotate:preview
+  > ```
+  > The script prints the same warning, with the right command, when it
+  > finishes.
 - **If the *owner*-role string leaked instead** (the one only you use, in
   `EMIBONNIE_DB`/`EMIBONNIE_DB_PREVIEW`): in the Neon console, open the
   affected branch → **Roles** → the owner role → **Reset password**, copy
@@ -422,7 +466,8 @@ pasted somewhere public, shown on a screen share:
   never give it to Vercel, so it never needs least-privilege treatment).
 - Either way, redeploy afterwards: `task deploy:preview` / `task
   deploy:prod` (or `site/scripts/deploy.sh [--prod]`), so the running
-  site picks up the new value.
+  site picks up the new value — immediately, for an `app` rotation (see
+  the outage warning above).
 - Check the Neon console's audit/activity log, and Vercel's Activity Log,
   for anything that used the leaked string before you rotated it.
 
@@ -474,8 +519,9 @@ task takedown -- <the numeric id from the /t/<id> URL>
 
 `task takedown` asks for confirmation, carries the id in a real
 environment variable (`TAKEDOWN_ID`, never spliced into shell or SQL
-text — the id is checked to be numeric-only before anything runs, so an
-id like `1"; rm -rf ~; echo "` or `$(...)` is rejected, not executed), and
+text — the whole id is checked to be digits only before anything runs, so
+an id like `1"; rm -rf ~; echo "`, `$(...)`, or one with a newline in it
+is rejected, not executed), and
 reminds you to purge the CDN cache afterwards. It's exactly this, run
 directly:
 

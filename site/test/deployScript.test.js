@@ -7,6 +7,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
+import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, chmodSync, rmSync, readFileSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -163,3 +165,74 @@ test('rejects an unknown argument before doing anything', () => {
   assert.notEqual(status, 0);
   assert.match(output, /unknown argument/);
 });
+
+/**
+ * Fix round 4, N3: the real (non-dry-run) first-deploy check, against a
+ * scratch copy of deploy.sh (REPO_ROOT resolves to the scratch dir, which
+ * gets its own `.vercel/project.json`), a fake `npx` that plays `vercel
+ * list`, and a fake `npm` that records its argv and fails -- so a run that
+ * gets past the check stops at step 1 (`npm ci`) and nothing real runs.
+ * @param {{ listOutput: string, listToStderr?: boolean, listStatus?: number }} fake
+ */
+function runFirstDeployCheck({ listOutput, listToStderr = false, listStatus = 0 }) {
+  const dir = mkdtempSync(path.join(tmpdir(), 'fan-archive-deploy-'));
+  try {
+    mkdirSync(path.join(dir, 'site/scripts'), { recursive: true });
+    mkdirSync(path.join(dir, '.vercel'));
+    writeFileSync(path.join(dir, '.vercel/project.json'), '{}');
+    copyFileSync(DEPLOY_SH, path.join(dir, 'site/scripts/deploy.sh'));
+    const binDir = path.join(dir, 'bin');
+    mkdirSync(binDir);
+    writeFileSync(path.join(dir, 'list-output'), listOutput);
+    writeFileSync(path.join(binDir, 'npx'),
+      `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >> "${dir}/npx-args"\ncat "${dir}/list-output" ${listToStderr ? '>&2' : ''}\nexit ${listStatus}\n`);
+    writeFileSync(path.join(binDir, 'npm'), `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >> "${dir}/npm-args"\nexit 1\n`);
+    chmodSync(path.join(binDir, 'npx'), 0o755);
+    chmodSync(path.join(binDir, 'npm'), 0o755);
+    let status = 0;
+    let output = '';
+    try {
+      output = execFileSync('bash', [path.join(dir, 'site/scripts/deploy.sh')], {
+        cwd: dir,
+        env: { PATH: `${binDir}:${process.env.PATH ?? ''}`, EMIBONNIE_DB_PREVIEW: PREVIEW_URL },
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+    } catch (/** @type {any} */ err) {
+      status = err.status ?? 1;
+      output = `${err.stdout ?? ''}${err.stderr ?? ''}`;
+    }
+    const read = (/** @type {string} */ f) => (existsSync(path.join(dir, f)) ? readFileSync(path.join(dir, f), 'utf8') : '');
+    return { status, output, npxArgs: read('npx-args'), npmArgs: read('npm-args') };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+for (const [label, fake, why] of /** @type {[string, Parameters<typeof runFirstDeployCheck>[0], RegExp][]} */ ([
+  ['empty output', { listOutput: '' }, /showed no deployment URL/],
+  ['"No deployments found."', { listOutput: 'Vercel CLI 65.1.0\n> No deployments found.\n', listToStderr: true }, /showed no deployment URL/],
+  ['unfamiliar wording, exit 0', { listOutput: 'Something changed in this CLI version\n' }, /showed no deployment URL/],
+  ['an error', { listOutput: 'Error: Not authorized\n', listToStderr: true, listStatus: 1 }, /'vercel list' failed \(exit 1\)/],
+])) {
+  test(`first-deploy check stops on ${label}, before step 1 (fix round 4, N3)`, () => {
+    const r = runFirstDeployCheck(fake);
+    assert.notEqual(r.status, 0, r.output);
+    assert.equal(r.npxArgs, '--yes vercel@65.1.0 list\n');
+    assert.match(r.output, why);
+    assert.match(r.output, /task deploy:prod/);
+    assert.equal(r.npmArgs, '', 'nothing after the check may run');
+    assert.doesNotMatch(r.output, /preview-secret-token/);
+  });
+}
+
+for (const toStderr of [false, true]) {
+  test(`first-deploy check proceeds when 'vercel list' shows a deployment URL (on ${toStderr ? 'stderr' : 'stdout'})`, () => {
+    const r = runFirstDeployCheck({
+      listOutput: 'Vercel CLI 65.1.0\n  Age  Deployment                                   Status\n  2d   https://archive-abc123-fanteam.vercel.app      ● Ready\n',
+      listToStderr: toStderr,
+    });
+    assert.match(r.output, /confirmed: this project already has at least one deployment/);
+    assert.equal(r.npmArgs, 'ci\n', 'it should reach step 1 (the fake npm then stops it)');
+  });
+}

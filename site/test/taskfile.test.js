@@ -93,12 +93,13 @@ function makeTakedownScratch() {
 
 /**
  * @param {string} dir @param {string} binDir @param {string} id
+ * @param {string[]} [taskArgs] defaults to `takedown -y -- <id>`
  * @returns {{ status: number, output: string, touchedPayload: boolean }}
  */
-function runTakedown(dir, binDir, id) {
+function runTakedown(dir, binDir, id, taskArgs = ['takedown', '-y', '--', id]) {
   const payloadMarker = path.join(dir, 'PAYLOAD_TOUCHED');
   try {
-    const output = execFileSync('task', ['takedown', '-y', '--', id], {
+    const output = execFileSync('task', taskArgs, {
       cwd: dir,
       encoding: 'utf8',
       env: { PATH: `${binDir}:${process.env.PATH ?? ''}`, EMIBONNIE_DB: 'postgres://u:p@h/db' },
@@ -147,3 +148,28 @@ test('task takedown: rejects `$(touch PAYLOAD_TOUCHED)` without running it', { s
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+/**
+ * Fix round 4, N2: the old `grep -Eqx` check matched line by line, so a
+ * value whose first line is digits passed. Through `--` Task shell-quotes
+ * CLI_ARGS, but `task takedown ID=<value>` carries the newline through
+ * as-is -- both routes are checked here.
+ */
+for (const [label, argsFor] of /** @type {[string, (id: string) => string[]][]} */ ([
+  ['task takedown -- <id>', (id) => ['takedown', '-y', '--', id]],
+  ['task takedown ID=<id>', (id) => ['takedown', '-y', `ID=${id}`]],
+])) {
+  test(`task takedown: rejects a multi-line id ('123\\n$(touch PAYLOAD_TOUCHED)') via ${label}`, { skip: !HAVE_TASK && 'task is not installed' }, () => {
+    const { dir } = makeTakedownScratch();
+    try {
+      const payload = '123\n$(touch PAYLOAD_TOUCHED)';
+      const { status, output, touchedPayload } = runTakedown(dir, path.join(dir, 'bin'), payload, argsFor(payload));
+      assert.notEqual(status, 0, output);
+      assert.match(output, /numeric tweet id only/);
+      assert.doesNotMatch(output, /FAKE_PSQL_ARGS/, 'psql must never be reached');
+      assert.equal(touchedPayload, false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+}
