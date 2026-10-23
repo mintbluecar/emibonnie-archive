@@ -93,7 +93,7 @@ export function composeItem(data) {
     </div>
     ${footerBlock(data)}
   `;
-  return pageShell.render({ active: 'home', compact: true, content });
+  return pageShell.render({ active: 'home', compact: true, headerProps: { noSearch: true }, content });
 }
 
 /**
@@ -175,7 +175,7 @@ function kindFromPath(path) {
 
 /** @param {Element} root @returns {void} */
 function mountNotFound(root) {
-  mountPage(root, pageShell.render({ compact: true, content: emptyState.render({ message: t('item.notFound') }) }));
+  mountPage(root, pageShell.render({ compact: true, headerProps: { noSearch: true }, content: emptyState.render({ message: t('item.notFound') }) }));
 }
 
 /** @returns {Promise<void>} */

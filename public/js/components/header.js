@@ -20,7 +20,7 @@
  */
 import { html } from '../core/html.js';
 import { site, t } from '../core/site.js';
-import { SEARCH_PATH } from '../core/routes.js';
+import { SEARCH_PATH, HOME_PATH } from '../core/routes.js';
 import * as themeToggle from './themeToggle.js';
 
 /** @returns {import('../core/html.js').SafeHtml} */
@@ -51,10 +51,16 @@ function searchRow(filterCount) {
   `;
 }
 
-/** The phone bar's search icon: a link to the search page (desktop has the nav's own "search" link instead). @returns {import('../core/html.js').SafeHtml} */
-function findLink() {
+/**
+ * The phone bar's search icon: a link to the search page (desktop has the
+ * nav's own "search" link instead) -- or, on a page with no search row
+ * (`noSearch`, the item page: Task 10c r, owner's decision), to home.
+ * @param {boolean} noSearch
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+function findLink(noSearch) {
   return html`
-    <a class="c-header__find" href="${SEARCH_PATH}" aria-label="${t('nav.search')}">
+    <a class="c-header__find" href="${noSearch ? HOME_PATH : SEARCH_PATH}" aria-label="${t('nav.search')}">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="11" cy="11" r="7"></circle>
         <path d="M21 21l-4.3-4.3"></path>
@@ -94,6 +100,22 @@ function belowClass(liveSearch, desktopSearch) {
 }
 
 /**
+ * What follows the bar: the phone tagline and the search row -- neither
+ * for a compact page with `noSearch` (the item page).
+ * @param {{ compact: boolean, filterCount?: number, liveSearch: boolean, desktopSearch: boolean, noSearch: boolean }} props
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+function below({ compact, filterCount, liveSearch, desktopSearch, noSearch }) {
+  if (noSearch && compact) return html``;
+  return html`
+    <div class="${belowClass(liveSearch, desktopSearch)}">
+      ${compact ? '' : tagline('below')}
+      ${noSearch ? '' : searchRow(filterCount)}
+    </div>
+  `;
+}
+
+/**
  * The pinned `<header>` (Task 10b, owner's "desktop full, phone slim"):
  * one bar, pinned by header.css at `--sticky-top`'s height. The tagline
  * and search row sit *after* it, so on a phone they scroll away; the
@@ -102,11 +124,13 @@ function belowClass(liveSearch, desktopSearch) {
  * `desktopSearch` (fix round 1, O1: the home page) keeps the search row
  * on desktop too, at the top of the content column under the bar -- the
  * bar itself stays clean. It still goes to /search (headerLinks.js).
- * @param {{ compact?: boolean, filterCount?: number, liveSearch?: boolean, desktopSearch?: boolean, nav?: import('../core/html.js').SafeHtml }} [props]
+ * `noSearch` (Task 10c r: the item page, which has no search box at any
+ * width) leaves the search row out entirely.
+ * @param {{ compact?: boolean, filterCount?: number, liveSearch?: boolean, desktopSearch?: boolean, noSearch?: boolean, nav?: import('../core/html.js').SafeHtml }} [props]
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function render(props = {}) {
-  const { compact = false, filterCount, liveSearch = false, desktopSearch = false, nav } = props;
+  const { compact = false, filterCount, liveSearch = false, desktopSearch = false, noSearch = false, nav } = props;
   return html`
     <header class="c-header${compact ? ' c-header--compact' : ''}${liveSearch ? ' c-header--live' : ''}">
       <div class="c-header__bar">
@@ -114,15 +138,12 @@ export function render(props = {}) {
           ${brand(compact)}
           <div class="c-header__tools">
             ${themeToggle.render()}
-            ${liveSearch ? '' : findLink()}
+            ${liveSearch ? '' : findLink(noSearch)}
           </div>
           ${nav ?? ''}
         </div>
       </div>
     </header>
-    <div class="${belowClass(liveSearch, desktopSearch)}">
-      ${compact ? '' : tagline('below')}
-      ${searchRow(filterCount)}
-    </div>
+    ${below({ compact, filterCount, liveSearch, desktopSearch, noSearch })}
   `;
 }

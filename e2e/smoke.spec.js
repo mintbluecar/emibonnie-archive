@@ -266,7 +266,8 @@ test('header (Task 10b fix O2, M5): on a phone the search row never sits over th
     const onTop = [40, 195, 350].map((x) => document.elementFromPoint(x, bar.bottom - 2)?.closest('header.c-header') !== null);
     return { barBottom: bar.bottom, rowTop: row.top, rowBottom: row.bottom, scrollY: window.scrollY, barOnTop: onTop.every(Boolean) };
   });
-  for (const path of ['/', `/e/${EVENT_SLUG}`, `/t/${IDS.LONG}`, `/search?q=${SEARCH_Q}`]) {
+  // The item page has no search row since Task 10c (r): e2e/polish.spec.js checks that.
+  for (const path of ['/', `/e/${EVENT_SLUG}`, `/search?q=${SEARCH_Q}`]) {
     await gotoReady(page, path);
     for (const y of [0, 10, 20, 40, 60, 80, 120, 300, 1500]) {
       await page.evaluate((target) => window.scrollTo(0, target), y);

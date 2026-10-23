@@ -153,3 +153,37 @@ test('embedSources on: the privacy page shows the X embed notice, linking X\'s p
   await expect(notice.locator('a')).toHaveAttribute('href', 'https://x.com/en/privacy');
   await assertNoSeriousA11yViolations(page);
 });
+
+test('embedSources on, X blocked (Task 10c l, q): the smaller embed\'s attributes, an "original tweet" heading, and a crop that only a tall post gets -- the switch opens it, toggling aria-expanded, keyboard reachable', async ({ page }, testInfo) => {
+  test.skip(DARK_PROJECTS.includes(testInfo.project.name), 'layout, not colour: light projects only');
+  await stubSyntheticMedia(page);
+  await blockX(page);
+  await turnEmbedSourcesOn(page, `/t/${LIVE}`);
+  await gotoReady(page, `/t/${LIVE}`);
+  const quote = page.locator('blockquote.twitter-tweet');
+  await expect(quote).toHaveAttribute('data-cards', 'hidden');
+  await expect(quote).toHaveAttribute('data-conversation', 'none');
+  await expect(quote).toHaveAttribute('data-width', '350');
+  await expect(page.locator('.c-embed-box h2.c-embed-box__label')).toHaveText('original tweet');
+  const box = page.locator('.c-embed-box');
+  const more = page.locator('.c-embed-box__more');
+  expect(await box.evaluate((el) => el.getBoundingClientRect().width)).toBeLessThanOrEqual(351);
+  await expect(more).toBeHidden(); // a short post: no switch, no crop
+  // A synthetic long post: more text in the fallback than the cap holds.
+  await quote.locator('.c-embed__text').evaluate((el) => { el.append('\nline of a very long translated post'.repeat(40)); });
+  await expect(more).toBeVisible();
+  await expect(box).toHaveClass(/c-embed-box--tall/);
+  const clip = page.locator('.c-embed-box__clip');
+  expect(await clip.evaluate((el) => el.getBoundingClientRect().height)).toBeLessThanOrEqual(321);
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await expect(more).toHaveAttribute('aria-label', 'show full tweet');
+  await more.focus();
+  await page.keyboard.press('Enter');
+  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  await expect(more).toHaveAttribute('aria-label', 'show less');
+  await expect(more).toBeFocused();
+  expect(await clip.evaluate((el) => el.getBoundingClientRect().height)).toBeGreaterThan(400);
+  await page.keyboard.press('Enter');
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  expect(await clip.evaluate((el) => el.getBoundingClientRect().height)).toBeLessThanOrEqual(321);
+});
