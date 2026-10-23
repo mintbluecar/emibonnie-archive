@@ -104,13 +104,3 @@ export function withQuery(path, query = '') {
   const qs = String(query);
   return qs ? `${path}?${qs}` : path;
 }
-
-/**
- * A whole-archive search: home, with the search's query string (Task
- * 10d -- home is the search). `searchHref(new URLSearchParams({ q: 'x' }))` -> `'/?q=x'`.
- * @param {string|URLSearchParams} [query]
- * @returns {string}
- */
-export function searchHref(query = '') {
-  return withQuery(HOME_PATH, query);
-}

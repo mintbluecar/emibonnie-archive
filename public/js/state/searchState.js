@@ -178,11 +178,6 @@ export function toApiParams(state, options = {}) {
   return params;
 }
 
-/** `true` when nothing is typed or filtered (home then shows its event list; see `searchScope.showsList` for a scoped page). @param {State} state @returns {boolean} */
-export function isBlank(state) {
-  return state.q === '' && filterCount(state) === 0;
-}
-
 /**
  * Adds `value` to a list field (no duplicates), or sets a scalar field.
  * Always a new `State`; `state` itself is never modified.

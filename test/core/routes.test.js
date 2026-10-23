@@ -82,13 +82,12 @@ test('Task 10b: every static page path in routes.js is exactly a src/pages.js ro
   }
 });
 
-test('Task 10d: no SEARCH_PATH any more; searchHref is home with the query, withQuery puts a query on any page path', async () => {
+test('Task 10d: no SEARCH_PATH or searchHref any more; withQuery puts a query on any page path', async () => {
   const routes = await import('../../public/js/core/routes.js');
   assert.equal(/** @type {any} */ (routes).SEARCH_PATH, undefined);
   assert.ok(!pages.some((p) => p.path === '/search'), '/search is not a page');
-  assert.equal(routes.searchHref(), '/');
-  assert.equal(routes.searchHref(''), '/');
-  assert.equal(routes.searchHref(new URLSearchParams({ q: 'a b' })), '/?q=a+b');
+  assert.equal(/** @type {any} */ (routes).searchHref, undefined);
+  assert.equal(routes.withQuery('/', new URLSearchParams({ q: 'a b' })), '/?q=a+b');
   assert.equal(routes.withQuery('/e/x', 'q=hi'), '/e/x?q=hi');
   assert.equal(routes.withQuery('/p/y', new URLSearchParams()), '/p/y');
 });

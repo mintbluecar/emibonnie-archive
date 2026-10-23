@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  EMPTY_STATE, parseState, toQuery, toApiParams, filterCount, withFilter, withoutFilter, sanitizeTypes, isBlank,
+  EMPTY_STATE, parseState, toQuery, toApiParams, filterCount, withFilter, withoutFilter, sanitizeTypes,
 } from '../../public/js/state/searchState.js';
 
 /** @type {import('../../src/http/contracts.js').FilterOptions} */
@@ -116,9 +116,9 @@ test('sanitizeTypes: drops a types entry that is neither a known category name n
   assert.deepEqual(sanitized.types, ['live', 'shared story']);
 });
 
-test('sanitizeTypes: an unknown type is neither counted by filterCount nor considered blank', () => {
+test('sanitizeTypes: an unknown type is not counted by filterCount', () => {
   const state = { ...EMPTY_STATE, types: ['made-up-category'] };
   const sanitized = sanitizeTypes(state, OPTIONS);
   assert.equal(filterCount(sanitized), 0);
-  assert.equal(isBlank(sanitized), true);
+  assert.deepEqual(sanitized.types, []);
 });

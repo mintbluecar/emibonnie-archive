@@ -61,7 +61,7 @@ export function literalPaths(source) {
 /**
  * Template literals starting with a typed path, outside routes.js. Only
  * API calls may be built this way; a page path must come from a
- * routes.js constant or helper (`searchHref`, `eventHref`, …).
+ * routes.js constant or helper (`eventHref`, `withQuery`, …).
  * @param {string} source @returns {string[]}
  */
 export function handTypedPagePaths(source) {
