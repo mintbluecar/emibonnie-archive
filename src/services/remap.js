@@ -5,7 +5,8 @@
  * through its kind's `remapSpeakers`, in one transaction under the given
  * actor. Never names a kind. Refuses an unknown kind or person (via
  * `resolveSpeakerRefs`), an item that isn't archived, and one that is
- * hidden or removed.
+ * hidden or removed. A pending (not yet published) item is allowed: the
+ * owner may fix its speakers before approving it.
  */
 import { kindsOf } from './cards.js';
 import { loadContext } from './ingestContext.js';

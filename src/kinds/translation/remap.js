@@ -35,22 +35,63 @@ export function swapPeople(current, before, after) {
   return [...kept, ...after.filter((p) => !have.has(keyOf(p)))];
 }
 
+const VS16 = /\uFE0F/gu;
+
 /**
+ * The text's own spelling of `marker`: itself when the text uses it,
+ * else the one used marker that differs only by U+FE0F (the emoji
+ * variation selector a keyboard or terminal may add or drop), else
+ * `null`. Several such matches are refused as ambiguous.
+ * @param {string} marker @param {string[]} used
+ * @returns {string|null}
+ */
+export function textMarkerFor(marker, used) {
+  if (used.includes(marker)) return marker;
+  const bare = marker.replace(VS16, '');
+  const matches = used.filter((m) => m.replace(VS16, '') === bare);
+  if (matches.length > 1) throw new BadRequest(`${marker} matches more than one marker in this item's text, differing only by a variation selector: ${matches.join(' ')}`);
+  return matches[0] ?? null;
+}
+
+/**
+ * The map re-keyed to the text's own markers (`textMarkerFor`), with a
+ * note for each one matched only through the variation selector.
+ * @param {SpeakerMap} map @param {string[]} used
+ * @returns {{ map: SpeakerMap, notes: string[] }}
+ */
+function onTextMarkers(map, used) {
+  /** @type {SpeakerMap} */
+  const out = {};
+  /** @type {string[]} */
+  const notes = [];
+  const unknown = [];
+  for (const [marker, speaker] of Object.entries(map)) {
+    const found = textMarkerFor(marker, used);
+    if (found === null) unknown.push(marker);
+    else out[found] = speaker;
+    if (found !== null && found !== marker) notes.push(`using ${found} (${found.length > marker.length ? 'with' : 'without'} variation selector)`);
+  }
+  if (unknown.length > 0) throw new BadRequest(`not a marker in this item's text: ${unknown.join(', ')} (it uses: ${used.join(' ') || 'none'})`);
+  return { map: out, notes };
+}
+
+/**
+ * Pending (not yet published) items may be remapped too; hidden or
+ * removed ones are refused by the caller (src/services/remap.js).
  * @param {any} tx
  * @param {{ itemId: number, map: SpeakerMap, ctx: DraftContext }} args
- * @returns {Promise<{ speakers: SpeakerMap, people: ItemPerson[] }>}
+ * @returns {Promise<{ speakers: SpeakerMap, people: ItemPerson[], notes: string[] }>}
  */
-export async function remapSpeakers(tx, { itemId, map, ctx }) {
+export async function remapSpeakers(tx, { itemId, map: given, ctx }) {
   const details = (await loadDetails(tx, [itemId])).get(itemId);
   if (!details) throw new BadRequest(`item ${itemId} is not a translation`);
-  const used = new Set(findMarkers(splitLines(details.body)).map((m) => m.marker));
-  const unknown = Object.keys(map).filter((marker) => !used.has(marker));
-  if (unknown.length > 0) throw new BadRequest(`not a marker in this item's text: ${unknown.join(', ')} (it uses: ${[...used].join(' ') || 'none'})`);
+  const used = [...new Set(findMarkers(splitLines(details.body)).map((m) => m.marker))];
+  const { map, notes } = onTextMarkers(given, used);
   const { rows } = await tx.query('select placement from items where id = $1', [itemId]);
   const item = { parts: details.parts, placement: rows[0].placement };
   const speakers = { ...details.speakers, ...map };
   const people = swapPeople(await listItemPeople(tx, itemId), speakerPeopleOf(item, details.speakers, ctx), speakerPeopleOf(item, speakers, ctx));
   await setSpeakers(tx, itemId, speakers);
   await setItemPeople(tx, itemId, people);
-  return { speakers, people: /** @type {ItemPerson[]} */ (people) };
+  return { speakers, people: /** @type {ItemPerson[]} */ (people), notes };
 }

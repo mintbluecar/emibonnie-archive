@@ -10,7 +10,7 @@ import { ingestDeps, ingestLong, rows, SYSTEM } from '../helpers/ingest.js';
 import { createPeople } from '../../src/services/intakeRefs.js';
 import { getPersonByHandle } from '../../src/repo/people.js';
 import { runRemap, remapRefs, remapTargetOf } from '../../scripts/remap.js';
-import { swapPeople } from '../../src/kinds/translation/remap.js';
+import { swapPeople, textMarkerFor } from '../../src/kinds/translation/remap.js';
 import { BadRequest } from '../../src/domain/errors.js';
 
 const RAIN = { igHandle: 'rain_x', displayName: 'Rain', emoji: '🌧️', colour: '#6b8cae' };
@@ -91,4 +91,27 @@ test('swapPeople: drops only what the old speakers gave, adds what the new ones 
   assert.deepEqual(swapPeople(/** @type {any} */ (current), /** @type {any} */ (before), /** @type {any} */ (after)), [
     { personId: 2, role: 'present' }, { personId: 9, role: 'present' }, { personId: 3, role: 'present' },
   ]);
+});
+
+test('review M4: a marker typed without (or with) the variation selector matches the text\'s spelling, with a note; pending items are allowed', async () => {
+  const deps = await ingestDeps();
+  try {
+    const long = await ingestLong(deps);
+    await deps.db.transaction((tx) => tx.query("update items set review_state = 'pending' where id = $1", [long.itemId]), SYSTEM);
+    /** @type {string[]} */
+    const lines = [];
+    await runRemap({ args: [IDS.LONG, '\u{1F327}=role:host'], deps, log: (l) => lines.push(l) });
+    assert.equal(lines[0], 'using 🌧️ (with variation selector)');
+    assert.equal((await speakers(deps.db, /** @type {number} */ (long.itemId)))['🌧️'], 'host');
+  } finally {
+    await deps.db.end();
+  }
+});
+
+test('textMarkerFor: exact first, then the one marker differing only by U+FE0F; several is refused, none is null', () => {
+  assert.equal(textMarkerFor('🌧️', ['🌧️']), '🌧️');
+  assert.equal(textMarkerFor('\u{1F327}', ['🌧️', '🐶']), '🌧️');
+  assert.equal(textMarkerFor('❤️', ['❤']), '❤');
+  assert.equal(textMarkerFor('🐸', ['🌧️']), null);
+  assert.throws(() => textMarkerFor('\u2764\uFE0F\uFE0F', ['\u2764', '\u2764\uFE0F']), /more than one marker/);
 });

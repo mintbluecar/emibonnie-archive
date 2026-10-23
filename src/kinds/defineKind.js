@@ -95,8 +95,10 @@ import { pages } from '../pages.js';
  *   What `fetchSource` returns: the kind's own input for `draft`, with at
  *   least a `status` ingest can read.
  * @typedef {any} Db
- * @typedef {{ speakers: SpeakerMap, people: ItemPerson[] }} RemapResult
- *   What `remapSpeakers` left on the item: its whole speaker map and people.
+ * @typedef {{ speakers: SpeakerMap, people: ItemPerson[], notes?: string[] }} RemapResult
+ *   What `remapSpeakers` left on the item: its whole speaker map and
+ *   people, plus `notes` for the owner (e.g. a marker matched only once a
+ *   variation selector was added or dropped).
  * @typedef {{ db: Db, fetchImpl: typeof fetch, now?: () => Date }} UpkeepDeps
  * @typedef {{
  *   people: Map<number, import('../repo/people.js').Person>,

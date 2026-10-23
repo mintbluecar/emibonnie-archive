@@ -72,6 +72,14 @@ export function resolveMedia(sources) {
 const THUMB_URL = /^https:\/\/pbs\.twimg\.com\//;
 
 /**
+ * @param {string|null} url @param {{ width: number, height: number }} size @param {boolean} video
+ * @returns {import('../../http/contracts.js').ThumbVM|null}
+ */
+function thumbAt(url, { width, height }, video) {
+  return url && THUMB_URL.test(url) ? { url, width, height, video } : null;
+}
+
+/**
  * The preview card's thumbnail (ThumbVM, Task 10c) from the same media
  * the item page pins: a clip's poster, else the first picture; a quote's
  * own clip or pictures the same way. Null for a text-only quote, a
@@ -81,9 +89,9 @@ const THUMB_URL = /^https:\/\/pbs\.twimg\.com\//;
  */
 export function thumbOf(media) {
   const shown = media?.type === 'quote' ? media.inner : media;
-  if (shown?.type === 'video') return shown.poster && THUMB_URL.test(shown.poster) ? { url: shown.poster, width: shown.width, height: shown.height, video: true } : null;
+  if (shown?.type === 'video') return thumbAt(shown.poster, shown, true);
   const first = shown?.type === 'images' ? shown.images[0] : undefined;
-  return first && THUMB_URL.test(first.url) ? { url: first.url, width: first.width, height: first.height, video: false } : null;
+  return first ? thumbAt(first.url, first, false) : null;
 }
 
 /** @param {MediaVM|null} media */

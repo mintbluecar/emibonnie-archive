@@ -6,8 +6,11 @@
  * each marker means and updates the item's people to match, in one
  * transaction with actor `'system'`, so the audit log records it. The
  * text is never changed. Refuses a marker the text doesn't use, an
- * unknown person or role, and a hidden or removed item; and, like
- * `npm run migrate`, refuses to run with neither `DATABASE_URL` nor
+ * unknown person or role, and a hidden or removed item (a pending one is
+ * fine). A marker typed with or without the emoji variation selector
+ * (U+FE0F) that the text spells the other way is matched, with a
+ * "using …" note; one that could match several is refused. Like
+ * `npm run migrate`, it refuses to run with neither `DATABASE_URL` nor
  * `PGLITE_DIR` set. Never prints the connection string.
  */
 import { fileURLToPath } from 'node:url';
@@ -54,6 +57,7 @@ export async function runRemap({ args, deps, log = console.log }) {
   const [sourceId, ...pairs] = positionals;
   if (!sourceId || pairs.length === 0) throw new Error(USAGE);
   const result = await remapItem(deps, { kind: values.kind, sourceId, refs: remapRefs(pairs), actor: 'system' });
+  for (const note of result.notes ?? []) log(note);
   log(`remapped item ${result.itemId} (${sourceId}): ${pairs.join(' ')}`);
   log(`  people: ${result.people.map((p) => `${p.personId}/${p.role}`).join(', ') || 'none'}`);
 }
