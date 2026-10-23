@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented here. Versions are semver tags (`vX.Y.Z`). Each release lists its **upgrade steps**; to take one, see `docs/start-your-own.md`, step 10.
 
+## 0.1.5
+
+UI polish. Entries and events browse as picture-led cards, translators get a linked credit line, events can have a typed title, and the embedded X post sits at the site's text size.
+
+**Upgrade steps:**
+
+1. `git fetch upstream --tags && git merge v0.1.5`.
+2. **Copy keys.** If `site/copy.json` overrides any of these, remove the line (the build refuses unknown keys): `item.translator`, `event.allPeople`, `event.translatorFilterLabel`, `event.translatorAll`. New keys you may override: `item.translatedBy` ("translated by:"), `event.keywordLabel.one|other` ("keyword:"/"keywords:"), `event.hashtagLabel.one|other` ("hashtag:"/"hashtags:").
+3. A site `theme.css` that styled `.c-event__people-filter`, `.c-event__account-filter` or `.c-event__account-select` can drop those rules: the elements are gone.
+4. `npm run build`, then redeploy.
+
+No migrations. Titles only apply to events created from now on; an existing event keeps its name.
+
+- **Picture-led grids.** On the event, person and translator pages, translation entries are cards in a grid (thumbnail on top, text clamped to three lines, the credit pinned to the bottom).
+- **Home event cards.** Events show as cards grouped by month: a representative picture (the first of an event's three opening items that has one), the name, the date, the hashtag on one line, and the count.
+- **"translated by: @handle"** is a last line on every card and on the item page, linking to the translator's X profile in a new tab. Cards are `<article>`s with one stretched main link, so the credit link is never nested. Previews gain `accountUrl`; item credits gain `account.url`.
+- **Event titles.** A draft's `overrides.eventName` names a new event; the slug still comes from the keyword. With none, the keyword is the name, as before.
+- **The event page** shows the event's keyword(s) and hashtag(s) as labelled rows (each hashtag searches X, in a new tab), then the type/client pills. Its own people chips and translator dropdown are gone: the in-place search's filters do the same.
+- **Dropdowns** draw their own inset chevron (`.c-select`, `src/styles/components/select.css`).
+- **The embedded X post** is scaled to `--embed-zoom` (0.82) with CSS `zoom`, since X's iframe can't be styled and has no size option; on desktop it's now about 450px wide. The fallback blockquote keeps the site's sizes.
+
 ## 0.1.4
 
 Search happens in place. There is no search page any more: home is the search, and the event, person and translator pages each search within themselves. Old `/search?…` links redirect home with the same query.
