@@ -99,30 +99,63 @@ every page.
 Visitors can switch the theme with the header's switch (light, dark, or
 follow the device); their choice sets `data-theme="light"` or
 `data-theme="dark"` on `<html>`, and following the device sets neither.
-So a site's dark values go in **two identical blocks**, exactly like the
-engine's own `tokens.css`, and its light values go on a plain `:root`:
+The engine's `tokens.css` writes its dark values twice, on selectors more
+specific than a plain `:root`:
+
+- `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { … } }`:
+  a dark device, unless the visitor forced light;
+- `:root[data-theme="dark"] { … }`: forced dark, whatever the device.
+
+Both are specificity (0,2,0); a plain `:root` is (0,1,0). That decides
+how a site's `theme.css` must be written:
+
+- **Light values go on a plain `:root`.** It works because the engine's
+  dark blocks outrank it wherever dark applies, and nothing outranks it
+  anywhere else. Don't use `@media (prefers-color-scheme: light)`: a
+  visitor forcing light on a dark device wouldn't get it, and would see the
+  engine's light defaults instead of yours.
+- **Dark values go in the same two blocks, identical.** A dark value on a
+  plain `:root` inside `@media (prefers-color-scheme: dark)` (the pre-0.1.3
+  pattern) loses to the engine's dark blocks, so it never shows -- not even
+  on a device in plain dark mode -- and on a dark device forced to light it
+  still applies, mixing into the light page.
+- **Repeat light-only tokens in your dark blocks.** A token you set on
+  `:root` for light that the engine's dark blocks don't set themselves
+  (for example `--gradient-from`; the engine's dark blocks set only the
+  paper, card, ink, `--gradient-to`, `--color-label`, `--color-highlight`
+  and `--color-accent-text` tokens) carries into dark unless your dark
+  blocks set it again.
+
+A worked example: a site with its own paper, label colour and gradient.
 
 ```css
+/* Light: everywhere the dark blocks below don't apply. */
 :root {
-  --gradient-to: #6456c9;            /* light */
+  --color-bg: #f6efe3;
+  --color-label: #7048e0;
+  --gradient-from: #d9541a;          /* darkened for the light paper */
+  --gradient-to: #cb206d;
 }
 
+/* Dark on a dark device, unless the visitor forced light. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --gradient-to: #8276dd;          /* device dark, unless forced light */
+    --color-label: #a58cff;
+    --gradient-from: #ff6a2b;        /* repeated: the engine's dark blocks don't set it, so the light value would leak */
+    --gradient-to: #e2468c;
   }
 }
 
+/* Forced dark, whatever the device: identical to the block above. */
 :root[data-theme="dark"] {
-  --gradient-to: #8276dd;            /* forced dark */
+  --color-label: #a58cff;
+  --gradient-from: #ff6a2b;
+  --gradient-to: #e2468c;
 }
 ```
 
-Don't put light values under `@media (prefers-color-scheme: light)`: a
-visitor who forces light on a dark device would get the engine's light
-defaults instead of yours, and one who forces dark on a light device
-keeps any light value the engine's dark block doesn't also set. A plain
-`:root` block is light wherever the dark blocks don't apply.
+`--color-bg` needs no dark value of its own here: the engine's dark blocks
+set it, and they outrank the light `:root`.
 
 ## `site/copy.json`
 

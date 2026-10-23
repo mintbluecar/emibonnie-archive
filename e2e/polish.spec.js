@@ -61,7 +61,7 @@ test('item media (Task 10c k): pins exactly where it starts on desktop; on a pho
     expect(Math.abs(at600 - at0)).toBeLessThanOrEqual(1);
     expect(at0 - barBottom).toBeCloseTo(16, 0);
   } else {
-    // A phone's search row and back link sit above the media, so it rises until it pins.
+    // A phone's back link sits above the media (the item page has no search row since 10c r), so it rises until it pins.
     expect(at600 - barBottom).toBeCloseTo(8, 0);
     await page.evaluate(() => window.scrollTo(0, 900));
     expect(Math.abs((await top()) - at600)).toBeLessThanOrEqual(1);
