@@ -1,0 +1,52 @@
+/*
+ * public/js/components/personHeader.js: a centred card tinted with the
+ * person's colour, as in mockups/people-me-v1.html (Task 9b). The
+ * gradient (12% of --c over the card, fading to 3%) is what
+ * dom.js's textBackgroundsFor() checks the name's --c-text against.
+ */
+
+.c-person-header {
+  position: relative;
+  text-align: center;
+  border-radius: 20px;
+  padding: 16px 52px;
+  margin: 12px 0;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--c) 12%, var(--color-card)), color-mix(in srgb, var(--c) 3%, var(--color-card)));
+}
+
+.c-person-header__emoji {
+  display: block;
+  font-size: 40px;
+  line-height: 1;
+}
+
+/*
+ * `--c-text` (see bubbles.css's `.c-bubbles__name`) is shaded by
+ * applyColours() for this card's own tint; the flat 60% mix is only the
+ * fallback before JS runs.
+ */
+.c-person-header__name {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.25;
+  margin: 4px 0 0;
+  color: var(--c-text, color-mix(in srgb, var(--c) 60%, var(--color-ink)));
+}
+
+/* Muted, shaded a quarter toward ink: a site's muted colour may only just
+   pass AA on a plain card, and this sits on a tint. */
+.c-person-header__handle {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-ink-muted) 75%, var(--color-ink));
+}
+
+.c-person-header .c-hub__counts {
+  color: var(--color-ink);
+  margin: 6px 0 0;
+}
+
+.c-person-header__action {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}

@@ -1,0 +1,30 @@
+{
+  "name": "solluna archive",
+  "wordmark": { "accent": "sol", "rest": "luna archive" },
+  "tagline": "fan translations, kept",
+  "ownerXUserId": "0",
+  "sourceLanguage": "th",
+  "timezone": "Asia/Bangkok",
+  "region": "sin1",
+  "lowercaseNames": true,
+  "featuredPeople": [
+    {
+      "igHandle": "solsunny",
+      "displayName": "sol",
+      "emoji": "☀️",
+      "colour": "#c47a12",
+      "otherAccounts": [{ "platform": "x", "handle": "solsunny_x" }]
+    },
+    { "igHandle": "lunamoon", "displayName": "luna", "emoji": "🌙", "colour": "#6a5cd6" }
+  ],
+  "defaultMarkers": {
+    "☀️": { "personHandle": "solsunny" },
+    "🌙": { "personHandle": "lunamoon" },
+    "🗣️": { "role": "crowd" },
+    "💬": { "role": "fan" }
+  },
+  "ignoredHashtags": ["solluna"],
+  "categories": ["show / interview", "fan meet / fan day", "live"],
+  "extraLivePatterns": [],
+  "contactUrl": "https://github.com/mintbluecar/fan-archive/issues"
+}

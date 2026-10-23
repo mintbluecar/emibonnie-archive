@@ -1,0 +1,34 @@
+/* public/js/components/resultCard.js */
+
+.c-result-card {
+  display: block;
+  background: var(--color-card);
+  border-radius: var(--radius-card);
+  box-shadow: 0 2px 0 var(--color-card-shadow);
+  padding: 10px 12px;
+}
+
+.c-result-card__event {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--color-label);
+  margin-bottom: 3px;
+}
+
+.c-result-card__line {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.c-result-card__text mark {
+  background: var(--color-highlight);
+  border-radius: 3px;
+  padding: 0 2px;
+  color: inherit;
+}
+
+.c-result-card__meta {
+  font-size: 10.5px;
+  color: var(--color-ink-muted);
+  margin-top: 5px;
+}

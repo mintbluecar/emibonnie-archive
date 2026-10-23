@@ -1,0 +1,30 @@
+/* public/js/kinds/translation/{section,detail}.js */
+
+.k-translation-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.k-translation-detail__credits {
+  font-size: 11px;
+  color: var(--color-ink-muted);
+  margin: 8px 0;
+}
+
+.k-translation-detail__original-toggle {
+  font-size: 11px;
+  color: var(--color-ink-muted);
+  text-decoration: underline;
+  margin-top: 12px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.k-translation-detail__original-para {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}

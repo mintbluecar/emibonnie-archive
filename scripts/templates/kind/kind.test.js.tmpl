@@ -1,0 +1,52 @@
+// @ts-check
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import kind from '../../../src/kinds/__name__/index.js';
+
+const URL_IN = 'https://example.com/posts/p1';
+
+/** @param {number} status @param {unknown} [body] */
+const fetchReturning = (status, body) => /** @type {typeof fetch} */ (async () => new Response(JSON.stringify(body ?? {}), { status }));
+
+test('__name__ satisfies the Kind contract (defineKind would have thrown on import)', () => {
+  assert.equal(kind.name, '__name__');
+  assert.equal(kind.table, '__name___items');
+  assert.equal(kind.urlPrefix, '/__dash__/');
+});
+
+test('matchesUrl: the post id, else null', () => {
+  assert.equal(kind.matchesUrl(URL_IN), 'p1');
+  assert.equal(kind.matchesUrl('https://example.org/posts/p1'), null);
+});
+
+test('fetchSource: live, deleted on 404, unavailable on a server error or a bad shape', async () => {
+  const live = await kind.fetchSource({ fetchImpl: fetchReturning(200, { text: 'hi', author: { handle: 'w' } }) }, 'p1');
+  assert.equal(live.status, 'live');
+  assert.equal((await kind.fetchSource({ fetchImpl: fetchReturning(404) }, 'p1')).status, 'deleted');
+  assert.equal((await kind.fetchSource({ fetchImpl: fetchReturning(500) }, 'p1')).status, 'unavailable');
+  assert.equal((await kind.fetchSource({ fetchImpl: fetchReturning(200, { nope: 1 }) }, 'p1')).status, 'unavailable');
+});
+
+test('search fragments bind only their placeholder', () => {
+  assert.match(kind.search.textClause(3), /ilike \$3\)$/);
+  assert.match(kind.search.rank(2), /word_similarity\(\$2, /);
+  assert.throws(() => kind.search.textClause(0), TypeError);
+  assert.deepEqual(kind.search.matchLines({ body: 'One\n  two Two \nthree' }, 'TWO'), ['two Two']);
+});
+
+test('presenter: plain-bubble preview (2 lines) and detail in the contract shapes', () => {
+  const card = /** @type {any} */ ({
+    id: 1, kind: '__name__', placement: 'unsorted', sourceId: 'p1', occurredOn: '2026-01-02', postedAt: null,
+    account: { handle: 'w', displayName: null }, event: null, people: [{ personId: 3, role: 'about' }], followsOn: null,
+  });
+  const details = { body: 'one\n\ntwo\nthree', sources: [{ role: 'primary', url: URL_IN, status: 'live' }] };
+  const ctx = /** @type {any} */ ({ urlFor: (/** @type {string} */ k, /** @type {string} */ id) => `/${k}/${id}`, chips: () => [] });
+  const preview = /** @type {any} */ (kind.present.preview(card, details, ctx));
+  assert.deepEqual(preview.lines, [{ kind: 'plain', text: 'one' }, { kind: 'plain', text: 'two' }]);
+  assert.equal(preview.url, '/__name__/p1');
+  assert.equal(preview.hasVideo, false);
+  const detail = /** @type {any} */ (kind.present.detail(card, details, ctx));
+  assert.equal(detail.bubbles.length, 3);
+  assert.deepEqual(detail.sources, [{ role: 'primary', url: URL_IN, status: 'live' }]);
+  assert.equal(detail.media, null);
+});

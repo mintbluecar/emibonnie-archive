@@ -1,0 +1,86 @@
+// @ts-check
+/**
+ * The __name__ kind's pure half (no I/O, no clock; it may import only
+ * src/domain/): reading a fetched post, and turning it into a `Draft`
+ * (src/kinds/defineKind.js). Generic code reads only `draft.common` and
+ * `draft.missing`; `body` is this kind's own, handed back to `persist`.
+ *
+ * Scaffolded by `npm run new kind __name__` as the smallest working
+ * kind: one text field (`body`). The translation kind
+ * (src/kinds/translation/domain.js) shows the fuller version: header
+ * parsing, event matching, speaker markers (`missing`), follow-ups.
+ */
+
+/**
+ * The `platforms` code this kind's posts live on (001_initial.sql seeds
+ * x, instagram, tiktok, youtube, weverse, telegram; a new one is an
+ * `insert into platforms` in this kind's migration). TODO set yours.
+ */
+export const PLATFORM = 'x';
+
+/**
+ * @typedef {{ status: 'live', id: string, url: string, text: string, authorId: string|null, authorHandle: string,
+ *   authorName: string|null, postedAt: string|null }} __Pascal__Post
+ *   What `fetchSource` returns for a live post (src/kinds/__name__/index.js).
+ * @typedef {import('../defineKind.js').Draft & { body: string }} __Pascal__Draft
+ */
+
+/** @param {unknown} value @returns {string|null} */
+const stringOrNull = (value) => (typeof value === 'string' && value.length > 0 ? value : null);
+
+/**
+ * A live post from the source's JSON, or `unavailable` when it isn't the
+ * expected shape (never throws on bad input). TODO match your source:
+ * this reads `{ text, url?, postedAt?, author: { id?, handle, name? } }`.
+ * @param {string} id
+ * @param {string} url the post's public URL
+ * @param {any} json
+ * @returns {__Pascal__Post | { status: 'unavailable' }}
+ */
+export function postOf(id, url, json) {
+  const text = stringOrNull(json?.text);
+  const handle = stringOrNull(json?.author?.handle);
+  if (!text || !handle) return { status: 'unavailable' };
+  return {
+    status: 'live', id, url, text, authorId: stringOrNull(json.author.id), authorHandle: handle,
+    authorName: stringOrNull(json.author.name), postedAt: stringOrNull(json.postedAt),
+  };
+}
+
+/**
+ * The known people a text names as `@igHandle` (case-insensitive), as
+ * `about` -- the translation kind finds its people through speaker
+ * markers instead.
+ * @param {string} text
+ * @param {import('../defineKind.js').DraftContext['people']} people
+ * @returns {import('../defineKind.js').ItemPerson[]}
+ */
+export function peopleNamedIn(text, people) {
+  const named = new Set([...text.matchAll(/@([\p{L}\p{N}._]+)/gu)].map((m) => m[1].toLowerCase()));
+  return people.filter((p) => p.igHandle && named.has(p.igHandle.toLowerCase())).map((p) => ({ personId: p.id, role: 'about' }));
+}
+
+/**
+ * `kind.draft`: the submitter's chosen event (`overrides.eventId`) places
+ * it there, else it's unsorted; hand-typed text replaces the post's.
+ * @param {__Pascal__Post} post
+ * @param {import('../defineKind.js').DraftContext} ctx
+ * @returns {__Pascal__Draft}
+ */
+export function draft__Pascal__(post, ctx) {
+  const { overrides } = ctx;
+  const eventId = overrides.eventId ?? null;
+  const body = overrides.text ?? post.text;
+  return {
+    common: {
+      placement: eventId === null ? 'unsorted' : 'event', eventId, proposal: null, occurredOn: null, postedAt: post.postedAt,
+      credited: { platform: PLATFORM, externalId: post.authorId, handle: post.authorHandle, displayName: post.authorName },
+      primary: { platform: PLATFORM, externalId: post.id, url: post.url },
+      people: peopleNamedIn(body, ctx.people),
+      categoryName: overrides.categoryName ?? null, clientName: overrides.clientName ?? null,
+      textEnteredManually: overrides.text !== undefined, followsOn: null,
+    },
+    missing: [],
+    body,
+  };
+}

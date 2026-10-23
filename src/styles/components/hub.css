@@ -1,0 +1,149 @@
+/*
+ * public/js/pages/{person,account}.js and public/js/pages/hubGroups.js:
+ * the layout shared by the person and translator pages -- the
+ * translator's head card, the counts/totals line, the segmented control, each
+ * group's label, and the person page's "with…" picker dialog.
+ */
+
+.c-person__search {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+}
+
+/* A plain card, like the person page's (mockups/people-me-v1.html, Task 9b). */
+.c-account__head {
+  text-align: center;
+  padding: 16px;
+  margin: 12px 0;
+  border-radius: 20px;
+  background: var(--color-card);
+}
+
+.c-account__handle {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.c-account__open-profile {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-label);
+  margin-top: 4px;
+}
+
+.c-hub__counts {
+  font-size: 11.5px;
+  color: var(--color-ink-muted);
+  text-align: center;
+  margin: 4px 0 10px;
+}
+
+.c-hub__seg {
+  margin-bottom: 12px;
+}
+
+/* The view switch reads as one pill track with the active view tinted,
+   as in mockups/people-me-v1.html (Task 9b). Each option keeps chips.css's
+   44px tap height. */
+.c-hub__seg .c-chips {
+  flex-wrap: nowrap;
+  gap: 2px;
+  padding: 2px;
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: 999px;
+}
+
+.c-hub__seg .c-chips .c-chips__chip {
+  flex: 1;
+  justify-content: center;
+  border: 0;
+  background: none;
+  color: var(--color-ink-muted);
+}
+
+.c-hub__seg .c-chips .c-chips__chip--on {
+  background: var(--color-label-tint);
+  color: var(--color-label-on-tint);
+  font-weight: 800;
+}
+
+.c-hub-group__label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-label);
+  margin: 16px 2px 6px;
+}
+
+.c-hub__more {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--color-ink-muted);
+  text-align: center;
+}
+
+.c-hub__picker {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  width: 100%;
+  max-width: none;
+  max-height: 85vh;
+  margin: 0;
+  border: 0;
+  border-radius: 20px 20px 0 0;
+  padding: 16px 16px 24px;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  overflow-y: auto;
+}
+
+.c-hub__picker::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.c-hub__picker-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--color-card);
+}
+
+.c-hub__picker-title {
+  font-size: 15px;
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+
+.c-hub__picker-error {
+  font-size: 12.5px;
+  color: var(--color-ink-muted);
+}
+
+.c-hub__picker-apply {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px;
+  border-radius: 12px;
+  font-weight: 800;
+  color: var(--color-accent-text);
+  background: var(--gradient-to);
+}

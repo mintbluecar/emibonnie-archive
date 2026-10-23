@@ -1,0 +1,109 @@
+/*
+ * public/js/pages/item.js's own layout (task-4 brief; review round 1,
+ * IMPORTANT #1 adds the back-to-event row). A dedicated grid (not the
+ * shared `.cols` from layout.css, which is only a grid at >=860px) so
+ * `grid-template-areas` can reposition the back row between phone
+ * ("back" above "media") and web ("back" at the top of the "body"
+ * column, "media" spanning both rows and staying sticky) without
+ * rendering it twice -- matching
+ * docs/superpowers/specs/mockups/screens-v2.html's phone and web
+ * translation screens.
+ */
+
+.c-item {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-areas: 'back' 'media' 'body';
+  row-gap: 8px;
+}
+
+.c-item__back {
+  grid-area: back;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+
+.c-item__media {
+  grid-area: media;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--color-bg);
+}
+
+.c-item__body {
+  grid-area: body;
+}
+
+.c-item__prevnext {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.c-item__prev,
+.c-item__next {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+
+.c-item__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1.5px solid var(--color-card-shadow);
+  font-size: 11px;
+}
+
+.c-item__footer-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  color: var(--color-ink-muted);
+  text-decoration: underline;
+}
+
+.c-item__added-by {
+  color: var(--color-ink-muted);
+}
+
+.c-item__copy-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 11px;
+  color: var(--color-ink);
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: 10px;
+}
+
+@media (min-width: 860px) {
+  .c-item {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: 'media back' 'media body';
+    column-gap: 24px;
+    row-gap: 0;
+    /* Clear of the one-line top bar (Task 9b), as in the mockup's web screen. */
+    padding-top: 16px;
+  }
+
+  .c-item__media {
+    align-self: start;
+  }
+
+  .c-item__back {
+    margin-bottom: 4px;
+  }
+}

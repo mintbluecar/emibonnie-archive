@@ -1,0 +1,177 @@
+// @ts-check
+/**
+ * The "check for update" button (task-4 brief): shown only while
+ * `editOpenUntil` is in the future. Posts to `/api/item/:kind/:sourceId/refresh`,
+ * then re-renders the bubbles when `updated > 0`. `throttled: true` (the
+ * server's own 60 s guard) is treated as a normal check -- the lock here
+ * is the *browser's* own, separate backoff (owner's ruling 1): 1 min
+ * after the 1st press, 5 min after the 2nd, 15 min after the 3rd on,
+ * kept per translation in `localStorage` behind try/catch, falling back
+ * to an in-memory `Map` when storage isn't available (private browsing,
+ * quota, etc). A 409 (the edit window has closed) removes the button.
+ */
+import { html } from '../core/html.js';
+import { on } from '../core/dom.js';
+import { t, site } from '../core/site.js';
+import { timePair } from '../core/format.js';
+import { nextLockMs } from './backoff.js';
+
+/** @typedef {{ count: number, lockedUntil: number }} ThrottleState */
+
+/** In-memory fallback, shared across every button on the page, keyed the same as `localStorage`. */
+const memoryStore = new Map();
+
+/** @param {string} kind @param {string} sourceId @returns {string} */
+const storageKey = (kind, sourceId) => `fa:refresh:${kind}:${sourceId}`;
+
+/**
+ * Reads `localStorage`, behind try/catch; only consults the in-memory
+ * fallback when `localStorage` itself is unavailable or throws -- a
+ * legitimate "no state yet" read (a present `localStorage` returning
+ * `null`) must stay `null`, not shadow-read a stale in-memory value.
+ * @param {string} key @returns {ThrottleState|null}
+ */
+function loadState(key) {
+  try {
+    if (globalThis.localStorage) {
+      const raw = globalThis.localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    }
+  } catch {
+    // falls through to the in-memory store below
+  }
+  return memoryStore.get(key) ?? null;
+}
+
+/** @param {string} key @param {ThrottleState} state @returns {void} */
+function saveState(key, state) {
+  try {
+    if (globalThis.localStorage) { globalThis.localStorage.setItem(key, JSON.stringify(state)); return; }
+  } catch {
+    // falls through to the in-memory store below
+  }
+  memoryStore.set(key, state);
+}
+
+/**
+ * @param {{ editOpenUntil: string|null, now?: Date }} props
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+export function render({ editOpenUntil, now = new Date() }) {
+  if (!editOpenUntil || new Date(editOpenUntil).getTime() <= now.getTime()) return html``;
+  return html`
+    <div class="c-refresh">
+      <button type="button" class="c-refresh__btn">
+        ${t('item.checkUpdate')} · ${t('item.editableUntil', { time: timePair(editOpenUntil, site.timezone) })}
+      </button>
+    </div>
+  `;
+}
+
+/** @param {number} ms @returns {string} `m:ss` */
+function formatCountdown(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = String(totalSeconds % 60).padStart(2, '0');
+  return `${minutes}:${seconds}`;
+}
+
+/**
+ * Disables the button and counts down its lock, re-enabling it once
+ * `lockedUntil` passes.
+ * @param {HTMLButtonElement} button @param {number} lockedUntil
+ * @returns {void}
+ */
+function startCountdown(button, lockedUntil) {
+  const original = button.textContent;
+  const tick = () => {
+    const remaining = lockedUntil - Date.now();
+    if (remaining <= 0) {
+      button.disabled = false;
+      button.textContent = original;
+      return;
+    }
+    button.disabled = true;
+    button.textContent = t('item.tryLater', { time: formatCountdown(remaining) });
+    // `unref()` (Node only) keeps a lingering timer from holding a test
+    // process open; real browsers simply don't have the method.
+    /** @type {any} */ (setTimeout(tick, 1000))?.unref?.();
+  };
+  tick();
+}
+
+/**
+ * @param {{ kind: string, sourceId: string }} target
+ * @returns {{ key: string, pressCount: number, lockedUntil: number }}
+ */
+function registerPress(target) {
+  const key = storageKey(target.kind, target.sourceId);
+  const current = loadState(key);
+  const pressCount = (current?.count ?? 0) + 1;
+  const lockedUntil = Date.now() + nextLockMs(pressCount);
+  saveState(key, { count: pressCount, lockedUntil });
+  return { key, pressCount, lockedUntil };
+}
+
+/**
+ * Re-applies the lock countdown to whatever `.c-refresh__btn` currently
+ * exists under `el`, if the stored state is still locked. Exported so a
+ * caller that re-renders just the button's container (e.g. the item
+ * page's body re-render after a successful check) can resync a freshly
+ * rendered button against the standing lock, without re-registering any
+ * listeners.
+ * @param {Element} el @param {{ kind: string, sourceId: string }} target
+ * @returns {void}
+ */
+export function syncLock(el, target) {
+  const existing = loadState(storageKey(target.kind, target.sourceId));
+  const button = /** @type {HTMLButtonElement|null} */ (el.querySelector('.c-refresh__btn'));
+  if (existing && existing.lockedUntil > Date.now() && button) startCountdown(button, existing.lockedUntil);
+}
+
+/**
+ * Posts the refresh request; a network failure (not a server error
+ * response -- `fetch` itself rejecting) still leaves the press-lock
+ * applied (already set by the caller before this runs) and shows a
+ * gentle "couldn't check" message instead of leaving the countdown
+ * silently hanging.
+ * @param {HTMLButtonElement} button @param {{ kind: string, sourceId: string }} target
+ * @param {(result: { updated: number }) => void} onUpdated
+ * @returns {Promise<void>}
+ */
+async function postRefresh(button, target, onUpdated) {
+  try {
+    const response = await fetch(`/api/item/${encodeURIComponent(target.kind)}/${encodeURIComponent(target.sourceId)}/refresh`, { method: 'POST' });
+    // `button.closest('.c-refresh')`, not `el.querySelector(...)`: `el` (the
+    // element `bind()` was called on) may be the `.c-refresh` element
+    // itself, whose own descendants a querySelector search would miss
+    // (review round 1, CRITICAL #2).
+    if (response.status === 409) { button.closest('.c-refresh')?.remove(); return; }
+    if (!response.ok) return;
+    const result = await response.json();
+    if (result.updated > 0) onUpdated(result);
+  } catch {
+    button.textContent = t('item.checkFailed');
+  }
+}
+
+/**
+ * Delegates the click at `el` (meant to be called exactly once, on a
+ * stable ancestor such as the page's root -- never re-called after a
+ * re-render of just the button's container, or its listener would pile
+ * up; see `syncLock()` for resyncing after such a re-render).
+ * @param {Element} el
+ * @param {{ kind: string, sourceId: string }} target
+ * @param {(result: { updated: number }) => void} onUpdated
+ * @returns {void}
+ */
+export function bind(el, target, onUpdated) {
+  syncLock(el, target);
+  on(el, '.c-refresh__btn', 'click', (_e, target_) => {
+    const button = /** @type {HTMLButtonElement} */ (target_);
+    if (button.disabled) return;
+    const { lockedUntil } = registerPress(target);
+    startCountdown(button, lockedUntil);
+    postRefresh(button, target, onUpdated);
+  });
+}

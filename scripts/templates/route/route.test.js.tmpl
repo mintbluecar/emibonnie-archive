@@ -1,0 +1,17 @@
+// @ts-check
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { route } from '../../src/routes/__camel__.js';
+import { routes } from '../../src/routes/index.js';
+
+test('__name__: GET /api/__dash__ is public-cached and registered in the route table', () => {
+  assert.equal(route.method, 'GET');
+  assert.equal(route.path, '/api/__dash__');
+  assert.match(route.cache, /^public, s-maxage=/);
+  assert.ok(routes.includes(route));
+});
+
+test('__name__: run returns the documented shape', async () => {
+  const result = await route.run({ params: {}, query: {}, body: undefined, origin: 'https://archive.example' }, {});
+  assert.deepEqual(result, { items: [] });
+});

@@ -1,0 +1,17 @@
+/* public/js/components/emptyState.js */
+
+.c-empty-state {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--color-ink-muted);
+}
+
+.c-empty-state__icon {
+  display: block;
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.c-empty-state__message {
+  font-size: 13px;
+}

@@ -1,0 +1,51 @@
+{
+ "status": {
+  "type": "status",
+  "url": "https://x.com/tl_alpha/status/1900000000000000009",
+  "id": "1900000000000000009",
+  "text": "#solsunny\n\n☀️: look at these two shots from earlier today\n☀️: so happy with how they turned out",
+  "raw_text": {
+   "text": "#solsunny\n\n☀️: look at these two shots from earlier today\n☀️: so happy with how they turned out",
+   "display_text_range": [
+    0,
+    95
+   ],
+   "facets": []
+  },
+  "author": {
+   "screen_name": "tl_alpha",
+   "url": "https://x.com/tl_alpha",
+   "id": "9001",
+   "name": "alpha clips"
+  },
+  "replies": 0,
+  "reposts": 0,
+  "likes": 42,
+  "bookmarks": 0,
+  "quotes": 0,
+  "embed_card": "player",
+  "created_at": "Tue Oct 20 10:00:00 +0000 2026",
+  "created_timestamp": 1792490400,
+  "possibly_sensitive": false,
+  "views": 100,
+  "is_note_tweet": false,
+  "community_note": null,
+  "lang": "en",
+  "replying_to": null,
+  "media": {
+   "all": [],
+   "videos": [],
+   "photos": []
+  },
+  "provider": "twitter",
+  "reposted_by": null
+ },
+ "thread": null,
+ "code": 200,
+ "author": {
+  "screen_name": "tl_alpha",
+  "url": "https://x.com/tl_alpha",
+  "id": "9001",
+  "name": "alpha clips"
+ }
+}

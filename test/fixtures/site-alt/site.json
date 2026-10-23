@@ -1,0 +1,23 @@
+{
+  "name": "starpetal archive",
+  "wordmark": { "accent": "star", "rest": "petal archive" },
+  "tagline": "a second fictional archive, for engine tests",
+  "ownerXUserId": "1",
+  "sourceLanguage": "ja",
+  "timezone": "Asia/Tokyo",
+  "region": "sin1",
+  "lowercaseNames": false,
+  "featuredPeople": [
+    { "igHandle": "starlitfox", "displayName": "star", "emoji": "⭐", "colour": "#2d7dd2" },
+    { "igHandle": "petalwisp", "displayName": "petal", "emoji": "🌸", "colour": "#c94f7c" }
+  ],
+  "defaultMarkers": {
+    "⭐": { "personHandle": "starlitfox" },
+    "🌸": { "personHandle": "petalwisp" },
+    "🗣️": { "role": "crowd" }
+  },
+  "ignoredHashtags": ["starpetal"],
+  "categories": ["show / interview", "fan meet / fan day", "live"],
+  "extraLivePatterns": [],
+  "contactUrl": "https://github.com/mintbluecar/fan-archive/issues"
+}

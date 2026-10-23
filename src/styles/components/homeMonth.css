@@ -1,0 +1,12 @@
+/*
+ * public/js/pages/home.js: the month group heading above each month's
+ * event cards (spec: "small, bold, lowercase, purple").
+ */
+
+.c-home-month__label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-label);
+  text-transform: lowercase;
+  margin: 16px 2px 6px;
+}

@@ -1,0 +1,23 @@
+-- __NNN_____name__: the __name__ kind (src/kinds/__name__/). Scaffolded by `npm run new kind __name__`.
+-- New tables reach the app role only when migrate runs with APP_DB_ROLE (docs/start-your-own.md, step 5).
+-- Conventions: docs/decisions/0006-data-model-conventions.md. Like `translations` in 001_initial.sql, a kind
+-- table is a child of `items` (which carries the common columns, soft delete and `meta`): keyed by `item_id`,
+-- with a composite foreign key to items (id, kind), so a row can never point at another kind's item.
+-- Runs inside one transaction (src/db/migrate.js); never add begin/commit here. Checksummed once applied:
+-- change it later with a new migration, never by editing this file.
+
+insert into item_kinds values ('__name__');
+
+create table __name___items (
+  item_id bigint primary key,
+  kind text not null default '__name__' check (kind = '__name__'),
+  body text not null,
+  foreign key (item_id, kind) references items (id, kind)
+);
+create index __name___items_body_trgm on __name___items using gin (body gin_trgm_ops);
+
+-- Audited like every kind table, keyed by its parent item (an item's whole history is one row_key lookup).
+create trigger __name___items_set_common before insert or update on __name___items
+  for each row execute function set_common();
+create trigger __name___items_audit after insert or update or delete on __name___items
+  for each row execute function write_audit('item_id');

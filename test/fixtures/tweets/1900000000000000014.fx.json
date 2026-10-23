@@ -1,0 +1,50 @@
+{
+ "status": {
+  "type": "status",
+  "url": "https://x.com/tl_beta/status/1900000000000000014",
+  "id": "1900000000000000014",
+  "text": "One more: the lanterns were handmade too, which is why they took so long.",
+  "raw_text": {
+   "text": "One more: the lanterns were handmade too, which is why they took so long.",
+   "display_text_range": [
+    0,
+    73
+   ],
+   "facets": []
+  },
+  "author": {
+   "screen_name": "tl_beta",
+   "url": "https://x.com/tl_beta",
+   "id": "9002",
+   "name": "beta subs"
+  },
+  "replies": 0,
+  "reposts": 0,
+  "likes": 42,
+  "bookmarks": 0,
+  "quotes": 0,
+  "embed_card": "tweet",
+  "created_at": "Tue Oct 20 12:00:00 +0000 2026",
+  "created_timestamp": 1792497600,
+  "possibly_sensitive": false,
+  "views": 100,
+  "is_note_tweet": false,
+  "community_note": null,
+  "lang": "en",
+  "replying_to": {
+   "screen_name": "tl_beta",
+   "status": "1900000000000000012"
+  },
+  "media": {},
+  "provider": "twitter",
+  "reposted_by": null
+ },
+ "thread": null,
+ "code": 200,
+ "author": {
+  "screen_name": "tl_beta",
+  "url": "https://x.com/tl_beta",
+  "id": "9002",
+  "name": "beta subs"
+ }
+}

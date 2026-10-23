@@ -1,0 +1,39 @@
+// @ts-check
+import '../helpers/siteFixture.js';
+import assert from 'node:assert/strict';
+import { test, mock } from 'node:test';
+// Dynamic import: see test/components/header.test.js for why.
+const { compose__Pascal__, load } = await import('../../public/js/pages/__camel__.js');
+const { MiniElement } = await import('../helpers/miniDom.js');
+
+test('compose__Pascal__: the page shell, its title and every item, escaped', () => {
+  const markup = String(compose__Pascal__({ items: ['one', '<two>'] }));
+  assert.match(markup, /c-tabbar/);
+  assert.match(markup, /<li class="c-__dash____item">one<\/li>/);
+  assert.match(markup, /&lt;two&gt;/);
+});
+
+test('compose__Pascal__: no items shows the empty state', () => {
+  assert.match(String(compose__Pascal__({ items: [] })), /c-empty-state__message/);
+});
+
+test('load: paints and marks #app ready; an overtaken response is dropped', async () => {
+  /** @type {((value: Response) => void)[]} */
+  const pending = [];
+  mock.method(globalThis, 'fetch', () => new Promise((resolve) => { pending.push(resolve); }));
+  try {
+    const root = new MiniElement('div');
+    const state = { seq: 0 };
+    const first = load(/** @type {any} */ (root), state);
+    const second = load(/** @type {any} */ (root), state);
+    pending[1](new Response(JSON.stringify({ items: ['newer'] })));
+    await second;
+    pending[0](new Response(JSON.stringify({ items: ['older'] })));
+    await first;
+    assert.equal(root.getAttribute('data-ready'), '');
+    const items = root.querySelectorAll('.c-__dash____item').map((/** @type {any} */ li) => li.firstChild?.textContent);
+    assert.deepEqual(items, ['newer']);
+  } finally {
+    mock.restoreAll();
+  }
+});

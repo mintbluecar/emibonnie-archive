@@ -1,0 +1,14 @@
+/* public/js/components/mediaBox.js: the pinned media area's own outer box. */
+
+.c-media-box {
+  margin-bottom: 8px;
+}
+
+.c-media-box__gone {
+  padding: 16px;
+  font-size: 12px;
+  color: var(--color-ink-muted);
+  background: var(--color-bg);
+  border-radius: var(--radius-card);
+  text-align: center;
+}

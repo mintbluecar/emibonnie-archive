@@ -1,0 +1,70 @@
+{
+  "createPeople": [
+    {
+      "igHandle": "leo_saussay",
+      "displayName": "leo",
+      "emoji": "🦁",
+      "colour": "#2fa89a"
+    }
+  ],
+  "tweets": {
+    "2003413749940834557": {
+      "chosen": {
+        "🪇": {
+          "role": "speaker"
+        }
+      },
+      "overrides": {
+        "placement": "shared_story",
+        "people": [
+          {
+            "igHandle": "emiamily",
+            "role": "about"
+          },
+          {
+            "igHandle": "beonnnie",
+            "role": "about"
+          }
+        ]
+      }
+    },
+    "2021992269596045801": {
+      "chosen": {
+        "🐰": {
+          "person": "beonnnie"
+        }
+      },
+      "overrides": {
+        "categoryName": "live"
+      }
+    },
+    "2030321729902641632": {
+      "chosen": {
+        "🐰": {
+          "person": "beonnnie"
+        },
+        "🦊": {
+          "person": "emiamily"
+        }
+      }
+    },
+    "2108532547101856124": {},
+    "2108748780564816034": {
+      "chosen": {
+        ":": {
+          "role": "fan"
+        }
+      }
+    },
+    "2110438810274414709": {
+      "chosen": {
+        "🦁": {
+          "person": "leo_saussay"
+        },
+        "🌧️": {
+          "role": "speaker"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,132 @@
+/*
+ * public/js/components/bubbles.js. `--c` is this element's own
+ * `data-c` colour, applied by `bind()`; an element with none keeps the
+ * engine default (see src/styles/tokens.css's `--c`).
+ */
+
+.c-bubbles {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.c-bubbles__msg {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+}
+
+.c-bubbles__msg:not(.c-bubbles__msg--cont) {
+  margin-top: 8px;
+}
+
+.c-bubbles__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex: none;
+  background: color-mix(in srgb, var(--c) 22%, var(--color-card));
+}
+
+/* A speaker with no emoji of its own (a bare ':' marker, fix round 2):
+   the plain neutral circle, empty. */
+.c-bubbles__avatar--none {
+  background: color-mix(in srgb, var(--color-ink-muted) 18%, var(--color-card));
+}
+
+.c-bubbles__avatar--blank {
+  visibility: hidden;
+}
+
+/*
+ * A joint line (2+ speakers at once, public/js/components/bubbles.js's
+ * `jointBubble`): always neutral, so this group carries no `data-c` and
+ * its avatars use the engine's default `--c` (src/styles/tokens.css).
+ */
+.c-bubbles__avatars {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: none;
+}
+
+.c-bubbles__avatars .c-bubbles__avatar {
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+}
+
+.c-bubbles__bub {
+  padding: 6px 10px;
+  border-radius: 4px 14px 14px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: 320px;
+  background: color-mix(in srgb, var(--c) 12%, var(--color-card));
+}
+
+.c-bubbles__msg--cont .c-bubbles__bub {
+  border-radius: 14px;
+}
+
+/*
+ * Review round 2, C1/fix round 2 item 1: the raw --c often fails AA
+ * 4.5:1 against what this text actually sits on. `--c-text`
+ * (`applyColours()`, public/js/core/dom.js) is a per-person shade that
+ * reaches 4.5:1 with the least mixing each colour needs; a flat 60% mix
+ * toward --color-ink is only the fallback for when `--c-text` hasn't
+ * been set (no JS, or a non-browser environment with no
+ * `document`/`getComputedStyle` -- it does NOT pass for every colour,
+ * e.g. #ff8a3d only reaches 4.14:1 against --color-bg at 60%).
+ */
+.c-bubbles__name {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--c-text, color-mix(in srgb, var(--c) 60%, var(--color-ink)));
+  margin-bottom: 1px;
+}
+
+.c-bubbles__crowd {
+  margin: 7px 0 7px 35px;
+  font-size: 12px;
+  color: var(--color-ink-muted);
+  font-style: italic;
+}
+
+.c-bubbles__plain {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.c-bubbles__notes {
+  margin-top: 12px;
+  border-top: 1px solid var(--color-card-shadow);
+  padding-top: 8px;
+}
+
+.c-bubbles__note {
+  font-size: 11px;
+  color: var(--color-ink-muted);
+}
+
+/* bubbles.js's renderCompact(): a hub entry's opening lines as one run of
+   "emoji text", clamped to two lines (Task 9b; mockups/people-me-v1.html). */
+.c-bubbles-compact {
+  font-size: 12.5px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.c-bubbles-compact__who--name {
+  font-weight: 700;
+  color: var(--color-ink-muted);
+}

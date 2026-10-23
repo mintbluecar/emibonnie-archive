@@ -1,0 +1,47 @@
+{
+ "status": {
+  "type": "status",
+  "url": "https://x.com/tl_alpha/status/1900000000000000005",
+  "id": "1900000000000000005",
+  "text": "#SolLuna #starguest\n\n💬: welcome everyone, glad you could join tonight's segment\n🪇: (shakes a maraca happily)\n💬: that was so much fun, thank you all",
+  "raw_text": {
+   "text": "#SolLuna #starguest\n\n💬: welcome everyone, glad you could join tonight's segment\n🪇: (shakes a maraca happily)\n💬: that was so much fun, thank you all",
+   "display_text_range": [
+    0,
+    150
+   ],
+   "facets": []
+  },
+  "author": {
+   "screen_name": "tl_alpha",
+   "url": "https://x.com/tl_alpha",
+   "id": "9001",
+   "name": "alpha clips"
+  },
+  "replies": 0,
+  "reposts": 0,
+  "likes": 42,
+  "bookmarks": 0,
+  "quotes": 0,
+  "embed_card": "tweet",
+  "created_at": "Mon Mar 02 15:00:00 +0000 2026",
+  "created_timestamp": 1772463600,
+  "possibly_sensitive": false,
+  "views": 100,
+  "is_note_tweet": false,
+  "community_note": null,
+  "lang": "en",
+  "replying_to": null,
+  "media": {},
+  "provider": "twitter",
+  "reposted_by": null
+ },
+ "thread": null,
+ "code": 200,
+ "author": {
+  "screen_name": "tl_alpha",
+  "url": "https://x.com/tl_alpha",
+  "id": "9001",
+  "name": "alpha clips"
+ }
+}

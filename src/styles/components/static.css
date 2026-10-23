@@ -1,0 +1,46 @@
+/*
+ * public/js/pages/static.js: the about/privacy/takedown/404 pages --
+ * plain, readable prose, no card chrome needed.
+ */
+
+.c-static__title {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 8px 0 4px;
+}
+
+.c-static__subtitle {
+  font-size: 14px;
+  font-weight: 800;
+  margin: 18px 0 4px;
+}
+
+.c-static__badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--color-ink-muted);
+  margin: 0 0 10px;
+}
+
+.c-static__p {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.c-static__contact {
+  margin-top: 8px;
+}
+
+.c-static__contact a,
+.c-static__back a {
+  font-weight: 800;
+  color: var(--color-label);
+}
+
+.c-static__back {
+  margin-top: 16px;
+  text-align: center;
+}

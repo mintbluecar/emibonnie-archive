@@ -1,0 +1,22 @@
+// @ts-check
+/**
+ * TODO say what this shows. Scaffolded by `npm run new component __name__`.
+ *
+ * A component is `render(props) -> SafeHtml` (plus `bind(el)` only when
+ * it has behaviour). Markup only ever goes through `html`, which escapes
+ * every interpolation. It holds no copy of its own: the caller passes
+ * text already resolved through `t()`, so the component works on any
+ * page. A person's colour goes out as `data-c` and is applied by
+ * `applyColours` (core/dom.js) in `bind`, never as an inline style (CSP).
+ * Its styles go in src/styles/components/__camel__.css (`c-__dash__`
+ * block, engine tokens only). See emptyState.js and chips.js.
+ */
+import { html } from '../core/html.js';
+
+/**
+ * @param {{ label: string }} props
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+export function render(props) {
+  return html`<span class="c-__dash__">${props.label}</span>`;
+}

@@ -1,0 +1,53 @@
+/*
+ * public/js/components/chips.js: generic filter/tag pills. `min-height:
+ * 44px` keeps the tap target to spec (see docs/.../1b plan, "Additional
+ * constraints" → Accessibility) while `line-height: 1` and tight padding
+ * keep the pill itself visually compact -- Task 5's filter sheet reuses
+ * these as its filter options.
+ */
+
+.c-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.c-chips__chip {
+  font-size: 11.5px;
+  line-height: 1;
+  border-radius: 999px;
+  padding: 0 10px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid var(--color-card-shadow);
+  background: var(--color-bg);
+  color: var(--color-ink);
+}
+
+.c-chips__chip--on {
+  border-color: var(--c);
+  background: color-mix(in srgb, var(--c) 14%, var(--color-bg));
+  color: var(--c);
+  font-weight: 700;
+}
+
+/*
+ * Review round 1, I5: a selected chip's text at the raw --c often fails
+ * AA (4.5:1). A neutral chip (no person colour: the any/all toggle, type
+ * chips) uses full-strength ink instead of the muted default --c.
+ */
+.c-chips__chip--on:not([data-c]) {
+  --c: var(--color-ink);
+}
+
+/*
+ * A person-coloured chip keeps --c for its border/background tint.
+ * `--c-text` (review round 2, fix round 2 item 1: see bubbles.css's
+ * `.c-bubbles__name`) is this chip's own on-tint background's text,
+ * shaded by the least this person's colour needs; the flat 60% mix is
+ * only the fallback (not every featured colour passes AA at 60%).
+ */
+.c-chips__chip--on[data-c] {
+  color: var(--c-text, color-mix(in srgb, var(--c) 60%, var(--color-ink)));
+}

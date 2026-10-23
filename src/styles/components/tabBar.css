@@ -1,0 +1,64 @@
+/*
+ * public/js/components/tabBar.js. Phone: a fixed bottom tab bar (the
+ * default). Web (>=860px, see layout.css): the right-hand side of the
+ * header's one top bar (pageShell renders it inside the header, Task 9b),
+ * links separated by a dot as in mockups/screens-v2.html's web screen --
+ * same markup, this media query is the only thing that moves it (see
+ * docs/.../1b plan, "Additional constraints" → Layout breakpoint).
+ */
+
+.c-tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-around;
+  background: var(--color-card);
+  border-top: 1px solid var(--color-card-shadow);
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+  z-index: 10;
+}
+
+.c-tabbar__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--color-ink-muted);
+}
+
+.c-tabbar__item--on {
+  color: var(--color-label);
+  font-weight: 800;
+}
+
+@media (min-width: 860px) {
+  .c-tabbar {
+    position: static;
+    flex: none;
+    justify-content: flex-end;
+    background: none;
+    border-top: 0;
+    padding: 0;
+  }
+
+  .c-tabbar__item {
+    font-size: 12px;
+    padding: 4px 6px;
+  }
+
+  /* The separator is decoration: the empty alt text after "/" keeps it
+     out of each link's accessible name (the plain declaration before it
+     is the fallback where that syntax isn't supported). */
+  .c-tabbar__item + .c-tabbar__item::before {
+    content: '·';
+    content: '·' / '';
+    color: var(--color-ink-muted);
+    font-weight: 400;
+    margin-right: 12px;
+  }
+}

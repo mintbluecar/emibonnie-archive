@@ -1,0 +1,36 @@
+{
+  "name": "emibonnie archive",
+  "wordmark": { "accent": "emibonnie", "rest": " archive" },
+  "tagline": "fan translations, kept",
+  "ownerXUserId": "1957464086339534848",
+  "sourceLanguage": "th",
+  "timezone": "Asia/Bangkok",
+  "region": "sin1",
+  "lowercaseNames": true,
+  "featuredPeople": [
+    {
+      "igHandle": "emiamily",
+      "displayName": "emi",
+      "emoji": "🧡",
+      "colour": "#ff8a3d",
+      "otherAccounts": [{ "platform": "x", "handle": "emiamily" }]
+    },
+    {
+      "igHandle": "beonnnie",
+      "displayName": "bonnie",
+      "emoji": "💜",
+      "colour": "#9b6cff",
+      "otherAccounts": [{ "platform": "x", "handle": "beonnnie" }]
+    }
+  ],
+  "defaultMarkers": {
+    "💜": { "personHandle": "beonnnie" },
+    "🧡": { "personHandle": "emiamily" },
+    "🗣️": { "role": "crowd" },
+    "💬": { "role": "fan" }
+  },
+  "ignoredHashtags": ["emibonnie", "namtanfilm"],
+  "categories": ["show / interview", "fan meet / fan day", "live"],
+  "extraLivePatterns": [],
+  "contactUrl": "https://x.com/mintbluetoyota"
+}

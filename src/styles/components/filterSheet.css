@@ -1,0 +1,129 @@
+/*
+ * public/js/components/filterSheet.js: a native <dialog>, so
+ * showModal()/close() give focus-trapping and an inert backdrop for
+ * free -- this only has to lay the sheet's own content out. Bottom
+ * sheet on phone; a centred modal from the shared 860px breakpoint.
+ */
+
+.c-filter-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  width: 100%;
+  max-width: none;
+  max-height: 85vh;
+  margin: 0;
+  border: 0;
+  border-radius: 20px 20px 0 0;
+  padding: 16px 16px 24px;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  overflow-y: auto;
+}
+
+.c-filter-sheet::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.c-filter-sheet__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--color-card);
+  color: var(--color-ink);
+}
+
+.c-filter-sheet__title {
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0 0 12px;
+}
+
+.c-filter-sheet__section {
+  border: 0;
+  padding: 0;
+  margin: 0 0 14px;
+}
+
+.c-filter-sheet__section legend {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-ink-muted);
+  margin-bottom: 4px;
+  padding: 0;
+}
+
+.c-filter-sheet__mode {
+  margin-bottom: 6px;
+}
+
+.c-filter-sheet__selects {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.c-filter-sheet__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-ink-muted);
+}
+
+.c-filter-sheet__field select,
+.c-filter-sheet__field input {
+  min-height: 44px;
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: 14px;
+  padding: 0 10px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--color-ink);
+}
+
+.c-filter-sheet__apply {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-accent-text);
+  /* Review round 2, fix round 2 item 3: same light-mode-only darkened start stop as header.css's .c-header__filter-count. */
+  background: linear-gradient(90deg, color-mix(in srgb, var(--gradient-from) 75%, #000), var(--gradient-to));
+}
+
+@media (prefers-color-scheme: dark) {
+  /* Dark mode's --color-accent-text is black, which already passes against the raw --gradient-from -- reverted here. */
+  .c-filter-sheet__apply {
+    background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
+  }
+}
+
+@media (min-width: 860px) {
+  .c-filter-sheet {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    top: 50%;
+    left: 50%;
+    bottom: auto;
+    right: auto;
+    transform: translate(-50%, -50%);
+    width: 420px;
+    max-height: 80vh;
+    border-radius: var(--radius-card);
+  }
+}

@@ -1,0 +1,21 @@
+/* public/js/components/cast.js. `min-height: 44px` (see chips.css's comment) keeps the tap target to spec; `line-height: 1` + tight padding keep the chip visually compact. */
+
+.c-cast {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+
+.c-cast__chip {
+  font-size: 11px;
+  line-height: 1;
+  border-radius: 999px;
+  padding: 0 10px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid var(--c);
+  background: var(--color-card);
+  color: var(--color-ink);
+}

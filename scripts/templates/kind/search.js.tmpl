@@ -1,0 +1,42 @@
+// @ts-check
+/**
+ * The __name__ kind's part of a search (src/repo/search.js builds the
+ * rest; see src/kinds/translation/search.js). Both fragments refer to
+ * the searched item as `i` and interpolate nothing but their
+ * placeholder index: the value itself is always bound.
+ */
+
+const MAX_MATCH_LINES = 3;
+
+/** @param {number} n */
+function placeholder(n) {
+  if (!Number.isInteger(n) || n < 1) throw new TypeError(`placeholder index must be a positive integer, got ${String(n)}`);
+  return `$${n}`;
+}
+
+/** Served by the migration's trigram index. @param {number} patternIndex the bound `ilike` pattern */
+function textClause(patternIndex) {
+  return `i.id in (select z.item_id from __name___items z where z.body ilike ${placeholder(patternIndex)})`;
+}
+
+/** Best first: how well the raw query matches the body's best-matching extent. @param {number} queryIndex */
+function rank(queryIndex) {
+  return `(select word_similarity(${placeholder(queryIndex)}, z.body) from __name___items z where z.item_id = i.id)`;
+}
+
+/**
+ * The lines (trimmed) containing `q`, case-insensitively, at most 3.
+ * @param {{ body: string }} details
+ * @param {string} q
+ * @returns {string[]}
+ */
+function matchLines(details, q) {
+  const needle = q.normalize('NFC').toLowerCase();
+  return details.body
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && line.normalize('NFC').toLowerCase().includes(needle))
+    .slice(0, MAX_MATCH_LINES);
+}
+
+export const search = { textClause, rank, matchLines };

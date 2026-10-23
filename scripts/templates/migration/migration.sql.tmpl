@@ -1,0 +1,14 @@
+-- __NNN_____name__: TODO say what this changes and why.
+-- New tables reach the app role only when migrate runs with APP_DB_ROLE (docs/start-your-own.md, step 5).
+-- Scaffolded by `npm run new migration __name__`. Conventions: docs/decisions/0006-data-model-conventions.md
+-- (common columns, soft delete, `meta jsonb`, text-coded lookup rows, composite FKs on kind tables).
+-- Runs inside one transaction (src/db/migrate.js); never add begin/commit here.
+-- Checksummed once applied (docs/decisions/0004-migrations-checksummed-expand-contract.md): after it has run
+-- anywhere, change the schema with a NEW migration, never by editing this file. Expand/contract: never drop or
+-- rename in the same release that adds the replacement.
+--
+-- Examples:
+--   insert into platforms values ('newplatform');      -- a growing value set is a lookup row, not an alter
+--   alter table events add column venue text;          -- a column for anything filtered, joined, sorted or searched
+
+select 1;
