@@ -38,13 +38,25 @@ function runDryRun(args, env) {
 test('refuses when no database URL is available at all', () => {
   const { status, output } = runDryRun([], {});
   assert.notEqual(status, 0);
-  assert.match(output, /neither \$DATABASE_URL nor \$EMIBONNIE_DB_PREVIEW is set/);
+  // Fix round 3, minor: the named var is checked first now (see the next
+  // two tests), so the message names it first too.
+  assert.match(output, /neither \$EMIBONNIE_DB_PREVIEW nor \$DATABASE_URL is set/);
 });
 
 test('accepts an inherited DATABASE_URL (how deploy.sh calls this script), without needing EMIBONNIE_DB_PREVIEW', () => {
   const { status, output } = runDryRun([], { DATABASE_URL: PREVIEW_URL });
   assert.equal(status, 0);
   assert.match(output, /pg_has_role/);
+});
+
+test('prefers EMIBONNIE_DB_PREVIEW over a stray pre-existing DATABASE_URL (fix round 3, minor)', () => {
+  // --dry-run never shows which source it picked (both are redacted the
+  // same way), so this only proves the script doesn't choke when both are
+  // set -- the actual precedence is enforced by the script's own
+  // `${!DB_VAR_NAME:-${DATABASE_URL:-}}` (reviewed, not independently
+  // observable without a real connection, which this round doesn't run).
+  const { status } = runDryRun([], { EMIBONNIE_DB_PREVIEW: PREVIEW_URL, DATABASE_URL: 'postgres://stale-unrelated@host/otherdb' });
+  assert.equal(status, 0);
 });
 
 test('preview dry run announces the exact least-privilege query and the all-false requirement', () => {

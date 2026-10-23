@@ -58,6 +58,7 @@ test('preview dry run prints every step in order, deploying without --prod', () 
     'env check',
     '.vercel/project.json',
     'rm -rf .vercel/output',
+    'failing closed',
     'npm ci',
     'npm run build',
     'npm run check',
@@ -88,6 +89,17 @@ test('preview dry run prints every step in order, deploying without --prod', () 
   assert.doesNotMatch(output, /check-app-role\.sh --prod/);
   // Preview mode warns that a brand-new project's first deploy is always production.
   assert.match(output, /FIRST deployment is always production/);
+});
+
+test('the first-deploy check (fail closed) is announced before step 1, in preview mode only (fix round 3, minor)', () => {
+  const { output: previewOutput } = runDryRun([], { EMIBONNIE_DB_PREVIEW: PREVIEW_URL });
+  const checkAt = previewOutput.indexOf('failing closed');
+  const step1At = previewOutput.indexOf('step 1');
+  assert.ok(checkAt !== -1, `expected the fail-closed check to be announced:\n${previewOutput}`);
+  assert.ok(checkAt < step1At, `expected the fail-closed check before step 1, got:\n${previewOutput}`);
+
+  const { output: prodOutput } = runDryRun(['--prod'], { EMIBONNIE_DB: PROD_URL });
+  assert.doesNotMatch(prodOutput, /failing closed/, '--prod already means production, so there is nothing to detect');
 });
 
 test('--prod dry run selects the production target, environment, confirmation, and the least-privilege check, all with production flags', () => {

@@ -10,6 +10,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
+import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, chmodSync, rmSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -32,10 +34,11 @@ test('task --list shows every expected task', { skip: !HAVE_TASK && 'task is not
   const expected = [
     'setup:preview', 'setup:prod',
     'role:preview', 'role:prod',
+    'role:rotate:preview', 'role:rotate:prod',
     'check-role:preview', 'check-role:prod',
     'deploy:preview', 'deploy:prod',
     'deploy:dry', 'deploy:dry-prod',
-    'backup', 'test', 'check', 'e2e:site', 'dev', 'takedown',
+    'backup', 'test', 'check', 'e2e:site', 'dev', 'takedown', 'purge',
   ];
   for (const name of expected) {
     assert.ok(output.includes(name), `expected '${name}' in:\n${output}`);
@@ -65,4 +68,82 @@ test('task deploy:dry refuses, via its precondition, when the preview env var is
     assert.match(output, /EMIBONNIE_DB_PREVIEW is not set/);
     return true;
   });
+});
+
+/**
+ * Fix round 3, I-T: the `takedown` task must never splice its id argument
+ * into shell text via `{{ }}` -- only through `env: TAKEDOWN_ID`, read
+ * back as `"$TAKEDOWN_ID"`. Run against a scratch copy of just the two
+ * Taskfiles (no network, no real database), with a fake `psql` on PATH
+ * so a real `cmds:` run (for a valid id) is observable without touching
+ * any database.
+ */
+function makeTakedownScratch() {
+  const dir = mkdtempSync(path.join(tmpdir(), 'fan-archive-takedown-'));
+  mkdirSync(path.join(dir, 'site'));
+  copyFileSync(path.join(REPO_ROOT, 'Taskfile.yml'), path.join(dir, 'Taskfile.yml'));
+  copyFileSync(path.join(REPO_ROOT, 'site/Taskfile.yml'), path.join(dir, 'site/Taskfile.yml'));
+  const binDir = path.join(dir, 'bin');
+  mkdirSync(binDir);
+  const fakePsql = path.join(binDir, 'psql');
+  writeFileSync(fakePsql, '#!/usr/bin/env bash\necho "FAKE_PSQL_ARGS: $*"\necho "UPDATE 1"\n');
+  chmodSync(fakePsql, 0o755);
+  return { dir, binDir };
+}
+
+/**
+ * @param {string} dir @param {string} binDir @param {string} id
+ * @returns {{ status: number, output: string, touchedPayload: boolean }}
+ */
+function runTakedown(dir, binDir, id) {
+  const payloadMarker = path.join(dir, 'PAYLOAD_TOUCHED');
+  try {
+    const output = execFileSync('task', ['takedown', '-y', '--', id], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: { PATH: `${binDir}:${process.env.PATH ?? ''}`, EMIBONNIE_DB: 'postgres://u:p@h/db' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    return { status: 0, output, touchedPayload: existsSync(payloadMarker) };
+  } catch (/** @type {any} */ err) {
+    return { status: err.status ?? 1, output: `${err.stdout ?? ''}${err.stderr ?? ''}`, touchedPayload: existsSync(payloadMarker) };
+  }
+}
+
+test('task takedown: a valid numeric id reaches the fake psql, quoted, with no shell metacharacters', { skip: !HAVE_TASK && 'task is not installed' }, () => {
+  const { dir } = makeTakedownScratch();
+  try {
+    const { status, output } = runTakedown(dir, path.join(dir, 'bin'), '2112858824172531819');
+    assert.equal(status, 0, output);
+    assert.match(output, /FAKE_PSQL_ARGS:.*-v id=2112858824172531819/);
+    assert.match(output, /UPDATE 1/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('task takedown: rejects `1"; touch PAYLOAD_TOUCHED; echo "` without running it', { skip: !HAVE_TASK && 'task is not installed' }, () => {
+  const { dir } = makeTakedownScratch();
+  try {
+    const { status, output, touchedPayload } = runTakedown(dir, path.join(dir, 'bin'), '1"; touch PAYLOAD_TOUCHED; echo "');
+    assert.notEqual(status, 0);
+    assert.match(output, /numeric tweet id only/);
+    assert.doesNotMatch(output, /FAKE_PSQL_ARGS/, 'psql must never be reached');
+    assert.equal(touchedPayload, false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('task takedown: rejects `$(touch PAYLOAD_TOUCHED)` without running it', { skip: !HAVE_TASK && 'task is not installed' }, () => {
+  const { dir } = makeTakedownScratch();
+  try {
+    const { status, output, touchedPayload } = runTakedown(dir, path.join(dir, 'bin'), '$(touch PAYLOAD_TOUCHED)');
+    assert.notEqual(status, 0);
+    assert.match(output, /numeric tweet id only/);
+    assert.doesNotMatch(output, /FAKE_PSQL_ARGS/, 'psql must never be reached');
+    assert.equal(touchedPayload, false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

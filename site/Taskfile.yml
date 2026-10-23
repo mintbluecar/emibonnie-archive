@@ -34,15 +34,26 @@ version: '3'
 # `task <name>` fails with a clear message instead of running the
 # underlying script and letting *that* refuse (which it still would).
 #
-# The four tasks that touch a real database destructively --
-# `setup:prod`, `role:prod`, `deploy:prod` and `takedown` -- also set
-# `prompt:`, on top of each script's own typed confirmation. In a
-# non-interactive shell (no TTY, as in a test), Task cancels a prompted
-# task unless `--yes`/`-y` is passed: "Task ... cancelled because it has a
-# prompt and the environment is not a terminal. Use --yes (-y) to run
-# anyway." (confirmed directly against the installed `task`, and matches
-# `-y, --yes`: "Automatically answer 'yes' to all prompts" in
-# https://taskfile.dev/reference/cli).
+# The tasks that touch a real database destructively -- `setup:prod`,
+# `role:prod`, `role:rotate:preview`, `role:rotate:prod`, `deploy:prod` and
+# `takedown` -- also set `prompt:`, on top of each script's own typed
+# confirmation. In a non-interactive shell (no TTY, as in a test), Task
+# cancels a prompted task unless `--yes`/`-y` is passed: "Task ...
+# cancelled because it has a prompt and the environment is not a
+# terminal. Use --yes (-y) to run anyway." (confirmed directly against the
+# installed `task`, and matches `-y, --yes`: "Automatically answer 'yes'
+# to all prompts" in https://taskfile.dev/reference/cli).
+#
+# Fix round 3, I-T: a user-supplied *value* (`takedown`'s id) must never
+# be spliced into shell text via `{{ }}` either -- Task's templating runs
+# before the shell ever sees the result, so a value containing shell
+# metacharacters would be parsed as shell syntax, not data, exactly like
+# an unsanitised string concatenated into a SQL query. `takedown` is the
+# only task that takes such a value, and it carries it through `env:`
+# instead (a real environment variable the shell reads with `$NAME`),
+# with a `preconditions.sh` that rejects anything but digits before any
+# `cmds:` runs. See that task's own comment for exactly how this was
+# confirmed (two injection payloads, against the installed `task`).
 
 tasks:
   setup:preview:
@@ -98,6 +109,36 @@ tasks:
         msg: "EMIBONNIE_DB is not set -- export the main branch's owner-role connection string first."
     cmds:
       - site/scripts/create-app-role.sh --prod
+
+  role:rotate:preview:
+    desc: "Rotate the 'app' role's password on the preview branch"
+    summary: |
+      Runs site/scripts/create-app-role.sh --rotate. Needs
+      EMIBONNIE_DB_PREVIEW set. Replaces the preview-scope DATABASE_URL
+      Secret in Vercel. Use this for a leaked secret (fix round 3, C1) --
+      never reset the password from the Neon console, which would put
+      'app' back into neon_superuser.
+    prompt: "This rotates the 'app' role's password on preview, and replaces the Vercel Secret. Continue?"
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB_PREVIEW"'
+        msg: "EMIBONNIE_DB_PREVIEW is not set -- export the preview branch's owner-role connection string first."
+    cmds:
+      - site/scripts/create-app-role.sh --rotate
+
+  role:rotate:prod:
+    desc: "Rotate the 'app' role's password on the main branch"
+    summary: |
+      Runs site/scripts/create-app-role.sh --rotate --prod. Needs
+      EMIBONNIE_DB set. Replaces the production-scope DATABASE_URL Secret
+      in Vercel. Use this for a leaked secret (fix round 3, C1) -- never
+      reset the password from the Neon console, which would put 'app'
+      back into neon_superuser.
+    prompt: "This rotates the 'app' role's password on PRODUCTION, and replaces the Vercel Secret. Continue?"
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB"'
+        msg: "EMIBONNIE_DB is not set -- export the main branch's owner-role connection string first."
+    cmds:
+      - site/scripts/create-app-role.sh --rotate --prod
 
   check-role:preview:
     desc: "Least-privilege check for 'app' on the preview branch"
@@ -198,16 +239,32 @@ tasks:
       `task takedown -- <id>` or `ID=<id> task takedown`.
     silent: true
     prompt: "This hides an item on PRODUCTION. Continue?"
-    vars:
-      ITEM_ID: '{{.ID | default .CLI_ARGS}}'
+    # Fix round 3, I-T: the id goes through `env:`, never through `{{ }}`
+    # inside a `cmds:`/`preconditions.sh` *string*. `env:` turns a
+    # template value into a real OS environment variable for the task's
+    # shell to read with `$TAKEDOWN_ID` -- the one safe way to carry an
+    # argument into shell text here. An earlier draft used
+    # `vars: { ITEM_ID: '{{.ID | default .CLI_ARGS}}' }` and then wrote
+    # `{{.ITEM_ID}}` straight into a `preconditions.sh` string and into
+    # the heredoc below: Task's `{{ }}` templating runs *before* the
+    # shell ever sees the text, splicing the id's literal characters into
+    # what becomes a shell command line -- so an id of `1"; touch X; echo
+    # "` or `$(touch X)` would have been parsed as shell syntax, not data.
+    # Confirmed both ways against a scratch Taskfile with the installed
+    # `task`: with `{{.ITEM_ID}}`, both payloads ran their embedded
+    # command; with `env: TAKEDOWN_ID` plus the numeric-only precondition
+    # below plus `"$TAKEDOWN_ID"` (always quoted) in the heredoc, both are
+    # rejected by the precondition and touch nothing.
+    env:
+      TAKEDOWN_ID: '{{.ID | default .CLI_ARGS}}'
     preconditions:
       - sh: 'test -n "$EMIBONNIE_DB"'
         msg: "EMIBONNIE_DB is not set -- export the main branch's owner-role connection string first."
-      - sh: 'test -n "{{.ITEM_ID}}"'
-        msg: "Pass the tweet id: task takedown -- <id>, or ID=<id> task takedown."
+      - sh: 'printf %s "$TAKEDOWN_ID" | grep -Eqx "[0-9]+"'
+        msg: "Pass a numeric tweet id only: task takedown -- <id>, or ID=<id> task takedown."
     cmds:
       - |
-        psql "$EMIBONNIE_DB" -v ON_ERROR_STOP=1 -v id="{{.ITEM_ID}}" <<'SQL'
+        psql "$EMIBONNIE_DB" -v ON_ERROR_STOP=1 -v id="$TAKEDOWN_ID" <<'SQL'
         begin;
         select set_config('app.actor', 'system', true);
 
@@ -215,14 +272,27 @@ tasks:
         set deleted_at = now(),
             deleted_by = 'system',
             deleted_reason = 'hidden_by_owner'
-        where kind = 'translation'
-          and id = (
-            select item_id from item_sources
-            where platform = 'x'
-              and external_id = :'id'
-              and role = 'primary'
-          );
+        where id = (
+          select item_id from item_sources
+          where platform = 'x'
+            and external_id = :'id'
+            and role = 'primary'
+            and kind = 'translation'
+        );
 
         commit;
         SQL
-      - echo "If this is urgent, also purge the Vercel CDN cache now (site/docs/deploy.md, section 6(b))."
+      - 'echo "If this is urgent, also purge the Vercel CDN cache now: task purge (site/docs/deploy.md, section 6(b))."'
+
+  purge:
+    desc: "Purge the Vercel CDN cache (use after an urgent takedown)"
+    summary: |
+      Runs `vercel cache purge --type cdn`
+      (https://vercel.com/docs/cli/cache), pinned to the same CLI version
+      as the scripts (see the header comment, M4). Public pages are
+      cached for up to 5 minutes (s-maxage=300); without this, a
+      just-hidden item can keep being served from cache for that long.
+      Dashboard fallback: the project's "..." menu -> Data Cache (or CDN)
+      -> Purge Cache.
+    cmds:
+      - npx --yes vercel@65.1.0 cache purge --type cdn

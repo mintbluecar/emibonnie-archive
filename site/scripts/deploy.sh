@@ -31,16 +31,18 @@
 #
 # -----------------------------------------------------------------------
 # First deploy of a brand-new Vercel project is always production
-# (fix round 1, I2)
+# (fix round 1, I2; detection fixed in fix round 3)
 # -----------------------------------------------------------------------
 # "The first deployment of a new project is always a production deployment.
 # This happens even when you... Run `vercel` or `vercel deploy` from the CLI
 # without `--prod`... Run `vercel deploy --target=preview`."
 # https://vercel.com/docs/deployments/environments#first-deployment
-# So this script warns in preview mode (below) and, when it can tell,
-# detects a project with no deployments yet. See `site/docs/deploy.md`,
-# section 2, for the owner's actual first-deploy order (which is run with
-# `--prod` for exactly this reason).
+# So, in preview mode, this script always warns about this, and -- before
+# step 1, so nothing real runs first -- tries to confirm this project
+# already has a deployment (`vercel list`), *failing closed*: if that
+# can't be confirmed, this run stops rather than guessing. See
+# `site/docs/deploy.md`, section 2, for the owner's actual first-deploy
+# order (which is run with `--prod` for exactly this reason).
 #
 # -----------------------------------------------------------------------
 # Deploy mechanism (controller ruling, 2026-10-23): local prebuilt, not a
@@ -214,6 +216,33 @@ fi
 
 if [ "$PROD" -eq 0 ]; then
   log "reminder: a brand-new Vercel project's FIRST deployment is always production, even without --prod (https://vercel.com/docs/deployments/environments#first-deployment). If this is the very first deploy of this project, stop and run 'site/scripts/deploy.sh --prod' instead -- see site/docs/deploy.md, section 2."
+
+  # Fix round 3, minor ("First-deploy detection"): run before step 1, fail
+  # closed, and actually capture the stream the "no deployments" message
+  # can land on. The earlier version redirected `vercel list`'s stderr to
+  # /dev/null before grepping it, which is exactly where that message can
+  # appear -- so it could never have matched, and the check silently never
+  # fired at all. If this can't be confirmed either way (the command
+  # fails, or its output doesn't look like a deployment list), this run
+  # stops rather than guessing: a false "has deployments" would let a real
+  # first deploy run as a preview, quietly land on `preview` data, and
+  # still ship it as this project's one-and-only production deployment.
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "would check (failing closed) whether this project already has a deployment, via 'vercel list', before step 1 -- and stop here, telling you to use --prod, if it doesn't, or if that check itself fails"
+  else
+    log "checking whether this project already has a deployment (a brand-new project's first deploy must be --prod)"
+    set +e
+    LIST_OUTPUT="$(vercel list 2>&1)"
+    LIST_STATUS=$?
+    set -e
+    if [ "$LIST_STATUS" -ne 0 ] || printf '%s' "$LIST_OUTPUT" | grep -qi 'no deployments'; then
+      echo "deploy.sh: could not confirm this project already has a deployment -- failing closed, before running anything else." >&2
+      echo "A brand-new Vercel project's first deployment is always production, regardless of flags (https://vercel.com/docs/deployments/environments#first-deployment)." >&2
+      echo "If this is genuinely the first deploy of this project, run 'site/scripts/deploy.sh --prod' instead. If it already has one, 'vercel list' could not be reached or understood just now -- investigate (are you logged in? is .vercel/project.json linked to the right project?) and retry." >&2
+      exit 1
+    fi
+    log "confirmed: this project already has at least one deployment"
+  fi
 fi
 
 # Runs a real step (or, under --dry-run, only announces it) and labels it
@@ -293,12 +322,6 @@ if [ "$DRY_RUN" -eq 1 ]; then
 else
   log "step 10: running: vercel pull --yes --environment=$TARGET"
   vercel pull --yes --environment="$TARGET"
-  if [ "$PROD" -eq 0 ]; then
-    # Best-effort only (fix round 1, I2): never let this block the deploy.
-    if vercel list 2>/dev/null | grep -qi 'no deployments'; then
-      log "this project has no deployments yet -- this run will be PRODUCTION regardless of the flags above (see the reminder near the top of this run)."
-    fi
-  fi
   if [ "$PROD" -eq 1 ]; then
     log "step 10: running: vercel build --prod"
     vercel build --prod

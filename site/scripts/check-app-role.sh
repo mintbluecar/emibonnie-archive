@@ -71,11 +71,19 @@ else
   DB_VAR_NAME="EMIBONNIE_DB_PREVIEW"
 fi
 
-# Prefer an already-exported DATABASE_URL (deploy.sh calling us), else fall
-# back to the named var for a standalone run.
-OWNER_URL="${DATABASE_URL:-${!DB_VAR_NAME:-}}"
+# Fix round 3, minor: prefer the named var (EMIBONNIE_DB/EMIBONNIE_DB_PREVIEW)
+# over any DATABASE_URL already sitting in the environment, rather than the
+# other way around -- a stray, unrelated DATABASE_URL left over in the
+# owner's shell from something else must never silently outrank the
+# variable that actually names which branch this run means to check.
+# deploy.sh (the one caller that passes DATABASE_URL instead) always runs
+# this as a standalone process with EMIBONNIE_DB/EMIBONNIE_DB_PREVIEW
+# already unset (its own fix round 1, I1), so this still picks up
+# DATABASE_URL correctly in that case -- there's nothing for the named var
+# to outrank there.
+OWNER_URL="${!DB_VAR_NAME:-${DATABASE_URL:-}}"
 if [ -z "$OWNER_URL" ]; then
-  echo "check-app-role.sh: neither \$DATABASE_URL nor \$$DB_VAR_NAME is set (one must hold the owner-role connection string for the $TARGET database) -- stopping before any step runs" >&2
+  echo "check-app-role.sh: neither \$$DB_VAR_NAME nor \$DATABASE_URL is set (one must hold the owner-role connection string for the $TARGET database) -- stopping before any step runs" >&2
   exit 1
 fi
 unset EMIBONNIE_DB EMIBONNIE_DB_PREVIEW DATABASE_URL

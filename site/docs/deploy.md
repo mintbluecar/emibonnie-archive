@@ -9,6 +9,26 @@ and [`docs/limits.md`](../../docs/limits.md) in the engine. Nothing here repeats
 the engine's own setup steps; it only covers what's specific to this archive
 and to the manual (no GitHub Actions) deploy path.
 
+### Before any of this: get the owner-role connection strings into your shell
+
+Every command below assumes `EMIBONNIE_DB` and `EMIBONNIE_DB_PREVIEW` (the
+**owner**-role connection strings, for the main branch and the `preview`
+branch) are already set in your shell — **never** type or paste either of
+them onto the same command line as a command, where it would sit in your
+shell history for as long as that history file exists. Set them once per
+terminal session, with your shell's own "read a line without echoing it"
+feature, so the value never appears on screen or in history at all:
+
+```sh
+read -rs EMIBONNIE_DB_PREVIEW; export EMIBONNIE_DB_PREVIEW
+read -rs EMIBONNIE_DB; export EMIBONNIE_DB
+```
+
+(Paste or type the connection string at each prompt, then press enter;
+nothing is echoed back.) Every command in this guide that follows just
+names `EMIBONNIE_DB`/`EMIBONNIE_DB_PREVIEW` or runs a plain `task ...` —
+none of them ever show the value itself.
+
 ## 1. Owner steps
 
 Do these once, before the first deploy. They're in your **fan** accounts
@@ -45,20 +65,29 @@ task role:preview
 task role:prod
 ```
 
-or the same thing directly:
+or the same thing directly (with `EMIBONNIE_DB_PREVIEW`/`EMIBONNIE_DB`
+already in your shell, as above):
 
 ```sh
-EMIBONNIE_DB_PREVIEW="<preview branch's OWNER-role connection string>" site/scripts/create-app-role.sh
-EMIBONNIE_DB="<main branch's OWNER-role connection string>" site/scripts/create-app-role.sh --prod
+site/scripts/create-app-role.sh
+site/scripts/create-app-role.sh --prod
 ```
 
 Run the first one against `preview`, the second against the main branch.
 Each one:
-- connects as the owner role and creates `app` with SQL (`create role app
-  with login password '<a freshly generated, strong, URL-safe password>'`)
-  — never printing the password, never through the Neon console;
-- refuses, with instructions for rotating the password instead, if `app`
-  already exists on that branch (so you can't run this twice by accident);
+- connects as the owner role and generates a strong, URL-safe password
+  locally, then creates `app` with SQL — without ever sending that
+  plaintext password to Postgres: it computes the password's
+  SCRAM-SHA-256 verifier itself and gives *that* to `create role app
+  login password %L`, the same way Postgres stores it internally. Never
+  prints the password, never goes through the Neon console. (See
+  `site/scripts/scram.mjs` and `site/scripts/create-app-role.sh`'s own
+  header comment for exactly why and how.)
+- refuses if `app` already exists on that branch (so you can't run this
+  twice by accident) and tells you to run it again with `--rotate`
+  instead (`task role:rotate:preview` / `task role:rotate:prod` —
+  section 6(a), below) — never the Neon console, which would put `app`
+  back into `neon_superuser`;
 - builds that branch's app-role connection string (same host, database and
   parameters, user `app`, the new password) and adds it to Vercel as
   `DATABASE_URL`, type **Secret**, in the matching scope — see (b), below.
@@ -92,8 +121,9 @@ deployment belongs to.
 **(c) Confirm 2FA.**
 
 Check that 2FA (an authenticator app or a passkey) is on for every fan
-account this archive uses: X, Google, GitHub, Vercel, Neon, **and the
-domain registrar**.
+account this archive uses: X, Google, GitHub, Vercel, Neon. (This archive
+uses its `*.vercel.app` address, not a separately registered domain, so
+there's no registrar account to cover.)
 
 **(d) GitHub repos.**
 
@@ -138,9 +168,9 @@ Vercel always makes a brand-new project's **first** deployment a
 So the very first deploy here is a `--prod` run, on purpose — a preview
 run first would just become the production deployment anyway, against
 whichever database it happened to be configured for. `site/scripts/deploy.sh`
-also prints a reminder of this every time it runs in preview mode, and
-makes a best-effort check for "this project has no deployments yet" when
-it can reach Vercel.
+also prints a reminder of this every time it runs in preview mode, and, in
+preview mode, checks (before doing anything else) whether this project
+already has a deployment — failing closed and stopping if it can't tell.
 
 In order:
 
@@ -151,8 +181,8 @@ In order:
    ```
    or directly:
    ```sh
-   EMIBONNIE_DB_PREVIEW="<preview branch's OWNER-role string>" site/scripts/create-app-role.sh
-   EMIBONNIE_DB="<main branch's OWNER-role string>" site/scripts/create-app-role.sh --prod
+   site/scripts/create-app-role.sh
+   site/scripts/create-app-role.sh --prod
    ```
 2. **Run setup and seed, with the app role granted, on *both* branches:**
    ```sh
@@ -174,7 +204,12 @@ In order:
    Use the **owner**-role string in `DATABASE_URL` here (`setup`/`seed-dev`
    are things you run by hand) — `APP_DB_ROLE=app` just tells `setup`'s
    internal migrate step which role to (re-)grant, same as `deploy.sh`
-   does.
+   does. `seed-dev` here loads **this archive's own 6 real archived
+   tweets** from `site/seed/` — not synthetic example data.
+   `scripts/seedDev.js` reads `SITE_DIR` (default `site`, this repo's own
+   folder) to find them, the same folder `site/scripts/deploy.sh`'s
+   `node --test site/test/` and `npm run e2e:site` steps build and check
+   against.
 3. **Run the least-privilege check on both branches:**
    ```sh
    task check-role:preview
@@ -194,7 +229,7 @@ In order:
    ```
    or directly:
    ```sh
-   EMIBONNIE_DB="$EMIBONNIE_DB" site/scripts/deploy.sh --prod
+   site/scripts/deploy.sh --prod
    ```
    `--prod` asks you to type a confirmation phrase before it touches the
    production database — read the prompt before answering. `task
@@ -210,9 +245,11 @@ In order:
 
 ## 3. Verification checklist
 
-**Against the production domain** (not a generated `*.vercel.app`
-deployment URL — Vercel only serves the production domain from the latest
-*production* deployment):
+**Against the production domain** — this project's own stable `*.vercel.app`
+**production alias** (Vercel always serves it from whichever deployment is
+currently production). That's different from the one-off URL each
+individual deployment gets (e.g. a per-commit or per-preview address),
+which changes on every deploy:
 
 - **Headers.** `curl -I https://<production domain>/` and check for:
   - a `Content-Security-Policy` header
@@ -249,19 +286,20 @@ deployment URL — Vercel only serves the production domain from the latest
 - **The least-privilege query** (section 1, "Least privilege", above) still
   answers `f, f, f`.
 
-**For a preview deployment,** `curl -I` against its generated URL will
-usually hit Vercel's deployment protection wall and never reach this
+**For a preview deployment,** a plain `curl -I` against its generated URL
+will usually hit Vercel's deployment protection wall and never reach this
 site's own headers. Use `vercel curl` instead, which adds the bypass
-token for you:
+token for you — "The `vercel curl` command works like `curl`, but
+automatically handles deployment protection bypass tokens for you."
+([Vercel: `vercel curl`](https://vercel.com/docs/cli/curl)). Either form
+works, run from this repo (linked to the project, so it can find the
+right deployment and bypass token):
 
 ```sh
-npx --yes vercel@65.1.0 curl -I /
+npx --yes vercel@65.1.0 curl -I --deployment <preview deployment URL> /
+# or, passing the full preview URL directly:
+npx --yes vercel@65.1.0 curl -I <preview deployment URL>/
 ```
-
-— "The `vercel curl` command works like `curl`, but automatically handles
-deployment protection bypass tokens for you." ([Vercel: `vercel curl`](https://vercel.com/docs/cli/curl))
-Run it from this repo, linked to the project, so it can find the right
-deployment and bypass token.
 
 ## 4. Launch checklist
 
@@ -277,8 +315,6 @@ Go through all of this before telling anyone the site is live.
       Gmail address.
 - [ ] The X developer app's authorize screen shows only fan-side names and
       links.
-- [ ] The domain is registered with the fan email, with registrant data
-      redacted (WHOIS privacy on).
 - [ ] One fan contact address is used on every public page (this archive
       uses the `contactUrl` in `site/site.json`).
 
@@ -339,15 +375,23 @@ server version — check with `pg_dump --version`.
 - Do the same for the `preview` branch (swap `--dbname="$EMIBONNIE_DB"` for
   `--dbname="$EMIBONNIE_DB_PREVIEW"`) if you've put anything in it worth
   keeping.
-- **To restore**, into an **empty** database:
+- **To restore**, into an **empty** database. The target (an empty branch
+  you're restoring into) usually isn't `EMIBONNIE_DB`/`EMIBONNIE_DB_PREVIEW`
+  itself, so read it into its own variable the same no-echo way as the
+  top of this guide, rather than typing or pasting it onto a command line:
   ```sh
-  pg_restore --no-owner --no-privileges --clean --if-exists --dbname="<target database's OWNER-role string>" <dump file>
-  APP_DB_ROLE=app DATABASE_URL="<same target database's OWNER-role string>" npm run migrate
+  read -rs RESTORE_TARGET_URL; export RESTORE_TARGET_URL
+  pg_restore --no-owner --no-privileges --clean --if-exists --dbname="$RESTORE_TARGET_URL" <dump file>
+  DATABASE_URL="$RESTORE_TARGET_URL" APP_DB_ROLE=app npm run migrate
   ```
   `--no-owner --no-privileges` restores every object as the role you're
   connecting with (never re-creates the dump-time owner or its grants);
   the `npm run migrate` afterwards re-grants the `app` role on the
-  restored schema, the same way it does after every other migrate.
+  restored schema, the same way it does after every other migrate --
+  **the `app` role must already exist on the target** before this
+  (`site/scripts/create-app-role.sh`, section 1(a)/2 step 1 above;
+  pointed at `RESTORE_TARGET_URL` the same way, if the target isn't
+  `preview` or main).
 
 ## 6. Incident runbook
 
@@ -356,18 +400,31 @@ server version — check with `pg_dump --version`.
 If a `DATABASE_URL` (or any other secret) is exposed — committed by mistake,
 pasted somewhere public, shown on a screen share:
 
-1. In the Neon console, open the affected branch → **Roles** → the leaked
-   role (`app`, or the owner role if that's what leaked) → **Reset
-   password**. This invalidates the old connection string immediately.
-2. Copy the new connection string.
-3. In Vercel, update the `DATABASE_URL` Secret (Settings → Environment
-   Variables → edit → paste the new value) for the affected scope
-   (Production or Preview).
-4. Redeploy: `site/scripts/deploy.sh` (add `--prod` for production), so the
-   running site picks up the new value. The migrate step inside it will
-   reconnect with the new string.
-5. Check the Neon console's audit/activity log, and Vercel's Activity Log,
-   for anything that used the leaked string before you rotated it.
+- **If it's the `app` role's connection string that leaked** (the normal
+  case — it's the one Vercel holds):
+  ```sh
+  task role:rotate:preview    # or
+  task role:rotate:prod
+  ```
+  or directly: `site/scripts/create-app-role.sh --rotate [--prod]`. This
+  generates a new password, replaces `app`'s password in the database
+  with its SCRAM-SHA-256 verifier (never the Neon console — see section
+  1(a)/"Least privilege", above, for why: a console reset would make
+  `app` a `neon_superuser` member), and replaces the `DATABASE_URL`
+  Secret in Vercel's matching scope for you.
+- **If the *owner*-role string leaked instead** (the one only you use, in
+  `EMIBONNIE_DB`/`EMIBONNIE_DB_PREVIEW`): in the Neon console, open the
+  affected branch → **Roles** → the owner role → **Reset password**, copy
+  the new string, and re-run `read -rs EMIBONNIE_DB...; export
+  EMIBONNIE_DB...` (top of this guide) with it. The owner role isn't
+  created by this archive's own scripts, so resetting it in the console
+  is the only option, and it's the one place that's appropriate (you
+  never give it to Vercel, so it never needs least-privilege treatment).
+- Either way, redeploy afterwards: `task deploy:preview` / `task
+  deploy:prod` (or `site/scripts/deploy.sh [--prod]`), so the running
+  site picks up the new value.
+- Check the Neon console's audit/activity log, and Vercel's Activity Log,
+  for anything that used the leaked string before you rotated it.
 
 ### (b) A takedown request, before the account tools exist
 
@@ -377,11 +434,18 @@ the same way the engine's own code does it, so it stays in the audit log
 with a real actor on it.
 
 **If the request is urgent** (something is actively circulating), also
-purge the Vercel CDN cache for this project (Project → the "..." menu →
-**Purge Cache**, or the equivalent in **Settings** → **Data Cache**) right
-after hiding the item below — public pages are cached for up to 5 minutes
-(`s-maxage=300`), so without a purge the hidden item can keep being served
-from cache for that long.
+purge the Vercel CDN cache right after hiding the item below — public
+pages are cached for up to 5 minutes (`s-maxage=300`), so without a purge
+the hidden item can keep being served from cache for that long:
+
+```sh
+task purge
+# or directly: npx --yes vercel@65.1.0 cache purge --type cdn
+```
+
+([Vercel: `vercel cache`](https://vercel.com/docs/cli/cache).) If the CLI
+can't reach it, the dashboard fallback is the project's "..." menu (or
+**Settings**) → **Data Cache**/**CDN** → **Purge Cache**.
 
 **What the engine already gives you:**
 - Every item has `deleted_at`, `deleted_by` and `deleted_reason` columns,
@@ -408,10 +472,12 @@ task takedown -- <the numeric id from the /t/<id> URL>
 # or: ID=<the numeric id> task takedown
 ```
 
-`task takedown` asks for confirmation, passes the id to `psql` as a bound
-variable (never interpolated into the SQL text — see "What this does and
-why it's safe", below), and reminds you to purge the CDN cache afterwards.
-It's exactly this, run directly:
+`task takedown` asks for confirmation, carries the id in a real
+environment variable (`TAKEDOWN_ID`, never spliced into shell or SQL
+text — the id is checked to be numeric-only before anything runs, so an
+id like `1"; rm -rf ~; echo "` or `$(...)` is rejected, not executed), and
+reminds you to purge the CDN cache afterwards. It's exactly this, run
+directly:
 
 ```sh
 psql "$EMIBONNIE_DB" -v ON_ERROR_STOP=1 -v id='<the numeric id from the /t/<id> URL>' <<'SQL'
@@ -422,13 +488,13 @@ update items
 set deleted_at = now(),
     deleted_by = 'system',
     deleted_reason = 'hidden_by_owner'
-where kind = 'translation'
-  and id = (
-    select item_id from item_sources
-    where platform = 'x'                 -- or the other source platform
-      and external_id = :'id'
-      and role = 'primary'
-  );
+where id = (
+  select item_id from item_sources
+  where platform = 'x'                 -- or the other source platform
+    and external_id = :'id'
+    and role = 'primary'
+    and kind = 'translation'
+);
 
 commit;
 SQL
@@ -453,9 +519,15 @@ What this does and why it's safe:
 - The `update` targets `items` by its **public** id (the number in the
   `/t/<id>` URL) through `item_sources`, rather than by `items.id`
   directly, because the public URL is the source platform's id, not the
-  internal one. `and kind = 'translation'` keeps this narrowed to the one
-  item kind this archive currently has, in case a future kind ever shares
-  the same `(platform, external_id)` pairing.
+  internal one. `and kind = 'translation'` sits *inside* that
+  `item_sources` subquery (not as a separate check on the outer `items`
+  row), because that's where it actually disambiguates: the unique index
+  behind `(platform, external_id)` with `role = 'primary'`
+  (`item_sources_primary_per_kind`) only guarantees uniqueness *within one
+  kind*. A check added only afterwards, against the outer row, wouldn't
+  un-pick a wrong row the subquery had already returned for a different
+  kind sharing the same `(platform, external_id)` pair — it's currently
+  this archive's only kind, but this stays correct if that ever changes.
 - Setting `deleted_reason = 'hidden_by_owner'` is required: a check
   constraint on `items` (`(deleted_at is null) = (deleted_reason is
   null)`) rejects the update without it.
@@ -472,9 +544,17 @@ URL's id is an older version tracked in `source_aliases`. Look it up there
 first:
 
 ```sql
-select item_id from source_aliases
-where platform = 'x' and external_id = '<the numeric id from the /t/<id> URL>';
+select s.item_id
+from source_aliases a
+join item_sources s on s.id = a.source_id
+where a.platform = 'x'
+  and a.external_id = '<the numeric id from the /t/<id> URL>'
+  and s.kind = 'translation';
 ```
+
+(`source_aliases` has no `item_id` column of its own — it only has
+`source_id`, which points at `item_sources.id`; the item's id comes from
+*that* row's `item_id`, hence the join.)
 
 Then run the `update` above with `id = <that item_id>` directly, instead
 of the `item_sources` subquery.
