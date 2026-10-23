@@ -84,3 +84,14 @@
   border: 1.5px solid color-mix(in srgb, var(--color-label) 30%, var(--color-card));
   color: var(--color-label-on-tint);
 }
+
+/* The hashtag gets its own line and never breaks mid-word: one line,
+   cut with an ellipsis; the full tag is in the tooltip. */
+.c-event-card__tag {
+  display: block;
+  font-size: var(--text-11);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

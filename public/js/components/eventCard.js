@@ -22,9 +22,8 @@ export function render(props) {
       <div class="c-event-card__body">
         <div class="c-event-card__text">
           <strong class="c-event-card__name">${event.name}</strong>
-          <small class="c-event-card__meta">
-            ${dayLabel(event.occurredOn)}${event.hashtag ? html` · #${event.hashtag}` : ''}
-          </small>
+          <small class="c-event-card__meta">${dayLabel(event.occurredOn)}</small>
+          ${event.hashtag ? html`<small class="c-event-card__tag" title="#${event.hashtag}">#${event.hashtag}</small>` : ''}
         </div>
         <span class="c-event-card__count">${total}</span>
       </div>
