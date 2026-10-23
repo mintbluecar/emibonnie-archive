@@ -13,6 +13,7 @@
     "posttest": "node scripts/checkTreeHash.js",
     "check": "tsc --noEmit -p jsconfig.json && eslint .",
     "dev": "node scripts/build.js && node scripts/dev.js",
+    "dev:watch": "node scripts/devWatch.js",
     "build": "node scripts/build.js",
     "setup": "node scripts/setup.js",
     "doctor": "node scripts/doctor.js",

@@ -284,6 +284,12 @@ export function missingBuildOutput(root) {
 }
 
 async function main() {
+  if (process.argv.includes('--watch')) {
+    // `npm run dev -- --watch` (Task 10c, i): the watcher builds, serves and rebuilds.
+    const { main: watchMain } = await import('./devWatch.js');
+    await watchMain();
+    return;
+  }
   const port = Number(process.env.PORT ?? 3000);
   const missing = missingBuildOutput('.');
   if (missing.length > 0) {
