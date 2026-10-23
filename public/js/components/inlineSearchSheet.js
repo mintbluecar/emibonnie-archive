@@ -8,7 +8,7 @@
  */
 import { mount } from '../core/dom.js';
 import { getJson } from '../core/api.js';
-import { t } from '../core/site.js';
+import { filterLabel } from './header.js';
 import * as filterSheet from './filterSheet.js';
 import { toApiParams, filterCount } from '../state/searchState.js';
 
@@ -16,7 +16,9 @@ import { toApiParams, filterCount } from '../state/searchState.js';
 export function updateFilterBadge(root, n) {
   const btn = root.querySelector('.c-header__filter-btn');
   if (!btn) return;
-  btn.setAttribute('aria-label', n > 0 ? t('search.filtersActive', { n }) : t('search.filters'));
+  const label = filterLabel(n);
+  btn.setAttribute('aria-label', label);
+  btn.setAttribute('title', label);
   let badge = btn.querySelector('.c-header__filter-count');
   if (n > 0) {
     if (!badge) {

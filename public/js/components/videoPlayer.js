@@ -46,7 +46,7 @@ export function pickVariant(variants, isSmall) {
 /** @returns {import('../core/html.js').SafeHtml} */
 function fullScreenButton() {
   return html`
-    <button type="button" class="c-video__full" aria-label="${t('item.fullScreen')}">
+    <button type="button" class="c-video__full" title="${t('item.fullScreen')}" aria-label="${t('item.fullScreen')}">
       <span aria-hidden="true">⤢</span>
     </button>
   `;
@@ -55,7 +55,7 @@ function fullScreenButton() {
 /** @returns {import('../core/html.js').SafeHtml} */
 function playButton() {
   return html`
-    <button type="button" class="c-video__play" aria-label="${t('item.play')}">
+    <button type="button" class="c-video__play" title="${t('item.play')}" aria-label="${t('item.play')}">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"></path></svg>
     </button>
   `;

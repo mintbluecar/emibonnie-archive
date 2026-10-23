@@ -58,7 +58,7 @@ export function personSearch(person, query = '') {
 function pickerMarkup(selfId, people) {
   const items = people.filter((p) => p.id !== selfId).map((p) => ({ emoji: p.emoji, label: p.name, colour: p.colour, value: p.id }));
   return html`
-    <button type="button" class="c-hub__picker-close" aria-label="${t('person.closePicker')}">✕</button>
+    <button type="button" class="c-hub__picker-close" title="${t('person.closePicker')}" aria-label="${t('person.closePicker')}">✕</button>
     <h2 class="c-hub__picker-title">${t('person.withTitle')}</h2>
     ${chips.render({ items })}
     <button type="button" class="c-hub__picker-apply">${t('person.withApply')}</button>
@@ -68,7 +68,7 @@ function pickerMarkup(selfId, people) {
 /** The picker's error body (review round 1, M3): `/api/filters` failed, but the dialog still opens, with a way to close it. @returns {import('../core/html.js').SafeHtml} */
 function pickerErrorMarkup() {
   return html`
-    <button type="button" class="c-hub__picker-close" aria-label="${t('person.closePicker')}">✕</button>
+    <button type="button" class="c-hub__picker-close" title="${t('person.closePicker')}" aria-label="${t('person.closePicker')}">✕</button>
     <h2 class="c-hub__picker-title">${t('person.withTitle')}</h2>
     <p class="c-hub__picker-error">${t('search.error')}</p>
   `;

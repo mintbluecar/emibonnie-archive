@@ -39,6 +39,11 @@ function searchIcon() {
 
 /** @typedef {{ placeholder: string, filterCount?: number }} SearchProps */
 
+/** The filter button's name, as its tooltip too (owner rule: every icon-only control has a `title`). @param {number|undefined} n @returns {string} */
+export function filterLabel(n) {
+  return n ? t('search.filtersActive', { n }) : t('search.filters');
+}
+
 /** @param {SearchProps} props @returns {import('../core/html.js').SafeHtml} */
 function searchRow({ placeholder, filterCount }) {
   return html`
@@ -47,7 +52,7 @@ function searchRow({ placeholder, filterCount }) {
         ${searchIcon()}
         <input class="c-header__search-box" type="search" placeholder="${placeholder}">
       </span>
-      <button class="c-header__filter-btn" type="button" aria-label="${filterCount ? t('search.filtersActive', { n: filterCount }) : t('search.filters')}">
+      <button class="c-header__filter-btn" type="button" title="${filterLabel(filterCount)}" aria-label="${filterLabel(filterCount)}">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
           <path d="M4 6h16M7 12h10M10 18h4" />
         </svg>
@@ -64,7 +69,7 @@ function searchRow({ placeholder, filterCount }) {
  */
 function findLink() {
   return html`
-    <a class="c-header__find" href="${HOME_PATH}" aria-label="${t('nav.search')}">
+    <a class="c-header__find" href="${HOME_PATH}" title="${t('nav.search')}" aria-label="${t('nav.search')}">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="11" cy="11" r="7"></circle>
         <path d="M21 21l-4.3-4.3"></path>

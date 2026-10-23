@@ -38,8 +38,8 @@ export function render({ images }) {
     <div class="c-carousel" data-count="${images.length}">
       <div class="c-carousel__track">${images.map((image, i) => slide(image, i, i === 0))}</div>
       ${many ? html`
-        <button type="button" class="c-carousel__prev" aria-label="${t('item.prevImage')}">‹</button>
-        <button type="button" class="c-carousel__next" aria-label="${t('item.nextImage')}">›</button>
+        <button type="button" class="c-carousel__prev" title="${t('item.prevImage')}" aria-label="${t('item.prevImage')}">‹</button>
+        <button type="button" class="c-carousel__next" title="${t('item.nextImage')}" aria-label="${t('item.nextImage')}">›</button>
         <span class="c-carousel__count" aria-live="polite">1 / ${images.length}</span>
       ` : ''}
     </div>

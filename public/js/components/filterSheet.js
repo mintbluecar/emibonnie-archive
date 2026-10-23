@@ -110,7 +110,7 @@ function datesSection(state) {
 export function render({ state, options, count }) {
   return html`
     <dialog class="c-filter-sheet" aria-label="${t('search.filters')}">
-      <button type="button" class="c-filter-sheet__close" aria-label="${t('search.closeFilters')}">✕</button>
+      <button type="button" class="c-filter-sheet__close" title="${t('search.closeFilters')}" aria-label="${t('search.closeFilters')}">✕</button>
       <h2 class="c-filter-sheet__title">${t('search.filters')}</h2>
       ${peopleSection(options.people, state)}
       ${typesSection(options.categories, state)}
