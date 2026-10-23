@@ -28,7 +28,7 @@ const APP_SELECTOR = 'app';
 
 /** @param {import('../../../src/http/contracts.js').ItemView} data @returns {import('../core/html.js').SafeHtml} */
 function pillsRow(data) {
-  const items = [...data.tags.hashtags.map((h) => ({ label: `#${h}` })), ...(data.category ? [{ label: data.category }] : [])];
+  const items = [...data.tags.hashtags.map(chips.hashtagChip), ...(data.category ? [{ label: data.category }] : [])];
   return items.length > 0 ? chips.render({ items }) : html``;
 }
 

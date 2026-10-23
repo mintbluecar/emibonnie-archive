@@ -79,7 +79,7 @@ function metaLine(data) {
  */
 function pillsRow(event) {
   const items = [
-    ...event.hashtags.map((hashtag) => ({ label: `#${hashtag}` })),
+    ...event.hashtags.map(chips.hashtagChip),
     ...(event.type ? [{ label: event.type }] : []),
     ...(event.client ? [{ label: event.client }] : []),
   ];
