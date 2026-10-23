@@ -32,27 +32,6 @@
   margin: 4px 0 8px;
 }
 
-.c-event__people-filter {
-  margin-bottom: 6px;
-}
-
-.c-event__account-select {
-  margin-bottom: 10px;
-}
-
-.c-event__account-filter {
-  display: block;
-  width: 100%;
-  min-height: 44px;
-  background: var(--color-card);
-  border: 1.5px solid var(--color-card-shadow);
-  border-radius: 14px;
-  padding: 0 10px;
-  font-family: inherit;
-  font-size: var(--text-12);
-  color: var(--color-ink);
-}
-
 .c-event__newest-toggle {
   display: inline-flex;
   align-items: center;

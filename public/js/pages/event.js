@@ -38,8 +38,7 @@ const SECTION_CTX = { compact: true };
 import { mountLoadError } from './pageError.js';
 
 const APP_SELECTOR = 'app';
-const ALL = 'all';
-/** @typedef {{ order: 'asc'|'desc', person: string, account: string }} EventPageState */
+/** @typedef {{ order: 'asc'|'desc' }} EventPageState */
 
 /** @param {string} slug @returns {import('../core/html.js').SafeHtml} */
 const backLink = (slug) => html`<a class="c-event__back" href="${HOME_PATH}" data-slug="${slug}">${t('event.back')}</a>`;
@@ -86,31 +85,6 @@ function pillsRow(event) {
 }
 
 /**
- * @param {import('../../../src/http/contracts.js').PersonChip[]} people
- * @returns {import('../core/html.js').SafeHtml}
- */
-function peopleFilterRow(people) {
-  const items = [
-    { label: t('event.allPeople'), active: true, value: ALL },
-    ...people.map((person) => ({ emoji: person.emoji, label: person.name, colour: person.colour, value: String(person.id) })),
-  ];
-  return html`<div class="c-event__people-filter">${chips.render({ items })}</div>`;
-}
-
-/** @param {string[]} accounts @returns {import('../core/html.js').SafeHtml} */
-function accountFilterRow(accounts) {
-  if (accounts.length === 0) return html``;
-  return html`
-    <span class="c-select c-event__account-select">
-      <select class="c-event__account-filter" aria-label="${t('event.translatorFilterLabel')}">
-        <option value="${ALL}">${t('event.translatorAll')}</option>
-        ${accounts.map((handle) => html`<option value="${handle}">@${handle}</option>`)}
-      </select>
-    </span>
-  `;
-}
-
-/**
  * @param {import('../../../src/http/contracts.js').Section} section
  * @returns {import('../core/html.js').SafeHtml}
  */
@@ -123,17 +97,6 @@ function sectionBlock(section) {
       ${section.hasMore ? html`<button type="button" class="c-event-section__more" data-kind="${section.kind}">${t('event.more')}</button>` : ''}
     </div>
   `;
-}
-
-/**
- * Every account handle on any loaded entry, computed client-side (ruling:
- * EventView carries no account list, only `accountCount`).
- * @param {import('../../../src/http/contracts.js').Section[]} sections
- * @returns {string[]}
- */
-function uniqueAccounts(sections) {
-  const handles = sections.flatMap((section) => section.items.map((item) => item.accountHandle)).filter((h) => h !== null);
-  return [...new Set(handles)].sort();
 }
 
 /**
@@ -153,8 +116,6 @@ export function eventSearch(event, query = '') {
  */
 export function composeEvent(data, search = eventSearch(data.event)) {
   const list = html`
-    ${peopleFilterRow(data.people)}
-    ${accountFilterRow(uniqueAccounts(data.sections))}
     <button type="button" class="c-event__newest-toggle" aria-pressed="false">${t('event.newestFirst')}</button>
     <div class="c-event-sections">${data.sections.map(sectionBlock)}</div>
   `;
@@ -172,34 +133,15 @@ export function composeEvent(data, search = eventSearch(data.event)) {
 }
 
 /**
- * Shows/hides every entry per the current person/account filter, over
- * the generic `data-person-ids`/`data-account` attributes. Called after
- * every filter change, and after "more" appends further entries, so a
- * standing filter never misses newly-loaded ones (Task 3 review #4).
- * @param {Element} root @param {string} personValue @param {string} accountValue
- * @returns {void}
- */
-function applyFilters(root, personValue, accountValue) {
-  for (const card of root.querySelectorAll('.c-preview-card')) {
-    const ids = (card.getAttribute('data-person-ids') ?? '').split(',').filter(Boolean);
-    const account = card.getAttribute('data-account') ?? '';
-    const personOk = personValue === ALL || ids.includes(personValue);
-    const accountOk = accountValue === ALL || account === accountValue;
-    /** @type {HTMLElement} */ (card).hidden = !(personOk && accountOk);
-  }
-}
-
-/**
  * Replaces `.c-event-sections`' content with freshly fetched `sections`,
- * re-binds every kind's UI there, then re-applies the current filters --
- * the newest-first toggle's whole job (never a CSS flip).
- * @param {Element} root @param {Element} container @param {import('../../../src/http/contracts.js').Section[]} sections @param {EventPageState} state
+ * and re-binds every kind's UI there -- the newest-first toggle's whole
+ * job (never a CSS flip).
+ * @param {Element} container @param {import('../../../src/http/contracts.js').Section[]} sections
  * @returns {void}
  */
-function renderAndBindSections(root, container, sections, state) {
+function renderAndBindSections(container, sections) {
   mount(container, html`${sections.map(sectionBlock)}`);
   for (const section of sections) KIND_UI[section.kind]?.section.bind?.(container);
-  applyFilters(root, state.person, state.account);
 }
 
 /**
@@ -241,7 +183,6 @@ async function loadMore(root, slug, state, button) {
   if (!section) return;
   appendMoreItems(container, /** @type {string} */ (kind), kindUi.section, section);
   container.setAttribute('data-offset', String(offset + section.items.length));
-  applyFilters(root, state.person, state.account);
   button.disabled = !section.hasMore;
   if (!section.hasMore) button.remove();
 }
@@ -258,13 +199,13 @@ async function toggleOrder(root, slug, state, toggle) {
   toggle.disabled = true;
   const page = await getJson(`/api/event/${encodeURIComponent(slug)}`, { order: state.order });
   const container = root.querySelector('.c-event-sections');
-  if (container) renderAndBindSections(root, container, page.sections, state);
+  if (container) renderAndBindSections(container, page.sections);
   toggle.setAttribute('aria-pressed', String(!pressed));
   toggle.disabled = false;
 }
 
 /**
- * Wires the people-chip/translator-select filters, the newest-first
+ * Wires the newest-first
  * toggle, and each section's "more" button. Exported so tests can drive
  * it directly against a real (if minimal) DOM, the same `render`/`bind`
  * pair every component exports.
@@ -274,27 +215,10 @@ async function toggleOrder(root, slug, state, toggle) {
 export function bind(root, data, slug) {
   chips.bind(root);
   for (const section of data.sections) KIND_UI[section.kind]?.section.bind?.(root);
-  const peopleFilterEl = root.querySelector('.c-event__people-filter');
   const sectionsEl = root.querySelector('.c-event-sections');
   /** @type {EventPageState} */
-  const state = { order: 'asc', person: ALL, account: ALL };
+  const state = { order: 'asc' };
 
-  if (peopleFilterEl) {
-    on(peopleFilterEl, '.c-chips__chip', 'click', (_e, target) => {
-      const value = target.getAttribute('data-value') ?? ALL;
-      state.person = value === state.person ? ALL : value;
-      for (const chip of peopleFilterEl.querySelectorAll('.c-chips__chip')) {
-        const isOn = chip.getAttribute('data-value') === state.person;
-        chip.classList.toggle('c-chips__chip--on', isOn);
-        chip.setAttribute('aria-pressed', String(isOn));
-      }
-      applyFilters(root, state.person, state.account);
-    });
-  }
-  on(root, '.c-event__account-filter', 'change', (_e, target) => {
-    state.account = /** @type {HTMLSelectElement} */ (target).value;
-    applyFilters(root, state.person, state.account);
-  });
   on(root, '.c-event__newest-toggle', 'click', (_e, target) => { toggleOrder(root, slug, state, target); });
   if (sectionsEl) on(sectionsEl, '.c-event-section__more', 'click', (_e, target) => { loadMore(root, slug, state, target); });
 }
