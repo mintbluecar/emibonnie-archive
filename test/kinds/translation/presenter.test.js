@@ -390,4 +390,9 @@ test('Task 10c (c): the preview thumbnail is the clip poster (video), else the f
   assert.equal(thumbOf(/** @type {any} */ ({ ...video, poster: null })), null);
   assert.equal(thumbOf(/** @type {any} */ ({ type: 'quote', inner: null })), null);
   assert.equal(thumbOf(null), null);
+  // Review M3: only https on pbs.twimg.com, like the video player's poster.
+  for (const url of ['http://pbs.twimg.com/p.jpg', 'https://evil.example/p.jpg', 'https://pbs.twimg.com.evil.example/p.jpg', 'javascript:alert(1)']) {
+    assert.equal(thumbOf(/** @type {any} */ ({ ...video, poster: url })), null, url);
+    assert.equal(thumbOf(/** @type {any} */ ({ type: 'images', images: [{ url, width: 1, height: 1 }] })), null, url);
+  }
 });
