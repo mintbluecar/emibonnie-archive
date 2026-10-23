@@ -96,6 +96,17 @@ Vercel Hobby can't connect to organisation-owned repos, so a GitHub Actions work
 3. Run `npx vercel link` once locally. The org and project IDs are then in `.vercel/project.json`, which is gitignored.
 4. Add the secrets as in step 7. The workflow's header comment explains each one.
 
+### Check the first preview deploy
+
+`npm run dev` can't reproduce how Vercel routes requests to the function, so check the first preview deploy (and the first one after any engine update) by hand. Use the deploy's URL and the id of a post you've added:
+
+```sh
+curl -s -o /dev/null -w '%{http_code}\n' 'https://<deploy-url>/api/home'   # 200
+curl -s 'https://<deploy-url>/t/<post id>' | grep 'og:title'                # the post's title, not Vercel's NOT_FOUND page
+```
+
+If Deployment Protection is on for previews, curl gets a login page instead: open both URLs in a browser where you're signed in to Vercel, or run the checks against production after its first deploy. A failure here is in the troubleshooting table below ("The deployed site").
+
 ## 7. Set the secrets
 
 Secrets live only in Vercel environment variables, GitHub environment secrets and your own untracked `.env` files. Never commit them.
@@ -169,5 +180,12 @@ The merge should be conflict-free as long as you've only changed `site/` (and de
 | `✗ missing env var(s): DATABASE_URL` | Set it for the command: `DATABASE_URL='…' npm run doctor`. |
 | `✗ engine version vA is behind upstream vB — …` | Pull the update (step 10). |
 | `· engine version — skipped (no upstream remote / upstream unreachable / no vX.Y.Z tags)` | Not an error. Add the `upstream` remote (step 1) to get this check. |
+
+### The deployed site
+
+| You see | What it means | Fix |
+|---|---|---|
+| `/api/...` answers 400 `unknown query parameter: ...` naming a parameter your request never sent | A `vercel.json` rewrite with a named param (`/t/:id`), or a function file with one in its name, made Vercel add that param to the query string. The engine refuses unknown query params. | Take the latest engine release, run `npm run build`, and (Git-integration path) commit the `vercel.json` it writes. The engine has one function, `api/index.js`, and writes only unnamed rewrites (`/t/(.*)` to `/api`). |
+| `/t/<id>` or `/e/<slug>` shows Vercel's own `404: NOT_FOUND` | The request never reached the function: `vercel.json` is missing the page's rewrite to `/api`, or is out of date. | Same fix: rebuild and redeploy (and commit `vercel.json` on the Git-integration path). |
 
 See also: [what happens at each free-tier limit, and how to spot it early](limits.md).

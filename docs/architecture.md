@@ -7,7 +7,7 @@ This document is copied from the engine's implementation plan ("Architecture and
 A reviewer rejects any task that breaks these rules.
 
 ```
-api/[...route].js        the ONLY Vercel function: builds deps per request, dispatches via src/routes/index.js
+api/index.js             the ONLY Vercel function: builds deps per request, dispatches via src/routes/index.js
 src/routes/              one module per endpoint: export const route = { method, path, cache, run({ query, body, params, user }, deps) }
 src/http/                router, handler wrapper (errors, cache headers, Origin check for writes), query parsing, contracts.js (response typedefs)
 src/services/            orchestration across repos/sources/kinds (ingest, search, hub views, seedFromSite). Never names a kind.
@@ -69,7 +69,15 @@ site/                    a site's own folder (gitignored in the template); examp
     - Files are `camelCase.js`. Functions are verbs. Pure transforms are named after what they return.
     - SQL is `snake_case`. Repos map rows to camelCase.
 
-## File structure (fan-archive, v0.1.0)
+## Routing on Vercel
+
+There is one function, `api/index.js`, and the build writes every `vercel.json` rewrite that reaches it with an **unnamed** source and the destination exactly `/api`: `/api/(.*)`, then each link-preview page (`/e/(.*)`, and `<urlPrefix>(.*)` per kind, e.g. `/t/(.*)`). Static pages rewrite to their file the same way (`/p/(.*)` to `/person.html`).
+
+- **Why unnamed:** a named param in a source is added to the request's query string (`/t/:id` arrives as `/t/123?id=123`; [Vercel's rewrites doc](https://vercel.com/docs/routing/rewrites): "This converts a request like /resize/800/600 to /api/sharp?width=800&height=600"), and the handler refuses unknown query params. A catch-all file name (`api/[...route].js`) does the same with its segment, and only matches one level deep.
+- **Why `/api`:** the function sees the original request URL, not the rewrite's destination, so the route table matches `/api/home` and `/t/:sourceId` directly. `src/pages.js` (a page's `meta`) and the kinds registry (`urlPrefix`) decide which page paths have meta; `src/routes/meta.js` builds the routes and `src/routes/index.js` the rewrites from them.
+- `test/site/build.test.js` fails on a named source or a function rewrite to anything but `/api`. `scripts/dev.js` routes the same way (a rewrite to `/api` calls the handler with the original URL) and refuses a named source, but it can't reproduce Vercel's own quirks, so the first preview deploy must check `/api/home` and `/t/<id>` (`docs/start-your-own.md`, step 6).
+
+## File structure (fan-archive, v0.1.1)
 
 ```
 package.json  package-lock.json  .nvmrc  .editorconfig  LICENSE (MIT)  README.md  CHANGELOG.md  SECURITY.md
@@ -79,7 +87,7 @@ CONTRIBUTING.md (recipes)  docs/{architecture,site-settings,start-your-own,limit
 examples/solluna/{site.json,theme.css,copy.json,logo.svg,seed/}
 scripts/{dev,build*,setup,migrate,doctor,initSite,add,seedDev,new,newPlans,genRegistries}.js  scripts/templates/{route,page,component,migration,kind}/
 e2e/smoke.spec.js (engine smoke)  e2e/site.spec.js (a site's own pages)  e2e/helpers.js  e2e/fixtures/
-api/[...route].js
+api/index.js
 src/http/{router,handler,errors,query,origin,contracts}.js
 src/routes/{index,home,event,item,search,filters,person,account,video,meta}.js
 src/services/{ingest,search,hubs,seedFromSite}.js

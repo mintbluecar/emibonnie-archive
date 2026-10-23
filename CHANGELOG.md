@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented here. Versions are semver tags (`vX.Y.Z`). Each release lists its **upgrade steps**; to take one, see `docs/start-your-own.md`, step 10.
 
+## 0.1.1
+
+Fixes how the engine is wired into Vercel. On the first production deploy every `/api/*` call answered 400 `unknown query parameter: ...route`, and shared `/t/<id>` and `/e/<slug>` links showed Vercel's own 404 `NOT_FOUND`.
+
+**Upgrade steps:**
+
+1. `git fetch upstream --tags && git merge v0.1.1`.
+2. `npm run build`.
+3. Redeploy.
+4. **Git-integration path** (your repo tracks its own `vercel.json`): the build rewrites it. Commit the new `vercel.json` before you push, or Vercel keeps the old rewrites.
+
+No migrations.
+
+- **One function at `api/index.js`** (was `api/[...route].js`). Vercel passed the catch-all file name's segment to the function as a `...route` query param, which the handler refuses, and the file only matched one path level, so `/api/meta/...` never reached it.
+- **Unnamed rewrites only, all to `/api`.** `vercel.json` now sends `/api/(.*)`, `/e/(.*)` and each kind's `<urlPrefix>(.*)` (e.g. `/t/(.*)`) to `/api`, and static pages to their file the same way (`/p/(.*)` to `/person.html`). A named param in a rewrite source is added to the query string ([Vercel's rewrites doc](https://vercel.com/docs/routing/rewrites)), so none are left. A build test now fails on a named source, or on a function rewrite to anything but `/api`.
+- **The meta routes match the page paths.** The function sees the original request URL, so the link-preview routes are `/e/:slug` and `/t/:sourceId` (per kind). `/api/meta/*` is gone. `src/pages.js`'s `meta` field is now a renderer name (`meta: 'event'`), and the routes and rewrites both derive from it and the kinds registry.
+- **`npm run dev` routes like Vercel:** a rewrite to `/api` calls the handler with the original URL, with no query params added, and a rewrite source with a named param is refused. Dev still can't reproduce Vercel's own routing, so `docs/start-your-own.md` (step 6) now lists two curl checks for the first preview deploy, and its troubleshooting covers both symptoms.
+
 ## 0.1.0
 
 The first release: a read-only archive (browse, search, item pages) with intake from the command line, and the contributor framework.
