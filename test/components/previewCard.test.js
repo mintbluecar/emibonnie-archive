@@ -12,33 +12,47 @@ function baseResult(overrides = {}) {
     kind: 'translation', sourceId: '1', url: '/t/1',
     lines: [{ kind: 'speech', emoji: '🦁', name: 'host', colour: '#b5651d', text: 'hi', cont: false }],
     people: [{ id: 1, name: 'sol', emoji: '🧡', colour: '#ff8a3d', igHandle: null }],
-    accountHandle: 'tl_alpha', hasVideo: true, followsOnFrom: null, thumb: null,
+    accountHandle: 'tl_alpha', accountUrl: 'https://x.com/tl_alpha', hasVideo: true, followsOnFrom: null, thumb: null,
     occurredOn: '2026-10-14', placement: 'post',
     ...overrides,
   };
 }
 
-test('previewCard: renders the opening lines via bubbles, and a meta row with the translator handle and a video marker', () => {
+test('previewCard: renders the opening lines via bubbles, and a meta row with a video marker (no translator icon any more)', () => {
   const markup = String(render({ result: baseResult() }));
   assert.match(markup, /href="\/t\/1"/);
   assert.match(markup, /c-bubbles__bub/, 'embeds the bubbles component output');
-  assert.match(markup, /<span class="c-icon c-icon--translator" role="img" aria-label="translator" title="translator"><svg[^>]*aria-hidden="true">.*?<\/svg><\/span> @tl_alpha/);
-  assert.ok(!/\btl @/.test(markup), 'the icon replaces the word "tl" (Task 10c e)');
+  assert.ok(!markup.includes('c-icon--translator'), 'the translate icon is gone (owner, 2026-10-23)');
   assert.match(markup, /aria-label="video"/);
 });
 
-test('previewCard: no accountHandle, no video, means no meta for them; follows-on shows as plain text, not a link', () => {
-  const markup = String(render({ result: baseResult({ accountHandle: null, hasVideo: false, followsOnFrom: { sourceId: '0', url: '/t/0' } }) }));
-  assert.ok(!markup.includes('c-icon--translator'));
+test('previewCard (owner, 2026-10-23): the translator credit line links to their X profile, with target/rel', () => {
+  const markup = String(render({ result: baseResult() }));
+  assert.match(markup, /<p class="c-card-credit">translated by: <a class="c-card-credit__link" href="https:\/\/x\.com\/tl_alpha" target="_blank" rel="noopener noreferrer">@tl_alpha<\/a><\/p>/);
+});
+
+test('previewCard (owner, 2026-10-23): an account with no profile link shows plain "@handle" text, not a link', () => {
+  const markup = String(render({ result: baseResult({ accountUrl: null }) }));
+  assert.match(markup, /<p class="c-card-credit">translated by: @tl_alpha<\/p>/);
+});
+
+test('previewCard: no accountHandle means no credit line at all, no video, means no meta for it; follows-on shows as plain text, not a link', () => {
+  const markup = String(render({ result: baseResult({ accountHandle: null, accountUrl: null, hasVideo: false, followsOnFrom: { sourceId: '0', url: '/t/0' } }) }));
+  assert.ok(!markup.includes('c-card-credit'));
   assert.ok(!markup.includes('aria-label="video"'));
   assert.ok(!markup.includes('/t/0'), 'followsOnFrom.url is never rendered -- it is plain text, not a link');
   assert.match(markup, /follows on from ↑/);
 });
 
-test('previewCard: the card never nests a second <a> -- its own outer anchor is the only link, even with a video and a follows-on', () => {
+test('previewCard: the card root is not an <a> containing another <a> -- the main link is the only one inside, the credit link is a sibling', () => {
   const markup = String(render({ result: baseResult({ followsOnFrom: { sourceId: '0', url: '/t/0' } }) }));
+  assert.ok(!/^<a[\s>]/.test(markup.trim()), 'the card root is not an <a>');
+  assert.match(markup, /<a class="c-preview-card__link" href="\/t\/1">/, 'the main link is still present');
   const anchors = markup.match(/<a[\s>]/g) ?? [];
-  assert.equal(anchors.length, 1);
+  assert.equal(anchors.length, 2, 'the main link and the credit link, never nested');
+  const mainLinkClose = markup.indexOf('</a>');
+  const creditLinkOpen = markup.indexOf('c-card-credit__link');
+  assert.ok(mainLinkClose > -1 && creditLinkOpen > mainLinkClose, 'the main link closes before the credit link opens -- siblings, not nested');
 });
 
 test('bind: delegates to bubbles.bind, colouring the embedded avatar', () => {
@@ -48,13 +62,13 @@ test('bind: delegates to bubbles.bind, colouring the embedded avatar', () => {
   assert.equal(coloured.styleProps['--c'], '#b5651d');
 });
 
-test('previewCard (Task 9b): compact shows the opening lines as one clamped run of "emoji text", not full bubbles, and keeps the meta row and the one link', () => {
+test('previewCard (Task 9b): compact shows the opening lines as one clamped run of "emoji text", not full bubbles, and keeps the meta row, the credit line, and the main link', () => {
   const markup = String(render({ result: baseResult(), compact: true }));
   assert.match(markup, /class="c-preview-card c-preview-card--compact"/);
   assert.match(markup, /c-bubbles-compact/);
   assert.ok(!markup.includes('c-bubbles__bub'));
-  assert.match(markup, /c-icon--translator.*? @tl_alpha/);
-  assert.equal((markup.match(/<a[\s>]/g) ?? []).length, 1);
+  assert.match(markup, /c-card-credit__link" href="https:\/\/x\.com\/tl_alpha"/);
+  assert.equal((markup.match(/<a[\s>]/g) ?? []).length, 2);
   assert.ok(!String(render({ result: baseResult() })).includes('c-preview-card--compact'), 'full bubbles by default');
 });
 
@@ -70,5 +84,5 @@ test('previewCard (Task 10c): a clip poster thumbnail with a ▶ replaces the �
   assert.ok(!photo.includes('c-thumb__play'));
   assert.ok(String(render({ result: baseResult({ thumb: null }) })).includes('🎬'), 'a clip with no poster keeps 🎬');
   assert.ok(!String(render({ result: baseResult({ hasVideo: false }) })).includes('c-thumb'));
-  assert.equal((clip.match(/<a[\s>]/g) ?? []).length, 1);
+  assert.equal((clip.match(/<a[\s>]/g) ?? []).length, 2, 'the main link and the credit link');
 });

@@ -37,7 +37,7 @@
  *
  * @typedef {{
  *   kind: string, sourceId: string, url: string, lines: BubbleVM[], people: PersonChip[],
- *   accountHandle: string|null, hasVideo: boolean, followsOnFrom: ItemLink|null, thumb: ThumbVM|null,
+ *   accountHandle: string|null, accountUrl: string|null, hasVideo: boolean, followsOnFrom: ItemLink|null, thumb: ThumbVM|null,
  * }} KindPreview
  *   What a kind's `present.preview` returns: its opening lines (the first
  *   2 speech bubbles, or failing that the first 2 plain lines that aren't
@@ -46,7 +46,9 @@
  *   `thumb` (Task 10c): the card's small picture -- a clip's poster
  *   (`video: true`, shown with a play glyph) or a photo post's first
  *   picture, from the same media; null for text only or a clip with no
- *   poster.
+ *   poster. `accountUrl` (owner, 2026-10-23): the credited account's own
+ *   profile link, for the card's "translated by: @handle" credit line;
+ *   null when there's no account, or the kind defines no profile link.
  * @typedef {{ url: string, width: number, height: number, video: boolean }} ThumbVM
  * @typedef {KindPreview & { occurredOn: string, placement: import('../domain/constants.js').Placement }} Preview
  *   An item in a list: the kind's preview plus the shared fields every
@@ -73,12 +75,14 @@
  * @typedef {{ role: string, url: string, status: 'live'|'deleted'|'unavailable' }} SourceLinkVM
  * @typedef {{
  *   bubbles: BubbleVM[], cast: CastVM[], original: string,
- *   credits: { account: { handle: string, displayName: string|null }|null, clipBy: string|null, occurredOn: string },
+ *   credits: { account: { handle: string, displayName: string|null, url?: string }|null, clipBy: string|null, occurredOn: string },
  *   sources: SourceLinkVM[], media: MediaVM|null,
  * }} DetailVM
  *   `original` is the verbatim text (every part, joined by a blank line).
  *   `clipBy`: the clip/picture account, when it isn't the translator.
- *   No post time (Task 10b): pages show the event date only.
+ *   No post time (Task 10b): pages show the event date only. `credits.account.url`
+ *   (owner, 2026-10-23): the account's own profile link for the "translated
+ *   by" credit; left out entirely when the kind defines no profile link.
  *
  * @typedef {{ kind: 'handle', handle: string } | { kind: 'name', name: string } | { kind: 'fan' }} AddedByVM
  *   Who added an item: an X user's handle, else the display name they
@@ -95,7 +99,7 @@
  *   out). `category`: its type's name. `addedBy`: null for the engine's
  *   own writes (seeds, imports run as `system`).
  *
- * @typedef {{ slug: string, name: string, occurredOn: string, hashtag: string|null, counts: Record<string, number>, thumb: ThumbVM|null }} HomeEvent
+ * @typedef {{ slug: string, name: string, occurredOn: string, hashtag: string|null, counts: Record<string, number> }} HomeEvent
  *   `counts`: visible items per kind (kinds with none are left out).
  * @typedef {{ months: { month: string, events: HomeEvent[] }[] }} HomeView
  *   Visible events, newest first; `month` is `YYYY-MM`.

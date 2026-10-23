@@ -8,6 +8,7 @@ import { BARE_MARKER, splitLines } from '../../domain/lines.js';
 import { parseHeader } from '../../domain/header.js';
 import { LIVE_PATTERNS, ROLE_EMOJI } from '../../domain/constants.js';
 import { resolveMedia, hasVideo, thumbOf, clipByOf, publicSources } from './media.js';
+import { profileUrl } from './profile.js';
 
 /** @typedef {import('../../http/contracts.js').BubbleVM} BubbleVM */
 /** @typedef {import('../../http/contracts.js').CastVM} CastVM */
@@ -188,7 +189,8 @@ function preview(card, details, ctx) {
   const media = resolveMedia(sources);
   return {
     kind: KIND, sourceId, url: ctx.urlFor(KIND, sourceId), lines: previewLines(details, ctx), people: ctx.chips(card.people),
-    accountHandle: card.account?.handle ?? null, hasVideo: hasVideo(media), thumb: thumbOf(media),
+    accountHandle: card.account?.handle ?? null, accountUrl: card.account ? profileUrl(card.account.handle) : null,
+    hasVideo: hasVideo(media), thumb: thumbOf(media),
     followsOnFrom: followsOn ? { sourceId: followsOn.sourceId, url: ctx.urlFor(followsOn.kind, followsOn.sourceId) } : null,
   };
 }
@@ -244,11 +246,12 @@ function castOf(details, ctx) {
 function detail(card, details, ctx) {
   const handle = card.account?.handle ?? null;
   const sources = publicSources(details.sources);
+  const account = card.account ? { ...card.account, url: profileUrl(card.account.handle) } : null;
   return {
     bubbles: bubblesOf(details, ctx),
     cast: castOf(details, ctx),
     original: details.body,
-    credits: { account: card.account, clipBy: clipByOf(sources, handle), occurredOn: card.occurredOn },
+    credits: { account, clipBy: clipByOf(sources, handle), occurredOn: card.occurredOn },
     sources: sources.map((s) => ({ role: /** @type {string} */ (s.role), url: /** @type {string} */ (s.url), status: /** @type {any} */ (s.status) })),
     media: resolveMedia(sources),
   };

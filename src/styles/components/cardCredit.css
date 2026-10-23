@@ -1,0 +1,20 @@
+/*
+ * public/js/components/cardCredit.js: the translator's own dedicated
+ * credit line at the end of a preview/result card (owner, 2026-10-23).
+ * Its link is lifted above the card's stretched main-link overlay
+ * (previewCard.css/resultCard.css's `::after`) with its own `z-index`,
+ * so it stays independently clickable.
+ */
+
+.c-card-credit {
+  margin: 0;
+  padding: 0 12px 10px;
+  font-size: var(--text-10-5);
+  color: var(--color-ink-muted);
+}
+
+.c-card-credit__link {
+  position: relative;
+  z-index: 1;
+  color: inherit;
+}

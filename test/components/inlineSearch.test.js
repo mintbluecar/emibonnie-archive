@@ -319,7 +319,7 @@ test('a stale refetch response never overwrites a newer one, however the two res
     await flush();
     resolvers[0]({ count: 99, results: [{ ...RESULT, url: '/t/stale', sourceId: 'stale' }] });
     await flush();
-    const hrefs = root.querySelectorAll('.c-result-card').map((/** @type {any} */ c) => c.getAttribute('href'));
+    const hrefs = root.querySelectorAll('.c-result-card__link').map((/** @type {any} */ c) => c.getAttribute('href'));
     assert.deepEqual(hrefs, ['/t/new'], 'the stale response never rendered');
   } finally {
     cleanup();

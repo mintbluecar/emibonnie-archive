@@ -1,11 +1,41 @@
-/* public/js/components/previewCard.js: opening lines + a meta row, no title. */
+/*
+ * public/js/components/previewCard.js: opening lines + a meta row, no
+ * title, then the translator's own dedicated credit line
+ * (cardCredit.css). The card root is a non-link `<article>` (owner,
+ * 2026-10-23): its main link (`.c-preview-card__link`) stretches over
+ * the whole card via a `::after` overlay, so the card stays one big
+ * click target even though the credit line below needs its own,
+ * separately clickable link (cardCredit.css lifts it above the overlay).
+ */
 
 .c-preview-card {
+  position: relative;
   display: block;
   background: var(--color-card);
   border-radius: var(--radius-card);
   box-shadow: 0 2px 0 var(--color-card-shadow);
+}
+
+.c-preview-card__link {
+  display: block;
   padding: 10px 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The stretched hit area: the link's own box only wraps the visible
+   content, but this covers the whole card (its containing block is
+   `.c-preview-card`, the nearest positioned ancestor), so the card stays
+   one click target. */
+.c-preview-card__link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.c-preview-card__link:focus-visible::after {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
 }
 
 .c-preview-card__meta {
@@ -14,7 +44,7 @@
   margin-top: 6px;
 }
 
-.c-preview-card--compact {
+.c-preview-card--compact .c-preview-card__link {
   padding: 9px 12px;
 }
 
@@ -23,7 +53,7 @@
 }
 
 /* Task 10c: with a thumbnail (thumb.js), text left, picture right. */
-.c-preview-card--thumb {
+.c-preview-card--thumb .c-preview-card__link {
   display: flex;
   gap: 10px;
 }
@@ -35,15 +65,19 @@
 
 /* Grid cards (compact entries): the picture on top, filling the card's
    width in a portrait frame (most clips are vertical), then up to three
-   lines of the opening text and the meta row. Cards without media keep
-   their text, a little larger. */
+   lines of the opening text, the meta row, and the credit line last, at
+   the bottom. Cards without media keep their text, a little larger. */
 .c-preview-card--compact,
 .c-preview-card--compact.c-preview-card--thumb {
+  overflow: hidden;
+}
+
+.c-preview-card--compact .c-preview-card__link,
+.c-preview-card--compact.c-preview-card--thumb .c-preview-card__link {
   display: flex;
   flex-direction: column;
   gap: 0;
   padding: 0;
-  overflow: hidden;
 }
 
 .c-preview-card--compact .c-thumb {

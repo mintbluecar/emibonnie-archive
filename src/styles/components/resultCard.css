@@ -1,11 +1,35 @@
-/* public/js/components/resultCard.js */
+/*
+ * public/js/components/resultCard.js. The card root is a non-link
+ * `<article>` (owner, 2026-10-23): its main link (`.c-result-card__link`)
+ * stretches over the whole card via a `::after` overlay, same trick as
+ * previewCard.css, so the translator credit line's own link
+ * (cardCredit.css) stays independently clickable above it.
+ */
 
 .c-result-card {
+  position: relative;
   display: block;
   background: var(--color-card);
   border-radius: var(--radius-card);
   box-shadow: 0 2px 0 var(--color-card-shadow);
+}
+
+.c-result-card__link {
+  display: block;
   padding: 10px 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.c-result-card__link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.c-result-card__link:focus-visible::after {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
 }
 
 .c-result-card__event {
@@ -35,7 +59,7 @@
 }
 
 /* Task 10c: with a thumbnail (thumb.js), text left, picture right. */
-.c-result-card--thumb {
+.c-result-card--thumb .c-result-card__link {
   display: flex;
   gap: 10px;
 }

@@ -2,17 +2,22 @@
 /**
  * A `Preview` card (src/http/contracts.js): a kind-agnostic shell around
  * its opening `lines` (rendered by `bubbles`, whose own escaping and
- * `data-c` colours this card's `bind()` delegates to) plus a meta row --
- * who's in it, the translator's handle, whether it has video, and
- * whether it follows on from an earlier entry (plain text, not a link --
- * the mockups show it that way, and the card's own outer `<a>` is
- * already the one link; nesting another inside it would be invalid
- * markup and ambiguous to click). Entries show opening lines, never a
- * title (see mockups/screens-v2.html's event screen). The outer `<a>`
- * also carries `data-person-ids`/`data-account` generically, so a hub
- * page's own client-side people/translator filter (Plan 1b Task 3) works
- * for any kind's entries without this component or the page knowing
- * which kind it is.
+ * `data-c` colours this card's `bind()` delegates to), a meta row --
+ * who's in it, whether it has video, and whether it follows on from an
+ * earlier entry (plain text, not a link -- the mockups show it that way) --
+ * and, last, the translator's own dedicated credit line (`cardCredit.js`,
+ * owner 2026-10-23: "translated by: @handle", linked to their profile).
+ *
+ * The card root is never an `<a>` any more: a link can't nest another,
+ * and the credit line needs its own. It's a non-link `<article>` instead,
+ * carrying the same class, modifiers and the generic `data-person-ids`/
+ * `data-account` a hub page's client-side people/translator filter (Plan
+ * 1b Task 3) reads, for any kind's entries, without this component or the
+ * page knowing which kind it is. The main link (`.c-preview-card__link`)
+ * wraps the opening content and stretches over the whole card with a
+ * `::after` overlay (previewCard.css), so the card stays one big click
+ * target; the credit line's own link sits above that overlay (`z-index`)
+ * so it's independently clickable.
  *
  * A card with media shows its thumbnail (`thumb.js`, Task 10c) beside
  * the text; a clip's ▶ thumbnail then stands in for the meta row's 🎬
@@ -26,7 +31,7 @@ import { html } from '../core/html.js';
 import { t } from '../core/site.js';
 import * as bubbles from './bubbles.js';
 import * as thumb from './thumb.js';
-import * as icons from './icons.js';
+import * as cardCredit from './cardCredit.js';
 
 /**
  * @param {import('../../../src/http/contracts.js').Preview} preview
@@ -36,7 +41,6 @@ function metaRow(preview) {
   return html`
     <div class="c-preview-card__meta">
       ${preview.people.map((person) => html`<span aria-hidden="true">${person.emoji}</span>`)}
-      ${preview.accountHandle ? html` · ${icons.translator()} @${preview.accountHandle}` : ''}
       ${preview.hasVideo && !preview.thumb ? html` · <span role="img" aria-label="${t('item.hasVideo')}">🎬</span>` : ''}
       ${preview.followsOnFrom ? html` · ${t('item.followsOn')} ↑` : ''}
     </div>
@@ -51,18 +55,20 @@ export function render(props) {
   const { result, compact = false } = props;
   const personIds = result.people.map((person) => person.id).join(',');
   return html`
-    <a
+    <article
       class="c-preview-card${compact ? ' c-preview-card--compact' : ''}${result.thumb ? ' c-preview-card--thumb' : ''}"
-      href="${result.url}"
       data-person-ids="${personIds}"
       ${result.accountHandle ? html`data-account="${result.accountHandle}"` : ''}
     >
-      <div class="c-preview-card__body">
-        ${compact ? bubbles.renderCompact({ bubbles: result.lines }) : bubbles.render({ bubbles: result.lines })}
-        ${metaRow(result)}
-      </div>
-      ${thumb.render(result.thumb)}
-    </a>
+      <a class="c-preview-card__link" href="${result.url}">
+        <div class="c-preview-card__body">
+          ${compact ? bubbles.renderCompact({ bubbles: result.lines }) : bubbles.render({ bubbles: result.lines })}
+          ${metaRow(result)}
+        </div>
+        ${thumb.render(result.thumb)}
+      </a>
+      ${cardCredit.render(result)}
+    </article>
   `;
 }
 

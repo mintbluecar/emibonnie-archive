@@ -75,6 +75,7 @@ test("LONG's preview: the first 2 speech bubbles, the host's standard emoji firs
   assert.equal(preview.sourceId, IDS.LONG);
   assert.equal(preview.url, `/t/${IDS.LONG}`);
   assert.equal(preview.accountHandle, 'tl_alpha');
+  assert.equal(preview.accountUrl, 'https://x.com/tl_alpha');
   assert.equal(preview.hasVideo, true);
   assert.equal(preview.followsOnFrom, null);
   assert.equal(preview.lines.length, 2);
@@ -119,6 +120,7 @@ test('detail: cast, original, credits, sources; media prefers the own video', as
   const view = await detailOf(IDS.EVENT_A);
   assert.deepEqual(view.cast.map((/** @type {any} */ c) => [c.kind, c.name, c.emoji]), [['person', 'sol', '☀️'], ['person', 'luna', '🌙']]);
   assert.equal(view.credits.account.handle, 'tl_beta');
+  assert.equal(view.credits.account.url, 'https://x.com/tl_beta');
   assert.equal(view.credits.clipBy, 'clipper_one');
   assert.equal(view.credits.occurredOn, '2026-10-19');
   assert.ok(!('postedAt' in view.credits), 'no post time in the item view (Task 10b, M7)');
