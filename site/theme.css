@@ -1,49 +1,54 @@
 /*
  * emibonnie archive's theme: only overrides engine tokens from
- * src/styles/tokens.css (see docs/site-settings.md). Values from the
- * spec's "Visual design" section: paper, card, line, ink, muted, the
- * logo's orange -> pink gradient, and IBM Plex Sans Thai for Thai text.
+ * src/styles/tokens.css (see docs/site-settings.md, "Light and dark").
+ * Values from the spec's "Visual design" section: paper, card, line, ink,
+ * muted, the logo's orange -> pink gradient, and IBM Plex Sans Thai for
+ * Thai text.
  *
- * The colour overrides are light-mode only. Dark mode keeps the engine's
- * own dark values (tokens.css's prefers-color-scheme: dark block); a plain
- * :root override here would replace those in dark mode too.
+ * Light values sit on a plain :root. The engine's dark blocks outrank it,
+ * so dark mode (the device's, or forced with the header's switch) keeps
+ * the engine's own dark tokens for everything set here. The one dark
+ * override (the label colour) uses the engine's two-block pattern below;
+ * keep those two blocks identical.
  */
 
 :root {
   --font-script: 'IBM Plex Sans Thai', sans-serif;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --color-bg: #f6efe3;
-    --color-card: #fffdf8;
-    --color-card-shadow: #eadfce;
-    --color-ink: #2b2233;
-    /* The spec's muted #8a7f8f is only 3.33:1 / 3.75:1 against
-       --color-bg / --color-card, below WCAG AA's 4.5:1 for text (axe's
-       color-contrast rule flagged the footer, meta lines, handles, back
-       links). The engine has no separate text-only muted token, so this
-       is the same hue and saturation, darkened just enough to pass:
-       4.64:1 / 5.21:1. */
-    --color-ink-muted: #726877;
-    --gradient-from: #ff6a2b;
-    /* The logo's pink #e03a85 carries white text on solid accent
-       surfaces (--color-accent-text), and white on #e03a85 is 4.11:1, below
-       AA's 4.5:1. So the gradient end is the same hue darkened just enough:
-       white on #cb206d is 5.29:1. Accent-coloured *text* uses --color-label
-       below, not this. */
-    --gradient-to: #cb206d;
-    /* Labels (section and month headings, active tab, result-card event
-       names, links) are purple, as in the mockups: 4.98:1 on --color-bg and
-       5.59:1 on --color-card. */
-    --color-label: #7048e0;
-  }
+  --color-bg: #f6efe3;
+  --color-card: #fffdf8;
+  --color-card-shadow: #eadfce;
+  --color-ink: #2b2233;
+  /* The spec's muted #8a7f8f is only 3.33:1 / 3.75:1 against
+     --color-bg / --color-card, below WCAG AA's 4.5:1 for text (axe's
+     color-contrast rule flagged the footer, meta lines, handles, back
+     links). The engine has no separate text-only muted token, so this
+     is the same hue and saturation, darkened just enough to pass:
+     4.64:1 / 5.21:1. */
+  --color-ink-muted: #726877;
+  /* Also the engine's own default, so dark mode is unchanged by it. */
+  --gradient-from: #ff6a2b;
+  /* The logo's pink #e03a85 carries white text on solid accent
+     surfaces (--color-accent-text), and white on #e03a85 is 4.11:1, below
+     AA's 4.5:1. So the gradient end is the same hue darkened just enough:
+     white on #cb206d is 5.29:1. Accent-coloured *text* uses --color-label
+     below, not this. */
+  --gradient-to: #cb206d;
+  /* Labels (section and month headings, active tab, result-card event
+     names, links) are purple, as in the mockups: 4.98:1 on --color-bg and
+     5.59:1 on --color-card. */
+  --color-label: #7048e0;
 }
 
 /* Dark mode keeps the engine's dark tokens except the label colour, which
-   stays purple: 7.04:1 on --color-bg and 6.63:1 on --color-card. */
+   stays purple: 7.04:1 on --color-bg and 6.63:1 on --color-card.
+   Device dark, unless the visitor forced light: */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --color-label: #a98bff;
   }
+}
+
+/* The visitor forced dark, whatever the device says: */
+:root[data-theme="dark"] {
+  --color-label: #a98bff;
 }
