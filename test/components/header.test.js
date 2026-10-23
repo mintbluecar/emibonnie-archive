@@ -70,3 +70,10 @@ test('header (Task 10b): the phone bar has a search icon linking to /search, lab
   assert.ok(!live.includes('c-header__find'));
   assert.match(live, /class="c-header__below c-header__below--live"/);
 });
+
+test('header (Task 10b fix O1): desktopSearch marks the search row that stays on desktop (home), outside the bar', () => {
+  const markup = String(render({ desktopSearch: true }));
+  assert.match(markup, /<div class="c-header__below c-header__below--desktop">/);
+  assert.ok(markup.indexOf('c-header__search"') > markup.indexOf('</header>'), 'in the page body, not the bar');
+  assert.ok(!String(render()).includes('c-header__below--desktop'));
+});

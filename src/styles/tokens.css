@@ -117,19 +117,25 @@
      height plus room for the prev/next row (44px targets + padding) under
      the clip, keeping both on screen. */
   --layout-sticky-offset: calc(var(--sticky-top) + 64px);
+  /* The smallest tap/click target (44px, WCAG 2.5.5): the header bar's
+     search icon and nav links, so also what sets the bar's height. */
+  --tap-target: 44px;
+  /* Space above and below the header bar's content: phone (the slim bar);
+     desktop below. */
+  --header-pad-y: 4px;
   /* The pinned header bar's height (Task 10b): header.css sets the bar to
-     exactly this, and the item page's pinned media sticks just below it
+     exactly this, the item page's pinned media sticks just below it
      (`top: var(--sticky-top)`), and `html`'s scroll-padding-top keeps a
-     focused element out from under it. A fixed value, so CSS alone keeps
-     the three in step (no JS measuring). Phone: the slim bar (34px logo). */
-  --sticky-top: 52px;
+     focused element out from under it. Derived from the tokens above (fix
+     round 1, M4) -- a tap target, its padding, the 1px bottom border --
+     so a theme that changes either one moves all three together, with no
+     JS measuring. Phone 53px, desktop 61px. */
+  --sticky-top: calc(var(--tap-target) + 2 * var(--header-pad-y) + 1px);
 }
 
 @media (min-width: 860px) {
   :root {
-    /* Desktop: the one-line bar, as tall as its 44px nav targets plus 8px
-       above and below, plus its 1px bottom border. */
-    --sticky-top: 61px;
+    --header-pad-y: 8px;
   }
 }
 

@@ -87,17 +87,25 @@ function brand(compact) {
   `;
 }
 
+/** @param {boolean} liveSearch @param {boolean} desktopSearch @returns {string} */
+function belowClass(liveSearch, desktopSearch) {
+  return `c-header__below${liveSearch ? ' c-header__below--live' : ''}${desktopSearch ? ' c-header__below--desktop' : ''}`;
+}
+
 /**
  * The pinned `<header>` (Task 10b, owner's "desktop full, phone slim"):
  * one bar, pinned by header.css at `--sticky-top`'s height. The tagline
  * and search row sit *after* it, so on a phone they scroll away; the
  * tagline is rendered in both places, and CSS shows exactly one of them
  * (the hidden one is `display: none`, so a screen reader hears it once).
- * @param {{ compact?: boolean, filterCount?: number, liveSearch?: boolean, nav?: import('../core/html.js').SafeHtml }} [props]
+ * `desktopSearch` (fix round 1, O1: the home page) keeps the search row
+ * on desktop too, at the top of the content column under the bar -- the
+ * bar itself stays clean. It still goes to /search (headerLinks.js).
+ * @param {{ compact?: boolean, filterCount?: number, liveSearch?: boolean, desktopSearch?: boolean, nav?: import('../core/html.js').SafeHtml }} [props]
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function render(props = {}) {
-  const { compact = false, filterCount, liveSearch = false, nav } = props;
+  const { compact = false, filterCount, liveSearch = false, desktopSearch = false, nav } = props;
   return html`
     <header class="c-header${compact ? ' c-header--compact' : ''}${liveSearch ? ' c-header--live' : ''}">
       <div class="c-header__bar">
@@ -108,7 +116,7 @@ export function render(props = {}) {
         </div>
       </div>
     </header>
-    <div class="c-header__below${liveSearch ? ' c-header__below--live' : ''}">
+    <div class="${belowClass(liveSearch, desktopSearch)}">
       ${compact ? '' : tagline('below')}
       ${searchRow(filterCount)}
     </div>

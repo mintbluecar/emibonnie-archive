@@ -29,7 +29,7 @@
 
 .c-header__inner {
   height: 100%;
-  padding: 0 16px;
+  padding: var(--header-pad-y) 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -45,8 +45,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: var(--tap-target);
+  height: var(--tap-target);
   flex: none;
   margin-right: -10px;
   color: var(--color-ink);
@@ -54,6 +54,22 @@
 
 .c-header__below {
   padding: 8px 16px;
+}
+
+/*
+ * The phone search page (fix round 1, M5): its box is the page's own live
+ * search, so it stays reachable -- pinned just below the bar (never under
+ * it: its top is the bar's bottom), on the page background.
+ */
+.c-header__below--live {
+  position: sticky;
+  top: var(--sticky-top);
+  z-index: 4;
+  background: var(--color-bg);
+}
+
+:root:has(.c-header__below--live) {
+  scroll-padding-top: calc(var(--sticky-top) + var(--tap-target) + 16px);
 }
 
 /* One tagline shows per layout: below the bar on a phone, in it on desktop. */
@@ -142,7 +158,7 @@
   font-family: inherit;
   font-size: var(--text-13);
   color: var(--color-ink);
-  min-height: 44px;
+  min-height: var(--tap-target);
 }
 
 .c-header__filter-btn {
@@ -150,8 +166,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: var(--tap-target);
+  height: var(--tap-target);
   flex: none;
   background: var(--color-card);
   border: 1.5px solid var(--color-card-shadow);
@@ -239,11 +255,22 @@
     padding: 0;
   }
 
+  .c-header__below--live {
+    position: static;
+  }
+
+  :root:has(.c-header__below--live) {
+    scroll-padding-top: var(--sticky-top);
+  }
+
   .c-header__search {
     display: none;
   }
 
-  .c-header__below--live .c-header__search {
+  /* The search page's live box, and (fix round 1, O1) the home page's box:
+     in the page body at the top of the content column, the bar stays clean. */
+  .c-header__below--live .c-header__search,
+  .c-header__below--desktop .c-header__search {
     display: flex;
     max-width: 960px;
     margin: 16px auto 12px;
