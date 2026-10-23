@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * The one request pipeline behind `api/[...route].js` (and the dev
+ * The one request pipeline behind `api/index.js` (and the dev
  * server): match the route, refuse a write from a foreign Origin, build
  * `deps` for this request only, parse query and body, run the route, and
  * turn its result or error into a Response with the route's cache header.

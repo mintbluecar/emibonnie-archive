@@ -19,8 +19,8 @@ function metaContent(html, key) {
   return m ? m[1] : null;
 }
 
-test('/api/meta/t/<LONG>: the item page HTML with og:title, the first preview line as description, logo, twitter:card', async () => {
-  const res = await apiFor(deps).call('GET', `/api/meta/t/${IDS.LONG}`);
+test('/t/<LONG>: the item page HTML with og:title, the first preview line as description, logo, twitter:card', async () => {
+  const res = await apiFor(deps).call('GET', `/t/${IDS.LONG}`);
   assert.equal(res.status, 200);
   assert.match(res.headers.get('content-type') ?? '', /^text\/html/);
   const html = res.text;
@@ -41,7 +41,7 @@ test('the description is attribute-escaped and at most 200 characters', async ()
     'update translation_parts set body = $2 where item_id = $1 and position = 0', [id, `${hostile}\n${part.body}`],
   ), SYSTEM);
   try {
-    const html = (await apiFor(deps).call('GET', `/api/meta/t/${IDS.EVENT_A}`)).text;
+    const html = (await apiFor(deps).call('GET', `/t/${IDS.EVENT_A}`)).text;
     assert.ok(!html.includes('<script>'), 'no raw tag');
     const description = metaContent(html, 'og:description') ?? '';
     assert.ok(description.startsWith('&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt; &amp; &#39;quoted&#39; xxx'), description);
@@ -56,7 +56,7 @@ test('a removed, unknown or opted-out item gets only the generic site meta, with
   const id = await itemIdOf(deps.db, IDS.LONG);
   await deps.db.transaction((/** @type {any} */ tx) => tx.query("update items set deleted_at = now(), deleted_reason = 'spam' where id = $1", [id]), SYSTEM);
   try {
-    for (const path of [`/api/meta/t/${IDS.LONG}`, '/api/meta/t/1', '/api/meta/zz/1', `/api/meta/t/${'9'.repeat(30)}`]) {
+    for (const path of [`/t/${IDS.LONG}`, '/t/1', `/t/${'9'.repeat(30)}`]) {
       const res = await apiFor(deps).call('GET', path);
       assert.equal(res.status, 200, path);
       assert.equal(res.headers.get('cache-control'), 'public, s-maxage=60', `${path}: cached like a 404`);
@@ -70,8 +70,8 @@ test('a removed, unknown or opted-out item gets only the generic site meta, with
   }
 });
 
-test('/api/meta/e/<slug>: the event page with the event name; a hidden or unknown event gets the generic meta', async () => {
-  const res = await apiFor(deps).call('GET', `/api/meta/e/${SLUG}`);
+test('/e/<slug>: the event page with the event name; a hidden or unknown event gets the generic meta', async () => {
+  const res = await apiFor(deps).call('GET', `/e/${SLUG}`);
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('cache-control'), 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400');
   const shown = await apiFor(deps).call('GET', `/t/${IDS.LONG}`);
@@ -79,7 +79,7 @@ test('/api/meta/e/<slug>: the event page with the event name; a hidden or unknow
   assert.match(res.text, /<title>SOLLUNA HAPPY DAY · solluna archive<\/title>/);
   assert.match(res.text, /EVENT PAGE/);
   assert.equal(metaContent(res.text, 'og:description'), '2026-10-19 · #SLHappyDay2026');
-  const missing = await apiFor(deps).call('GET', '/api/meta/e/no-such-event');
+  const missing = await apiFor(deps).call('GET', '/e/no-such-event');
   assert.equal(missing.status, 200);
   assert.equal(missing.headers.get('cache-control'), 'public, s-maxage=60');
   assert.equal((await apiFor(deps).call('GET', '/e/no-such-event')).headers.get('cache-control'), 'public, s-maxage=60');
@@ -116,4 +116,11 @@ test('injectMeta replaces a page\'s own title, og:*, twitter:* and description t
   assert.match(html, /<meta charset="utf-8">/);
   assert.match(html, /name="viewport"/);
   assert.match(html, /<body>keep<\/body>/);
+});
+
+test('metaRoutes derives the meta routes from src/pages.js and the kinds: page paths, never /api/meta/*', async () => {
+  const { metaRoutes } = await import('../../src/routes/meta.js');
+  const pageList = [{ path: '/e/:slug', file: 'event.html', meta: /** @type {const} */ ('event') }, { path: '/search', file: 'search.html' }];
+  assert.deepEqual(metaRoutes(pageList, [{ urlPrefix: '/t/' }, { urlPrefix: '/zz/' }]).map((r) => r.path), ['/e/:slug', '/t/:sourceId', '/zz/:sourceId']);
+  assert.throws(() => metaRoutes([{ path: '/x/:id', file: 'x.html', meta: /** @type {any} */ ('nope') }], []), /unknown meta renderer 'nope'/);
 });

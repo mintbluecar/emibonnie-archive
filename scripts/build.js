@@ -12,6 +12,7 @@ import {
   writeKindsRegistries,
 } from './buildOutputs.js';
 import { runBundling } from './buildBundle.js';
+import { unnamedSource } from '../src/http/router.js';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -56,26 +57,21 @@ function collectEngineJsSources(repoRoot) {
  * `<path>.html` on its own -- every page with a `file` needs an explicit
  * rewrite (review round 1, C1), except `/` itself (served as
  * `index.html` by the platform's own static-file default). A page with
- * no `file` yet (a later task's) has nothing to rewrite to; a dynamic
- * page (`:param`) with a meta route rewrites there instead, so its
- * link-preview meta still renders for a real browser too.
+ * no `file` yet (a later task's) has nothing to rewrite to, and a page
+ * with `meta` is the function's (the route table's rewrites send it to
+ * `/api`). The source is unnamed (`/p/:ig` -> `/p/(.*)`): a named param
+ * would be added to the query string (`unnamedSource`, src/http/router.js).
  * @param {import('../src/pages.js').PageRoute} page
  * @returns {{ source: string, destination: string }|null}
  */
 function pageRewriteOf(page) {
-  if (page.path.includes(':')) {
-    if (page.meta) return { source: page.path, destination: `/api${page.meta}` };
-    return page.file ? { source: page.path, destination: `/${page.file}` } : null;
-  }
-  return page.path === '/' || !page.file ? null : { source: page.path, destination: `/${page.file}` };
+  if (page.path === '/' || !page.file || page.meta) return null;
+  return { source: unnamedSource(page.path), destination: `/${page.file}` };
 }
 
 /**
- * `src/pages.js`'s own rewrites (Plan 1b), skipping any whose `source`
- * the route table's rewrites already cover (e.g. the event page's meta
- * route, registered through the kinds registry) -- so `src/pages.js` and
- * the route table can agree on the same URL without `vercel.json`
- * listing it twice.
+ * `src/pages.js`'s static-file rewrites (Plan 1b), skipping any whose
+ * `source` the route table's function rewrites already cover.
  * @param {string} repoRoot
  * @param {Set<string>} knownSources
  * @returns {Promise<{ source: string, destination: string }[]>}
@@ -130,7 +126,8 @@ function copyRobots(repoRoot) {
 }
 
 /**
- * The route table's meta rewrites. Imported from this engine checkout
+ * The route table's function rewrites (`/api/(.*)` and each meta page,
+ * all to `/api`). Imported from this engine checkout
  * (so its dependencies resolve here) after the kinds registry is written.
  * @returns {Promise<{ source: string, destination: string }[]>}
  */

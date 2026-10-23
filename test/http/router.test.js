@@ -1,7 +1,7 @@
 // @ts-check
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { matchRoute } from '../../src/http/router.js';
+import { matchRoute, unnamedSource } from '../../src/http/router.js';
 
 test('matchRoute extracts params and method', () => {
   const routes = [
@@ -22,4 +22,11 @@ test('matchRoute returns null when nothing matches', () => {
 test('matchRoute is strict about the method', () => {
   const routes = [{ method: 'GET', path: '/api/ping' }];
   assert.equal(matchRoute(routes, 'POST', '/api/ping'), null);
+});
+
+test('unnamedSource turns every :param into an unnamed group, so Vercel adds no query params', () => {
+  assert.equal(unnamedSource('/e/:slug'), '/e/(.*)');
+  assert.equal(unnamedSource('/t/:sourceId'), '/t/(.*)');
+  assert.equal(unnamedSource('/a/:x/b/:y'), '/a/(.*)/b/(.*)');
+  assert.equal(unnamedSource('/search'), '/search');
 });

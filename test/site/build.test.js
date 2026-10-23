@@ -168,16 +168,17 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
 
     const vercelJson = JSON.parse(readFileSync(path.join(repoRoot, 'vercel.json'), 'utf8'));
     assert.deepEqual(vercelJson.regions, ['sin1']);
-    // a rewrite for each page route: the item pages (one per kind's urlPrefix), the event page,
-    // and every static page with a file (review round 1, C1: Vercel's cleanUrls defaults to
-    // false, so a static page needs an explicit rewrite -- it doesn't resolve to <path>.html
-    // on its own).
+    // The function's rewrites first (every /api/* path, the event page, then one item page per
+    // kind's urlPrefix), all to /api with unnamed sources; then every static page with a file
+    // (review round 1, C1: Vercel's cleanUrls defaults to false, so a static page needs an
+    // explicit rewrite -- it doesn't resolve to <path>.html on its own).
     const core = [
-      { source: '/e/:slug', destination: '/api/meta/e/:slug' },
-      { source: '/t/:id', destination: '/api/meta/t/:id' },
+      { source: '/api/(.*)', destination: '/api' },
+      { source: '/e/(.*)', destination: '/api' },
+      { source: '/t/(.*)', destination: '/api' },
       { source: '/search', destination: '/search.html' },
-      { source: '/p/:ig', destination: '/person.html' },
-      { source: '/tl/:handle', destination: '/account.html' },
+      { source: '/p/(.*)', destination: '/person.html' },
+      { source: '/tl/(.*)', destination: '/account.html' },
       { source: '/about', destination: '/about.html' },
       { source: '/privacy', destination: '/privacy.html' },
       { source: '/takedown', destination: '/takedown.html' },
@@ -186,10 +187,10 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
     // ...and exactly those plus one per added kind (after the event page) and per added static page (at the end).
     const { kindsRegistry } = await import('../../src/kinds/_registry.js');
     const { pages } = await import('../../src/pages.js');
-    const kindRewrites = Object.values(kindsRegistry).map((k) => ({ source: `${k.urlPrefix}:id`, destination: `/api/meta${k.urlPrefix}:id` }));
-    const added = pages.filter((p) => p.file && p.path !== '/' && !core.some((r) => r.source === p.path));
+    const kindRewrites = Object.values(kindsRegistry).map((k) => ({ source: `${k.urlPrefix}(.*)`, destination: '/api' }));
+    const added = pages.filter((p) => p.file && p.path !== '/' && !p.meta && !core.some((r) => r.destination === `/${p.file}`));
     assert.deepEqual(vercelJson.rewrites, [
-      core[0], ...kindRewrites, ...core.slice(2), ...added.map((p) => ({ source: p.path, destination: `/${p.file}` })),
+      ...core.slice(0, 2), ...kindRewrites, ...core.slice(3), ...added.map((p) => ({ source: p.path.replace(/\/:\w+/g, '/(.*)'), destination: `/${p.file}` })),
     ]);
     const headers = vercelJson.headers[0].headers;
     assert.match(headers.find((/** @type {any} */ h) => h.key === 'Content-Security-Policy').value, /frame-ancestors 'none'/);
@@ -202,6 +203,27 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
     assert.ok(generated.includes('export const site ='));
     assert.ok(generated.includes('export const copy ='));
     assert.ok(generated.includes('export const assets = {"logo":"/site/logo.svg"}'));
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test('runBuild guard: no vercel.json rewrite source has a named param, and every function rewrite goes to exactly /api', async () => {
+  // Learned on the first production deploy: a named param (`/t/:id`) is added to the request's
+  // query string (https://vercel.com/docs/routing/rewrites: "This converts a request like
+  // /resize/800/600 to /api/sharp?width=800&height=600"; a scratch echo function confirmed it,
+  // 2026-10-23), and the handler refuses unknown query params. The one function lives at
+  // api/index.js and sees the original URL, so its rewrites carry no path of their own.
+  const { repoRoot, siteDir } = makeBuildRepoRoot();
+  try {
+    await runBuild({ repoRoot, siteDir });
+    const { rewrites } = JSON.parse(readFileSync(path.join(repoRoot, 'vercel.json'), 'utf8'));
+    for (const { source, destination } of rewrites) {
+      assert.doesNotMatch(source, /\/:[A-Za-z_]/, `${source}: a named param becomes a query param on Vercel`);
+      if (destination.startsWith('/api')) assert.equal(destination, '/api', `${source}: a function rewrite goes to exactly /api`);
+      assert.doesNotMatch(destination, /[:?]/, `${source} -> ${destination}: no params or query in a destination`);
+    }
+    assert.deepEqual(rewrites[0], { source: '/api/(.*)', destination: '/api' });
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }

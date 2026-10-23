@@ -23,19 +23,41 @@ function listen(srv) {
   });
 }
 
+/** The generated vercel.json's shape: `/api/(.*)` and each meta page to the function, static pages to their file. */
+const REWRITES = [
+  { source: '/api/(.*)', destination: '/api' },
+  { source: '/t/(.*)', destination: '/api' },
+  { source: '/p/(.*)', destination: '/event.html' },
+];
+
 test('dev server: rewrites, api dispatch, 404', async () => {
   const handle = async (req) => Response.json({ path: new URL(req.url).pathname });
-  const srv = createServer({
-    root: 'test/fixtures/static',
-    routes: [],
-    rewrites: [{ source: '/e/:slug', destination: '/event.html' }],
-    handle,
-  });
+  const srv = createServer({ root: 'test/fixtures/static', routes: [], rewrites: REWRITES, handle });
   const base = await listen(srv);
-  assert.match(await (await fetch(base + '/e/x')).text(), /EVENT PAGE/);
+  assert.match(await (await fetch(base + '/p/x')).text(), /EVENT PAGE/);
   assert.deepEqual(await (await fetch(base + '/api/ping')).json(), { path: '/api/ping' });
   assert.equal((await fetch(base + '/nope.html')).status, 404);
   srv.close();
+});
+
+test('dev server: a rewrite to /api hands the handler the original URL, query untouched and nothing added (as Vercel does)', async () => {
+  /** @type {string[]} */
+  const seen = [];
+  const handle = async (/** @type {Request} */ req) => { seen.push(new URL(req.url).pathname + new URL(req.url).search); return new Response('ok'); };
+  const srv = createServer({ root: 'test/fixtures/static', rewrites: REWRITES, handle });
+  const base = await listen(srv);
+  for (const path of ['/t/123', '/t/123?s=20', '/api/home', '/api/meta/t/123', '/api']) assert.equal((await fetch(base + path)).status, 200, path);
+  assert.deepEqual(seen, ['/t/123', '/t/123?s=20', '/api/home', '/api/meta/t/123', '/api']);
+  const none = createServer({ root: 'test/fixtures/static', rewrites: [], handle });
+  const base2 = await listen(none);
+  assert.equal((await fetch(base2 + '/api/home')).status, 404, 'without the /api/(.*) rewrite, /api/home is not the function (only /api is)');
+  srv.close();
+  none.close();
+});
+
+test('dev server: refuses a rewrite source with a named param (Vercel would add it as a query param)', () => {
+  const handle = async () => new Response('ok');
+  assert.throws(() => createServer({ root: 'test/fixtures/static', rewrites: [{ source: '/t/:id', destination: '/api' }], handle }), /named param/);
 });
 
 test('dev server: an unmatched path serves root/404.html with status 404 (mirrors Vercel\'s own static-output behaviour)', async () => {
@@ -82,7 +104,7 @@ test('dev server: a page response carries vercel.json\'s headers, CSP and Referr
     { source: '/(.*)', headers: [{ key: 'Content-Security-Policy', value: "default-src 'self'" }, { key: 'Referrer-Policy', value: 'no-referrer' }] },
     { source: '/build/(.*)', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] },
   ];
-  const srv = createServer({ root: 'test/fixtures/static', rewrites: [{ source: '/e/:slug', destination: '/event.html' }], headers, handle });
+  const srv = createServer({ root: 'test/fixtures/static', rewrites: [...REWRITES, { source: '/e/(.*)', destination: '/event.html' }], headers, handle });
   const base = await listen(srv);
   const page = await fetch(base + '/e/x');
   assert.equal(page.headers.get('content-security-policy'), "default-src 'self'");
@@ -97,7 +119,7 @@ test('dev server: a header rule matches the incoming path, not a rewrite\'s dest
   const handle = async (req) => Response.json({ path: new URL(req.url).pathname });
   // Only the incoming /e/x matches this; the rewrite's destination, /event.html, never would.
   const headers = [{ source: '/e/(.*)', headers: [{ key: 'X-Incoming-Path-Rule', value: 'hit' }] }];
-  const srv = createServer({ root: 'test/fixtures/static', rewrites: [{ source: '/e/:slug', destination: '/event.html' }], headers, handle });
+  const srv = createServer({ root: 'test/fixtures/static', rewrites: [...REWRITES, { source: '/e/(.*)', destination: '/event.html' }], headers, handle });
   const base = await listen(srv);
   const page = await fetch(base + '/e/x');
   assert.equal(page.headers.get('x-incoming-path-rule'), 'hit');
@@ -114,7 +136,7 @@ test('dev server: waitUntil (from @vercel/functions) runs after the response, an
     waitUntil(gate.then(() => { done = true; }));
     return Response.json({ origin: new URL(req.url).origin });
   };
-  const srv = createServer({ root: 'test/fixtures/static', handle });
+  const srv = createServer({ root: 'test/fixtures/static', rewrites: REWRITES, handle });
   const base = await listen(srv);
   const settled = new Promise((resolve) => srv.once('waitUntilSettled', resolve));
   const res = await fetch(base + '/api/bg');

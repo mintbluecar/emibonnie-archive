@@ -1,7 +1,7 @@
 // @ts-check
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { makeDeps } from '../api/[...route].js';
+import { makeDeps } from '../api/index.js';
 import { dbOptionsFromEnv } from '../src/db/client.js';
 
 test('in production (VERCEL set) a missing DATABASE_URL fails fast and never falls back to PGlite', () => {

@@ -1,9 +1,10 @@
 // @ts-check
 /**
- * The only Vercel function. Every `/api/*` request (and, through the
- * `vercel.json` rewrites, every shared `/t/:id` and `/e/:slug` link)
- * lands here: deps are built per request and closed in `finally`
- * (src/http/handler.js), and routing goes through src/routes/index.js.
+ * The only Vercel function. `vercel.json`'s rewrites send every `/api/*`
+ * request and every shared `/t/:id` and `/e/:slug` link here, to `/api`,
+ * with unnamed sources only; the function sees the original request URL,
+ * so src/routes/index.js matches `/api/...` and the page paths directly.
+ * Deps are built per request and closed in `finally` (src/http/handler.js).
  */
 import { fileURLToPath } from 'node:url';
 import { waitUntil } from '@vercel/functions';

@@ -13,47 +13,48 @@ const htmlResponse = ({ html, found }) => new Response(html, {
 });
 
 /**
- * `GET /api/meta/e/:slug` (behind the `/e/:slug` rewrite): the event page
- * with link-preview meta; generic meta for a hidden or unknown event.
- * Shared links carry tracking params (`?s=20`), so any query is accepted
- * and ignored.
+ * One link-preview meta route on a page path. Shared links carry
+ * tracking params (`?s=20`), so any query is accepted and ignored.
+ * @param {string} path
+ * @param {(input: import('../http/handler.js').RouteInput, deps: any) => Promise<{ html: string, found: boolean }>} render
  */
-export const eventMeta = {
+const metaRoute = (path, render) => ({
   method: 'GET',
-  path: '/api/meta/e/:slug',
+  path,
   cache: PUBLIC_CACHE,
   query: null,
   /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async ({ params, origin }, deps) => htmlResponse(await eventMetaPage(deps, { slug: params.slug, origin })),
-};
+  run: async (input, deps) => htmlResponse(await render(input, deps)),
+});
 
 /**
- * `GET /api/meta/:prefix/:sourceId` (behind each kind's `<urlPrefix>:id`
- * rewrite, e.g. `/t/:id`): the item page with link-preview meta; generic
- * meta for a hidden or unknown item. Listed after `eventMeta`.
+ * The renderer each `src/pages.js` `meta` name stands for. `event` reads
+ * the page path's `:slug`.
+ * @type {Record<string, (input: import('../http/handler.js').RouteInput, deps: any) => Promise<{ html: string, found: boolean }>>}
  */
-export const itemMeta = {
-  method: 'GET',
-  path: '/api/meta/:prefix/:sourceId',
-  cache: PUBLIC_CACHE,
-  query: null,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async ({ params, origin }, deps) => htmlResponse(await itemMetaPage(deps, { prefix: params.prefix, sourceId: params.sourceId, origin })),
+const PAGE_META = {
+  event: ({ params, origin }, deps) => eventMetaPage(deps, { slug: params.slug, origin }),
 };
 
 /**
- * The same meta routes on the original page paths (`/e/:slug`, and
- * `<urlPrefix>:sourceId` for each registered kind), in case the platform
- * hands the function the original path instead of the rewritten one.
+ * The link-preview meta routes, on the original page paths: Vercel hands
+ * the function the URL the browser asked for (`/t/123`, not a rewritten
+ * one), so these match `/e/:slug` and `<urlPrefix>:sourceId` directly.
+ * Derived from the one source of truth: each `src/pages.js` page with a
+ * `meta` name, then each registered kind's `urlPrefix` (the item page).
+ * A hidden or unknown target gets the generic site meta.
+ * @param {import('../pages.js').PageRoute[]} pageList
  * @param {{ urlPrefix: string }[]} kinds
  */
-export function pageMetaRoutes(kinds) {
-  const event = { ...eventMeta, path: '/e/:slug' };
-  const items = kinds.map(({ urlPrefix }) => ({
-    ...itemMeta,
-    path: `${urlPrefix}:sourceId`,
-    /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-    run: async (input, deps) => itemMeta.run({ ...input, params: { ...input.params, prefix: urlPrefix.slice(1, -1) } }, deps),
-  }));
-  return [event, ...items];
+export function metaRoutes(pageList, kinds) {
+  const pageRoutes = pageList.flatMap((page) => {
+    if (!page.meta) return [];
+    const render = PAGE_META[page.meta];
+    if (!render) throw new Error(`src/pages.js: ${page.path} names an unknown meta renderer '${page.meta}'`);
+    return [metaRoute(page.path, render)];
+  });
+  const itemRoutes = kinds.map(({ urlPrefix }) => metaRoute(`${urlPrefix}:sourceId`, ({ params, origin }, deps) => (
+    itemMetaPage(deps, { prefix: urlPrefix.slice(1, -1), sourceId: params.sourceId, origin })
+  )));
+  return [...pageRoutes, ...itemRoutes];
 }

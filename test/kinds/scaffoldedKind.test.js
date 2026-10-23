@@ -191,7 +191,7 @@ describe('a scaffolded kind plugs in without touching the core', { skip: SKIP },
     // there it may change too, but only by the kind's new rewrite.
     const outside = changed.filter((p) => !own.some((dir) => p.startsWith(dir)) && p !== proof.migration && p !== 'vercel.json');
     assert.deepEqual(outside, []);
-    const kindRewrite = { source: `/${KIND}/:id`, destination: `/api/meta/${KIND}/:id` };
+    const kindRewrite = { source: `/${KIND}/(.*)`, destination: '/api' };
     const vercel = JSON.parse(readFileSync(path.join(copy, 'vercel.json'), 'utf8'));
     assert.deepEqual(vercel.rewrites.filter((/** @type {any} */ r) => r.source === kindRewrite.source), [kindRewrite], 'the build still adds the kind\'s rewrite');
     if (changed.includes('vercel.json')) {
