@@ -142,3 +142,33 @@ test('validateSite (Task 10b): embedSources is an optional boolean -- true is ke
   assert.equal(badResult.ok, false);
   if (!badResult.ok) assert.ok(badResult.errors.includes('embedSources: must be a boolean'), badResult.errors.join('\n'));
 });
+
+test('validateSite (Task 10c): roleEmoji defaults to {}, keeps fan/host/speaker overrides, and refuses crowd, unknown roles and empty values', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  const plain = validateSite(raw);
+  assert.ok(plain.ok);
+  if (plain.ok) assert.deepEqual(plain.site.roleEmoji, {});
+  const ok = validateSite({ ...raw, roleEmoji: { host: '🎙️' } });
+  assert.ok(ok.ok);
+  if (ok.ok) assert.deepEqual(ok.site.roleEmoji, { host: '🎙️' });
+  const bad = validateSite({ ...raw, roleEmoji: { crowd: '📢', fan: '', mc: '🎤' } });
+  assert.equal(bad.ok, false);
+  if (bad.ok) return;
+  assert.ok(bad.errors.some((e) => e.startsWith('roleEmoji.crowd:')), bad.errors.join('\n'));
+  assert.ok(bad.errors.some((e) => e.startsWith('roleEmoji.fan:')), bad.errors.join('\n'));
+  assert.ok(bad.errors.some((e) => e.startsWith('roleEmoji.mc:')), bad.errors.join('\n'));
+  assert.equal(validateSite({ ...raw, roleEmoji: ['💬'] }).ok, false);
+});
+
+test('validateSite (Task 10c j): favicon is an optional relative .png/.svg path inside the site folder; anything else names the field', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  const plain = validateSite(raw);
+  assert.ok(plain.ok && plain.site.favicon === null);
+  const ok = validateSite({ ...raw, favicon: 'icons/fav.png' });
+  assert.ok(ok.ok && ok.site.favicon === 'icons/fav.png');
+  for (const bad of ['/etc/fav.png', '../fav.png', 'icons/../../x.svg', 'fav.ico', 'https://x.example/f.png', 42]) {
+    const result = validateSite({ ...raw, favicon: bad });
+    assert.equal(result.ok, false, String(bad));
+    if (!result.ok) assert.ok(result.errors.some((e) => e.startsWith('favicon:')), String(bad));
+  }
+});

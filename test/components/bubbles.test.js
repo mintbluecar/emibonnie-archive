@@ -2,6 +2,7 @@
 import '../helpers/siteFixture.js';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
 import { FakeEl } from '../helpers/fakeDom.js';
 // Dynamic import: see test/components/header.test.js for why.
 const { render, renderCompact, bind } = await import('../../public/js/components/bubbles.js');
@@ -141,7 +142,7 @@ test('renderCompact (Task 9b): one paragraph of "emoji text" runs -- each speake
   ];
   const markup = String(renderCompact({ bubbles }));
   assert.equal(markup.match(/<p class="c-bubbles-compact"/g)?.length, 1);
-  assert.match(markup, /<span class="c-bubbles-compact__who" role="img" aria-label="luna">💜<\/span> hi &lt;b&gt;/);
+  assert.match(markup, /<span class="c-bubbles-compact__who c-emoji" role="img" aria-label="luna">💜<\/span> hi &lt;b&gt;/);
   assert.equal(markup.match(/aria-label="luna"/g)?.length, 1, 'the continuation line adds no second emoji');
   assert.match(markup, /aria-label="sol &amp; unknown speaker">🧡💜<\/span> both/);
   assert.match(markup, /context/);
@@ -167,4 +168,20 @@ test('fix round 2: compact, a speaker with no emoji shows its name as text ("fan
   assert.ok(!mapped.includes('role="img"'));
   const unmapped = String(renderCompact({ bubbles: [{ kind: 'speech', emoji: '', name: null, text: 'hello', cont: false }] }));
   assert.match(unmapped, /c-bubbles-compact__who--name">unknown speaker:<\/span>/);
+});
+
+test('Task 10c (o): an avatar\'s emoji sits in its own .c-emoji box, centred by the circle\'s grid', () => {
+  const markup = String(render({ bubbles: [{ kind: 'speech', emoji: '🦁', name: 'host', text: 'hi', cont: false }] }));
+  assert.match(markup, /<div class="c-bubbles__avatar"><span class="c-emoji">🦁<\/span><\/div>/);
+  const css = readFileSync('src/styles/components/bubbles.css', 'utf8');
+  assert.match(/\.c-bubbles__avatar\s*\{([^}]*)\}/.exec(css)?.[1] ?? '', /display:\s*grid;\s*place-items:\s*center;\s*line-height:\s*1/);
+  assert.match(/\.c-emoji\s*\{([^}]*)\}/.exec(css)?.[1] ?? '', /line-height:\s*1;[\s\S]*translateY\(var\(--emoji-nudge-y\)\)/);
+});
+
+test('Task 10c (p): every bubble text box wraps a long unbroken string, and the bubble may shrink in its row', () => {
+  const css = readFileSync('src/styles/components/bubbles.css', 'utf8');
+  for (const cls of ['c-bubbles__bub', 'c-bubbles__crowd', 'c-bubbles__plain', 'c-bubbles__note', 'c-bubbles-compact']) {
+    assert.match(new RegExp(`\\.${cls}\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? '', /overflow-wrap:\s*anywhere/, cls);
+  }
+  assert.match(/\.c-bubbles__bub\s*\{([^}]*)\}/.exec(css)?.[1] ?? '', /min-width:\s*0/);
 });

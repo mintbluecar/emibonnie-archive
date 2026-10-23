@@ -18,7 +18,7 @@ const PROPS = { text: 'สวัสดี hello', author: { handle: 'tl_alpha', 
 
 test('sourceEmbed: X\'s documented markup -- blockquote.twitter-tweet with data-dnt, the text (Thai in lang="th"), author and canonical link (labelled, not dated: Task 10b shows no post time)', () => {
   const markup = String(render(PROPS));
-  assert.match(markup, /^\s*<blockquote class="twitter-tweet c-embed" data-dnt="true">/);
+  assert.match(markup, /<blockquote class="twitter-tweet c-embed" data-dnt="true" data-cards="hidden" data-conversation="none" data-width="350">/);
   assert.match(markup, /<span lang="th">สวัสดี<\/span>/);
   assert.match(markup, /&mdash; \(@tl_alpha\) <a class="c-embed__link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">original tweet<\/a>/);
   assert.ok(!markup.includes('<script'), 'never an inline script');
@@ -83,4 +83,24 @@ test('sourceEmbed.css (fix round 1, M6): the fallback text keeps line breaks lik
   const { readFileSync } = await import('node:fs');
   const css = readFileSync(new URL('../../src/styles/components/sourceEmbed.css', import.meta.url), 'utf8');
   assert.match(/\.c-embed__text\s*\{([^}]*)\}/.exec(css)?.[1] ?? '', /white-space:\s*pre-wrap/);
+});
+
+test('sourceEmbed (Task 10c l, q): X\'s smaller embed (cards hidden, no parent post, 350px wide) inside a box with an "original tweet" h2, a crop wrapper and a hidden "show full tweet" switch', () => {
+  const markup = String(render(PROPS));
+  assert.match(markup, /<section class="c-embed-box">\s*<h2 class="c-embed-box__label">original tweet<\/h2>/);
+  assert.match(markup, /<div class="c-embed-box__clip"><div class="c-embed-box__inner">\s*<blockquote class="twitter-tweet c-embed"/);
+  assert.match(markup, /<button class="c-embed-box__more" type="button" aria-expanded="false" title="show full tweet" aria-label="show full tweet"[^>]*data-label-less="show less"[^>]*hidden>/);
+  assert.match(markup, /data-cards="hidden" data-conversation="none" data-width="350"/);
+  const gone = String(render({ ...PROPS, source: { ...PROPS.source, status: 'deleted' } }));
+  assert.match(gone, /c-embed-box__clip[\s\S]*c-embed--gone/, 'the fallback for a gone post is cropped the same way');
+});
+
+test('sourceEmbed.bind (Task 10c f): a forced dark page (data-theme on <html>) themes the embed dark even on a light device', () => {
+  const { head } = fakeBrowser({ dark: false });
+  /** @type {any} */ (globalThis.document).documentElement = { getAttribute: (/** @type {string} */ k) => (k === 'data-theme' ? 'dark' : null) };
+  const root = new MiniElement('div');
+  mount(/** @type {any} */ (root), render(PROPS));
+  bind(/** @type {any} */ (root));
+  assert.equal(root.querySelector('blockquote')?.getAttribute('data-theme'), 'dark');
+  assert.ok(head);
 });

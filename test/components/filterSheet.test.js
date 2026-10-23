@@ -27,7 +27,7 @@ test('render: shows the count copy on the apply button', () => {
 
 /** The whole `<button ...>label</button>` tag for one chip's `data-value`, wherever its attributes land. @param {string} markup @param {string} value @returns {string} */
 function chipTag(markup, value) {
-  const match = new RegExp(`<button[^>]*data-value="${value}"[^>]*>[^<]*</button>`).exec(markup);
+  const match = new RegExp(`<button[^>]*data-value="${value}"[^>]*>.*?</button>`).exec(markup);
   assert.ok(match, `no chip with data-value="${value}" in ${markup}`);
   return match[0];
 }
@@ -36,7 +36,7 @@ test('render: selected people and type chips are marked .on, unselected ones are
   const state = { ...EMPTY_STATE, people: [2], types: ['live'] };
   const markup = String(render({ state, options: OPTIONS, count: 3 }));
   assert.ok(chipTag(markup, '2').includes('c-chips__chip--on'), 'luna is selected');
-  assert.ok(chipTag(markup, '2').includes('🌙 luna'));
+  assert.ok(chipTag(markup, '2').includes('🌙</span><span>luna'));
   assert.ok(!chipTag(markup, '1').includes('c-chips__chip--on'), 'sol is not selected');
   assert.ok(chipTag(markup, 'live').includes('c-chips__chip--on'), 'live is selected');
   assert.ok(!chipTag(markup, 'shared story').includes('c-chips__chip--on'), 'shared story is not selected');

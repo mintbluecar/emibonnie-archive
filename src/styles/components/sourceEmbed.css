@@ -23,16 +23,12 @@
 }
 
 .c-embed__text {
+  overflow-wrap: anywhere;
   line-height: 1.45;
   margin-bottom: 6px;
   white-space: pre-wrap;
-  /* A long post's full text is already on the page ("show original");
-     the fallback shows its opening, like X's own card would. */
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 8;
-  line-clamp: 8;
-  overflow: hidden;
+  /* Task 10c (q): no line clamp of its own any more -- the box around it
+     crops at --embed-max-height, and "show full tweet" shows it all. */
 }
 
 .c-embed__by {
@@ -52,4 +48,69 @@
   margin-top: 6px;
   font-size: var(--text-11);
   color: var(--color-ink-muted);
+}
+
+/*
+ * Task 10c (l, q): the box around the embed. Its width is the embed's
+ * own (--embed-width), so the fallback matches; its height is cut at
+ * --embed-max-height with a fade made of the page background, until the
+ * switch opens it. `embedBox.js` marks it --tall only when the content
+ * is taller than the cap.
+ */
+.c-embed-box {
+  max-width: var(--embed-width);
+}
+
+.c-embed-box__label {
+  font-size: var(--text-11);
+  font-weight: 800;
+  color: var(--color-label);
+  margin: 4px 2px 6px;
+}
+
+.c-embed-box__clip {
+  position: relative;
+  max-height: var(--embed-max-height);
+  overflow: hidden;
+}
+
+.c-embed-box--tall .c-embed-box__clip::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 64px;
+  background: linear-gradient(to bottom, transparent, var(--color-bg));
+  pointer-events: none;
+}
+
+.c-embed-box--open .c-embed-box__clip {
+  max-height: none;
+}
+
+.c-embed-box--open .c-embed-box__clip::after {
+  display: none;
+}
+
+.c-embed-box__more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  margin: 2px auto 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+}
+
+.c-embed-box__more[hidden] {
+  display: none;
+}
+
+.c-embed-box--open .c-embed-box__more svg {
+  transform: rotate(180deg);
 }

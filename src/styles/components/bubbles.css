@@ -1,5 +1,10 @@
 /*
- * public/js/components/bubbles.js. `--c` is this element's own
+ * public/js/components/bubbles.js. Task 10c (p): every text box here
+ * wraps a long unbroken string (a URL) anywhere rather than overflowing
+ * -- the text itself is never changed -- and the bubble, a flex child,
+ * may shrink below that string's width (`min-width: 0`).
+ *
+ * `--c` is this element's own
  * `data-c` colour, applied by `bind()`; an element with none keeps the
  * engine default (see src/styles/tokens.css's `--c`).
  */
@@ -24,12 +29,26 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
+  line-height: 1;
   font-size: var(--text-15);
   flex: none;
   background: color-mix(in srgb, var(--c) 22%, var(--color-card));
+}
+
+/*
+ * Task 10c (o): the emoji in its own line-height-1 box, so the circle
+ * centres the glyph rather than the font's tall line box. Emoji fonts
+ * still draw a little above their em box's centre, so --emoji-nudge-y
+ * (tokens.css) moves it down by a fraction of its own size. The same
+ * class centres the cast's, chips', compact lines' and person header's
+ * emoji.
+ */
+.c-emoji {
+  display: inline-block;
+  line-height: 1;
+  transform: translateY(var(--emoji-nudge-y));
 }
 
 /* A speaker with no emoji of its own (a bare ':' marker, fix round 2):
@@ -61,6 +80,8 @@
 }
 
 .c-bubbles__bub {
+  min-width: 0;
+  overflow-wrap: anywhere;
   padding: 6px 10px;
   border-radius: 4px 14px 14px 14px;
   font-size: var(--text-13);
@@ -91,6 +112,7 @@
 }
 
 .c-bubbles__crowd {
+  overflow-wrap: anywhere;
   margin: 7px 0 7px 35px;
   font-size: var(--text-12);
   color: var(--color-ink-muted);
@@ -98,6 +120,7 @@
 }
 
 .c-bubbles__plain {
+  overflow-wrap: anywhere;
   font-size: var(--text-13);
   line-height: 1.45;
 }
@@ -109,6 +132,7 @@
 }
 
 .c-bubbles__note {
+  overflow-wrap: anywhere;
   font-size: var(--text-11);
   color: var(--color-ink-muted);
 }

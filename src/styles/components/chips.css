@@ -1,28 +1,56 @@
 /*
- * public/js/components/chips.js: generic filter/tag pills. `min-height:
- * 44px` keeps the tap target to spec (see docs/.../1b plan, "Additional
- * constraints" → Accessibility) while `line-height: 1` and tight padding
- * keep the pill itself visually compact -- Task 5's filter sheet reuses
- * these as its filter options.
+ * public/js/components/chips.js: generic filter/tag pills. Task 10c (g):
+ * a chip is its content plus fixed padding (--chip-pad-y/--chip-pad-x,
+ * tokens.css) -- no fixed or minimum height -- so it scales with the text
+ * and wraps. A clickable chip's tap target stays at least 24x24 (WCAG 2.2
+ * SC 2.5.8, target size minimum) through an invisible hit area
+ * (`::before`), never by forcing the visible height. The emoji sits in
+ * its own element, 0.3em from the label (the flex gap).
  */
 
 .c-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px 4px;
+}
+
+/* Task 10c (d): two chip groups in a row (hashtags, then people) never touch. */
+.c-chips + .c-chips,
+.c-chips + .c-cast,
+.c-cast + .c-chips,
+* + .c-event__people-filter {
+  margin-top: 6px;
 }
 
 .c-chips__chip {
+  position: relative;
   font-size: var(--text-11-5);
-  line-height: 1;
+  line-height: 1.25;
   border-radius: 999px;
-  padding: 0 10px;
-  min-height: 44px;
+  padding: var(--chip-pad-y) var(--chip-pad-x);
   display: inline-flex;
   align-items: center;
+  gap: 0.3em;
   border: 1.5px solid var(--color-card-shadow);
   background: var(--color-bg);
   color: var(--color-ink);
+}
+
+/* The hit area: the chip's full width, and at least 24px tall, centred. */
+button.c-chips__chip::before,
+a.c-chips__chip::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 100%;
+  min-height: 24px;
+  transform: translateY(-50%);
+}
+
+.c-chips__emoji {
+  line-height: 1;
 }
 
 .c-chips__chip--on {

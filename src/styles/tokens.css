@@ -13,6 +13,7 @@
  */
 
 :root {
+  color-scheme: light;
   --color-bg: #f6efe3;
   --color-card: #fffdf8;
   --color-card-shadow: #eadfce;
@@ -60,6 +61,23 @@
      for its own --gradient-to instead. */
   --color-accent-text: #fff;
   --radius-card: 16px;
+  /* A chip's padding (Task 10c, chips.css and cast.css): its size is its
+     content plus this, never a fixed height. */
+  --chip-pad-x: 10px;
+  --chip-pad-y: 4px;
+  /* How far an emoji glyph is moved down to sit optically centred in its
+     circle or chip (Task 10c, bubbles.css's .c-emoji): emoji fonts draw
+     above the centre of their em box. Measured in Chromium (macOS, Apple
+     Color Emoji) with canvas measureText's ink box. */
+  --emoji-nudge-y: 0.05em;
+  /* The X embed's box (Task 10c, l and q; sourceEmbed.css): as wide as
+     the embed's data-width (sourceEmbed.js EMBED_WIDTH), and cropped at
+     this height, with a fade and a "show full tweet" switch. */
+  --embed-width: 350px;
+  --embed-max-height: 320px;
+  /* A card's thumbnail height (Task 10c, thumb.css); its width follows
+     the picture, between half and one and a half times this. */
+  --thumb-size: 56px;
   --font-latin: 'Nunito', sans-serif;
   --font-script: 'IBM Plex Sans Thai', sans-serif;
 
@@ -116,7 +134,14 @@
      the media now sticks below the pinned header, so this is that bar's
      height plus room for the prev/next row (44px targets + padding) under
      the clip, keeping both on screen. */
-  --layout-sticky-offset: calc(var(--sticky-top) + 64px);
+  --layout-sticky-offset: calc(var(--sticky-top) + var(--item-media-gap) + 64px);
+  /* The space between the pinned header and the item page's media (Task
+     10c, k): its offset before scrolling on desktop (.c-item's top
+     padding) and the row gap above it on a phone, and also how far below
+     the bar it pins (`top: calc(var(--sticky-top) + var(--item-media-gap))`),
+     so the media never jumps when it starts to stick. 8px phone, 16px
+     desktop (below). */
+  --item-media-gap: 8px;
   /* The smallest tap/click target (44px, WCAG 2.5.5): the header bar's
      search icon and nav links, so also what sets the bar's height. */
   --tap-target: 44px;
@@ -136,11 +161,21 @@
 @media (min-width: 860px) {
   :root {
     --header-pad-y: 8px;
+    --item-media-gap: 16px;
   }
 }
 
+/*
+ * Dark mode (Task 10c, f): the device's preference, unless the visitor
+ * chose light with the header's theme switch (`data-theme="light"` on
+ * <html>), and again, identically, when they chose dark
+ * (`data-theme="dark"`) whatever the device says. The two blocks must
+ * hold the same declarations (test/site/themeTokens.test.js). A site's
+ * theme.css follows the same pattern (docs/site-settings.md).
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --color-bg: #140f19;
     --color-card: #1c1522;
     --color-card-shadow: #0d0a11;
@@ -160,4 +195,26 @@
        --gradient-from, so it's correct for a solid accent surface. */
     --color-accent-text: #000;
   }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #140f19;
+  --color-card: #1c1522;
+  --color-card-shadow: #0d0a11;
+  --color-ink: #f4eef8;
+  --color-ink-muted: #a89aad;
+  /* The light-mode #b32e6a above is too dark to read on these dark
+     backgrounds (3.2:1/3.0:1); a lighter pick of the same hue instead. */
+  --gradient-to: #e2468c;
+  /* The same default, stated for dark mode too (a site may set either):
+     #e2468c is 4.94:1/4.65:1 on the dark --color-bg/--color-card. */
+  --color-label: var(--gradient-to);
+  /* A pale highlight would put light ink on a light wash; a dark amber
+     instead: the dark ink on it is 6.7:1. */
+  --color-highlight: #6b4f12;
+  /* Black passes 5.49:1 against this theme's --gradient-to (white only
+     passes 3.83:1 -- review round 2, I3) and 7.35:1 against
+     --gradient-from, so it's correct for a solid accent surface. */
+  --color-accent-text: #000;
 }

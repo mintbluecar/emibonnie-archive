@@ -68,6 +68,32 @@ export function resolveMedia(sources) {
   return quoted ? quoteOf(quoted) : null;
 }
 
+/** Only X's image host (the same guard as videoPlayer.js's `POSTER_URL`, and CSP's img-src). */
+const THUMB_URL = /^https:\/\/pbs\.twimg\.com\//;
+
+/**
+ * @param {string|null} url @param {{ width: number, height: number }} size @param {boolean} video
+ * @returns {import('../../http/contracts.js').ThumbVM|null}
+ */
+function thumbAt(url, { width, height }, video) {
+  return url && THUMB_URL.test(url) ? { url, width, height, video } : null;
+}
+
+/**
+ * The preview card's thumbnail (ThumbVM, Task 10c) from the same media
+ * the item page pins: a clip's poster, else the first picture; a quote's
+ * own clip or pictures the same way. Null for a text-only quote, a
+ * clip with no poster, or a picture not on pbs.twimg.com over https.
+ * @param {MediaVM|null} media
+ * @returns {import('../../http/contracts.js').ThumbVM|null}
+ */
+export function thumbOf(media) {
+  const shown = media?.type === 'quote' ? media.inner : media;
+  if (shown?.type === 'video') return thumbAt(shown.poster, shown, true);
+  const first = shown?.type === 'images' ? shown.images[0] : undefined;
+  return first ? thumbAt(first.url, first, false) : null;
+}
+
 /** @param {MediaVM|null} media */
 export function hasVideo(media) {
   return media?.type === 'video' || (media?.type === 'quote' && media.inner?.type === 'video');

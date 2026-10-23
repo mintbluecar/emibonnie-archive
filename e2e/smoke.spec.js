@@ -47,6 +47,8 @@ const SEARCH_Q = encodeURIComponent('ครบ');
 const LIVE_HEIGHT_CAP = 338;
 /** The pinned header bar's height (tokens.css `--sticky-top`, derived from `--tap-target` and `--header-pad-y`). */
 const STICKY_TOP = { phone: 53, desktop: 61 };
+/** The gap the item media keeps below the bar, before and while pinned (tokens.css `--item-media-gap`, Task 10c). */
+const MEDIA_GAP = { phone: 8, desktop: 16 };
 
 const PAGES = [
   ['home', '/'],
@@ -71,7 +73,7 @@ test('an unknown path: 404 status, renders, no console errors', async ({ page })
   await checkPage(page, '/this-page-does-not-exist', { status: 404 });
 });
 
-test('LONG: after scrolling 2000px the pinned header and the sticky media area are both in view, media just below the header (Task 10b), the 🐱 line shows 🌙 luna, and the stub clip decodes', async ({ page }, testInfo) => {
+test('LONG: after scrolling 2000px the pinned header and the sticky media area are both in view, media --item-media-gap below the header (Task 10b, 10c), the 🐱 line shows 🌙 luna, and the stub clip decodes', async ({ page }, testInfo) => {
   test.skip(DARK_PROJECTS.includes(testInfo.project.name), 'item-page extras only run in light mode (I1)');
   await stubSyntheticMedia(page);
   await gotoReady(page, `/t/${IDS.LONG}`);
@@ -80,11 +82,12 @@ test('LONG: after scrolling 2000px the pinned header and the sticky media area a
   // Task 10b: the header is pinned at the top, and the media sticks at
   // --sticky-top -- the header bar's own height (53px phone, 61px desktop:
   // a 44px tap target, 4px/8px padding each side, a 1px border).
-  const stickyTop = `${STICKY_TOP[testInfo.project.name === 'desktop' ? 'desktop' : 'phone']}px`;
+  const layout = testInfo.project.name === 'desktop' ? 'desktop' : 'phone';
+  const stickyTop = `${STICKY_TOP[layout]}px`;
   expect(await page.locator('.c-header__bar').evaluate((el) => `${el.getBoundingClientRect().height}px`)).toBe(stickyTop);
   await expect(header).toHaveCSS('position', 'sticky');
   await expect(media).toHaveCSS('position', 'sticky');
-  await expect(media).toHaveCSS('top', stickyTop);
+  await expect(media).toHaveCSS('top', `${STICKY_TOP[layout] + MEDIA_GAP[layout]}px`);
   // A sticky element's containing block is its own grid area (.c-item, which
   // `.c-item__media` spans both rows of) -- it can only stay stuck while that
   // area is still scrolling past, not once the page scrolls into
@@ -103,8 +106,8 @@ test('LONG: after scrolling 2000px the pinned header and the sticky media area a
   const headerBottom = parseFloat(stickyTop);
   await expect.poll(() => header.evaluate((el) => Math.abs(el.getBoundingClientRect().top))).toBeLessThanOrEqual(1);
   await expect.poll(() => header.evaluate((el) => el.getBoundingClientRect().bottom)).toBeCloseTo(headerBottom, 0);
-  // Just below the header, not under it: no overlap, no gap.
-  await expect.poll(() => media.evaluate((el) => el.getBoundingClientRect().top)).toBeCloseTo(headerBottom, 0);
+  // Below the header, not under it, by the same gap it starts with (Task 10c).
+  await expect.poll(() => media.evaluate((el) => el.getBoundingClientRect().top)).toBeCloseTo(headerBottom + MEDIA_GAP[layout], 0);
   await expect(header).toBeInViewport();
   await expect(media).toBeInViewport();
 
@@ -263,7 +266,8 @@ test('header (Task 10b fix O2, M5): on a phone the search row never sits over th
     const onTop = [40, 195, 350].map((x) => document.elementFromPoint(x, bar.bottom - 2)?.closest('header.c-header') !== null);
     return { barBottom: bar.bottom, rowTop: row.top, rowBottom: row.bottom, scrollY: window.scrollY, barOnTop: onTop.every(Boolean) };
   });
-  for (const path of ['/', `/e/${EVENT_SLUG}`, `/t/${IDS.LONG}`, `/search?q=${SEARCH_Q}`]) {
+  // The item page has no search row since Task 10c (r): e2e/polish.spec.js checks that.
+  for (const path of ['/', `/e/${EVENT_SLUG}`, `/search?q=${SEARCH_Q}`]) {
     await gotoReady(page, path);
     for (const y of [0, 10, 20, 40, 60, 80, 120, 300, 1500]) {
       await page.evaluate((target) => window.scrollTo(0, target), y);

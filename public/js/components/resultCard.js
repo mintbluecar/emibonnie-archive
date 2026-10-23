@@ -18,8 +18,9 @@
  */
 import { html } from '../core/html.js';
 import { dayLabel } from '../core/format.js';
-import { t } from '../core/site.js';
 import * as bubbles from './bubbles.js';
+import * as thumb from './thumb.js';
+import * as icons from './icons.js';
 
 /** @param {string} text @returns {string} */
 function escapeRegExp(text) {
@@ -48,7 +49,7 @@ function metaLine(result) {
   return html`
     <div class="c-result-card__meta">
       ${result.people.map((person) => html`<span aria-hidden="true">${person.emoji}</span>`)}
-      ${result.accountHandle ? html` · ${t('item.translatedBy')} @${result.accountHandle}` : ''}
+      ${result.accountHandle ? html` · ${icons.translator()} @${result.accountHandle}` : ''}
     </div>
   `;
 }
@@ -63,10 +64,13 @@ export function render(props) {
     ? html`<div class="c-result-card__text">${result.matchLines.map((line) => html`<div class="c-result-card__line">${highlighted(line, q)}</div>`)}</div>`
     : bubbles.renderCompact({ bubbles: result.lines.filter((b) => b.kind !== 'note').slice(0, FALLBACK_LINES) });
   return html`
-    <a class="c-result-card" href="${result.url}">
-      ${result.event ? html`<div class="c-result-card__event">${result.event.name} · ${dayLabel(result.occurredOn)}</div>` : ''}
-      ${text}
-      ${metaLine(result)}
+    <a class="c-result-card${result.thumb ? ' c-result-card--thumb' : ''}" href="${result.url}">
+      <div class="c-result-card__body">
+        ${result.event ? html`<div class="c-result-card__event">${result.event.name} · ${dayLabel(result.occurredOn)}</div>` : ''}
+        ${text}
+        ${metaLine(result)}
+      </div>
+      ${thumb.render(result.thumb)}
     </a>
   `;
 }

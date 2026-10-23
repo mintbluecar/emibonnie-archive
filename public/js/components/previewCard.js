@@ -14,6 +14,10 @@
  * for any kind's entries without this component or the page knowing
  * which kind it is.
  *
+ * A card with media shows its thumbnail (`thumb.js`, Task 10c) beside
+ * the text; a clip's ▶ thumbnail then stands in for the meta row's 🎬
+ * (kept for a clip with no poster).
+ *
  * `compact` (Task 9b: the event, person and translator pages) shows the same
  * lines as one clamped run of "emoji text" (`bubbles.renderCompact`)
  * instead of full bubbles, as in mockups/people-me-v1.html.
@@ -21,6 +25,8 @@
 import { html } from '../core/html.js';
 import { t } from '../core/site.js';
 import * as bubbles from './bubbles.js';
+import * as thumb from './thumb.js';
+import * as icons from './icons.js';
 
 /**
  * @param {import('../../../src/http/contracts.js').Preview} preview
@@ -30,8 +36,8 @@ function metaRow(preview) {
   return html`
     <div class="c-preview-card__meta">
       ${preview.people.map((person) => html`<span aria-hidden="true">${person.emoji}</span>`)}
-      ${preview.accountHandle ? html` · ${t('item.translatedBy')} @${preview.accountHandle}` : ''}
-      ${preview.hasVideo ? html` · <span role="img" aria-label="${t('item.hasVideo')}">🎬</span>` : ''}
+      ${preview.accountHandle ? html` · ${icons.translator()} @${preview.accountHandle}` : ''}
+      ${preview.hasVideo && !preview.thumb ? html` · <span role="img" aria-label="${t('item.hasVideo')}">🎬</span>` : ''}
       ${preview.followsOnFrom ? html` · ${t('item.followsOn')} ↑` : ''}
     </div>
   `;
@@ -46,13 +52,16 @@ export function render(props) {
   const personIds = result.people.map((person) => person.id).join(',');
   return html`
     <a
-      class="c-preview-card${compact ? ' c-preview-card--compact' : ''}"
+      class="c-preview-card${compact ? ' c-preview-card--compact' : ''}${result.thumb ? ' c-preview-card--thumb' : ''}"
       href="${result.url}"
       data-person-ids="${personIds}"
       ${result.accountHandle ? html`data-account="${result.accountHandle}"` : ''}
     >
-      ${compact ? bubbles.renderCompact({ bubbles: result.lines }) : bubbles.render({ bubbles: result.lines })}
-      ${metaRow(result)}
+      <div class="c-preview-card__body">
+        ${compact ? bubbles.renderCompact({ bubbles: result.lines }) : bubbles.render({ bubbles: result.lines })}
+        ${metaRow(result)}
+      </div>
+      ${thumb.render(result.thumb)}
     </a>
   `;
 }

@@ -6,8 +6,8 @@
  */
 import { BARE_MARKER, splitLines } from '../../domain/lines.js';
 import { parseHeader } from '../../domain/header.js';
-import { LIVE_PATTERNS } from '../../domain/constants.js';
-import { resolveMedia, hasVideo, clipByOf, publicSources } from './media.js';
+import { LIVE_PATTERNS, ROLE_EMOJI } from '../../domain/constants.js';
+import { resolveMedia, hasVideo, thumbOf, clipByOf, publicSources } from './media.js';
 
 /** @typedef {import('../../http/contracts.js').BubbleVM} BubbleVM */
 /** @typedef {import('../../http/contracts.js').CastVM} CastVM */
@@ -37,9 +37,21 @@ function ownEmojiOf(marker) {
 }
 
 /**
+ * A generic role's emoji: the translator's own (the marker), or -- only
+ * when they used none -- the role's default (`ROLE_EMOJI`, or the site's
+ * `roleEmoji` via `ctx.roleEmoji`); '' for a role with no default (crowd).
+ * @param {string} marker @param {string} role @param {PresentContext} ctx
+ * @returns {string}
+ */
+function roleEmojiOf(marker, role, ctx) {
+  const defaults = /** @type {Record<string, string|undefined>} */ (ctx.roleEmoji ?? ROLE_EMOJI);
+  return ownEmojiOf(marker) || (defaults[role] ?? '');
+}
+
+/**
  * The one speaker resolver every display path uses (bubbles, joint
  * parts, search match lines): a known person's standard emoji and
- * name, a generic role's translator emoji and role name, or (never
+ * name, a generic role's emoji (`roleEmojiOf`) and role name, or (never
  * mapped) the marker itself with `name: null`. `person` is the known
  * person, if any, for callers that need their id or colour.
  * @param {string} marker
@@ -51,8 +63,8 @@ function speakerOf(marker, speakers, ctx) {
   const speaker = Object.hasOwn(speakers, marker) ? speakers[marker] : undefined;
   const person = speaker && 'person' in speaker ? ctx.people.get(speaker.person) : undefined;
   if (person) return { emoji: person.emoji, name: ctx.formatName(person.displayName), person };
-  const name = speaker && 'role' in speaker ? speaker.role : null;
-  return { emoji: ownEmojiOf(marker), name, person: undefined };
+  if (speaker && 'role' in speaker) return { emoji: roleEmojiOf(marker, speaker.role, ctx), name: speaker.role, person: undefined };
+  return { emoji: ownEmojiOf(marker), name: null, person: undefined };
 }
 
 /**
@@ -173,9 +185,10 @@ function preview(card, details, ctx) {
   const sources = publicSources(details.sources);
   const sourceId = card.sourceId;
   const followsOn = card.followsOn;
+  const media = resolveMedia(sources);
   return {
     kind: KIND, sourceId, url: ctx.urlFor(KIND, sourceId), lines: previewLines(details, ctx), people: ctx.chips(card.people),
-    accountHandle: card.account?.handle ?? null, hasVideo: hasVideo(resolveMedia(sources)),
+    accountHandle: card.account?.handle ?? null, hasVideo: hasVideo(media), thumb: thumbOf(media),
     followsOnFrom: followsOn ? { sourceId: followsOn.sourceId, url: ctx.urlFor(followsOn.kind, followsOn.sourceId) } : null,
   };
 }
@@ -194,7 +207,7 @@ function castEntryOf(marker, speaker, ctx) {
     const name = ctx.formatName(person.displayName);
     return [`p:${person.id}`, { kind: 'person', id: person.id, emoji: person.emoji, name, colour: person.colour, igHandle: person.igHandle }];
   }
-  if ('role' in speaker && speaker.role !== 'crowd') return [`m:${marker}`, { kind: 'role', role: speaker.role, emoji: ownEmojiOf(marker), name: speaker.role }];
+  if ('role' in speaker && speaker.role !== 'crowd') return [`m:${marker}`, { kind: 'role', role: speaker.role, emoji: roleEmojiOf(marker, speaker.role, ctx), name: speaker.role }];
   return null;
 }
 

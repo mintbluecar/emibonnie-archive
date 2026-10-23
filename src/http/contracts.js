@@ -37,12 +37,17 @@
  *
  * @typedef {{
  *   kind: string, sourceId: string, url: string, lines: BubbleVM[], people: PersonChip[],
- *   accountHandle: string|null, hasVideo: boolean, followsOnFrom: ItemLink|null,
+ *   accountHandle: string|null, hasVideo: boolean, followsOnFrom: ItemLink|null, thumb: ThumbVM|null,
  * }} KindPreview
  *   What a kind's `present.preview` returns: its opening lines (the first
  *   2 speech bubbles, or failing that the first 2 plain lines that aren't
  *   header). `hasVideo`: the item's media (MediaVM) is, or quotes, a clip
  *   that is still live. `followsOnFrom`: the visible item this one follows on from.
+ *   `thumb` (Task 10c): the card's small picture -- a clip's poster
+ *   (`video: true`, shown with a play glyph) or a photo post's first
+ *   picture, from the same media; null for text only or a clip with no
+ *   poster.
+ * @typedef {{ url: string, width: number, height: number, video: boolean }} ThumbVM
  * @typedef {KindPreview & { occurredOn: string, placement: import('../domain/constants.js').Placement }} Preview
  *   An item in a list: the kind's preview plus the shared fields every
  *   kind has (added by src/services/cards.js): the date it happened on

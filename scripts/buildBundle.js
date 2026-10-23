@@ -6,12 +6,63 @@
  * each `src/html/*.html` page template to `public/` with its asset
  * placeholders resolved from it.
  */
-import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync, copyFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import * as esbuild from 'esbuild';
 import { buildAppCss, buildFontsCss } from './buildAssets.js';
 
-/** @typedef {{ appCss: string, fontsCss: string, pages: Record<string, string> }} Manifest */
+/** @typedef {{ file: string, type: string }} Favicon */
+/** @typedef {{ appCss: string, fontsCss: string, pages: Record<string, string>, boot: string|null, favicon?: Favicon|null }} Manifest */
+
+const FAVICON_TYPES = /** @type {Record<string, string>} */ ({ '.png': 'image/png', '.svg': 'image/svg+xml' });
+
+/**
+ * The site's favicon (Task 10c, j) copied into `outDir` content-hashed
+ * (`favicon-<hash>.<ext>`), so it's served from `/build/` with the
+ * immutable cache like every other build file. `null` with no source.
+ * @param {string|null} src @param {string} outDir
+ * @returns {Favicon|null}
+ */
+function copyFavicon(src, outDir) {
+  if (!src) return null;
+  const ext = path.extname(src).toLowerCase();
+  const type = FAVICON_TYPES[ext];
+  if (!type) throw new Error(`build failed: the favicon must be a .png or .svg file, got ${path.basename(src)}`);
+  const hash = createHash('sha256').update(readFileSync(src)).digest('hex').slice(0, 10);
+  const file = `favicon-${hash}${ext}`;
+  copyFileSync(src, path.join(outDir, file));
+  return { file, type };
+}
+
+/**
+ * `{{asset:icons}}`: the favicon and apple-touch-icon links, or nothing
+ * for a site with neither a logo nor a favicon.
+ * @param {Manifest} manifest @returns {string}
+ */
+function iconLinks(manifest) {
+  if (!manifest.favicon) return '';
+  const href = `/build/${manifest.favicon.file}`;
+  return `<link rel="icon" type="${manifest.favicon.type}" href="${href}">\n<link rel="apple-touch-icon" href="${href}">`;
+}
+
+/**
+ * The blocking `<head>` script (`public/js/boot/theme.js`, Task 10c) as
+ * one classic (IIFE) hashed file, `boot-<hash>.js`; `null` when the
+ * source is missing.
+ * @param {string} repoRoot @param {string} outDir
+ * @returns {Promise<string|null>}
+ */
+async function bundleBoot(repoRoot, outDir) {
+  const entry = path.join(repoRoot, 'public/js/boot/theme.js');
+  if (!existsSync(entry)) return null;
+  const result = await esbuild.build({
+    entryPoints: { boot: entry }, bundle: true, format: 'iife', target: ['es2022'], minify: true,
+    outdir: outDir, entryNames: '[name]-[hash]', metafile: true, write: true, logLevel: 'silent',
+  });
+  const [output] = Object.keys(result.metafile.outputs);
+  return path.basename(output);
+}
 
 /**
  * One esbuild entry point per `public/js/pages/<page>.js` file, or `{}`
@@ -94,6 +145,11 @@ const ASSET_PLACEHOLDER = /\{\{asset:([a-zA-Z0-9_.:-]+)\}\}/g;
 function resolveAssetToken(token, manifest) {
   if (token === 'app.css') return `/build/${manifest.appCss}`;
   if (token === 'fonts.css') return `/build/${manifest.fontsCss}`;
+  if (token === 'icons') return iconLinks(manifest);
+  if (token === 'boot.js') {
+    if (!manifest.boot) throw new Error('build failed: {{asset:boot.js}} has no bundled boot script (no public/js/boot/theme.js?)');
+    return `/build/${manifest.boot}`;
+  }
   if (token.startsWith('js:')) {
     const page = token.slice('js:'.length);
     const fileName = manifest.pages[page];
@@ -131,10 +187,10 @@ function writeHtmlPages(htmlDir, publicDir, manifest) {
  * where `node_modules` (esbuild, @fontsource) actually lives; `repoRoot`
  * is where output goes (the same checkout in production, a temp dir in
  * tests).
- * @param {{ repoRoot: string, engineRoot: string, siteThemePath: string|null }} options
+ * @param {{ repoRoot: string, engineRoot: string, siteThemePath: string|null, faviconPath?: string|null }} options
  * @returns {Promise<Manifest>}
  */
-export async function runBundling({ repoRoot, engineRoot, siteThemePath }) {
+export async function runBundling({ repoRoot, engineRoot, siteThemePath, faviconPath = null }) {
   const outDir = path.join(repoRoot, 'public/build');
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
@@ -142,9 +198,10 @@ export async function runBundling({ repoRoot, engineRoot, siteThemePath }) {
   const appCss = buildAppCss(repoRoot, outDir, siteThemePath);
   const fontsCss = buildFontsCss(engineRoot, outDir);
   const pages = await bundlePages(repoRoot, outDir);
+  const boot = await bundleBoot(repoRoot, outDir);
 
   /** @type {Manifest} */
-  const manifest = { appCss, fontsCss, pages };
+  const manifest = { appCss, fontsCss, pages, boot, favicon: copyFavicon(faviconPath, outDir) };
   writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
   writeHtmlPages(path.join(repoRoot, 'src/html'), path.join(repoRoot, 'public'), manifest);

@@ -53,7 +53,7 @@ function headRow(data) {
 
 /** @param {number} selfId @param {import('../../../src/http/contracts.js').PersonChip[]} people @returns {import('../core/html.js').SafeHtml} */
 function pickerMarkup(selfId, people) {
-  const items = people.filter((p) => p.id !== selfId).map((p) => ({ label: `${p.emoji} ${p.name}`, colour: p.colour, value: p.id }));
+  const items = people.filter((p) => p.id !== selfId).map((p) => ({ emoji: p.emoji, label: p.name, colour: p.colour, value: p.id }));
   return html`
     <button type="button" class="c-hub__picker-close" aria-label="${t('person.closePicker')}">✕</button>
     <h2 class="c-hub__picker-title">${t('person.withTitle')}</h2>

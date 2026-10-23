@@ -8,6 +8,17 @@
 
 /** @type {Role[]} */
 export const ROLES = ['host', 'fan', 'speaker', 'crowd'];
+
+/**
+ * The emoji a generic role shows when the translator gave its speaker
+ * none (today: the bare ':' marker). A translator's own emoji always wins
+ * (two hosts stay 👦🏻 host and 👩🏻 host); crowd has none, since it shows as
+ * an inline note, not a speaker. Owner decision 2026-10-23 (the spec's
+ * "Generic roles"). A site may override any of them (`roleEmoji` in
+ * site.json).
+ * @type {Readonly<Partial<Record<Role, string>>>}
+ */
+export const ROLE_EMOJI = Object.freeze({ fan: '💬', host: '🎤', speaker: '🗣' });
 /** How a person is on an item (`item_person_roles`, migration 001). */
 export const ITEM_PERSON_ROLES = ['present', 'sharing', 'about', 'author'];
 

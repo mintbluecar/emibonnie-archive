@@ -36,7 +36,10 @@ test('bind: an invalid data-c is never applied', () => {
   assert.equal(chip.styleProps['--c'], undefined);
 });
 
-test('CSS: the cast chip is at least a 44px tap target', () => {
+test('CSS (Task 10c g): the cast chip is its content plus the chip padding tokens, no fixed height, emoji 0.3em from the name', () => {
   const css = readFileSync('src/styles/components/cast.css', 'utf8');
-  assert.match(css, /\.c-cast__chip\s*\{[^}]*min-height:\s*44px/);
+  const rule = /\.c-cast__chip\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+  assert.match(rule, /padding:\s*var\(--chip-pad-y\)\s+var\(--chip-pad-x\)/);
+  assert.match(rule, /gap:\s*0\.3em/);
+  assert.doesNotMatch(rule, /(^|[^-])(min-)?height:/);
 });

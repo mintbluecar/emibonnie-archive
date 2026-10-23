@@ -188,6 +188,17 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
       const built = readFileSync(path.join(repoRoot, 'public', page), 'utf8');
       assert.ok(!built.includes('{{asset:'), `${page}: every placeholder resolved`);
       assert.match(built, /\/build\/app-[A-Za-z0-9]+\.css/, page);
+      // Task 10c (f): the theme boot script, blocking (no async/defer/module), before the stylesheet.
+      const head = built.slice(0, built.indexOf('</head>'));
+      const boot = /<script src="(\/build\/boot-[A-Za-z0-9]+\.js)"><\/script>/.exec(head);
+      assert.ok(boot, `${page}: has the boot script in <head>`);
+      assert.ok(head.indexOf(boot[0]) < head.indexOf('rel="stylesheet"'), `${page}: boot script before the stylesheet`);
+      assert.ok(existsSync(path.join(repoRoot, 'public', boot[1])), `${page}: ${boot[1]} was built`);
+      // Task 10c (j): both icon links, to the logo copied content-hashed into /build/.
+      const icon = /<link rel="icon" type="image\/svg\+xml" href="(\/build\/favicon-[0-9a-f]+\.svg)">/.exec(head);
+      assert.ok(icon, `${page}: has <link rel="icon">`);
+      assert.ok(head.includes(`<link rel="apple-touch-icon" href="${icon[1]}">`), `${page}: has <link rel="apple-touch-icon">`);
+      assert.equal(readFileSync(path.join(repoRoot, 'public', icon[1]), 'utf8'), readFileSync('examples/solluna/logo.svg', 'utf8'), `${page}: the icon is the logo`);
     }
 
     const vercelJson = JSON.parse(readFileSync(path.join(repoRoot, 'vercel.json'), 'utf8'));
@@ -248,6 +259,25 @@ test('runBuild guard: no vercel.json rewrite source has a named param, and every
       assert.doesNotMatch(destination, /[:?]/, `${source} -> ${destination}: no params or query in a destination`);
     }
     assert.deepEqual(rewrites[0], { source: '/api/(.*)', destination: '/api' });
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test('runBuild (Task 10c j): a site.json favicon (a PNG in the site folder) replaces the logo as every page\'s icon; a missing file fails the build', async () => {
+  const { repoRoot, siteDir } = makeBuildRepoRoot();
+  try {
+    cpSync('e2e/fixtures/tiny.png', path.join(siteDir, 'icons/fav.png'), { recursive: true });
+    const site = JSON.parse(readFileSync(path.join(siteDir, 'site.json'), 'utf8'));
+    writeFileSync(path.join(siteDir, 'site.json'), JSON.stringify({ ...site, favicon: 'icons/fav.png' }));
+    await runBuild({ repoRoot, siteDir });
+    const built = readFileSync(path.join(repoRoot, 'public/about.html'), 'utf8');
+    const icon = /<link rel="icon" type="image\/png" href="(\/build\/favicon-[0-9a-f]+\.png)">/.exec(built);
+    assert.ok(icon, built.slice(0, 600));
+    assert.ok(built.includes(`<link rel="apple-touch-icon" href="${icon[1]}">`));
+    assert.deepEqual(readFileSync(path.join(repoRoot, 'public', icon[1])), readFileSync('e2e/fixtures/tiny.png'));
+    writeFileSync(path.join(siteDir, 'site.json'), JSON.stringify({ ...site, favicon: 'nope.png' }));
+    await assert.rejects(runBuild({ repoRoot, siteDir }), /favicon nope\.png is not in/);
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }

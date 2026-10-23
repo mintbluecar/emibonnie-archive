@@ -112,7 +112,7 @@ test('composeItem (Task 10b): with embedSources on, X\'s embed blockquote replac
       original: 'hi <b>there</b>',
       credits: { account: { handle: 'tl_alpha', displayName: 'TL <alpha>' }, clipBy: null, occurredOn: '2026-10-19' },
     })));
-    assert.match(markup, /<blockquote class="twitter-tweet c-embed" data-dnt="true">/);
+    assert.match(markup, /<blockquote class="twitter-tweet c-embed" data-dnt="true" data-cards="hidden" data-conversation="none" data-width="350">/);
     assert.match(markup, /hi &lt;b&gt;there&lt;\/b&gt;/);
     assert.match(markup, /&mdash; TL &lt;alpha&gt; \(@tl_alpha\)/);
     assert.match(markup, /<a class="c-embed__link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">/);
@@ -300,4 +300,11 @@ test('start: a non-404 failure renders the generic page.loadFailed fallback, nev
     delete (/** @type {any} */ (globalThis)).document;
     delete (/** @type {any} */ (globalThis)).window;
   }
+});
+
+test('composeItem (Task 10c r): the item page has no search row or box at any width; the bar\'s search icon goes home', () => {
+  const markup = String(composeItem(itemVm()));
+  assert.ok(!markup.includes('c-header__search'), 'no search row');
+  assert.ok(!markup.includes('c-header__below'), 'nothing under the bar');
+  assert.match(markup, /<a class="c-header__find" href="\/"/);
 });

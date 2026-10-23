@@ -334,12 +334,33 @@ test('search.matchLines (Task 9b): a long matching line is trimmed to a window a
   assert.ok([...line].length < 130, `${[...line].length}`);
 });
 
-test('fix round 2: a bare ":" mapped to role fan is a neutral bubble named "fan", with no emoji of its own (no translator emoji exists)', () => {
+test('Task 10c (a): a bare ":" mapped to role fan is a neutral bubble named "fan" with the role\'s default 💬 (the translator gave no emoji)', () => {
   const details = { body: ': hello there, I have news\n💜: really?', speakers: { ':': { role: 'fan' } }, sources: [] };
   const card = { sourceId: 'x', followsOn: null, people: [], account: null };
   const preview = /** @type {any} */ (translation.present.preview(card, details, fakePreviewCtx()));
-  assert.deepEqual(preview.lines[0], { kind: 'speech', emoji: '', name: 'fan', text: 'hello there, I have news', cont: false });
+  assert.deepEqual(preview.lines[0], { kind: 'speech', emoji: '💬', name: 'fan', text: 'hello there, I have news', cont: false });
   assert.ok(!('colour' in preview.lines[0]), 'neutral: no person colour');
+});
+
+test('Task 10c (a): role defaults are 💬 fan, 🎤 host, 🗣 speaker, only for a bare ":"; a translator emoji wins; crowd stays a note; the cast and joint parts agree', () => {
+  const ctx = fakePreviewCtx();
+  for (const [role, emoji] of [['fan', '💬'], ['host', '🎤'], ['speaker', '🗣']]) {
+    const view = /** @type {any} */ (translation.present.detail(/** @type {any} */ ({ account: null }), { body: ': hi', speakers: { ':': { role } }, sources: [] }, ctx));
+    assert.equal(view.bubbles[0].emoji, emoji, role);
+    assert.deepEqual(view.cast, [{ kind: 'role', role, emoji, name: role }]);
+  }
+  const own = /** @type {any} */ (translation.present.detail(/** @type {any} */ ({ account: null }), { body: '👩🏻: hi\n:: joint', speakers: { '👩🏻': { role: 'host' } }, sources: [] }, ctx));
+  assert.equal(own.bubbles[0].emoji, '👩🏻', 'the translator\'s own emoji wins');
+  const crowd = /** @type {any} */ (translation.present.detail(/** @type {any} */ ({ account: null }), { body: ': wooo', speakers: { ':': { role: 'crowd' } }, sources: [] }, ctx));
+  assert.deepEqual(crowd.bubbles[0], { kind: 'crowd', text: 'wooo' });
+  assert.deepEqual(crowd.cast, []);
+});
+
+test('Task 10c (a): ctx.roleEmoji (the site\'s roleEmoji over ROLE_EMOJI) overrides a default', () => {
+  const ctx = { ...fakePreviewCtx(), roleEmoji: { fan: '💬', host: '🎙️', speaker: '🗣' } };
+  const view = /** @type {any} */ (translation.present.detail(/** @type {any} */ ({ account: null }), { body: ': hi', speakers: { ':': { role: 'host' } }, sources: [] }, ctx));
+  assert.equal(view.bubbles[0].emoji, '🎙️');
+  assert.equal(view.cast[0].emoji, '🎙️');
 });
 
 test('fix round 2: an unmapped ":" shows no emoji and no name (the client says "unknown speaker"); mapped to a person, it is that person', () => {
@@ -353,8 +374,25 @@ test('fix round 2: an unmapped ":" shows no emoji and no name (the client says "
   assert.equal(person.lines[0].name, 'sol');
 });
 
-test('fix round 2: search shows a mapped bare ":" line as "fan: …", an unmapped one as written', () => {
+test('Task 10c (a): search shows a mapped bare ":" line with its role\'s default emoji ("💬 …"), an unmapped one as written', () => {
   const ctx = /** @type {any} */ ({ people: new Map(), formatName: (/** @type {string} */ n) => n.toLowerCase() });
-  assert.deepEqual(translation.search.matchLines({ body: ': luna, I have news\n🐶: what news?', speakers: { ':': { role: 'fan' } } }, 'news', ctx), ['fan: luna, I have news', '🐶 what news?']);
+  assert.deepEqual(translation.search.matchLines({ body: ': luna, I have news\n🐶: what news?', speakers: { ':': { role: 'fan' } } }, 'news', ctx), ['💬 luna, I have news', '🐶 what news?']);
   assert.deepEqual(translation.search.matchLines({ body: ': luna, I have news', speakers: {} }, 'news', ctx), [': luna, I have news']);
+});
+
+test('Task 10c (c): the preview thumbnail is the clip poster (video), else the first picture, else a quote\'s own; none for text only or a posterless clip', async () => {
+  const { thumbOf } = await import('../../../src/kinds/translation/media.js');
+  const video = { type: 'video', variants: [{ bitrate: 1, url: 'https://video.twimg.com/a.mp4' }], width: 720, height: 1280, poster: 'https://pbs.twimg.com/p.jpg' };
+  const images = { type: 'images', images: [{ url: 'https://pbs.twimg.com/1.jpg', width: 4, height: 3 }, { url: 'https://pbs.twimg.com/2.jpg', width: 1, height: 1 }] };
+  assert.deepEqual(thumbOf(/** @type {any} */ (video)), { url: 'https://pbs.twimg.com/p.jpg', width: 720, height: 1280, video: true });
+  assert.deepEqual(thumbOf(/** @type {any} */ (images)), { url: 'https://pbs.twimg.com/1.jpg', width: 4, height: 3, video: false });
+  assert.deepEqual(thumbOf(/** @type {any} */ ({ type: 'quote', inner: images })), { url: 'https://pbs.twimg.com/1.jpg', width: 4, height: 3, video: false });
+  assert.equal(thumbOf(/** @type {any} */ ({ ...video, poster: null })), null);
+  assert.equal(thumbOf(/** @type {any} */ ({ type: 'quote', inner: null })), null);
+  assert.equal(thumbOf(null), null);
+  // Review M3: only https on pbs.twimg.com, like the video player's poster.
+  for (const url of ['http://pbs.twimg.com/p.jpg', 'https://evil.example/p.jpg', 'https://pbs.twimg.com.evil.example/p.jpg', 'javascript:alert(1)']) {
+    assert.equal(thumbOf(/** @type {any} */ ({ ...video, poster: url })), null, url);
+    assert.equal(thumbOf(/** @type {any} */ ({ type: 'images', images: [{ url, width: 1, height: 1 }] })), null, url);
+  }
 });

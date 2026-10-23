@@ -16,6 +16,7 @@
 }
 
 .c-result-card__line {
+  overflow-wrap: anywhere;
   font-size: var(--text-13);
   line-height: 1.45;
 }
@@ -31,4 +32,15 @@
   font-size: var(--text-10-5);
   color: var(--color-ink-muted);
   margin-top: 5px;
+}
+
+/* Task 10c: with a thumbnail (thumb.js), text left, picture right. */
+.c-result-card--thumb {
+  display: flex;
+  gap: 10px;
+}
+
+.c-result-card__body {
+  flex: 1;
+  min-width: 0;
 }

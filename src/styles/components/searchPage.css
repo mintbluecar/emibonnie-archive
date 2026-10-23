@@ -2,6 +2,9 @@
  * public/js/pages/search.js: active-filter chips, the results list, the
  * "more" button, and the blank empty state's recent searches + quick
  * chips (task-5-brief.md).
+ *
+ * Task 10c: the min-heights here are kept only until the in-place search
+ * replaces this page (next task); its chips weren't slimmed like chips.css.
  */
 
 .c-search__active-filters {

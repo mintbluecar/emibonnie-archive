@@ -41,11 +41,11 @@ function detailVm(overrides = {}) {
 
 test('translation detail: renders credits, cast, bubbles, and a native <details> "show original"', () => {
   const markup = String(detail.render(detailVm()));
-  assert.match(markup, /tl <b>@tl_alpha<\/b>/);
+  assert.match(markup, /aria-label="translator" title="translator"><svg[^>]*>.*?<\/svg><\/span> <b>@tl_alpha<\/b>/);
   assert.match(markup, /c-cast__chip/);
   assert.match(markup, /c-bubbles__bub/);
   assert.match(markup, /<details class="k-translation-detail__original">/);
-  assert.match(markup, /<summary class="k-translation-detail__original-toggle">show original<\/summary>/);
+  assert.match(markup, /<summary class="k-translation-detail__original-toggle">show original text<\/summary>/);
   assert.match(markup, /first paragraph/);
 });
 

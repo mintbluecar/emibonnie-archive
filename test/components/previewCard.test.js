@@ -12,7 +12,7 @@ function baseResult(overrides = {}) {
     kind: 'translation', sourceId: '1', url: '/t/1',
     lines: [{ kind: 'speech', emoji: '🦁', name: 'host', colour: '#b5651d', text: 'hi', cont: false }],
     people: [{ id: 1, name: 'sol', emoji: '🧡', colour: '#ff8a3d', igHandle: null }],
-    accountHandle: 'tl_alpha', hasVideo: true, followsOnFrom: null,
+    accountHandle: 'tl_alpha', hasVideo: true, followsOnFrom: null, thumb: null,
     occurredOn: '2026-10-14', placement: 'post',
     ...overrides,
   };
@@ -22,13 +22,14 @@ test('previewCard: renders the opening lines via bubbles, and a meta row with th
   const markup = String(render({ result: baseResult() }));
   assert.match(markup, /href="\/t\/1"/);
   assert.match(markup, /c-bubbles__bub/, 'embeds the bubbles component output');
-  assert.match(markup, /tl @tl_alpha/);
+  assert.match(markup, /<span class="c-icon c-icon--translator" role="img" aria-label="translator" title="translator"><svg[^>]*aria-hidden="true">.*?<\/svg><\/span> @tl_alpha/);
+  assert.ok(!/\btl @/.test(markup), 'the icon replaces the word "tl" (Task 10c e)');
   assert.match(markup, /aria-label="video"/);
 });
 
 test('previewCard: no accountHandle, no video, means no meta for them; follows-on shows as plain text, not a link', () => {
   const markup = String(render({ result: baseResult({ accountHandle: null, hasVideo: false, followsOnFrom: { sourceId: '0', url: '/t/0' } }) }));
-  assert.ok(!markup.includes('tl @'));
+  assert.ok(!markup.includes('c-icon--translator'));
   assert.ok(!markup.includes('aria-label="video"'));
   assert.ok(!markup.includes('/t/0'), 'followsOnFrom.url is never rendered -- it is plain text, not a link');
   assert.match(markup, /follows on from ↑/);
@@ -52,7 +53,22 @@ test('previewCard (Task 9b): compact shows the opening lines as one clamped run 
   assert.match(markup, /class="c-preview-card c-preview-card--compact"/);
   assert.match(markup, /c-bubbles-compact/);
   assert.ok(!markup.includes('c-bubbles__bub'));
-  assert.match(markup, /tl @tl_alpha/);
+  assert.match(markup, /c-icon--translator.*? @tl_alpha/);
   assert.equal((markup.match(/<a[\s>]/g) ?? []).length, 1);
   assert.ok(!String(render({ result: baseResult() })).includes('c-preview-card--compact'), 'full bubbles by default');
+});
+
+test('previewCard (Task 10c): a clip poster thumbnail with a ▶ replaces the 🎬; a photo has no ▶; lazy, async, sized, alt from copy; text only has none', () => {
+  const poster = { url: 'https://pbs.twimg.com/amplify_video_thumb/1/img/a.jpg', width: 1080, height: 1920, video: true };
+  const clip = String(render({ result: baseResult({ thumb: poster }), compact: true }));
+  assert.match(clip, /class="c-preview-card c-preview-card--compact c-preview-card--thumb"/);
+  assert.match(clip, /<img class="c-thumb__img" src="https:\/\/pbs\.twimg\.com\/amplify_video_thumb\/1\/img\/a\.jpg" alt="clip still" width="1080" height="1920" loading="lazy" decoding="async">/);
+  assert.match(clip, /c-thumb__play" aria-hidden="true">▶/);
+  assert.ok(!clip.includes('🎬'), 'the ▶ thumbnail stands in for the video marker');
+  const photo = String(render({ result: baseResult({ hasVideo: false, thumb: { ...poster, video: false } }) }));
+  assert.match(photo, /alt="photo"/);
+  assert.ok(!photo.includes('c-thumb__play'));
+  assert.ok(String(render({ result: baseResult({ thumb: null }) })).includes('🎬'), 'a clip with no poster keeps 🎬');
+  assert.ok(!String(render({ result: baseResult({ hasVideo: false }) })).includes('c-thumb'));
+  assert.equal((clip.match(/<a[\s>]/g) ?? []).length, 1);
 });

@@ -77,3 +77,9 @@ test('header (Task 10b fix O1): desktopSearch marks the search row that stays on
   assert.ok(markup.indexOf('c-header__search"') > markup.indexOf('</header>'), 'in the page body, not the bar');
   assert.ok(!String(render()).includes('c-header__below--desktop'));
 });
+
+test('header (Task 10c r): noSearch drops the search row and points the bar\'s search icon home; by default it goes to /search', () => {
+  assert.ok(!String(render({ compact: true, noSearch: true })).includes('c-header__search'));
+  assert.match(String(render({ compact: true, noSearch: true })), /class="c-header__find" href="\/"/);
+  assert.match(String(render()), /class="c-header__find" href="\/search"/);
+});

@@ -202,3 +202,29 @@ export function draftTranslation(tweet, ctx) {
   const missing = missingMarkers(markers, speakers);
   return { common, missing, suggestions: match.suggestions, tweet, text, header, speakers, markers, memory, sharedStory, newTags: match.newTags };
 }
+
+/**
+ * The item people that `speakers` alone contributes for an archived item,
+ * derived exactly as `draftTranslation` derives them (`itemPeopleOf`,
+ * with the person tags of the first part's header): `present` for an
+ * event or unsorted item, `about` (and the tagged sharer) for a shared
+ * story, and nothing for a post (its people are its authors). The remap
+ * command (src/kinds/translation/remap.js) diffs this for the old and new
+ * map, so people that came from anywhere else stay. Pure.
+ * @param {{ parts: string[], placement: import('../../domain/constants.js').Placement }} item
+ * @param {SpeakerMap} speakers
+ * @param {DraftContext} ctx
+ * @returns {ItemPerson[]}
+ */
+export function speakerPeopleOf({ parts, placement }, speakers, ctx) {
+  if (placement === 'post') return [];
+  const [first = '', ...rest] = parts;
+  const tweet = /** @type {Tweet} */ (/** @type {unknown} */ ({ text: first, createdAt: null, followUps: rest.map((text) => ({ text })) }));
+  const { header, markers } = readText(tweet, { ...ctx, overrides: {} });
+  const tagIds = peopleForTags(header.personTags, ctx.people).map((p) => p.id);
+  const speakerIds = personIdsFrom(speakers, markers);
+  const story = placement === 'shared_story' ? sharedStoryOf(tagIds, speakerIds, []) : null;
+  const placing = { placement, eventId: null, proposal: null, authorIds: [] };
+  return itemPeopleOf(placing, story, [...new Set([...speakerIds, ...tagIds])]);
+}
+

@@ -30,7 +30,7 @@ function peopleSection(people, state) {
     { label: t('search.anyOf'), value: 'any', active: state.peopleMode === 'any' },
     { label: t('search.allOf'), value: 'all', active: state.peopleMode === 'all' },
   ];
-  const peopleItems = people.map((p) => ({ label: `${p.emoji} ${p.name}`, colour: p.colour, value: p.id, active: state.people.includes(p.id) }));
+  const peopleItems = people.map((p) => ({ emoji: p.emoji, label: p.name, colour: p.colour, value: p.id, active: state.people.includes(p.id) }));
   return html`
     <fieldset class="c-filter-sheet__section">
       <legend>${t('search.whoLabel')}</legend>

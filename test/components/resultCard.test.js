@@ -10,7 +10,7 @@ const { render } = await import('../../public/js/components/resultCard.js');
 /** @returns {SearchResult} */
 function baseResult(matchLines) {
   return {
-    kind: 'translation', sourceId: '1', url: '/t/1', lines: [], people: [], accountHandle: null, hasVideo: false,
+    kind: 'translation', sourceId: '1', url: '/t/1', lines: [], people: [], accountHandle: null, hasVideo: false, thumb: null,
     followsOnFrom: null, occurredOn: '2026-10-14', placement: 'post', event: null, matchLines,
   };
 }
@@ -64,4 +64,17 @@ test('resultCard (Task 9b): with q, only the matching lines show -- not the open
   const markup = String(render({ result: /** @type {SearchResult} */ (result), q: 'hug' }));
   assert.match(markup, /<mark>hug<\/mark>/);
   assert.ok(!markup.includes('an opening line'));
+});
+
+test('resultCard (Task 10c): a thumbnail sits beside the text, the card still one link', () => {
+  const result = { ...baseResult(['a line']), thumb: { url: 'https://pbs.twimg.com/media/b.jpg', width: 800, height: 600, video: false } };
+  const markup = String(render({ result, q: '' }));
+  assert.match(markup, /class="c-result-card c-result-card--thumb"/);
+  assert.match(markup, /<img class="c-thumb__img" src="https:\/\/pbs\.twimg\.com\/media\/b\.jpg" alt="photo" width="800" height="600" loading="lazy" decoding="async">/);
+  assert.equal((markup.match(/<a[\s>]/g) ?? []).length, 1);
+});
+
+test('resultCard (Task 10c e): the translator handle follows the translate icon, named "translator", not the word "tl"', () => {
+  const markup = String(render({ result: { ...baseResult(['x']), accountHandle: 'tl_beta' }, q: '' }));
+  assert.match(markup, /role="img" aria-label="translator" title="translator"><svg[^>]*>.*?<\/svg><\/span> @tl_beta/);
 });
