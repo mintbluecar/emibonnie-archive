@@ -251,6 +251,14 @@ In order:
    the real release. `task deploy:dry` / `task deploy:dry-prod` run the
    same thing in `--dry-run`, with no network call and nothing executed
    for real, if you just want to see the step order.
+6. **Quick deploys while iterating:** `task deploy:quick` (preview) and
+   `task deploy:quick-prod` skip the heavy checks: `npm ci` when
+   `node_modules` already exists, `npm run check`, `npm test` and
+   `e2e:site`. They still build, run the name-leak guard, migrate and check
+   the app role. Try a change with `deploy:quick` on a preview, then ship
+   the release with the full `task deploy:prod`. Every deploy, quick or
+   full, stops before building if the repo's files change while it runs —
+   don't edit, pull or merge in this repo during a deploy.
 
 ## 3. Verification checklist
 

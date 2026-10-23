@@ -141,12 +141,18 @@ set -euo pipefail
 
 PROD=0
 DRY_RUN=0
+# --quick (owner, 2026-10-23): for fast iteration, skip the heavy checks
+# (npm ci when node_modules exists, npm run check, npm test, e2e:site).
+# Still runs: build, the name-leak guard, doctor, migrate, the
+# least-privilege check, and the tree-unchanged guard.
+QUICK=0
 for arg in "$@"; do
   case "$arg" in
     --prod) PROD=1 ;;
     --dry-run) DRY_RUN=1 ;;
+    --quick) QUICK=1 ;;
     *)
-      echo "deploy.sh: unknown argument '$arg' (expected --prod and/or --dry-run)" >&2
+      echo "deploy.sh: unknown argument '$arg' (expected --prod, --quick and/or --dry-run)" >&2
       exit 1
       ;;
   esac
@@ -291,12 +297,36 @@ if [ "$PROD" -eq 1 ]; then
   fi
 fi
 
-step 1 "npm ci" npm ci
+# The tracked files must not change while this runs: a build made from a
+# half-changed tree once shipped a broken production deploy (2026-10-23).
+# Generated files are gitignored, so the build itself doesn't count.
+tree_fingerprint() {
+  # Outside a git checkout (the offline tests run a copy) there is nothing to compare.
+  git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo no-git; return 0; }
+  { git -C "$REPO_ROOT" rev-parse HEAD; git -C "$REPO_ROOT" status --porcelain; git -C "$REPO_ROOT" diff HEAD; } | shasum | cut -d' ' -f1
+}
+TREE_AT_START="$(tree_fingerprint)"
+
+# Skips a heavy check under --quick, saying so.
+heavy() {
+  local n="$1" label="$2"
+  if [ "$QUICK" -eq 1 ]; then
+    log "step $n: skipped (--quick): $label"
+    return 0
+  fi
+  step "$@"
+}
+
+if [ "$QUICK" -eq 1 ] && [ -d "$REPO_ROOT/node_modules" ]; then
+  log "step 1: skipped (--quick, node_modules present): npm ci"
+else
+  step 1 "npm ci" npm ci
+fi
 step 2 "npm run build" npm run build
-step 3 "npm run check" npm run check
-step 4 "npm test" npm test
+heavy 3 "npm run check" npm run check
+heavy 4 "npm test" npm test
 step 5 "node --test site/test/ (name-leak guard)" node --test site/test/
-step 6 "npm run e2e:site" npm run e2e:site
+heavy 6 "npm run e2e:site" npm run e2e:site
 
 if [ "$DRY_RUN" -eq 1 ]; then
   log "step 7: would run: DATABASE_URL=<redacted> npm run doctor"
@@ -328,6 +358,7 @@ else
 fi
 
 if [ "$DRY_RUN" -eq 1 ]; then
+  log "would check the repo's files are unchanged since the start, before building"
   log "step 10: would run: vercel pull --yes --environment=$TARGET"
   if [ "$PROD" -eq 1 ]; then
     log "step 10: would run: vercel build --prod"
@@ -338,6 +369,10 @@ if [ "$DRY_RUN" -eq 1 ]; then
   fi
   log "step 11: would print the deployment URL"
 else
+  if [ "$(tree_fingerprint)" != "$TREE_AT_START" ]; then
+    echo "deploy.sh: the repo's files changed while this deploy was running -- stopping before building, so a half-changed copy can't ship. Nothing was deployed; re-run when no one is editing the repo." >&2
+    exit 1
+  fi
   log "step 10: running: vercel pull --yes --environment=$TARGET"
   vercel pull --yes --environment="$TARGET"
   if [ "$PROD" -eq 1 ]; then

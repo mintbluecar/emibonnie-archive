@@ -260,3 +260,21 @@ test('--prod asks before any step: a typo asks again, and "no" stops with nothin
   assert.doesNotMatch(output, /step 1: running/);
   assert.doesNotMatch(output, /prod-secret-token/);
 });
+
+test('--quick skips the heavy checks but keeps the build, guard, migrate and role check', () => {
+  const { status, output } = runDryRun(['--quick'], { EMIBONNIE_DB_PREVIEW: PREVIEW_URL });
+  assert.equal(status, 0);
+  for (const skipped of ['npm run check', 'npm test', 'npm run e2e:site']) {
+    assert.match(output, new RegExp(`skipped \\(--quick\\): ${skipped.replace(/[.:]/g, '\\$&')}`));
+  }
+  for (const kept of ['would run: npm run build', 'name-leak guard', 'npm run migrate', 'check-app-role.sh', 'unchanged since the start']) {
+    assert.ok(output.includes(kept), `expected '${kept}' in:\n${output}`);
+  }
+  assert.doesNotMatch(output, /preview-secret-token/);
+});
+
+test('without --quick no check is skipped', () => {
+  const { output } = runDryRun([], { EMIBONNIE_DB_PREVIEW: PREVIEW_URL });
+  assert.doesNotMatch(output, /skipped \(--quick\)/);
+  assert.match(output, /unchanged since the start/);
+});

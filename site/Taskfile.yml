@@ -181,17 +181,41 @@ tasks:
       - site/scripts/deploy.sh
 
   deploy:prod:
-    desc: "Deploy to production (the first deploy, or a release)"
+    desc: "Deploy to production with the full checks (a release)"
     summary: |
-      Runs site/scripts/deploy.sh --prod. Asks for confirmation here, on top
-      of deploy.sh's own 'yes' confirmation, which it asks before any check
-      runs (a typo just asks again). See site/docs/deploy.md, section 2.
-    prompt: "This deploys to PRODUCTION and migrates the production database. Continue?"
+      Runs site/scripts/deploy.sh --prod. deploy.sh asks for 'yes' once,
+      before any check runs (a typo just asks again). See
+      site/docs/deploy.md, section 2.
     preconditions:
       - sh: 'test -n "$EMIBONNIE_DB"'
         msg: "EMIBONNIE_DB is not set -- export the main branch's owner-role connection string first."
     cmds:
       - site/scripts/deploy.sh --prod
+
+  deploy:quick:
+    desc: "Fast preview deploy: skips the heavy checks, for iterating"
+    summary: |
+      Runs site/scripts/deploy.sh --quick against the preview branch. Skips
+      npm ci (when node_modules exists), npm run check, npm test and
+      e2e:site. Still builds, runs the name-leak guard, migrates, checks the
+      app role, and stops if the repo's files change mid-run.
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB_PREVIEW"'
+        msg: "EMIBONNIE_DB_PREVIEW is not set -- export the preview branch's owner-role connection string first."
+    cmds:
+      - site/scripts/deploy.sh --quick
+
+  deploy:quick-prod:
+    desc: "Fast production deploy: skips the heavy checks (use with care)"
+    summary: |
+      Runs site/scripts/deploy.sh --prod --quick. Same skips as deploy:quick,
+      against production. Use it for small fixes you've already seen working
+      on a preview; use deploy:prod for releases.
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB"'
+        msg: "EMIBONNIE_DB is not set -- export the main branch's owner-role connection string first."
+    cmds:
+      - site/scripts/deploy.sh --prod --quick
 
   deploy:dry:
     desc: "Dry run of the preview deploy (no network, no real commands)"
