@@ -10,7 +10,7 @@ import { checkPage, gotoReady, stubSyntheticMedia, DARK_PROJECTS } from './helpe
 
 const LONG = '1900000000000000001';
 const LIVE = '1900000000000000004';
-const PAGES = [['home', '/'], ['event', '/e/solluna-at-starfest-2026-10-18'], ['item', `/t/${LONG}`], ['search', `/search?q=${encodeURIComponent('ครบ')}`], ['person', '/p/solsunny']];
+const PAGES = [['home', '/'], ['event', '/e/solluna-at-starfest-2026-10-18'], ['item', `/t/${LONG}`], ['home, searching', `/?q=${encodeURIComponent('ครบ')}`], ['person', '/p/solsunny']];
 
 /** Forces `choice` the way the switch remembers it, before any page script. @param {import('@playwright/test').Page} page @param {string} choice */
 async function forceTheme(page, choice) {
