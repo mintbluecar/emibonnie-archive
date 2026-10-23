@@ -117,3 +117,14 @@
 .c-embed-box--open .c-embed-box__more svg {
   transform: rotate(180deg);
 }
+
+/*
+ * X's rendered post lives in its own iframe, so its type can't be styled
+ * and X's embed parameters have no size option. `zoom` shrinks the whole
+ * rendered post, layout box included (unlike `transform`), so X's
+ * auto-height and the crop above still measure true. The fallback
+ * blockquote is ours and keeps the site's own sizes.
+ */
+.c-embed-box__clip .twitter-tweet-rendered {
+  zoom: var(--embed-zoom);
+}

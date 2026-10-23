@@ -76,6 +76,8 @@
      cropped at this height, with a fade and a "show full tweet" switch. */
   --embed-width: min(100%, 550px);
   --embed-max-height: 320px;
+  /* X draws its post at its own, larger type; scaled to sit with ours. */
+  --embed-zoom: 0.82;
   /* A card's thumbnail height (Task 10c, thumb.css); its width follows
      the picture, between half and one and a half times this. */
   --thumb-size: 56px;
