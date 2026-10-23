@@ -99,7 +99,7 @@
  *   out). `category`: its type's name. `addedBy`: null for the engine's
  *   own writes (seeds, imports run as `system`).
  *
- * @typedef {{ slug: string, name: string, occurredOn: string, hashtag: string|null, counts: Record<string, number> }} HomeEvent
+ * @typedef {{ slug: string, name: string, occurredOn: string, hashtag: string|null, counts: Record<string, number>, thumb: ThumbVM|null }} HomeEvent
  *   `counts`: visible items per kind (kinds with none are left out).
  * @typedef {{ months: { month: string, events: HomeEvent[] }[] }} HomeView
  *   Visible events, newest first; `month` is `YYYY-MM`.
