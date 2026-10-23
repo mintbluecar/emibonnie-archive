@@ -6,7 +6,7 @@ This repository is the **template/engine**. It contains no fandom-specific conte
 
 ## Status
 
-v0.1.1: a read-only archive (browse, search, item pages) with command-line intake. See `CHANGELOG.md`, `docs/architecture.md` for the layered architecture and code rules, and `docs/decisions/` for the reasoning behind the major choices.
+v0.1.2: a read-only archive (browse, search, item pages) with command-line intake. See `CHANGELOG.md`, `docs/architecture.md` for the layered architecture and code rules, and `docs/decisions/` for the reasoning behind the major choices.
 
 ## Getting started
 

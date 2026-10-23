@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented here. Versions are semver tags (`vX.Y.Z`). Each release lists its **upgrade steps**; to take one, see `docs/start-your-own.md`, step 10.
 
+## 0.1.2
+
+A pinned header, an optional X embed of each translation's original post, working footer links, and dates without clock times.
+
+**Upgrade steps:**
+
+1. `git fetch upstream --tags && git merge v0.1.2`.
+2. `npm run build`.
+3. Redeploy. **Git-integration path:** commit the rebuilt `vercel.json` first.
+4. **To use the embed:** set `"embedSources": true` in `site/site.json`, review the privacy notice it adds (`privacy.embedNotice` and `privacy.embedPolicyLinkLabel`, overridable in `site/copy.json`), then build (step 2) and redeploy. It's off by default.
+5. If `site/copy.json` overrides `item.editableUntil`, `item.originalMedia` or `item.quotedTweet`, remove those lines: the keys are gone, and the build refuses unknown keys.
+
+No migrations.
+
+- **Pinned header.** On desktop the whole one-line header stays at the top while scrolling, on every page. On a phone a slim bar stays (logo, wordmark and a search icon that goes to `/search`), while the tagline and search box scroll away; the bottom tab bar is unchanged. The bar's height is the `--sticky-top` token, which the item page's pinned clip uses for its own `top` (so it sits just below the bar), and `html`'s `scroll-padding-top` keeps keyboard focus out from under it. Nothing animates. The search row is now its own `search` landmark after the `<header>`.
+- **`embedSources` (site setting, default `false`).** When on, a translation page shows its original post as X's official embed in place of the footer's link: a `<blockquote class="twitter-tweet" data-dnt="true">` holding the archived text, author and the post's `https://x.com/<handle>/status/<id>` link, which X's `widgets.js` (added only on pages with an embed, once) replaces with the post. If X doesn't load, the blockquote stays as the fallback. A post already marked deleted or unavailable gets no embed: the archived text with the "no longer available" note. Dark mode sets `data-theme="dark"`. The build's CSP then adds only `script-src https://platform.twitter.com` and `frame-src https://platform.twitter.com`, and the page sets X's `twitter:widgets:csp` switch so widgets.js doesn't probe for inline styles. Off, the CSP is unchanged. The privacy page shows a notice about X's embed, linking X's privacy policy, only when the setting is on.
+- **One "original tweet" link.** With `embedSources` off, the footer's "original media" and "quoted tweet" links are gone (the pinned media area shows those); "copy link" and "report" stay.
+- **Item pages no longer show the viewer's local time or the post time; only the date.** A time will only be shown where an event happened, in that place's local time, once the engine stores that. The check-for-update button no longer says "editable until" a time. `timePair()` and `cityOf()` are removed from `public/js/core/format.js`.
+- **Footer links work.** The footer linked `/about/`, `/privacy/` and `/takedown/`, the item page's report link `/takedown/`, and the tab bar `/add/` and `/me/`. No route has the trailing slash, so `/privacy/` answered 404. Every page path now comes from `public/js/core/routes.js`, pinned to `src/pages.js`, and a test fails on any hand-typed link path in `public/js` that doesn't resolve. The event page's report link (a `/soon` placeholder) now goes to `/takedown`, like the item page's.
+- **"Show original" keeps line breaks.** The original text is one element with `white-space: pre-wrap`, so the stored line breaks and blank lines (including between a thread's parts) show as written, and a long URL wraps.
+
 ## 0.1.1
 
 Fixes how the engine is wired into Vercel. On the first production deploy every `/api/*` call answered 400 `unknown query parameter: ...route`, and shared `/t/<id>` and `/e/<slug>` links showed Vercel's own 404 `NOT_FOUND`.
