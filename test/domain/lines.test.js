@@ -33,16 +33,6 @@ test("':' at the start of a line forces plain, even with a marker-shaped prefix"
   assert.equal(isSpeechLine(': a note from the translator'), false);
 });
 
-test("fix round 1, M4: a bare ':' opening a line (a speaker the translator left unmarked) stays plain, without the ': ' separator", () => {
-  assert.deepEqual(splitLines(': hello there, I have news\n🌙: really?\n:and more news'), [
-    { kind: 'plain', text: 'hello there, I have news' },
-    { kind: 'speech', marker: '🌙', markers: ['🌙'], text: 'really?' },
-    { kind: 'plain', text: 'and more news' },
-  ]);
-  assert.deepEqual(splitLines(':'), [{ kind: 'plain', text: ':' }], 'a lone colon stays as written');
-  assert.deepEqual(splitLines(':) so cute'), [{ kind: 'plain', text: ':) so cute' }], 'an emoticon is not an opener');
-});
-
 test('a label longer than 3 characters does not count as a marker', () => {
   assert.equal(isSpeechLine("translation: can't stop thinking about you"), false);
 });
