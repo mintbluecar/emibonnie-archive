@@ -90,3 +90,9 @@
   font-size: var(--text-11);
   color: var(--color-ink-muted);
 }
+
+/* The event's hashtag/type pills sit in the head; the people filter starts
+   the search region below, so the gap between the two rows lives here. */
+.c-event__pills {
+  margin-bottom: 12px;
+}
