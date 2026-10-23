@@ -14,9 +14,10 @@ function update(boxEl) {
   const clip = /** @type {HTMLElement|null} */ (boxEl.querySelector('.c-embed-box__clip'));
   const inner = /** @type {HTMLElement|null} */ (boxEl.querySelector('.c-embed-box__inner'));
   const button = /** @type {HTMLElement|null} */ (boxEl.querySelector('.c-embed-box__more'));
-  if (!clip || !inner || !button) return;
-  const cap = parseFloat(getComputedStyle(boxEl).getPropertyValue('--embed-max-height')) || Infinity;
-  const tall = inner.getBoundingClientRect().height > cap + 1;
+  // Open, the clip has no cap to measure; the switch stays so it can close again.
+  if (!clip || !inner || !button || boxEl.classList.contains('c-embed-box--open')) return;
+  // The capped clip's own rendered height is the cap (whatever unit the token uses).
+  const tall = inner.getBoundingClientRect().height > clip.getBoundingClientRect().height + 1;
   boxEl.classList.toggle('c-embed-box--tall', tall);
   button.hidden = !tall;
 }
@@ -38,7 +39,7 @@ export function bind(root) {
   for (const boxEl of root.querySelectorAll('.c-embed-box')) {
     const button = /** @type {HTMLElement|null} */ (boxEl.querySelector('.c-embed-box__more'));
     const inner = boxEl.querySelector('.c-embed-box__inner');
-    if (!button || !inner || typeof getComputedStyle !== 'function') continue;
+    if (!button || !inner || typeof inner.getBoundingClientRect !== 'function') continue;
     button.addEventListener('click', () => toggle(boxEl, button));
     update(boxEl);
     if (typeof ResizeObserver === 'function') new ResizeObserver(() => update(boxEl)).observe(inner);
