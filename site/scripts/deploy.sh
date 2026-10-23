@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# scripts/deploy.sh [--prod] [--dry-run]
+# site/scripts/deploy.sh [--prod] [--dry-run]
 #
 # Manual deploy for this archive. The owner runs this on their own machine,
 # logged in to the fan Vercel CLI account. There is no GitHub Actions
@@ -20,8 +20,8 @@
 #   7. npm run doctor
 #   8. npm run migrate              -- APP_DB_ROLE=app, against the target
 #                                       branch (requires the `app` role to
-#                                       already exist: scripts/create-app-role.sh)
-#   9. scripts/check-app-role.sh    -- the least-privilege check (fix round 1)
+#                                       already exist: site/scripts/create-app-role.sh)
+#   9. site/scripts/check-app-role.sh    -- the least-privilege check (fix round 1)
 #  10. vercel pull / vercel build / vercel deploy --prebuilt  [--prod]
 #  11. print the deployment URL
 #
@@ -149,7 +149,7 @@ for arg in "$@"; do
   esac
 done
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 if [ "$PROD" -eq 1 ]; then
@@ -213,7 +213,7 @@ else
 fi
 
 if [ "$PROD" -eq 0 ]; then
-  log "reminder: a brand-new Vercel project's FIRST deployment is always production, even without --prod (https://vercel.com/docs/deployments/environments#first-deployment). If this is the very first deploy of this project, stop and run 'scripts/deploy.sh --prod' instead -- see site/docs/deploy.md, section 2."
+  log "reminder: a brand-new Vercel project's FIRST deployment is always production, even without --prod (https://vercel.com/docs/deployments/environments#first-deployment). If this is the very first deploy of this project, stop and run 'site/scripts/deploy.sh --prod' instead -- see site/docs/deploy.md, section 2."
 fi
 
 # Runs a real step (or, under --dry-run, only announces it) and labels it
@@ -260,7 +260,7 @@ fi
 
 if [ "$DRY_RUN" -eq 1 ]; then
   log "step 8: would run: DATABASE_URL=<redacted> APP_DB_ROLE=app npm run migrate"
-  log "step 8: (this fails with \"role \\\"app\\\" does not exist\" unless scripts/create-app-role.sh already ran for this branch)"
+  log "step 8: (this fails with \"role \\\"app\\\" does not exist\" unless site/scripts/create-app-role.sh already ran for this branch)"
 else
   log "step 8: running: npm run migrate"
   DATABASE_URL="$DB_URL" APP_DB_ROLE=app npm run migrate
@@ -274,10 +274,10 @@ if [ "$PROD" -eq 1 ]; then
   PROD_FLAG_TEXT=" --prod"
 fi
 if [ "$DRY_RUN" -eq 1 ]; then
-  log "step 9: would run: scripts/check-app-role.sh$PROD_FLAG_TEXT"
+  log "step 9: would run: site/scripts/check-app-role.sh$PROD_FLAG_TEXT"
 else
-  log "step 9: running: scripts/check-app-role.sh$PROD_FLAG_TEXT"
-  DATABASE_URL="$DB_URL" "$REPO_ROOT/scripts/check-app-role.sh" "${CHECK_ARGS[@]}"
+  log "step 9: running: site/scripts/check-app-role.sh$PROD_FLAG_TEXT"
+  DATABASE_URL="$DB_URL" "$REPO_ROOT/site/scripts/check-app-role.sh" "${CHECK_ARGS[@]}"
 fi
 
 if [ "$DRY_RUN" -eq 1 ]; then

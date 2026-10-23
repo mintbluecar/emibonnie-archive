@@ -3,7 +3,7 @@
  * Offline tests for the root `Taskfile.yml` (go-task v3): that `task
  * --list` shows the expected tasks, and that `task deploy:dry` runs
  * cleanly end to end through Task itself (not just by invoking
- * scripts/deploy.sh directly, as deployScript.test.js does). Skips
+ * site/scripts/deploy.sh directly, as deployScript.test.js does). Skips
  * cleanly if `task` isn't installed -- CI may not have it. Run with
  * `node --test site/test/`.
  */

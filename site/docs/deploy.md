@@ -1,6 +1,6 @@
 # Deploying and running this archive
 
-This is the owner's guide for `scripts/deploy.sh`: what's already set up, what's
+This is the owner's guide for `site/scripts/deploy.sh`: what's already set up, what's
 left to do by hand, how the first deploy goes, how to check it worked, the
 launch checklist, manual backups, and what to do if something goes wrong.
 
@@ -22,7 +22,7 @@ Do these once, before the first deploy. They're in your **fan** accounts
 
 **Still to do:**
 
-**(a) Create the `app` role, on both branches — with `scripts/create-app-role.sh`, not the Neon console.**
+**(a) Create the `app` role, on both branches — with `site/scripts/create-app-role.sh`, not the Neon console.**
 
 A role created in the Neon console (or via its API/CLI) is automatically
 made a member of `neon_superuser`:
@@ -48,8 +48,8 @@ task role:prod
 or the same thing directly:
 
 ```sh
-EMIBONNIE_DB_PREVIEW="<preview branch's OWNER-role connection string>" scripts/create-app-role.sh
-EMIBONNIE_DB="<main branch's OWNER-role connection string>" scripts/create-app-role.sh --prod
+EMIBONNIE_DB_PREVIEW="<preview branch's OWNER-role connection string>" site/scripts/create-app-role.sh
+EMIBONNIE_DB="<main branch's OWNER-role connection string>" site/scripts/create-app-role.sh --prod
 ```
 
 Run the first one against `preview`, the second against the main branch.
@@ -64,7 +64,7 @@ Each one:
   `DATABASE_URL`, type **Secret**, in the matching scope — see (b), below.
 
 Run this **before** the first `npm run migrate` with `APP_DB_ROLE=app`
-(which `scripts/deploy.sh` always uses): if the `app` role doesn't exist
+(which `site/scripts/deploy.sh` always uses): if the `app` role doesn't exist
 yet, migrate fails with `role "app" does not exist`, and that's the fix.
 
 **(b) Vercel: link the project, then let `create-app-role.sh` set the Secret.**
@@ -108,10 +108,10 @@ table (`grant_app_role`, defined in the engine's
 `src/db/migrations/001_initial.sql` and called from
 `src/repo/roles.js`). That's why the deploy script passes `APP_DB_ROLE=app`
 on every migrate, and why Vercel gets the `app` role's connection string,
-never the owner-role one. `scripts/check-app-role.sh` (which
-`scripts/deploy.sh` runs automatically, right after every migrate) checks
+never the owner-role one. `site/scripts/check-app-role.sh` (which
+`site/scripts/deploy.sh` runs automatically, right after every migrate) checks
 this mechanically (`task check-role:preview` / `task check-role:prod`, or
-`scripts/check-app-role.sh [--prod]` directly):
+`site/scripts/check-app-role.sh [--prod]` directly):
 
 ```sql
 select pg_has_role('app', 'neon_superuser', 'member'),
@@ -137,7 +137,7 @@ Vercel always makes a brand-new project's **first** deployment a
 
 So the very first deploy here is a `--prod` run, on purpose — a preview
 run first would just become the production deployment anyway, against
-whichever database it happened to be configured for. `scripts/deploy.sh`
+whichever database it happened to be configured for. `site/scripts/deploy.sh`
 also prints a reminder of this every time it runs in preview mode, and
 makes a best-effort check for "this project has no deployments yet" when
 it can reach Vercel.
@@ -151,8 +151,8 @@ In order:
    ```
    or directly:
    ```sh
-   EMIBONNIE_DB_PREVIEW="<preview branch's OWNER-role string>" scripts/create-app-role.sh
-   EMIBONNIE_DB="<main branch's OWNER-role string>" scripts/create-app-role.sh --prod
+   EMIBONNIE_DB_PREVIEW="<preview branch's OWNER-role string>" site/scripts/create-app-role.sh
+   EMIBONNIE_DB="<main branch's OWNER-role string>" site/scripts/create-app-role.sh --prod
    ```
 2. **Run setup and seed, with the app role granted, on *both* branches:**
    ```sh
@@ -182,28 +182,28 @@ In order:
    ```
    or directly:
    ```sh
-   DATABASE_URL="$EMIBONNIE_DB_PREVIEW" scripts/check-app-role.sh
-   DATABASE_URL="$EMIBONNIE_DB" scripts/check-app-role.sh --prod
+   DATABASE_URL="$EMIBONNIE_DB_PREVIEW" site/scripts/check-app-role.sh
+   DATABASE_URL="$EMIBONNIE_DB" site/scripts/check-app-role.sh --prod
    ```
    Both must print "least-privilege check passed". Don't continue if
    either doesn't.
-4. **Make the first deploy `scripts/deploy.sh --prod`** (not a plain
-   `scripts/deploy.sh`) — see the reasoning above.
+4. **Make the first deploy `site/scripts/deploy.sh --prod`** (not a plain
+   `site/scripts/deploy.sh`) — see the reasoning above.
    ```sh
    task deploy:prod
    ```
    or directly:
    ```sh
-   EMIBONNIE_DB="$EMIBONNIE_DB" scripts/deploy.sh --prod
+   EMIBONNIE_DB="$EMIBONNIE_DB" site/scripts/deploy.sh --prod
    ```
    `--prod` asks you to type a confirmation phrase before it touches the
    production database — read the prompt before answering. `task
    deploy:prod` asks its own yes/no `prompt:` first, on top of that.
 5. **Later releases go through preview first:** once this project has a
-   production deployment, `task deploy:preview` (or `scripts/deploy.sh`
+   production deployment, `task deploy:preview` (or `site/scripts/deploy.sh`
    with no `--prod`) behaves normally — it deploys a preview build against
    the `preview` branch, for you to check with section 3, below, before
-   running `task deploy:prod` (or `scripts/deploy.sh --prod`) again for
+   running `task deploy:prod` (or `site/scripts/deploy.sh --prod`) again for
    the real release. `task deploy:dry` / `task deploy:dry-prod` run the
    same thing in `--dry-run`, with no network call and nothing executed
    for real, if you just want to see the step order.
@@ -363,7 +363,7 @@ pasted somewhere public, shown on a screen share:
 3. In Vercel, update the `DATABASE_URL` Secret (Settings → Environment
    Variables → edit → paste the new value) for the affected scope
    (Production or Preview).
-4. Redeploy: `scripts/deploy.sh` (add `--prod` for production), so the
+4. Redeploy: `site/scripts/deploy.sh` (add `--prod` for production), so the
    running site picks up the new value. The migrate step inside it will
    reconnect with the new string.
 5. Check the Neon console's audit/activity log, and Vercel's Activity Log,

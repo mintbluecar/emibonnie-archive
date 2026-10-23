@@ -22,19 +22,6 @@ import { fileURLToPath } from 'node:url';
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const SITE_DIR = path.join(REPO_ROOT, 'site');
 const EXCLUDED_PREFIXES = ['site/', 'docs/superpowers/', '.superpowers/'];
-/**
- * Task 10's three manual-deploy scripts live under `scripts/` (alongside
- * genuine engine scripts) because that's where `npm run <name>` expects a
- * script to be, but they're this site's own files, not engine code: they
- * aren't copied into other archives, and they legitimately need to name
- * this site's env vars (`EMIBONNIE_DB`...) and, for the local secret
- * fallback path, this site's own name. `Taskfile.yml` is the same kind of
- * exception: it sits at the repo root (so `task` finds it there), but it's
- * only a discoverable wrapper around those same three scripts and this
- * site's own backup path. Exact paths only, so no other `scripts/*.js`
- * engine file is accidentally exempted.
- */
-const EXCLUDED_FILES = ['scripts/deploy.sh', 'scripts/create-app-role.sh', 'scripts/check-app-role.sh', 'Taskfile.yml'];
 
 /** @param {string} file @returns {any} */
 const readJson = (file) => JSON.parse(readFileSync(file, 'utf8'));
@@ -73,7 +60,6 @@ function engineFiles() {
   const out = execFileSync('git', ['ls-files', '-co', '--exclude-standard', '-z'], { cwd: REPO_ROOT, encoding: 'utf8' });
   return out.split('\0').filter(Boolean)
     .filter((f) => !EXCLUDED_PREFIXES.some((prefix) => f.startsWith(prefix)))
-    .filter((f) => !EXCLUDED_FILES.includes(f))
     .filter((f) => existsSync(path.join(REPO_ROOT, f)));
 }
 

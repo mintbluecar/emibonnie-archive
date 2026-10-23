@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Offline tests for `scripts/check-app-role.sh`, run entirely through its
+ * Offline tests for `site/scripts/check-app-role.sh`, run entirely through its
  * `--dry-run` flag: no database connection. Run with `node --test
  * site/test/`.
  */
@@ -11,7 +11,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const SCRIPT = path.join(REPO_ROOT, 'scripts/check-app-role.sh');
+const SCRIPT = path.join(REPO_ROOT, 'site/scripts/check-app-role.sh');
 
 const PREVIEW_URL = 'postgres://preview-user:preview-secret-token@ep-preview.example.neon.tech/db';
 const PROD_URL = 'postgres://prod-user:prod-secret-token@ep-main.example.neon.tech/db';

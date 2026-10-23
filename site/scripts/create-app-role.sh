@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-# scripts/create-app-role.sh [--prod] [--dry-run]
+# site/scripts/create-app-role.sh [--prod] [--dry-run]
 #
 # Creates the least-privilege `app` database role on one branch, and adds
 # its connection string to Vercel. The owner runs this once per branch:
-#   scripts/create-app-role.sh            (the Neon `preview` branch)
-#   scripts/create-app-role.sh --prod     (the Neon main branch)
+#   site/scripts/create-app-role.sh            (the Neon `preview` branch)
+#   site/scripts/create-app-role.sh --prod     (the Neon main branch)
 #
 # Added in fix round 1 (review, C1): a role created in the Neon console
 # (or via the Neon API/CLI) is granted membership in `neon_superuser` --
@@ -20,10 +20,10 @@
 # `create role app with login password '<generated>'` -- over the owner's
 # own connection, never through the Neon console or the Neon API. After
 # this runs, `npm run migrate` (run with `APP_DB_ROLE=app`, as
-# scripts/deploy.sh already does) grants `app` exactly what the engine's
+# site/scripts/deploy.sh already does) grants `app` exactly what the engine's
 # own `grant_app_role` gives it (src/db/migrations/001_initial.sql,
 # src/repo/roles.js) -- read/write on every table except `audit_log` and
-# the migration-tracking table. `scripts/check-app-role.sh` re-confirms
+# the migration-tracking table. `site/scripts/check-app-role.sh` re-confirms
 # this after every migrate.
 #
 # What this script does, in order:
@@ -53,16 +53,15 @@
 #        (Production and Preview already default to Secret; this script
 #        passes --sensitive anyway, to be explicit.)
 #   6. If that command fails for any reason, writes the connection string
-#      to a `chmod 600` file outside this repo, under a directory named
-#      after this site's own `site/site.json` (`wordmark.accent`), read at
-#      runtime rather than written into this file -- `scripts/` is scanned
-#      by the engine's own `test/purity.test.js`, which bans every fandom
-#      name from engine-owned code with no exception, this site's
-#      included. Prints only that file's path and the steps to paste it
-#      into the Vercel dashboard as a Secret by hand, and tells the owner
-#      to delete the file afterwards.
+#      to a `chmod 600` file outside this repo (`~/.emibonnie/app-<scope>.url`),
+#      prints only that path and the steps to paste it into the Vercel
+#      dashboard as a Secret by hand, and tells the owner to delete the
+#      file afterwards. This file lives under `site/`, so it's exempt from
+#      the engine's own fandom-neutrality check (`test/purity.test.js`)
+#      and from `site/test/engineNeutral.test.js` (fix round 2: moved here
+#      from `scripts/`, which had neither exemption).
 #
-# Reads EMIBONNIE_DB / EMIBONNIE_DB_PREVIEW the same way scripts/deploy.sh
+# Reads EMIBONNIE_DB / EMIBONNIE_DB_PREVIEW the same way site/scripts/deploy.sh
 # does, and unsets both (plus DATABASE_URL) from its own environment the
 # moment it has copied the one it needs. Never echoes, logs or writes the
 # owner connection string, the generated password, or the app-role
@@ -89,7 +88,7 @@ for arg in "$@"; do
   esac
 done
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 if [ "$PROD" -eq 1 ]; then
@@ -123,7 +122,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
   log "would run: create role app with login password '<redacted>' (parameterised, via a node one-liner using the owner connection -- never through the Neon console)"
   log "would build the app-role URL from the owner URL: same host/database/parameters, user 'app', the new password"
   log "would run: vercel env add DATABASE_URL $TARGET --sensitive --yes (value piped through stdin, never in argv or output)"
-  log "would fall back to a chmod 600 file under a directory named after this site (read from site/site.json at runtime) if that command fails, and print only its path"
+  log "would fall back to a chmod 600 file under ~/.emibonnie/ if that command fails, and print only its path"
   exit 0
 fi
 
@@ -180,17 +179,7 @@ PASSWORD=""
 if printf '%s' "$APP_URL" | vercel env add DATABASE_URL "$TARGET" --sensitive --yes; then
   log "added DATABASE_URL as a Secret in Vercel's $TARGET scope"
 else
-  # The directory name comes from this site's own site.json at runtime, not
-  # from a literal fandom name written into this file -- see the header
-  # comment, step 6.
-  SITE_SLUG="$(node --input-type=module -e '
-    import { readFileSync } from "node:fs";
-    const site = JSON.parse(readFileSync("site/site.json", "utf8"));
-    const raw = (site.wordmark && site.wordmark.accent) || site.name || "archive";
-    const slug = raw.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
-    process.stdout.write(slug || "archive");
-  ')"
-  FALLBACK_DIR="$HOME/.$SITE_SLUG"
+  FALLBACK_DIR="$HOME/.emibonnie"
   mkdir -p "$FALLBACK_DIR"
   chmod 700 "$FALLBACK_DIR"
   FALLBACK_FILE="$FALLBACK_DIR/app-$TARGET.url"

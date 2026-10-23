@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# scripts/check-app-role.sh [--prod] [--dry-run]
+# site/scripts/check-app-role.sh [--prod] [--dry-run]
 #
 # The least-privilege check for the `app` database role (fix round 1, C1 of
-# the Task 10 review). `scripts/deploy.sh` runs this right after every
+# the Task 10 review). `site/scripts/deploy.sh` runs this right after every
 # migrate; the owner can also run it by hand, standalone, any time.
 #
 # Fails unless all three of these are `f` (false):
@@ -21,7 +21,7 @@
 # -- whereas "roles created with SQL from clients like psql, pgAdmin, or
 # the Neon SQL Editor are only granted the basic public schema privileges
 # granted to newly created roles in a standalone Postgres installation"
-# (same page). That's why `scripts/create-app-role.sh` creates `app` with a
+# (same page). That's why `site/scripts/create-app-role.sh` creates `app` with a
 # SQL statement over the owner's own connection, never through the Neon
 # console, and why this script re-checks it: a role created the wrong way,
 # by mistake, would otherwise look fine until it mattered. The two
@@ -30,8 +30,8 @@
 # src/repo/roles.js during every migrate) hasn't been widened to cover
 # `audit_log`, which it must never grant write access to.
 #
-# Reads its database connection the same way scripts/deploy.sh and
-# scripts/create-app-role.sh do:
+# Reads its database connection the same way site/scripts/deploy.sh and
+# site/scripts/create-app-role.sh do:
 #   EMIBONNIE_DB           Neon main branch       (used with --prod)
 #   EMIBONNIE_DB_PREVIEW   Neon `preview` branch  (used without --prod)
 # -- or, when deploy.sh calls this script itself, an already-exported
@@ -60,7 +60,7 @@ for arg in "$@"; do
   esac
 done
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 if [ "$PROD" -eq 1 ]; then

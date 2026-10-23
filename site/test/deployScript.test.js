@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Offline tests for `scripts/deploy.sh`, run entirely through its
+ * Offline tests for `site/scripts/deploy.sh`, run entirely through its
  * `--dry-run` flag: no network call, no git/vercel/npm command, and no
  * database connection. Run with `node --test site/test/`.
  */
@@ -11,13 +11,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const DEPLOY_SH = path.join(REPO_ROOT, 'scripts/deploy.sh');
+const DEPLOY_SH = path.join(REPO_ROOT, 'site/scripts/deploy.sh');
 
 const PREVIEW_URL = 'postgres://preview-user:preview-secret-token@ep-preview.example.neon.tech/db';
 const PROD_URL = 'postgres://prod-user:prod-secret-token@ep-main.example.neon.tech/db';
 
 /**
- * Runs `scripts/deploy.sh` with the given args and env, always under
+ * Runs `site/scripts/deploy.sh` with the given args and env, always under
  * `--dry-run`, and returns combined stdout+stderr.
  * @param {string[]} args
  * @param {Record<string, string>} env
@@ -66,7 +66,7 @@ test('preview dry run prints every step in order, deploying without --prod', () 
     'npm run e2e:site',
     'npm run doctor',
     'npm run migrate',
-    'scripts/check-app-role.sh',
+    'site/scripts/check-app-role.sh',
     'vercel pull --yes --environment=preview',
     'vercel build',
     'vercel deploy --prebuilt',
@@ -108,7 +108,7 @@ test('--prod dry run selects the production target, environment, confirmation, a
     'npm run doctor',
     "would ask for typed confirmation ('yes, migrate production')",
     'npm run migrate',
-    'scripts/check-app-role.sh --prod',
+    'site/scripts/check-app-role.sh --prod',
     'vercel pull --yes --environment=production',
     'vercel build --prod',
     'vercel deploy --prebuilt --prod',
