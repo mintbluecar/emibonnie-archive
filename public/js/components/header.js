@@ -21,6 +21,7 @@
 import { html } from '../core/html.js';
 import { site, t } from '../core/site.js';
 import { SEARCH_PATH } from '../core/routes.js';
+import * as themeToggle from './themeToggle.js';
 
 /** @returns {import('../core/html.js').SafeHtml} */
 function searchIcon() {
@@ -111,7 +112,10 @@ export function render(props = {}) {
       <div class="c-header__bar">
         <div class="c-header__inner">
           ${brand(compact)}
-          ${liveSearch ? '' : findLink()}
+          <div class="c-header__tools">
+            ${themeToggle.render()}
+            ${liveSearch ? '' : findLink()}
+          </div>
           ${nav ?? ''}
         </div>
       </div>

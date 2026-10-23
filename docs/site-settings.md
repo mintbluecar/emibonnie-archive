@@ -89,9 +89,39 @@ both `--color-bg` and `--color-card`, in light and dark mode. Since it
 defaults to `--gradient-to`, a site that keeps that default must pick a
 `--gradient-to` dark enough to read. To keep an exact brand gradient
 that's too light for text, set `--color-label` to a separate, darker
-colour instead, and set it again under
-`@media (prefers-color-scheme: dark)` with a value that reads on the
-dark backgrounds. `npm run e2e:site` checks contrast on every page.
+colour instead, and set it again in the dark blocks (below) with a value
+that reads on the dark backgrounds. `npm run e2e:site` checks contrast on
+every page.
+
+### Light and dark
+
+Visitors can switch the theme with the header's switch (light, dark, or
+follow the device); their choice sets `data-theme="light"` or
+`data-theme="dark"` on `<html>`, and following the device sets neither.
+So a site's dark values go in **two identical blocks**, exactly like the
+engine's own `tokens.css`, and its light values go on a plain `:root`:
+
+```css
+:root {
+  --gradient-to: #6456c9;            /* light */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --gradient-to: #8276dd;          /* device dark, unless forced light */
+  }
+}
+
+:root[data-theme="dark"] {
+  --gradient-to: #8276dd;            /* forced dark */
+}
+```
+
+Don't put light values under `@media (prefers-color-scheme: light)`: a
+visitor who forces light on a dark device would get the engine's light
+defaults instead of yours, and one who forces dark on a light device
+keeps any light value the engine's dark block doesn't also set. A plain
+`:root` block is light wherever the dark blocks don't apply.
 
 ## `site/copy.json`
 

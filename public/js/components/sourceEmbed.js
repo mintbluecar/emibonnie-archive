@@ -23,6 +23,7 @@
 import { html } from '../core/html.js';
 import { t } from '../core/site.js';
 import { thaiSpans } from '../core/thai.js';
+import { isDark } from '../core/themeChoice.js';
 
 export const WIDGETS_SRC = 'https://platform.twitter.com/widgets.js';
 /** X's own loader's id for the script (set-up-x-for-websites), so a second call never adds it again. */
@@ -87,7 +88,9 @@ function cspMeta() {
 }
 
 /**
- * Sets the dark theme on every embed when the visitor is in dark mode,
+ * Sets the dark theme on every embed when the page is dark (the header's
+ * switch, else the device: `isDark()`; X renders it once, so a later
+ * switch shows on the next load),
  * then adds X's CSP switch and `widgets.js` -- once per page, and only
  * when there's an embed.
  * @param {Element} root
@@ -96,8 +99,7 @@ function cspMeta() {
 export function bind(root) {
   const quotes = root.querySelectorAll('blockquote.twitter-tweet');
   if (quotes.length === 0) return;
-  const dark = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  if (dark) for (const quote of quotes) quote.setAttribute('data-theme', 'dark');
+  if (isDark()) for (const quote of quotes) quote.setAttribute('data-theme', 'dark');
   if (document.getElementById(WIDGETS_ID)) return;
   document.head.appendChild(cspMeta());
   const script = document.createElement('script');

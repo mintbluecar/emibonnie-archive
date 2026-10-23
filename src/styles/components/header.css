@@ -40,6 +40,42 @@
   min-width: 0;
 }
 
+/* The bar's icon buttons: the theme switch, and on a phone the search icon. */
+.c-header__tools {
+  display: flex;
+  align-items: center;
+  flex: none;
+  margin-left: auto;
+}
+
+/*
+ * The theme switch (Task 10c, f; themeToggle.js): one of its three icons
+ * shows, the one for the current choice.
+ */
+.c-theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.c-theme-toggle__icon {
+  display: none;
+}
+
+.c-theme-toggle[data-choice="light"] .c-theme-toggle__icon--light,
+.c-theme-toggle[data-choice="dark"] .c-theme-toggle__icon--dark,
+.c-theme-toggle[data-choice="system"] .c-theme-toggle__icon--system {
+  display: block;
+}
+
 /* The phone bar's search icon (header.js `findLink`). */
 .c-header__find {
   display: flex;
@@ -200,11 +236,15 @@
   color: var(--color-accent-text);
 }
 
+/* Dark mode's --color-accent-text is black, which already passes against the raw --gradient-from (7.35:1) -- the light-mode-only darkening above is reverted here (device dark unless forced light, or forced dark: Task 10c). */
 @media (prefers-color-scheme: dark) {
-  /* Dark mode's --color-accent-text is black, which already passes against the raw --gradient-from (7.35:1) -- the light-mode-only darkening above is reverted here. */
-  .c-header__filter-count {
+  :root:not([data-theme="light"]) .c-header__filter-count {
     background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
   }
+}
+
+:root[data-theme="dark"] .c-header__filter-count {
+  background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
 }
 
 @media (min-width: 860px) {

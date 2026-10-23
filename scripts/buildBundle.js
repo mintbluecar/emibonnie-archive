@@ -11,7 +11,25 @@ import path from 'node:path';
 import * as esbuild from 'esbuild';
 import { buildAppCss, buildFontsCss } from './buildAssets.js';
 
-/** @typedef {{ appCss: string, fontsCss: string, pages: Record<string, string> }} Manifest */
+/** @typedef {{ appCss: string, fontsCss: string, pages: Record<string, string>, boot: string|null }} Manifest */
+
+/**
+ * The blocking `<head>` script (`public/js/boot/theme.js`, Task 10c) as
+ * one classic (IIFE) hashed file, `boot-<hash>.js`; `null` when the
+ * source is missing.
+ * @param {string} repoRoot @param {string} outDir
+ * @returns {Promise<string|null>}
+ */
+async function bundleBoot(repoRoot, outDir) {
+  const entry = path.join(repoRoot, 'public/js/boot/theme.js');
+  if (!existsSync(entry)) return null;
+  const result = await esbuild.build({
+    entryPoints: { boot: entry }, bundle: true, format: 'iife', target: ['es2022'], minify: true,
+    outdir: outDir, entryNames: '[name]-[hash]', metafile: true, write: true, logLevel: 'silent',
+  });
+  const [output] = Object.keys(result.metafile.outputs);
+  return path.basename(output);
+}
 
 /**
  * One esbuild entry point per `public/js/pages/<page>.js` file, or `{}`
@@ -94,6 +112,10 @@ const ASSET_PLACEHOLDER = /\{\{asset:([a-zA-Z0-9_.:-]+)\}\}/g;
 function resolveAssetToken(token, manifest) {
   if (token === 'app.css') return `/build/${manifest.appCss}`;
   if (token === 'fonts.css') return `/build/${manifest.fontsCss}`;
+  if (token === 'boot.js') {
+    if (!manifest.boot) throw new Error('build failed: {{asset:boot.js}} has no bundled boot script (no public/js/boot/theme.js?)');
+    return `/build/${manifest.boot}`;
+  }
   if (token.startsWith('js:')) {
     const page = token.slice('js:'.length);
     const fileName = manifest.pages[page];
@@ -142,9 +164,10 @@ export async function runBundling({ repoRoot, engineRoot, siteThemePath }) {
   const appCss = buildAppCss(repoRoot, outDir, siteThemePath);
   const fontsCss = buildFontsCss(engineRoot, outDir);
   const pages = await bundlePages(repoRoot, outDir);
+  const boot = await bundleBoot(repoRoot, outDir);
 
   /** @type {Manifest} */
-  const manifest = { appCss, fontsCss, pages };
+  const manifest = { appCss, fontsCss, pages, boot };
   writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
   writeHtmlPages(path.join(repoRoot, 'src/html'), path.join(repoRoot, 'public'), manifest);

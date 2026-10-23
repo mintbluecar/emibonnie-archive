@@ -6,6 +6,7 @@
  * in exactly one place.
  */
 import { SafeHtml } from './html.js';
+import { bindThemeToggles } from './theme.js';
 
 /**
  * Replaces `el`'s content with already-escaped markup. Throws if `safeHtml`
@@ -36,6 +37,7 @@ export function mount(el, safeHtml) {
  */
 export function mountPage(root, safeHtml) {
   mount(root, safeHtml);
+  bindThemeToggles();
   root.setAttribute('data-ready', '');
 }
 
@@ -170,6 +172,8 @@ function installSchemeListener() {
   if (schemeListenerInstalled || typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
   schemeListenerInstalled = true;
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyColours(document.body));
+  // The header's theme switch (Task 10c, f; public/js/core/theme.js).
+  document.addEventListener('themechange', () => applyColours(document.body));
 }
 
 /** Set once `installSchemeListener()` has attached its (one, module-lifetime) listener. */
@@ -217,9 +221,10 @@ function currentTheme() {
  * Also sets `--c-text`: a per-person text colour (`textShade()`, above)
  * guaranteed to reach AA against whatever that element's own text
  * actually sits on (`currentTheme()`/`applyOneColour()`, above).
- * Installs a `prefers-color-scheme` listener (once, module lifetime)
- * that re-runs this over the whole document, since a scheme change
- * flips the backgrounds and ink `--c-text` was computed against.
+ * Installs a `prefers-color-scheme` listener and a `themechange` one (the
+ * header's switch) -- once, module lifetime -- that re-run this over the
+ * whole document, since either flips the backgrounds and ink `--c-text`
+ * was computed against.
  * @param {Element} el
  * @returns {void}
  */

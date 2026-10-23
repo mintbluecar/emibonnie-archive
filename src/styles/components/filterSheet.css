@@ -105,11 +105,15 @@
   background: linear-gradient(90deg, color-mix(in srgb, var(--gradient-from) 75%, #000), var(--gradient-to));
 }
 
+/* Dark mode's --color-accent-text is black, which already passes against the raw --gradient-from -- reverted here (device dark unless forced light, or forced dark: Task 10c). */
 @media (prefers-color-scheme: dark) {
-  /* Dark mode's --color-accent-text is black, which already passes against the raw --gradient-from -- reverted here. */
-  .c-filter-sheet__apply {
+  :root:not([data-theme="light"]) .c-filter-sheet__apply {
     background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
   }
+}
+
+:root[data-theme="dark"] .c-filter-sheet__apply {
+  background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
 }
 
 @media (min-width: 860px) {

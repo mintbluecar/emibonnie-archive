@@ -188,6 +188,12 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
       const built = readFileSync(path.join(repoRoot, 'public', page), 'utf8');
       assert.ok(!built.includes('{{asset:'), `${page}: every placeholder resolved`);
       assert.match(built, /\/build\/app-[A-Za-z0-9]+\.css/, page);
+      // Task 10c (f): the theme boot script, blocking (no async/defer/module), before the stylesheet.
+      const head = built.slice(0, built.indexOf('</head>'));
+      const boot = /<script src="(\/build\/boot-[A-Za-z0-9]+\.js)"><\/script>/.exec(head);
+      assert.ok(boot, `${page}: has the boot script in <head>`);
+      assert.ok(head.indexOf(boot[0]) < head.indexOf('rel="stylesheet"'), `${page}: boot script before the stylesheet`);
+      assert.ok(existsSync(path.join(repoRoot, 'public', boot[1])), `${page}: ${boot[1]} was built`);
     }
 
     const vercelJson = JSON.parse(readFileSync(path.join(repoRoot, 'vercel.json'), 'utf8'));
