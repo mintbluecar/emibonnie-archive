@@ -32,11 +32,17 @@ function creditsLine(credits) {
   `;
 }
 
-/** @param {string} text @returns {import('../../core/html.js').SafeHtml[]} */
-function originalParagraphs(text) {
-  return text
-    .split(/\n\s*\n/)
-    .map((para) => html`<p class="k-translation-detail__original-para">${thaiSpans(para, site.sourceLanguage)}</p>`);
+/**
+ * The verbatim original, as one element whose CSS (`white-space:
+ * pre-wrap`, kindTranslation.css) keeps every line break and blank line
+ * the stored text has -- a thread's parts are joined by a blank line, so
+ * they stay apart too (Task 10b). Escaped by `html`; no `<br>`s. No
+ * whitespace inside the element besides the text's own.
+ * @param {string} text
+ * @returns {import('../../core/html.js').SafeHtml}
+ */
+function originalText(text) {
+  return html`<p class="k-translation-detail__original-text">${thaiSpans(text, site.sourceLanguage)}</p>`;
 }
 
 /**
@@ -59,7 +65,7 @@ export function render(detail, extra = {}) {
       ${bubbles.render({ bubbles: detail.bubbles })}
       <details class="k-translation-detail__original">
         <summary class="k-translation-detail__original-toggle">${t('item.showOriginal')}</summary>
-        ${originalParagraphs(detail.original)}
+        ${originalText(detail.original)}
       </details>
     </div>
   `;

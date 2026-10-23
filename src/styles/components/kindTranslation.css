@@ -23,8 +23,13 @@
   cursor: pointer;
 }
 
-.k-translation-detail__original-para {
+/* The stored text's own line breaks and blank lines (thread parts are
+   joined by one), kept as written; a long URL wraps instead of
+   overflowing (Task 10b). */
+.k-translation-detail__original-text {
   font-size: 13px;
   line-height: 1.5;
   margin-bottom: 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

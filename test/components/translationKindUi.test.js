@@ -92,3 +92,25 @@ test('translation section (Task 9b): ctx.compact renders compact preview cards (
   assert.match(String(section.render(sectionVm, { compact: true })), /c-preview-card--compact/);
   assert.ok(!String(section.render(sectionVm, {})).includes('c-preview-card--compact'));
 });
+
+test('translation detail (Task 10b): "show original" is one escaped element, with the class that keeps line breaks (pre-wrap), the stored newlines and blank lines intact, no <br>', async () => {
+  const { MiniElement } = await import('../helpers/miniDom.js');
+  const { mount } = await import('../../public/js/core/dom.js');
+  const original = 'line one\nline two <b>\n\nsecond part https://example.com/a/very/long/url';
+  const root = new MiniElement('div');
+  mount(/** @type {any} */ (root), detail.render(detailVm({ original })));
+  const els = root.querySelectorAll('details p');
+  assert.equal(els.length, 1, 'one element for the whole text, thread parts included');
+  assert.ok(els[0].classList.contains('k-translation-detail__original-text'));
+  const markup = String(detail.render(detailVm({ original })));
+  assert.match(markup, /<p class="k-translation-detail__original-text">line one\nline two &lt;b&gt;\n\nsecond part https:\/\/example\.com\/a\/very\/long\/url<\/p>/);
+  assert.ok(!markup.includes('<br'));
+});
+
+test('kindTranslation.css (Task 10b): the original-text class keeps line breaks and wraps long URLs', async () => {
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(new URL('../../src/styles/components/kindTranslation.css', import.meta.url), 'utf8');
+  const rule = /\.k-translation-detail__original-text\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+  assert.match(rule, /white-space:\s*pre-wrap/);
+  assert.match(rule, /overflow-wrap:\s*anywhere/);
+});
