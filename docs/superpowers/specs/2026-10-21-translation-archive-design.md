@@ -324,8 +324,12 @@ Approved with the owner on 2026-10-21 using mockups. The mockups are kept in `do
   - Logo, wordmark and FAN-MADE badge at the top. Then a search box with a **filter icon** (three stacked lines, not the word "filters").
   - Below that, events newest first, grouped by month. Each card shows the event name, date, hashtag, and a translation count.
   - **No tabs.** Home lists events only.
-- **Search** (`search-v2.html`).
-  - Opening search (from the tab bar or the home box) focuses the box with the keyboard up. Before typing, it shows recent searches and quick chips for people and types.
+- **Search happens in place; there is no separate search page** (owner decision, 2026-10-23, replacing the search screen of `search-v2.html`).
+  - **Home** is the search: the event list shows until you type (or set a filter). Then the results replace it in place, and clearing the box and filters brings the list back. The URL reflects the query and filters, so a search is still a shareable link. Old `/search?…` links redirect to home with the same query.
+  - **Event, person and translator pages** have a box that searches **within that page** (that event, that person, that translator). Results replace the page's list in place, and clearing restores it. The placeholder says what's searched (e.g. "search this event…").
+  - **Translation pages** have no box, only the header's search icon, which goes to home.
+  - Clicking the box never navigates and never pops up a keyboard on its own: the person taps it themselves. There's no autofocus anywhere.
+  - The phone tab bar is **home · ＋ add · me**, with no search tab.
   - **Filter icon:** shows a small count badge when filters are on, and opens a sheet with:
     - **who's in it:** people chips, with an "any of / all of" switch.
     - **type** chips, including shared story.
@@ -334,7 +338,7 @@ Approved with the owner on 2026-10-21 using mockups. The mockups are kept in `do
   - Active filters show as removable chips under the box, plus "clear all".
   - Results show the event and date, then the matching lines with the match highlighted, then people and translator.
   - Filters work with an empty search box, for browsing.
-  - **Scoped search:** searching from a person, translator or event page opens the same screen with that filter already applied as a removable chip. Searching from the tab bar or home starts unfiltered.
+  - **Scoped search** is the in-place search on event, person and translator pages (above).
 - **Event page** (`screens-v2.html`).
   - Name, date, and translation and translator counts. Tag pills for hashtag and type. Filter chips for people and translator.
   - Entries show their opening lines, with standard speaker emoji, as a preview (no titles), plus people emoji, translator, a clip marker, and "follows on" where relevant.
