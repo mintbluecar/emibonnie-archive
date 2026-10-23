@@ -29,7 +29,7 @@ function monthGroup(group) {
   return html`
     <section class="c-home-month">
       <h2 class="c-home-month__label">${monthLabel(group.month)}</h2>
-      <div class="stack">${group.events.map((event) => eventCard.render({ event }))}</div>
+      <div class="c-home-month__grid">${group.events.map((event) => eventCard.render({ event }))}</div>
     </section>
   `;
 }
