@@ -12,7 +12,11 @@
  * one top bar -- brand left, links right, no search box -- as in
  * mockups/screens-v2.html's web screen; on a phone tabBar.css still fixes
  * the nav to the bottom. `liveSearch` marks the search page's header,
- * whose box is the page's own live search and so stays on desktop too.
+ * whose box is the page's own live search and so stays on desktop too
+ * (and whose phone bar has no search icon: the box is right there).
+ *
+ * Task 10b pins the bar (header.css). Only the `<header>` landmark holds
+ * the bar; the search row follows it as its own `search` landmark.
  */
 import { html } from '../core/html.js';
 import { site, t } from '../core/site.js';
@@ -30,7 +34,7 @@ function searchIcon() {
 /** @param {number|undefined} filterCount @returns {import('../core/html.js').SafeHtml} */
 function searchRow(filterCount) {
   return html`
-    <div class="c-header__search">
+    <div class="c-header__search" role="search">
       <span class="c-header__search-field">
         ${searchIcon()}
         <input class="c-header__search-box" type="search" placeholder="${t('search.placeholder')}">
@@ -45,7 +49,49 @@ function searchRow(filterCount) {
   `;
 }
 
+/** The phone bar's search icon: a link to the search page (desktop has the nav's own "search" link instead). @returns {import('../core/html.js').SafeHtml} */
+function findLink() {
+  return html`
+    <a class="c-header__find" href="/search" aria-label="${t('nav.search')}">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle>
+        <path d="M21 21l-4.3-4.3"></path>
+      </svg>
+    </a>
+  `;
+}
+
+/** @param {'bar'|'below'} where @returns {import('../core/html.js').SafeHtml} */
+function tagline(where) {
+  return html`
+    <p class="c-header__tagline c-header__tagline--${where}">
+      ${site.tagline}
+      <span class="c-header__badge">${t('badge.fanMade')}</span>
+    </p>
+  `;
+}
+
+/** Logo, wordmark, and (desktop, not compact) the tagline. @param {boolean} compact @returns {import('../core/html.js').SafeHtml} */
+function brand(compact) {
+  return html`
+    <div class="c-header__brand">
+      <div class="c-header__row">
+        ${site.logo ? html`<img class="c-header__logo" src="${site.logo}" alt="" width="34" height="34">` : ''}
+        <span class="c-header__wordmark">
+          <span class="c-header__accent">${site.wordmark.accent}</span>${site.wordmark.rest}
+        </span>
+      </div>
+      ${compact ? '' : tagline('bar')}
+    </div>
+  `;
+}
+
 /**
+ * The pinned `<header>` (Task 10b, owner's "desktop full, phone slim"):
+ * one bar, pinned by header.css at `--sticky-top`'s height. The tagline
+ * and search row sit *after* it, so on a phone they scroll away; the
+ * tagline is rendered in both places, and CSS shows exactly one of them
+ * (the hidden one is `display: none`, so a screen reader hears it once).
  * @param {{ compact?: boolean, filterCount?: number, liveSearch?: boolean, nav?: import('../core/html.js').SafeHtml }} [props]
  * @returns {import('../core/html.js').SafeHtml}
  */
@@ -55,24 +101,15 @@ export function render(props = {}) {
     <header class="c-header${compact ? ' c-header--compact' : ''}${liveSearch ? ' c-header--live' : ''}">
       <div class="c-header__bar">
         <div class="c-header__inner">
-          <div class="c-header__brand">
-            <div class="c-header__row">
-              ${site.logo ? html`<img class="c-header__logo" src="${site.logo}" alt="" width="34" height="34">` : ''}
-              <span class="c-header__wordmark">
-                <span class="c-header__accent">${site.wordmark.accent}</span>${site.wordmark.rest}
-              </span>
-            </div>
-            ${compact ? '' : html`
-              <p class="c-header__tagline">
-                ${site.tagline}
-                <span class="c-header__badge">${t('badge.fanMade')}</span>
-              </p>
-            `}
-          </div>
+          ${brand(compact)}
+          ${liveSearch ? '' : findLink()}
           ${nav ?? ''}
         </div>
       </div>
-      ${searchRow(filterCount)}
     </header>
+    <div class="c-header__below${liveSearch ? ' c-header__below--live' : ''}">
+      ${compact ? '' : tagline('below')}
+      ${searchRow(filterCount)}
+    </div>
   `;
 }

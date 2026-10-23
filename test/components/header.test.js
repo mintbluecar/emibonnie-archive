@@ -52,3 +52,21 @@ test('header (Task 9b): liveSearch marks the header whose box stays on desktop (
   assert.match(String(render({ liveSearch: true })), /class="c-header c-header--compact c-header--live"|class="c-header c-header--live"/);
   assert.ok(!String(render()).includes('c-header--live'));
 });
+
+test('header (Task 10b): the <header> landmark holds only the pinned bar; the tagline and search row follow it, the search row as its own search landmark', () => {
+  const markup = String(render());
+  const headerEnd = markup.indexOf('</header>');
+  const inHeader = markup.slice(0, headerEnd);
+  const after = markup.slice(headerEnd);
+  assert.ok(inHeader.includes('c-header__bar') && inHeader.includes('c-header__wordmark'));
+  assert.ok(!inHeader.includes('c-header__search-box'), 'the search row scrolls away with the page');
+  assert.match(after, /<div class="c-header__below">[\s\S]*c-header__tagline--below[\s\S]*<div class="c-header__search" role="search">/);
+  assert.match(inHeader, /c-header__tagline--bar/, 'desktop shows the tagline in the bar; CSS shows exactly one of the two');
+});
+
+test('header (Task 10b): the phone bar has a search icon linking to /search, labelled for screen readers -- except on the search page itself', () => {
+  assert.match(String(render()), /<a class="c-header__find" href="\/search" aria-label="search">\s*<svg[^>]*aria-hidden="true"/);
+  const live = String(render({ liveSearch: true }));
+  assert.ok(!live.includes('c-header__find'));
+  assert.match(live, /class="c-header__below c-header__below--live"/);
+});

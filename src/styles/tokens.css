@@ -89,8 +89,25 @@
      column at `calc(100svh - var(--layout-sticky-offset))` on web, so it
      never grows taller than the viewport has room for above the fold.
      An approximation (the builder's choice, per the task ruling), not a
-     measured value -- a few px of slack either way is harmless. */
-  --layout-sticky-offset: 96px;
+     measured value -- a few px of slack either way is harmless. Task 10b:
+     the media now sticks below the pinned header, so this is that bar's
+     height plus room for the prev/next row (44px targets + padding) under
+     the clip, keeping both on screen. */
+  --layout-sticky-offset: calc(var(--sticky-top) + 64px);
+  /* The pinned header bar's height (Task 10b): header.css sets the bar to
+     exactly this, and the item page's pinned media sticks just below it
+     (`top: var(--sticky-top)`), and `html`'s scroll-padding-top keeps a
+     focused element out from under it. A fixed value, so CSS alone keeps
+     the three in step (no JS measuring). Phone: the slim bar (34px logo). */
+  --sticky-top: 52px;
+}
+
+@media (min-width: 860px) {
+  :root {
+    /* Desktop: the one-line bar, as tall as its 44px nav targets plus 8px
+       above and below, plus its 1px bottom border. */
+    --sticky-top: 61px;
+  }
 }
 
 @media (prefers-color-scheme: dark) {

@@ -1,20 +1,71 @@
 /*
  * public/js/components/header.js. Phone-first; see layout.css for the
- * shared 860px breakpoint. Phone: brand, tagline, then the search row
- * (the nav inside the bar is tabBar.css's fixed bottom bar). Desktop: one
- * top bar -- brand left, nav right, inner content aligned with the
- * centred `.container` column -- and no search box, except on the
- * search page (`--live`), as in mockups/screens-v2.html's web screen.
+ * shared 860px breakpoint.
+ *
+ * Pinned (Task 10b, owner's "desktop full, phone slim"): the `<header>`
+ * holds only the bar, and is `position: sticky` at the top of the page
+ * on every page. Its height is fixed at `--sticky-top` (tokens.css), the
+ * same value the item page's pinned media uses for its own `top`, so the
+ * two stack without overlapping and with no JS measuring. Phone: a slim
+ * bar -- logo, wordmark, a search icon -- then the tagline and search row
+ * (`.c-header__below`), which scroll away; the nav inside the bar is
+ * tabBar.css's fixed bottom bar. Desktop: one top bar -- brand left, nav
+ * right, inner content aligned with the centred `.container` column --
+ * and no search box, except on the search page (`--live`), as in
+ * mockups/screens-v2.html's web screen. Nothing animates in or out.
  */
 
 .c-header {
-  padding: 16px 16px 8px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--color-bg);
+}
+
+.c-header__bar {
+  height: var(--sticky-top);
+  border-bottom: 1px solid var(--color-card-shadow);
+}
+
+.c-header__inner {
+  height: 100%;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.c-header__brand {
+  min-width: 0;
+}
+
+/* The phone bar's search icon (header.js `findLink`). */
+.c-header__find {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  margin-right: -10px;
+  color: var(--color-ink);
+}
+
+.c-header__below {
+  padding: 8px 16px;
+}
+
+/* One tagline shows per layout: below the bar on a phone, in it on desktop. */
+.c-header__tagline--bar {
+  display: none;
 }
 
 .c-header__row {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .c-header__logo {
@@ -24,6 +75,9 @@
 .c-header__wordmark {
   font-weight: 800;
   font-size: 19px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .c-header__accent {
@@ -40,7 +94,7 @@
 .c-header__tagline {
   font-size: 12px;
   color: var(--color-ink-muted);
-  margin: 4px 0 12px;
+  margin: 0 0 8px;
 }
 
 .c-header__badge {
@@ -139,12 +193,7 @@
 
 @media (min-width: 860px) {
   .c-header {
-    padding: 0;
-  }
-
-  .c-header__bar {
     background: var(--color-card);
-    border-bottom: 1px solid var(--color-card-shadow);
   }
 
   /* Same width and gutters as layout.css's `.container`, so the bar's
@@ -152,10 +201,6 @@
   .c-header__inner {
     max-width: 960px;
     margin: 0 auto;
-    padding: 8px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     gap: 16px;
   }
 
@@ -163,7 +208,6 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    min-width: 0;
   }
 
   .c-header__logo {
@@ -176,15 +220,30 @@
     font-size: 16px;
   }
 
-  .c-header__tagline {
+  .c-header__find,
+  .c-header__tagline--below {
+    display: none;
+  }
+
+  /* A one-line bar: the tagline never wraps it taller than --sticky-top. */
+  .c-header__tagline--bar {
+    display: block;
     margin: 0;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .c-header__below {
+    padding: 0;
   }
 
   .c-header__search {
     display: none;
   }
 
-  .c-header--live .c-header__search {
+  .c-header__below--live .c-header__search {
     display: flex;
     max-width: 960px;
     margin: 16px auto 12px;

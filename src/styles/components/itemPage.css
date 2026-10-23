@@ -29,7 +29,8 @@
 .c-item__media {
   grid-area: media;
   position: sticky;
-  top: 0;
+  /* Just below the pinned header (Task 10b), never under it. */
+  top: var(--sticky-top);
   z-index: 2;
   background: var(--color-bg);
 }
