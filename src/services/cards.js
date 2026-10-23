@@ -10,6 +10,7 @@ import { kindsRegistry } from '../kinds/_registry.js';
 import { listPeople } from '../repo/people.js';
 import { loadCards } from '../repo/cards.js';
 import { formatName } from '../site/loadSite.js';
+import { ROLE_EMOJI } from '../domain/constants.js';
 
 /** @typedef {import('../kinds/defineKind.js').Kind} Kind */
 /** @typedef {import('../repo/cards.js').Card} Card */
@@ -50,6 +51,7 @@ export async function presenterContext(deps) {
   return {
     people,
     formatName: format,
+    roleEmoji: { ...ROLE_EMOJI, ...deps.site.roleEmoji },
     urlFor: (kind, sourceId) => `${kinds[kind]?.urlPrefix ?? '/'}${sourceId}`,
     chips: (list) => [...new Set(list.map((p) => p.personId))]
       .map((id) => people.get(id))

@@ -27,7 +27,8 @@ export { ALLOWED_REGIONS } from './regions.js';
  * @typedef {{ name: string, wordmark: { accent: string, rest: string }, tagline: string, ownerXUserId: string,
  *   sourceLanguage: string, timezone: string, region: string, lowercaseNames: boolean, featuredPeople: FeaturedPerson[],
  *   defaultMarkers: Record<string, { personHandle: string } | { role: string }>, ignoredHashtags: string[],
- *   categories: string[], extraLivePatterns: LivePattern[], contactUrl: string, embedSources: boolean }} Site
+ *   categories: string[], extraLivePatterns: LivePattern[], contactUrl: string, embedSources: boolean,
+ *   roleEmoji: Record<string, string> }} Site
  */
 
 const DEFAULT_CATEGORIES = ['show / interview', 'fan meet / fan day', 'live'];
@@ -84,6 +85,33 @@ function checkExtraLivePatterns(errors, raw) {
   return value.map((pattern, index) => checkOneLivePattern(errors, pattern, index));
 }
 
+/** The roles a site may give a default emoji (crowd shows as a note, with none). */
+const EMOJI_ROLES = ['fan', 'host', 'speaker'];
+
+/**
+ * `roleEmoji` (optional): overrides `ROLE_EMOJI` (src/domain/constants.js)
+ * for some of fan, host, speaker; each value a non-empty string.
+ * @param {string[]} errors
+ * @param {any} raw
+ * @returns {Record<string, string>}
+ */
+function checkRoleEmoji(errors, raw) {
+  const value = raw.roleEmoji;
+  if (value === undefined) return {};
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    errors.push('roleEmoji: must be an object mapping fan, host or speaker to an emoji');
+    return {};
+  }
+  /** @type {Record<string, string>} */
+  const result = {};
+  for (const [role, emoji] of Object.entries(value)) {
+    if (!EMOJI_ROLES.includes(role)) errors.push(`roleEmoji.${role}: must be one of ${EMOJI_ROLES.join(', ')}`);
+    else if (typeof emoji !== 'string' || emoji.trim() === '') errors.push(`roleEmoji.${role}: must be a non-empty string`);
+    else result[role] = emoji;
+  }
+  return result;
+}
+
 /**
  * Validates and normalises a site's raw `site.json`. Every error names the
  * field path it came from. `warnings` (e.g. a featured colour that's a bit
@@ -119,6 +147,7 @@ export function validateSite(raw) {
   const extraLivePatterns = checkExtraLivePatterns(errors, input);
   const contactUrl = checkContactUrl(errors, input);
   const embedSources = checkOptionalBoolean(errors, input, 'embedSources');
+  const roleEmoji = checkRoleEmoji(errors, input);
 
   if (errors.length > 0) return { ok: false, errors, warnings };
 
@@ -141,6 +170,7 @@ export function validateSite(raw) {
       extraLivePatterns,
       contactUrl,
       embedSources,
+      roleEmoji,
     },
   };
 }

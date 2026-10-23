@@ -101,10 +101,13 @@ import { pages } from '../pages.js';
  *   formatName: (name: string) => string,
  *   urlFor: (kind: string, sourceId: string) => string,
  *   chips: (people: { personId: number }[]) => import('../http/contracts.js').PersonChip[],
+ *   roleEmoji?: Partial<Record<import('../domain/constants.js').Role, string>>,
  * }} PresentContext
  *   What a presenter may consult, loaded once per request by the caller
  *   (src/services/cards.js): every known person by id, the site's name
- *   formatting, public URLs by kind, and person chips for a card's people.
+ *   formatting, public URLs by kind, person chips for a card's people, and
+ *   each generic role's default emoji (`ROLE_EMOJI` with the site's
+ *   `roleEmoji` over it; a presenter falls back to `ROLE_EMOJI` without it).
  * @typedef {{
  *   name: string,
  *   table: string,

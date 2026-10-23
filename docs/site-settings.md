@@ -31,6 +31,7 @@ path).
 | `extraLivePatterns` | `LivePattern[]` | default `[]` | Extra "who + where + when" live platform phrases (see below). |
 | `contactUrl` | https URL | required | The one public contact (a form or profile link) -- never a personal email. |
 | `embedSources` | boolean | default `false` | When true, a translation page shows its original post as X's official embed (X's `widgets.js`, loaded only on pages with an embed), with the archived text and author as the fallback inside it; the build adds X's hosts to the CSP, and the privacy page gains a notice that X may set cookies and collect visitor data. Review that notice (`privacy.embedNotice` in `site/copy.json`) before turning it on. When false (the default), the page links to the original post instead and loads nothing from X. |
+| `roleEmoji` | `{ fan?, host?, speaker? }` of strings | default `{}` | Overrides the default emoji a generic role shows when the translator's marker had none (a bare `:`): 💬 fan, 🎤 host, 🗣 speaker. A translator's own emoji always wins; crowd has none (it shows as an inline note). E.g. `{ "host": "🎙️" }`. |
 
 ### `FeaturedPerson`
 
