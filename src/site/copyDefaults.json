@@ -142,5 +142,9 @@
   "takedown.response": "what happens next: the entry is hidden first, and reviewed second. you don't need to wait for a reply before it comes down.",
   "takedown.contactLinkLabel": "get in touch",
   "static.notFound": "page not found",
-  "static.notFoundBack": "‹ home"
+  "static.notFoundBack": "‹ home",
+  "event.keywordLabel.one": "keyword:",
+  "event.keywordLabel.other": "keywords:",
+  "event.hashtagLabel.one": "hashtag:",
+  "event.hashtagLabel.other": "hashtags:"
 }
