@@ -121,7 +121,7 @@ test('detail: cast, original, credits, sources; media prefers the own video', as
   assert.equal(view.credits.account.handle, 'tl_beta');
   assert.equal(view.credits.clipBy, 'clipper_one');
   assert.equal(view.credits.occurredOn, '2026-10-19');
-  assert.equal(view.credits.postedAt, '2026-10-19T08:00:00.000Z');
+  assert.ok(!('postedAt' in view.credits), 'no post time in the item view (Task 10b, M7)');
   assert.ok(view.original.startsWith('SOLLUNA HAPPY DAY'));
   assert.deepEqual(view.sources.map((/** @type {any} */ s) => s.role), ['primary', 'media']);
   assert.equal(view.media.type, 'video');

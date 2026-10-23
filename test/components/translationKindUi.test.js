@@ -32,7 +32,7 @@ function detailVm(overrides = {}) {
     bubbles: [{ kind: 'speech', emoji: '🧡', name: 'sol', colour: '#ff8a3d', text: 'hello', cont: false }],
     cast: [{ kind: 'person', id: 1, emoji: '🧡', name: 'sol', colour: '#ff8a3d', igHandle: null }],
     original: 'first paragraph\n\nsecond paragraph',
-    credits: { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, postedAt: null, occurredOn: '2026-10-14' },
+    credits: { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, occurredOn: '2026-10-14' },
     sources: [],
     media: null,
     ...overrides,
@@ -55,7 +55,7 @@ test('translation detail: Thai-script text in the original gets lang="th", same 
 });
 
 test('translation detail (Task 10b): credits show the event date (dayLabel) and no time -- not the post time, never the viewer\'s local time', () => {
-  const credits = { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, postedAt: '2026-10-19T08:00:00.000Z', occurredOn: '2026-10-19' };
+  const credits = { account: { handle: 'tl_alpha', displayName: null }, clipBy: null, occurredOn: '2026-10-19' };
   const markup = String(detail.render(detailVm({ credits })));
   assert.match(markup, /19 Oct 2026/);
   assert.ok(!/\d:\d\d|\b(am|pm)\b|bangkok/.test(markup), markup);

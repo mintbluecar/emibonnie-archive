@@ -235,7 +235,7 @@ function detail(card, details, ctx) {
     bubbles: bubblesOf(details, ctx),
     cast: castOf(details, ctx),
     original: details.body,
-    credits: { account: card.account, clipBy: clipByOf(sources, handle), postedAt: card.postedAt, occurredOn: card.occurredOn },
+    credits: { account: card.account, clipBy: clipByOf(sources, handle), occurredOn: card.occurredOn },
     sources: sources.map((s) => ({ role: /** @type {string} */ (s.role), url: /** @type {string} */ (s.url), status: /** @type {any} */ (s.status) })),
     media: resolveMedia(sources),
   };
