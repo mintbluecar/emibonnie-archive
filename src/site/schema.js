@@ -7,6 +7,7 @@ import {
   checkRegion,
   checkContactUrl,
   checkLowercaseNames,
+  checkOptionalBoolean,
   checkStringArray,
   checkOneFeaturedPerson,
   checkOneMarker,
@@ -26,7 +27,7 @@ export { ALLOWED_REGIONS } from './regions.js';
  * @typedef {{ name: string, wordmark: { accent: string, rest: string }, tagline: string, ownerXUserId: string,
  *   sourceLanguage: string, timezone: string, region: string, lowercaseNames: boolean, featuredPeople: FeaturedPerson[],
  *   defaultMarkers: Record<string, { personHandle: string } | { role: string }>, ignoredHashtags: string[],
- *   categories: string[], extraLivePatterns: LivePattern[], contactUrl: string }} Site
+ *   categories: string[], extraLivePatterns: LivePattern[], contactUrl: string, embedSources: boolean }} Site
  */
 
 const DEFAULT_CATEGORIES = ['show / interview', 'fan meet / fan day', 'live'];
@@ -117,6 +118,7 @@ export function validateSite(raw) {
   const categories = checkStringArray(errors, 'categories', input.categories, DEFAULT_CATEGORIES);
   const extraLivePatterns = checkExtraLivePatterns(errors, input);
   const contactUrl = checkContactUrl(errors, input);
+  const embedSources = checkOptionalBoolean(errors, input, 'embedSources');
 
   if (errors.length > 0) return { ok: false, errors, warnings };
 
@@ -138,6 +140,7 @@ export function validateSite(raw) {
       categories,
       extraLivePatterns,
       contactUrl,
+      embedSources,
     },
   };
 }

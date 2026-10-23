@@ -158,6 +158,22 @@ export function checkLowercaseNames(errors, raw) {
 }
 
 /**
+ * An optional boolean field, `false` when left out (e.g. `embedSources`).
+ * @param {string[]} errors
+ * @param {any} raw
+ * @param {string} field
+ * @returns {boolean}
+ */
+export function checkOptionalBoolean(errors, raw, field) {
+  if (raw[field] === undefined) return false;
+  if (typeof raw[field] !== 'boolean') {
+    errors.push(`${field}: must be a boolean`);
+    return false;
+  }
+  return raw[field];
+}
+
+/**
  * @param {string[]} errors
  * @param {string} path
  * @param {unknown} value

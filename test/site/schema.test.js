@@ -53,10 +53,12 @@ test('validateSite: applies documented defaults when fields are omitted', () => 
   delete raw.lowercaseNames;
   delete raw.extraLivePatterns;
   delete raw.categories;
+  delete raw.embedSources;
   const result = validateSite(raw);
   assert.equal(result.ok, true);
   if (!result.ok) return;
   assert.equal(result.site.lowercaseNames, false);
+  assert.equal(result.site.embedSources, false, 'embedSources: off unless a site opts in (Task 10b)');
   assert.deepEqual(result.site.extraLivePatterns, []);
   assert.deepEqual(result.site.categories, ['show / interview', 'fan meet / fan day', 'live']);
 });
@@ -125,4 +127,18 @@ test('ALLOWED_REGIONS: Vercel\'s 19 compute regions (vercel.com/docs/regions, ch
   const raw = readFixture('examples/solluna/site.json');
   assert.equal(validateSite({ ...raw, region: 'yul1' }).ok, true);
   assert.equal(validateSite({ ...raw, region: 'dev1' }).ok, false, 'the local-dev pseudo-region is not a deploy target');
+});
+
+test('validateSite (Task 10b): embedSources is an optional boolean -- true is kept, a non-boolean names the field', () => {
+  const on = readFixture('examples/solluna/site.json');
+  on.embedSources = true;
+  const okResult = validateSite(on);
+  assert.equal(okResult.ok, true);
+  if (okResult.ok) assert.equal(okResult.site.embedSources, true);
+
+  const bad = readFixture('examples/solluna/site.json');
+  bad.embedSources = 'yes';
+  const badResult = validateSite(bad);
+  assert.equal(badResult.ok, false);
+  if (!badResult.ok) assert.ok(badResult.errors.includes('embedSources: must be a boolean'), badResult.errors.join('\n'));
 });
