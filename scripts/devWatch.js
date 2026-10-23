@@ -1,6 +1,7 @@
 // @ts-check
 /**
- * `npm run dev:watch` (or `npm run dev -- --watch`), Task 10c (i): builds,
+ * `npm run dev:watch` (or `npm run dev -- --watch`, which serves the
+ * build `dev` just made instead of building twice), Task 10c (i): builds,
  * serves the build (`scripts/dev.js`, as a child process), and rebuilds
  * whenever a file under `src/html`, `src/styles`, `public/js` or the
  * active site folder (`SITE_DIR`, default `site`) changes, then restarts
@@ -19,6 +20,7 @@
  */
 import { watch } from 'node:fs';
 import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,8 +31,10 @@ const IGNORED = /(^|[\\/])_registry\.js$/;
  * Debounced, never-overlapping rebuilds. `trigger()` after any change;
  * `build()` runs at most once at a time, and a trigger while it runs
  * schedules one more run after it (not one per change).
- * @param {{ build: () => Promise<boolean>, onBuilt?: () => void, debounceMs?: number }} options
- *   `build` resolves `true` on success; `onBuilt` runs after each success.
+ * @param {{ build: () => Promise<boolean>, onBuilt?: () => void|Promise<void>, debounceMs?: number }} options
+ *   `build` resolves `true` on success (a rejection counts as a failure);
+ *   `onBuilt` runs after each success and is awaited before the next
+ *   build may start.
  */
 export function createRebuilder({ build, onBuilt = () => {}, debounceMs = DEBOUNCE_MS }) {
   /** @type {ReturnType<typeof setTimeout>|null} */
@@ -45,7 +49,9 @@ export function createRebuilder({ build, onBuilt = () => {}, debounceMs = DEBOUN
     }
     running = true;
     try {
-      if (await build()) onBuilt();
+      if (await build().catch(() => false)) await onBuilt();
+    } catch (/** @type {any} */ err) {
+      console.error(`dev:watch: ${err?.message ?? err}`);
     } finally {
       running = false;
       if (again) {
@@ -77,24 +83,58 @@ function node(script, args = []) {
   return spawn(process.execPath, [script, ...args], { stdio: 'inherit', env: process.env });
 }
 
-/** Runs `npm run build`'s script once. @returns {Promise<boolean>} */
-function buildOnce() {
+/**
+ * Runs `npm run build`'s script once: `true` when it exits 0; `false` on
+ * any other exit, or when the child can't even start (`error`).
+ * @param {(script: string) => import('node:child_process').ChildProcess} [start]
+ * @returns {Promise<boolean>}
+ */
+export function buildOnce(start = node) {
   return new Promise((resolve) => {
-    const child = node('scripts/build.js');
+    const child = start('scripts/build.js');
+    child.on('error', () => resolve(false));
     child.on('exit', (code) => resolve(code === 0));
   });
 }
 
-export async function main() {
-  const siteDir = process.env.SITE_DIR ?? 'site';
+/**
+ * The dev server child, restarted on each good build: the old one is
+ * stopped and its `exit` awaited before the new one starts, so the two
+ * never race for the port (EADDRINUSE).
+ * @param {(script: string) => import('node:child_process').ChildProcess} [start]
+ */
+export function createServerSupervisor(start = node) {
   /** @type {import('node:child_process').ChildProcess|null} */
   let server = null;
-  const restart = () => {
-    server?.kill();
-    server = node('scripts/dev.js');
-    console.log('dev:watch: serving the fresh build -- refresh the browser');
+  /** @returns {Promise<void>} */
+  async function stop() {
+    const old = server;
+    server = null;
+    if (!old || old.exitCode !== null || old.signalCode !== null) return;
+    const exited = once(old, 'exit');
+    old.kill();
+    await exited;
+  }
+  return {
+    stop,
+    /** @returns {Promise<void>} */
+    async restart() {
+      await stop();
+      server = start('scripts/dev.js');
+      console.log('dev:watch: serving the fresh build -- refresh the browser');
+    },
   };
-  const rebuilder = createRebuilder({ build: buildOnce, onBuilt: restart });
+}
+
+/**
+ * @param {{ skipFirstBuild?: boolean }} [options] `skipFirstBuild`: the
+ *   caller just built (`npm run dev -- --watch`, whose `dev` script builds
+ *   first), so serve that build instead of building it again.
+ */
+export async function main({ skipFirstBuild = false } = {}) {
+  const siteDir = process.env.SITE_DIR ?? 'site';
+  const supervisor = createServerSupervisor();
+  const rebuilder = createRebuilder({ build: () => buildOnce(), onBuilt: supervisor.restart });
   for (const dir of watchedDirs(siteDir)) {
     watch(dir, { recursive: true }, (_event, file) => {
       if (file && IGNORED.test(String(file))) return;
@@ -102,8 +142,11 @@ export async function main() {
       rebuilder.trigger();
     });
   }
-  process.on('SIGINT', () => { server?.kill(); process.exit(0); });
-  await rebuilder.run();
+  for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.on(signal, () => { void supervisor.stop().finally(() => process.exit(0)); });
+  }
+  if (skipFirstBuild) await supervisor.restart();
+  else await rebuilder.run();
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

@@ -285,9 +285,10 @@ export function missingBuildOutput(root) {
 
 async function main() {
   if (process.argv.includes('--watch')) {
-    // `npm run dev -- --watch` (Task 10c, i): the watcher builds, serves and rebuilds.
+    // `npm run dev -- --watch` (Task 10c, i): `dev` already built, so the
+    // watcher serves that build and rebuilds on changes (no second build).
     const { main: watchMain } = await import('./devWatch.js');
-    await watchMain();
+    await watchMain({ skipFirstBuild: true });
     return;
   }
   const port = Number(process.env.PORT ?? 3000);
