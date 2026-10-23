@@ -14,7 +14,6 @@ import {
 import { formatName } from '../site/loadSite.js';
 import { kindsOf, chipOf } from './cards.js';
 import { sectionsOf } from './sections.js';
-import { eventCovers } from './eventCovers.js';
 import { hubPage, orderParam } from './params.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
@@ -31,13 +30,12 @@ const IDENTITY_PLATFORM = 'instagram';
 /** @param {ViewDeps} deps @returns {Promise<HomeView>} */
 export async function homeView(deps) {
   const [events, counts] = await Promise.all([listVisibleEvents(deps.db), countsByEventKind(deps.db)]);
-  const covers = await eventCovers(deps, events.map((e) => e.id));
   /** @type {HomeView['months']} */
   const months = [];
   for (const e of events) {
     const month = e.occurredOn.slice(0, 7);
     if (months.at(-1)?.month !== month) months.push({ month, events: [] });
-    const entry = { slug: e.slug, name: e.name, occurredOn: e.occurredOn, hashtag: e.hashtags[0] ?? null, counts: counts.get(e.id) ?? {}, thumb: covers.get(e.id) ?? null };
+    const entry = { slug: e.slug, name: e.name, occurredOn: e.occurredOn, hashtag: e.hashtags[0] ?? null, counts: counts.get(e.id) ?? {} };
     months[months.length - 1].events.push(entry);
   }
   return { months };

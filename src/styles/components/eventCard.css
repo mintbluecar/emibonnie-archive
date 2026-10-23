@@ -1,8 +1,7 @@
 /*
  * public/js/components/eventCard.js. Home shows each month's events as a
- * grid of cards (owner, 2026-10-23): the event's representative picture on
- * top in a portrait frame, then the name, date, hashtag and count. Cards
- * without a picture are text only.
+ * grid of cards (owner, 2026-10-23): the name, date, hashtag and count.
+ * No thumbnail (owner, 2026-10-23: "no thumbnail in home cards").
  */
 
 .c-home-month__grid {
@@ -26,25 +25,6 @@
   box-shadow: 0 2px 0 var(--color-card-shadow);
   overflow: hidden;
   min-width: 0;
-}
-
-.c-event-card .c-thumb {
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  border-radius: 0;
-  align-self: stretch;
-}
-
-.c-event-card .c-thumb__img {
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  min-width: 0;
-  object-fit: cover;
-}
-
-.c-event-card .c-thumb__play {
-  font-size: var(--text-22);
 }
 
 .c-event-card__body {
