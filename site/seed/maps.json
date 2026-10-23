@@ -5,6 +5,12 @@
       "displayName": "leo",
       "emoji": "🦁",
       "colour": "#2fa89a"
+    },
+    {
+      "igHandle": "fonkanittha.k",
+      "displayName": "fon",
+      "emoji": "🌧️",
+      "colour": "#6b8cae"
     }
   ],
   "tweets": {
@@ -62,7 +68,7 @@
           "person": "leo_saussay"
         },
         "🌧️": {
-          "role": "speaker"
+          "person": "fonkanittha.k"
         }
       }
     }

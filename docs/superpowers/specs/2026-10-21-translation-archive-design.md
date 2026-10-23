@@ -195,7 +195,7 @@ A known personality: emi, bonnie, leo (a host), and others as they appear.
 - **The all-caps keyword line** and **live patterns** still propose events, because they're translator conventions rather than guesses.
 - **Person hashtags are their IG handles** (owner's information): #beonnnie means @beonnnie, which is bonnie. The site recognises a person from a hashtag that matches their stored IG handle. The owner can add extra hashtags to a person if a fandom tag differs from the handle. Person hashtags identify **who** (for lives, shared stories and tagging). They never create or match an event by themselves.
 
-**Generic roles** cover people who don't need telling apart: host, fan, speaker. They have a neutral style and no person page. A translator's own emoji is kept for a generic role (e.g. 🌧️ shown as "speaker"), since generic roles have no standard emoji. 🗣️ is pre-mapped to **crowd reaction**, and 💬 (chat/comments) is suggested as **fan**.
+**Generic roles** cover people who don't need telling apart: host, fan, speaker. They have a neutral style and no person page. A translator's own emoji is kept for a generic role when they used one, so two hosts stay distinguishable (👦🏻 host, 👩🏻 host). **When there's no emoji** (a bare `:` marker), the role shows its **default emoji: 💬 fan, 🎤 host, 🗣 speaker** (owner decision, 2026-10-23). 🗣️ is pre-mapped to **crowd reaction**, and 💬 (chat/comments) is suggested as **fan**.
 
 ### Speaker mapping
 
