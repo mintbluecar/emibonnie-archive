@@ -18,9 +18,9 @@
  */
 import { html } from '../core/html.js';
 import { dayLabel } from '../core/format.js';
-import { t } from '../core/site.js';
 import * as bubbles from './bubbles.js';
 import * as thumb from './thumb.js';
+import * as icons from './icons.js';
 
 /** @param {string} text @returns {string} */
 function escapeRegExp(text) {
@@ -49,7 +49,7 @@ function metaLine(result) {
   return html`
     <div class="c-result-card__meta">
       ${result.people.map((person) => html`<span aria-hidden="true">${person.emoji}</span>`)}
-      ${result.accountHandle ? html` · ${t('item.translatedBy')} @${result.accountHandle}` : ''}
+      ${result.accountHandle ? html` · ${icons.translator()} @${result.accountHandle}` : ''}
     </div>
   `;
 }

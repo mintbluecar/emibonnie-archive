@@ -22,13 +22,14 @@ test('previewCard: renders the opening lines via bubbles, and a meta row with th
   const markup = String(render({ result: baseResult() }));
   assert.match(markup, /href="\/t\/1"/);
   assert.match(markup, /c-bubbles__bub/, 'embeds the bubbles component output');
-  assert.match(markup, /tl @tl_alpha/);
+  assert.match(markup, /<span class="c-icon c-icon--translator" role="img" aria-label="translator" title="translator"><svg[^>]*aria-hidden="true">.*?<\/svg><\/span> @tl_alpha/);
+  assert.ok(!/\btl @/.test(markup), 'the icon replaces the word "tl" (Task 10c e)');
   assert.match(markup, /aria-label="video"/);
 });
 
 test('previewCard: no accountHandle, no video, means no meta for them; follows-on shows as plain text, not a link', () => {
   const markup = String(render({ result: baseResult({ accountHandle: null, hasVideo: false, followsOnFrom: { sourceId: '0', url: '/t/0' } }) }));
-  assert.ok(!markup.includes('tl @'));
+  assert.ok(!markup.includes('c-icon--translator'));
   assert.ok(!markup.includes('aria-label="video"'));
   assert.ok(!markup.includes('/t/0'), 'followsOnFrom.url is never rendered -- it is plain text, not a link');
   assert.match(markup, /follows on from ↑/);
@@ -52,7 +53,7 @@ test('previewCard (Task 9b): compact shows the opening lines as one clamped run 
   assert.match(markup, /class="c-preview-card c-preview-card--compact"/);
   assert.match(markup, /c-bubbles-compact/);
   assert.ok(!markup.includes('c-bubbles__bub'));
-  assert.match(markup, /tl @tl_alpha/);
+  assert.match(markup, /c-icon--translator.*? @tl_alpha/);
   assert.equal((markup.match(/<a[\s>]/g) ?? []).length, 1);
   assert.ok(!String(render({ result: baseResult() })).includes('c-preview-card--compact'), 'full bubbles by default');
 });

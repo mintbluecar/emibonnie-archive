@@ -69,7 +69,7 @@
   "search.results.other": "{n} translations",
   "search.newestFirst": "newest first",
   "search.bestFirst": "best match first",
-  "item.translatedBy": "tl",
+  "item.translator": "translator",
   "item.clipBy": "clip by",
   "item.hasVideo": "video",
   "item.thumbClip": "clip still",

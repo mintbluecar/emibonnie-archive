@@ -26,6 +26,7 @@ import { html } from '../core/html.js';
 import { t } from '../core/site.js';
 import * as bubbles from './bubbles.js';
 import * as thumb from './thumb.js';
+import * as icons from './icons.js';
 
 /**
  * @param {import('../../../src/http/contracts.js').Preview} preview
@@ -35,7 +36,7 @@ function metaRow(preview) {
   return html`
     <div class="c-preview-card__meta">
       ${preview.people.map((person) => html`<span aria-hidden="true">${person.emoji}</span>`)}
-      ${preview.accountHandle ? html` · ${t('item.translatedBy')} @${preview.accountHandle}` : ''}
+      ${preview.accountHandle ? html` · ${icons.translator()} @${preview.accountHandle}` : ''}
       ${preview.hasVideo && !preview.thumb ? html` · <span role="img" aria-label="${t('item.hasVideo')}">🎬</span>` : ''}
       ${preview.followsOnFrom ? html` · ${t('item.followsOn')} ↑` : ''}
     </div>

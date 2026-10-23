@@ -73,3 +73,8 @@ test('resultCard (Task 10c): a thumbnail sits beside the text, the card still on
   assert.match(markup, /<img class="c-thumb__img" src="https:\/\/pbs\.twimg\.com\/media\/b\.jpg" alt="photo" width="800" height="600" loading="lazy" decoding="async">/);
   assert.equal((markup.match(/<a[\s>]/g) ?? []).length, 1);
 });
+
+test('resultCard (Task 10c e): the translator handle follows the translate icon, named "translator", not the word "tl"', () => {
+  const markup = String(render({ result: { ...baseResult(['x']), accountHandle: 'tl_beta' }, q: '' }));
+  assert.match(markup, /role="img" aria-label="translator" title="translator"><svg[^>]*>.*?<\/svg><\/span> @tl_beta/);
+});
