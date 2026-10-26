@@ -50,6 +50,20 @@ function json(status, body, cache) {
   return Response.json(body, { status, headers: { 'cache-control': cache } });
 }
 
+/**
+ * A route's own JSON response with an explicit cache header, for a route
+ * whose cache depends on the request: the item page is `private, no-store`
+ * for a signed-in viewer and public otherwise. `toResponse` keeps a
+ * `PRIVATE_NO_STORE` (or `NOT_FOUND_CACHE`) header; anything else is
+ * replaced by the route's declared cache, so returning the route's own
+ * public cache here is harmless.
+ * @param {unknown} body @param {string} cache
+ * @returns {Response}
+ */
+export function jsonWithCache(body, cache) {
+  return Response.json(body, { headers: { 'cache-control': cache } });
+}
+
 /** @param {unknown} err @returns {string} */
 function describe(err) {
   return err instanceof Error ? (err.stack ?? `${err.name}: ${err.message}`) : String(err);

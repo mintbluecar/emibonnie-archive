@@ -17,14 +17,15 @@ function depsWith(authSecret = 'test-secret', now = new Date('2026-01-01T00:00:0
 
 test('LIMITS holds the agreed limits', () => {
   assert.deepEqual(LIMITS, {
-    signIn: { limit: 10, windowSeconds: 900 },
+    signIn: { limit: 10, windowSeconds: 900, subject: 'ip' },
     addPreview: { limit: 60, windowSeconds: 3600 },
     add: { limit: 20, windowSeconds: 3600 },
+    addPerson: { limit: 20, windowSeconds: 3600 },
     edit: { limit: 60, windowSeconds: 3600 },
     followUps: { limit: 10, windowSeconds: 3600 },
     setName: { limit: 5, windowSeconds: 3600 },
     deleteAccount: { limit: 3, windowSeconds: 86400 },
-    report: { limit: 5, windowSeconds: 3600 },
+    report: { limit: 5, windowSeconds: 3600, subject: 'ip' },
   });
 });
 

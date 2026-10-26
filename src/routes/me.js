@@ -7,7 +7,7 @@
 import { NO_STORE } from '../http/handler.js';
 import { BadRequest } from '../http/errors.js';
 import { jsonWithCookies } from '../http/cookies.js';
-import { currentUser, requireUser, signOut, signOutEverywhere, setDisplayName, isTranslator } from '../services/session.js';
+import { currentUser, requireUser, signOut, signOutEverywhere, setDisplayName, isTranslator, needsDisplayName } from '../services/session.js';
 import { limit } from '../services/limits.js';
 import { cleanDisplayName } from '../domain/displayName.js';
 import { deleteAccount } from '../services/deleteAccount.js';
@@ -21,7 +21,7 @@ function meUser(user) {
     displayName: user.displayName,
     isOwner: user.isOwner,
     isTranslator: isTranslator(user),
-    needsName: user.via === 'google' && !user.displayName,
+    needsName: needsDisplayName(user),
   };
 }
 

@@ -9,7 +9,7 @@
  * (src/http/cookies.js), and only the token's SHA-256 is stored.
  */
 import { randomBytes } from 'node:crypto';
-import { Unauthorized, Forbidden } from '../domain/errors.js';
+import { Unauthorized, Forbidden, Conflict } from '../domain/errors.js';
 import { serializeCookie } from '../domain/cookies.js';
 import { linkXAccountToUser, xAccountIdsOfUser } from '../repo/accounts.js';
 import { createSession, deleteSession, deleteUserSessions, userIdForToken } from '../repo/sessions.js';
@@ -185,4 +185,24 @@ export async function setDisplayName(deps, userId, name) {
 /** Whether a signed-in user is recognised as a credited translator. @param {SessionUser} user */
 export function isTranslator(user) {
   return user.translatorAccountIds.length > 0;
+}
+
+/**
+ * A Google user who hasn't picked a public display name yet. The me page
+ * asks them to pick one (its `needsName` flag).
+ * @param {SessionUser} user
+ * @returns {boolean}
+ */
+export function needsDisplayName(user) {
+  return user.via === 'google' && !user.displayName;
+}
+
+/**
+ * Refuse a write whose "added by" would be missing: a Google user must
+ * pick a display name first (`409 needs_name`). Used by every add route.
+ * @param {SessionUser} user
+ * @returns {void}
+ */
+export function requireDisplayName(user) {
+  if (needsDisplayName(user)) throw new Conflict('needs_name');
 }

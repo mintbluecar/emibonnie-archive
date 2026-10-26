@@ -2,9 +2,10 @@
 /**
  * Rate limits (Plan 2a Task 3). One frozen table `LIMITS` pairs each named
  * action with `{ limit, windowSeconds }`; `limit()` enforces it against
- * `rate_limits`, keyed by `${name}:${subject}`. IP subjects are stored
- * hashed so a raw IP never reaches the table; a missing IP becomes
- * `ip:unknown`.
+ * `rate_limits`, keyed by `${name}:${subject}`. A bucket marked
+ * `subject: 'ip'` is keyed by the caller's address, stored hashed so a raw
+ * IP never reaches the table (a missing IP becomes `ip:unknown`); every
+ * other bucket is keyed by the caller's user id.
  *
  * Old window rows are pruned opportunistically: on about 1 in 100 hits,
  * windows more than two days old are deleted. The roll uses `deps.random`
@@ -18,18 +19,16 @@ import { recordHit, pruneBefore } from '../repo/rateLimits.js';
 
 /** The agreed limits, keyed by action name. Frozen. */
 export const LIMITS = Object.freeze({
-  signIn: { limit: 10, windowSeconds: 900 },
+  signIn: { limit: 10, windowSeconds: 900, subject: 'ip' },
   addPreview: { limit: 60, windowSeconds: 3600 },
   add: { limit: 20, windowSeconds: 3600 },
+  addPerson: { limit: 20, windowSeconds: 3600 },
   edit: { limit: 60, windowSeconds: 3600 },
   followUps: { limit: 10, windowSeconds: 3600 },
   setName: { limit: 5, windowSeconds: 3600 },
   deleteAccount: { limit: 3, windowSeconds: 86400 },
-  report: { limit: 5, windowSeconds: 3600 },
+  report: { limit: 5, windowSeconds: 3600, subject: 'ip' },
 });
-
-/** Names whose subject is an IP address (hashed) rather than a user id. */
-const IP_KEYED = new Set(['signIn', 'report']);
 
 /**
  * Hash an IP with the auth secret so the stored key is opaque.
@@ -50,14 +49,12 @@ export function hashIpSubject(authSecret, ip) {
  * @returns {Promise<void>}
  */
 export async function limit(deps, name, subject) {
-  const { limit: max, windowSeconds } = LIMITS[name];
+  const entry = LIMITS[name];
+  const { limit: max, windowSeconds } = entry;
 
-  let key;
-  if (IP_KEYED.has(name)) {
-    key = subject === null ? 'ip:unknown' : hashIpSubject(deps.env?.AUTH_SECRET ?? '', subject);
-  } else {
-    key = String(subject);
-  }
+  const key = 'subject' in entry && entry.subject === 'ip'
+    ? (subject === null ? 'ip:unknown' : hashIpSubject(deps.env?.AUTH_SECRET ?? '', subject))
+    : String(subject);
 
   const now = (deps.now ?? (() => new Date()))();
   const windowStart = new Date(Math.floor(now.getTime() / (windowSeconds * 1000)) * windowSeconds * 1000);

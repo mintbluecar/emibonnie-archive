@@ -1,5 +1,5 @@
 // @ts-check
-import { PUBLIC_CACHE, PRIVATE_NO_STORE } from '../http/handler.js';
+import { PUBLIC_CACHE, PRIVATE_NO_STORE, jsonWithCache } from '../http/handler.js';
 import { NotFound } from '../http/errors.js';
 import { itemPage } from '../services/itemPage.js';
 import { currentUser } from '../services/session.js';
@@ -9,7 +9,8 @@ import { currentUser } from '../services/session.js';
  * `editOpenUntil`. An elapsed, unfinalized edit window is refreshed in
  * the background (`deps.defer`), so the response isn't delayed and the
  * CDN still caches it. A signed-in viewer gets `canEdit`/`canCheckFollowUps`
- * and a `private, no-store` response (the flags are per-user).
+ * and a `private, no-store` response (the flags are per-user); everyone
+ * else gets the public view under the route's cache.
  */
 export const route = {
   method: 'GET',
@@ -21,12 +22,6 @@ export const route = {
     const page = await itemPage(deps, input.params.kind, input.params.sourceId, viewer);
     if (!page) throw new NotFound();
     if (page.refresh) deps.defer(page.refresh);
-    if (viewer) {
-      return new Response(JSON.stringify(page.view), {
-        status: 200,
-        headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': PRIVATE_NO_STORE },
-      });
-    }
-    return page.view;
+    return jsonWithCache(page.view, viewer ? PRIVATE_NO_STORE : PUBLIC_CACHE);
   },
 };

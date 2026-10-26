@@ -5,6 +5,8 @@ import { IDS } from '../helpers/fixtures.js';
 import { ingestDeps, count, rows, SYSTEM } from '../helpers/ingest.js';
 import { apiFor } from '../helpers/api.js';
 import { signInUser } from '../../src/services/session.js';
+import { LIMITS, limit } from '../../src/services/limits.js';
+import { RateLimited } from '../../src/http/errors.js';
 
 const ENV = { AUTH_SECRET: 'test-auth-secret' };
 
@@ -141,4 +143,25 @@ test('POST /api/people adds a person and returns its id (or the existing one)', 
 
   const bad = await api.call('POST', '/api/people', { cookies, body: { displayName: 'X', igHandle: 'not valid!' } });
   assert.equal(bad.status, 400);
+});
+
+test('adding a person has its own bucket: an exhausted edit limit does not block it', async () => {
+  const cookies = await sidFor({ via: 'x', subject: '12', handle: 'person_editor' });
+  for (let i = 0; i < LIMITS.edit.limit; i++) await limit(deps, 'edit', 'x:12');
+  await assert.rejects(limit(deps, 'edit', 'x:12'), RateLimited, 'the edit bucket is exhausted');
+
+  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const res = await api.call('POST', '/api/people', { cookies, body: { displayName: 'Bucket Person', igHandle: 'bucket_person' } });
+  assert.equal(res.status, 200, 'adding a person is not billed to the edit bucket');
+});
+
+test('the 21st person added in an hour is 429', async () => {
+  const cookies = await sidFor({ via: 'x', subject: '13', handle: 'person_adder' });
+  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  let last;
+  for (let i = 0; i < 21; i++) {
+    last = await api.call('POST', '/api/people', { cookies, body: { displayName: 'Limit Person', igHandle: 'limit_person' } });
+  }
+  assert.equal(last.status, 429);
+  assert.deepEqual(JSON.parse(last.text), { error: 'rate_limited' });
 });

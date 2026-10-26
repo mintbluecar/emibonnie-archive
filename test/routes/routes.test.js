@@ -27,6 +27,16 @@ const input = (params, query = {}) => ({ params, query, body: undefined, origin:
 /** Route deps with a no-op `defer` (run-level tests don't need background work). */
 const routeDeps = () => ({ ...deps, defer: () => {} });
 
+/**
+ * A route's returned body, whether it returned a plain value or its own
+ * Response (the item route does, to set a per-request cache header).
+ * @param {unknown} result
+ * @returns {Promise<any>}
+ */
+async function bodyOf(result) {
+  return result instanceof Response ? result.json() : result;
+}
+
 test('every route is { method, path, cache, run }, with a unique method+path', () => {
   // The original page paths of the meta routes: the event page, and each kind's item page.
   const pagePaths = ['/e/:slug', ...Object.values(kindsRegistry).map((kind) => `${kind.urlPrefix}:sourceId`)];
@@ -61,7 +71,7 @@ test('event: ?order=desc reverses the section; an unknown order is a BadRequest'
 });
 
 test('item: a removed item and an unknown kind throw NotFound', async () => {
-  const view = await itemRoute.run(input({ kind: 'translation', sourceId: IDS.EVENT_A }), routeDeps());
+  const view = await bodyOf(await itemRoute.run(input({ kind: 'translation', sourceId: IDS.EVENT_A }), routeDeps()));
   assert.equal(view.sourceId, IDS.EVENT_A);
   assert.ok('editOpenUntil' in view);
   await assert.rejects(itemRoute.run(input({ kind: 'no_such_kind', sourceId: IDS.EVENT_A }), routeDeps()), NotFound);
@@ -237,7 +247,7 @@ test('a post with no edit window is finalized at intake, so viewing it never sch
   let fetches = 0;
   let defers = 0;
   const counting = { ...deps, fetchImpl: /** @type {typeof fetch} */ (async (...args) => { fetches += 1; return deps.fetchImpl(...args); }) };
-  const view = await itemRoute.run(input({ kind: 'translation', sourceId: IDS.LONG }), { ...counting, defer: () => { defers += 1; } });
+  const view = await bodyOf(await itemRoute.run(input({ kind: 'translation', sourceId: IDS.LONG }), { ...counting, defer: () => { defers += 1; } }));
   assert.equal(view.editOpenUntil, null);
   assert.equal(defers, 0);
   assert.equal(fetches, 0);
