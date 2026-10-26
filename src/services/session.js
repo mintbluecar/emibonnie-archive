@@ -124,7 +124,7 @@ const cache = new WeakMap();
  */
 export async function currentUser(deps, input) {
   if (cache.has(input)) return cache.get(input) ?? null;
-  const token = input.cookies[COOKIE_NAME];
+  const token = input.cookies?.[COOKIE_NAME];
   const now = (deps.now ?? (() => new Date()))();
   const userId = token ? await userIdForToken(deps.db, token, now) : null;
   const user = userId ? await loadSessionUser(deps, userId) : null;

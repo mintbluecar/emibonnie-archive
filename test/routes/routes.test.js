@@ -40,7 +40,8 @@ test('every route is { method, path, cache, run }, with a unique method+path', (
     // set cookies and must never be cached, so they are no-store despite being
     // GET; the add form's `options` list is also per-user. Every other GET is
     // cached, and every write (POST) is no-store.
-    const authGet = r.path.startsWith('/api/auth/') || r.path === '/api/me' || r.path === '/api/add/options';
+    const authGet = r.path.startsWith('/api/auth/') || r.path === '/api/me' || r.path === '/api/add/options'
+      || r.path === '/api/item/:kind/:sourceId/edit';
     assert.equal(r.cache === 'no-store', r.method !== 'GET' || authGet, `${r.path}: GETs are cached, writes are no-store (auth flow excepted)`);
   }
   assert.equal(new Set(routes.map((r) => `${r.method} ${r.path}`)).size, routes.length);

@@ -226,3 +226,37 @@ export async function getItem(db, itemId) {
   const { rows } = await db.query('select * from items where id = $1', [itemId]);
   return rows[0] ? camelRow(rows[0]) : null;
 }
+
+/**
+ * Moves an item's placement (and, for `event`, its event). Never touches
+ * the event's own row. `sort_key` is recomputed for the new placement the
+ * way a new item's is (epoch of `occurred_on` when the item has no
+ * `posted_at`), the same as `ingestWrite.js`.
+ * @param {Tx} tx
+ * @param {{ itemId: number, placement: import('../domain/constants.js').Placement, eventId: number|null }} input
+ * @returns {Promise<void>}
+ */
+export async function updatePlacement(tx, { itemId, placement, eventId }) {
+  // Only an event placement recomputes sort_key (the way a new item's is);
+  // any other placement keeps the item's existing sort position.
+  if (placement === 'event') {
+    await tx.query(
+      `update items set placement = $2, event_id = $3,
+         sort_key = case when posted_at is null then extract(epoch from occurred_on::timestamp) else sort_key end
+       where id = $1`,
+      [itemId, placement, eventId],
+    );
+    return;
+  }
+  await tx.query('update items set placement = $2, event_id = null where id = $1', [itemId, placement]);
+}
+
+/**
+ * Sets an item's category (type) and/or client, when given.
+ * @param {Tx} tx
+ * @param {{ itemId: number, categoryId: number|null, clientId: number|null }} input
+ * @returns {Promise<void>}
+ */
+export async function updateLookups(tx, { itemId, categoryId, clientId }) {
+  await tx.query('update items set category_id = $2, client_id = $3 where id = $1', [itemId, categoryId, clientId]);
+}

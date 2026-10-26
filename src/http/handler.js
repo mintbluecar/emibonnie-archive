@@ -24,6 +24,8 @@ export const PUBLIC_CACHE = 'public, s-maxage=300, stale-while-revalidate=86400,
 export const VIDEO_CACHE = 'public, s-maxage=600, stale-while-revalidate=86400, stale-if-error=86400';
 /** A public GET's 404: cached briefly, so a newly visible item appears within a minute. */
 export const NOT_FOUND_CACHE = 'public, s-maxage=60';
+/** A signed-in GET: per-user, never shared or stored. */
+export const PRIVATE_NO_STORE = 'private, no-store';
 /** Writes and errors. */
 export const NO_STORE = 'no-store';
 
@@ -87,15 +89,18 @@ function errorResponse(err, route, { method, pathname, log }) {
 }
 
 /**
- * The route's cache header always wins, with one exception: a GET route's
- * own Response may shorten it to `NOT_FOUND_CACHE` (the meta pages'
- * generic meta for a hidden or missing target).
+ * The route's cache header always wins, with two exceptions: a GET route's
+ * own Response may shorten it to `NOT_FOUND_CACHE` (the meta pages' generic
+ * meta for a hidden or missing target), or mark it `PRIVATE_NO_STORE` (the
+ * item page for a signed-in viewer, so the per-user edit buttons are never
+ * shared or cached).
  * @param {unknown} result @param {Route} route
  */
 function toResponse(result, route) {
   const response = result instanceof Response ? result : json(200, result, route.cache);
   const own = response.headers.get('cache-control');
-  const cache = route.method === 'GET' && own === NOT_FOUND_CACHE ? own : route.cache;
+  const kept = own === NOT_FOUND_CACHE || own === PRIVATE_NO_STORE;
+  const cache = route.method === 'GET' && kept ? /** @type {string} */ (own) : route.cache;
   response.headers.set('cache-control', cache);
   return response;
 }

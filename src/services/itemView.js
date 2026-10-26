@@ -59,10 +59,11 @@ async function loadVisible(deps, kindName, sourceId) {
  * One visible item's page: its kind's detail, with the shared header
  * fields and its neighbours in its event. Null for an unknown kind, an
  * unknown id or a hidden item.
- * @param {ViewDeps} deps @param {string} kindName @param {string} sourceId
- * @returns {Promise<ItemView|null>}
+ * @param {ViewDeps & { kinds?: any }} deps @param {string} kindName @param {string} sourceId
+ * @param {import('./session.js').SessionUser|null} [viewer] the signed-in caller, for `canEdit`/`canCheckFollowUps`
+ * @returns {Promise<(ItemView & { canEdit: boolean, canCheckFollowUps: boolean })|null>}
  */
-export async function itemView(deps, kindName, sourceId) {
+export async function itemView(deps, kindName, sourceId, viewer = null) {
   const found = await loadVisible(deps, kindName, sourceId);
   const extras = found ? await loadItemExtras(deps.db, found.card.id) : null;
   if (!found || !extras) return null;
@@ -71,10 +72,30 @@ export async function itemView(deps, kindName, sourceId) {
   const preview = /** @type {KindPreview} */ (kind.present.preview(card, details, ctx));
   const detail = /** @type {DetailVM} */ (kind.present.detail(card, details, ctx));
   const { prev, next } = card.event ? await neighbours(deps.db, card.id) : { prev: null, next: null };
+  // A signed-in viewer's own permissions, for the edit and follow-up buttons.
+  const rawItem = viewer ? /** @type {any} */ (await getItemRaw(deps.db, card.id)) : null;
+  const role = viewer && rawItem
+    ? canEditRole(viewer, { createdBy: rawItem.created_by, creditedAccountId: rawItem.credited_account_id })
+    : null;
   return {
     ...detail, kind: kind.name, sourceId: card.sourceId, url: preview.url, placement: card.placement,
     event: eventRefOf(card.event), people: preview.people,
     tags: { keyword: extras.keyword, hashtags: extras.hashtags }, category: extras.category, addedBy: addedByOf(extras.submitter),
     followsOnFrom: preview.followsOnFrom, prev: await linkTo(deps, prev), next: await linkTo(deps, next),
+    canEdit: role !== null, canCheckFollowUps: role !== null,
   };
+}
+
+/** @param {any} db @param {number} itemId */
+async function getItemRaw(db, itemId) {
+  const { rows } = await db.query('select created_by, credited_account_id from items where id = $1', [itemId]);
+  return rows[0] ? { created_by: rows[0].created_by, credited_account_id: rows[0].credited_account_id } : null;
+}
+
+/** @param {import('./session.js').SessionUser} user @param {{createdBy: string|null, creditedAccountId: number|null}} item */
+function canEditRole(user, item) {
+  if (user.isOwner) return 'owner';
+  if (item.creditedAccountId !== null && user.translatorAccountIds.includes(item.creditedAccountId)) return 'translator';
+  if (item.createdBy === user.id) return 'submitter';
+  return null;
 }

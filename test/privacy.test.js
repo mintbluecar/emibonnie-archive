@@ -101,6 +101,8 @@ async function representativeCalls() {
   calls.push(['GET', '/api/me'], ['POST', '/api/me/name'], ['POST', '/api/auth/signout'], ['POST', '/api/auth/signout-all'], ['POST', '/api/auth/dev']);
   // The signed-in add flow: all 401 without a session, nothing leaks.
   calls.push(['GET', '/api/add/options'], ['POST', '/api/add/preview'], ['POST', '/api/add'], ['POST', '/api/people']);
+  // Editing and follow-ups: all signed-in, a bare probe is 401 (no session).
+  calls.push(['GET', '/api/item/translation/1/edit'], ['POST', '/api/item/translation/1/edit'], ['POST', '/api/item/translation/1/edits/1/revert'], ['POST', '/api/item/translation/1/follow-ups']);
   return calls;
 }
 

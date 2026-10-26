@@ -4,7 +4,7 @@ import { draftTranslation } from './domain.js';
 import { fetchTranslationSource } from './source.js';
 import { parseTweetId } from '../../sources/url.js';
 import { appendFollowUp, persistTranslation } from './persist.js';
-import { loadDetails } from './repo.js';
+import { loadDetails, setLineFixes } from './repo.js';
 import { present } from './presenter.js';
 import { search } from './search.js';
 import { refreshEdits, checkFollowUps } from './upkeep.js';
@@ -18,6 +18,11 @@ import { profileUrl } from './profile.js';
  */
 function followUpOf(tweet) {
   return tweet.replyToId ? { platform: 'x', externalId: tweet.replyToId } : null;
+}
+
+/** @param {import('../../db/common.js').Tx} tx @param {{ itemId: number, subbed: boolean }} args */
+async function setSubbed(tx, { itemId, subbed }) {
+  await tx.query('update translations set subbed = $2 where item_id = $1', [itemId, subbed]);
 }
 
 export default defineKind({
@@ -38,4 +43,6 @@ export default defineKind({
   checkFollowUps,
   profileUrl,
   remapSpeakers,
+  setLineFixes: (/** @type {any} */ tx, /** @type {any} */ { itemId, fixes }) => setLineFixes(tx, itemId, fixes),
+  setSubbed,
 });

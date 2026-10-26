@@ -133,6 +133,8 @@ import { pages, redirects } from '../pages.js';
  *   checkFollowUps?: (deps: UpkeepDeps, itemId: number, options: { actor: string }) => Promise<{ added: number }>,
  *   profileUrl?: (handle: string) => string,
  *   remapSpeakers?: (tx: Db, args: { itemId: number, map: SpeakerMap, ctx: DraftContext }) => Promise<RemapResult>,
+ *   setLineFixes?: (tx: Db, args: { itemId: number, fixes: import('../domain/lineFixes.js').LineFix[] }) => Promise<void>,
+ *   setSubbed?: (tx: Db, args: { itemId: number, subbed: boolean }) => Promise<void>,
  * }} Kind
  *   `remapSpeakers(tx, …)` (optional, Task 10c): the owner's `npm run
  *   remap` for an archived item -- sets the given markers' speakers and
@@ -186,7 +188,7 @@ export const RESERVED_URL_PREFIXES = Object.freeze([
 const OWNED_URL_PREFIXES = Object.freeze({ '/t/': 'translation' });
 const REQUIRED_FUNCTIONS = ['matchesUrl', 'fetchSource', 'draft', 'persist', 'loadDetails'];
 const REQUIRED_GROUPS = { present: ['preview', 'detail'], search: ['textClause', 'rank', 'matchLines'] };
-const OPTIONAL_FUNCTIONS = ['refresh', 'checkFollowUps', 'profileUrl', 'remapSpeakers'];
+const OPTIONAL_FUNCTIONS = ['refresh', 'checkFollowUps', 'profileUrl', 'remapSpeakers', 'setLineFixes', 'setSubbed'];
 
 /**
  * Each string field of the spec, the pattern it must match, and the problem when it doesn't.
