@@ -26,14 +26,21 @@ export function apiFor(deps, options = {}) {
   });
   /**
    * @param {string} method @param {string} path
-   * @param {{ origin?: string|null, headers?: Record<string, string> }} [init]
+   * @param {{ body?: unknown, cookies?: Record<string, string>, origin?: string|null, headers?: Record<string, string> }} [init]
    */
   async function call(method, path, init = {}) {
     const headers = new Headers(init.headers);
     const origin = init.origin === undefined ? ORIGIN : init.origin;
     if (origin !== null && method !== 'GET') headers.set('origin', origin);
-    const res = await handle(new Request(`${ORIGIN}${path}`, { method, headers }));
-    return { status: res.status, headers: res.headers, text: await res.text() };
+    if (init.body !== undefined) headers.set('content-type', 'application/json');
+    if (init.cookies) {
+      const pairs = Object.entries(init.cookies).map(([k, v]) => `${k}=${v}`);
+      if (pairs.length > 0) headers.set('cookie', pairs.join('; '));
+    }
+    const res = await handle(new Request(`${ORIGIN}${path}`, {
+      method, headers, body: init.body === undefined ? undefined : JSON.stringify(init.body),
+    }));
+    return { status: res.status, headers: res.headers, setCookies: res.headers.getSetCookie(), text: await res.text() };
   }
   async function settle() {
     while (pending.length > 0) await Promise.all(pending.splice(0));

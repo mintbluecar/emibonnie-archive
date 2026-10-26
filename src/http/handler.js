@@ -16,6 +16,7 @@ import { matchRoute } from './router.js';
 import { BadRequest, NotFound, Conflict, RateLimited, PayloadTooLarge } from './errors.js';
 import { originAllowed } from './origin.js';
 import { assertKnownParams, parseQuery, readBody } from './query.js';
+import { parseCookies } from './cookies.js';
 
 /** Every public GET (Global Constraints: Caching). */
 export const PUBLIC_CACHE = 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400';
@@ -29,7 +30,8 @@ export const NO_STORE = 'no-store';
 /**
  * @typedef {{ db: { end(): Promise<void> }, fetchImpl: typeof fetch, now: () => Date, site: any, [key: string]: unknown }} BaseDeps
  * @typedef {BaseDeps & { defer: (task: () => Promise<unknown>) => void }} Deps
- * @typedef {{ params: Record<string, string>, query: Record<string, string|string[]>, body: unknown, origin: string }} RouteInput
+ * @typedef {{ params: Record<string, string>, query: Record<string, string|string[]>, body: unknown, origin: string,
+ *   cookies: Record<string, string>, ip: string|null }} RouteInput
  * @typedef {{ method: string, path: string, cache: string, query?: readonly string[]|null, lists?: readonly string[],
  *   run: (input: RouteInput, deps: any) => Promise<unknown> }} Route
  *   `query`: the query params a GET accepts (default none; null accepts any,
@@ -104,6 +106,19 @@ export async function withDeps(makeDeps, { waitUntil, onError }, fn) {
 }
 
 /**
+ * The client IP from the proxy headers: the first entry of
+ * `x-forwarded-for`, else `x-real-ip`, else null. It is never logged.
+ * @param {Request} request
+ * @returns {string|null}
+ */
+function ipOf(request) {
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim() || null;
+  const real = request.headers.get('x-real-ip');
+  return real ? real.trim() || null : null;
+}
+
+/**
  * HEAD is answered by the matching GET route: same status and headers, no body.
  * @param {(request: Request) => Promise<Response>} handle
  * @returns {(request: Request) => Promise<Response>}
@@ -133,7 +148,8 @@ export function createHandler({ routes, makeDeps, waitUntil, log = console.error
       if (route.method !== 'GET' && !originAllowed(request, env)) return json(403, { error: 'forbidden' }, NO_STORE);
       const query = route.query === null ? {} : parseQuery(url.searchParams, route.lists);
       if (route.method === 'GET') assertKnownParams(query, route.query);
-      const input = { params: match.params, query, body: await readBody(request), origin: url.origin };
+      const input = { params: match.params, query, body: await readBody(request), origin: url.origin,
+        cookies: parseCookies(request.headers.get('cookie')), ip: ipOf(request) };
       const onError = (/** @type {unknown} */ err) => log(`[api] ${ctx.method} ${ctx.pathname} background work failed: ${describe(err)}`);
       const result = await withDeps(makeDeps, { waitUntil, onError }, (deps) => /** @type {Route} */ (route).run(input, deps));
       return toResponse(result, route);
