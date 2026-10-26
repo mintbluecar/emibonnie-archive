@@ -33,9 +33,8 @@ export const pages = [
   { path: '/privacy', file: 'privacy.html' },
   { path: '/takedown', file: 'takedown.html' },
   // scaffold:pages (`npm run new page <name>` adds its entry above this line)
-  // Not yet built (later Plan 1b tasks); listed so no kind can claim these prefixes.
-  { path: '/add', file: null },
-  { path: '/me', file: null },
+  { path: '/add', file: 'add.html' },
+  { path: '/me', file: 'me.html' },
 ];
 
 /**

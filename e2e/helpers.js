@@ -153,6 +153,6 @@ export function devServer({ port, dbDir, siteDir }) {
     url: `http://127.0.0.1:${port}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { PORT: String(port), PGLITE_DIR: dbDir, SITE_DIR: siteDir, DATABASE_URL: '', VERCEL: '', E2E_LOCK_TOKEN: e2eLockToken() },
+    env: { PORT: String(port), PGLITE_DIR: dbDir, SITE_DIR: siteDir, DATABASE_URL: '', VERCEL: '', DEV_SIGN_IN: '1', E2E_LOCK_TOKEN: e2eLockToken() },
   };
 }

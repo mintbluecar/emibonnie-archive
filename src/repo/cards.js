@@ -13,12 +13,15 @@ import { EVENT_NOT_DELETED } from './items.js';
  * @typedef {{
  *   id: number, kind: string, placement: import('../domain/constants.js').Placement, sourceId: string,
  *   occurredOn: string, postedAt: string|null,
+ *   reviewState: import('../domain/constants.js').ReviewState,
  *   account: { handle: string, displayName: string|null }|null,
  *   event: { id: number, slug: string, name: string, occurredOn: string }|null,
  *   people: { personId: number, role: string }[],
  *   followsOn: { kind: string, sourceId: string }|null,
  * }} Card
  *   `sourceId`: the primary source's external id (the item's public id).
+ *   `reviewState`: always read, so the signed-in owner's own list can
+ *   label a held or rejected entry (Task 12); public lists ignore it.
  */
 
 /** @param {unknown} value */
@@ -31,7 +34,7 @@ function isoOrNull(value) {
 function toCard(row) {
   return {
     id: row.id, kind: row.kind, placement: row.placement, sourceId: row.source_id,
-    occurredOn: row.occurred_on, postedAt: isoOrNull(row.posted_at),
+    occurredOn: row.occurred_on, postedAt: isoOrNull(row.posted_at), reviewState: row.review_state,
     account: row.account_handle === null ? null : { handle: row.account_handle, displayName: row.account_name },
     event: row.event_id === null ? null : { id: row.event_id, slug: row.event_slug, name: row.event_name, occurredOn: row.event_on },
     people: row.people ?? [],
@@ -39,8 +42,8 @@ function toCard(row) {
   };
 }
 
-const CARDS_SQL = `
-  select i.id, i.kind, i.placement, i.occurred_on, i.posted_at, ps.external_id as source_id,
+const CARDS_SELECT = `
+  select i.id, i.kind, i.placement, i.occurred_on, i.posted_at, i.review_state, ps.external_id as source_id,
     a.handle as account_handle, a.display_name as account_name,
     e.id as event_id, e.slug as event_slug, e.name as event_name, e.occurred_on as event_on,
     (select json_agg(json_build_object('personId', ip.person_id, 'role', ip.role) order by ip.person_id, ip.role)
@@ -55,7 +58,7 @@ const CARDS_SQL = `
   join item_sources ps on ps.item_id = i.id and ps.role = 'primary'
   left join accounts a on a.id = i.credited_account_id
   left join events e on e.id = i.event_id
-  where i.id = any($1::bigint[]) and ${visibleItem('i')} and ${EVENT_NOT_DELETED}`;
+  where i.id = any($1::bigint[])`;
 
 /**
  * @param {Tx} db
@@ -64,7 +67,24 @@ const CARDS_SQL = `
  */
 export async function loadCards(db, itemIds) {
   if (itemIds.length === 0) return new Map();
-  const { rows } = await db.query(CARDS_SQL, [itemIds]);
+  const { rows } = await db.query(`${CARDS_SELECT} and ${visibleItem('i')} and ${EVENT_NOT_DELETED}`, [itemIds]);
+  return new Map(rows.map((row) => [row.id, toCard(row)]));
+}
+
+/**
+ * The signed-in submitter's own items, in any review state (Task 12's
+ * "added by me"). Same card shape, but the visibility rule's published/
+ * opted-out/blocked clauses are deliberately absent: the caller owns
+ * these items and sees their pending or rejected text. A soft-deleted
+ * item, or one in a deleted event, still has no page to link to, so it
+ * stays out.
+ * @param {Tx} db
+ * @param {number[]} itemIds
+ * @returns {Promise<Map<number, Card>>}
+ */
+export async function loadOwnCards(db, itemIds) {
+  if (itemIds.length === 0) return new Map();
+  const { rows } = await db.query(`${CARDS_SELECT} and i.deleted_at is null and ${EVENT_NOT_DELETED}`, [itemIds]);
   return new Map(rows.map((row) => [row.id, toCard(row)]));
 }
 

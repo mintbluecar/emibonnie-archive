@@ -22,7 +22,7 @@ import { route as account } from './account.js';
 import { route as video } from './video.js';
 import { route as authXStart, callbackRoute as authXCallback } from './authX.js';
 import { route as authGoogleStart, callbackRoute as authGoogleCallback } from './authGoogle.js';
-import { meRoute, setNameRoute, signOutRoute, signOutAllRoute, deleteAccountRoute } from './me.js';
+import { meRoute, addedRoute, setNameRoute, signOutRoute, signOutAllRoute, deleteAccountRoute } from './me.js';
 import { route as authDev } from './authDev.js';
 import { optionsRoute, previewRoute, addRoute, addPersonRoute } from './add.js';
 import { editRoute, applyRoute, revertRoute, followUpsRoute } from './edit.js';
@@ -34,7 +34,7 @@ export const routes = [
   home, event, item, refresh, search, filters, person, account, video,
   authXStart, authXCallback,
   authGoogleStart, authGoogleCallback,
-  meRoute, setNameRoute, signOutRoute, signOutAllRoute, deleteAccountRoute,
+  meRoute, addedRoute, setNameRoute, signOutRoute, signOutAllRoute, deleteAccountRoute,
   authDev,
   optionsRoute, previewRoute, addRoute, addPersonRoute,
   editRoute, applyRoute, revertRoute, followUpsRoute,

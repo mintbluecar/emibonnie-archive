@@ -55,6 +55,11 @@
  *   kind has (added by src/services/cards.js): the date it happened on
  *   and its placement.
  *
+ * @typedef {Preview & { reviewState: import('../domain/constants.js').ReviewState }} AddedPreview
+ *   One of the signed-in submitter's own items (Task 12's "added by me"):
+ *   every review state is listed, so the page can label a held or rejected
+ *   entry. Public lists never carry `reviewState`.
+ *
  * @typedef {{ url: string, width: number, height: number }} ImageVM
  * @typedef {{ bitrate: number, url: string }} VariantVM
  * @typedef {{ type: 'video', variants: VariantVM[], width: number, height: number, poster: string|null }} VideoVM

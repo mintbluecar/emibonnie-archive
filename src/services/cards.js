@@ -8,7 +8,7 @@
  */
 import { kindsRegistry } from '../kinds/_registry.js';
 import { listPeople } from '../repo/people.js';
-import { loadCards } from '../repo/cards.js';
+import { loadCards, loadOwnCards } from '../repo/cards.js';
 import { formatName } from '../site/loadSite.js';
 import { ROLE_EMOJI } from '../domain/constants.js';
 
@@ -62,21 +62,44 @@ export async function presenterContext(deps) {
 
 /**
  * Each kind's details for the cards of that kind, in one call per kind.
+ * `includePending` reaches every kind's `loadDetails` (Task 12: the
+ * submitter's own list shows text still held for review).
  * @param {ViewDeps} deps
  * @param {Card[]} cards
+ * @param {{ includePending?: boolean }} [options]
  * @returns {Promise<Map<number, any>>}
  */
-export async function detailsFor(deps, cards) {
+export async function detailsFor(deps, cards, { includePending = false } = {}) {
   const kinds = kindsOf(deps);
   /** @type {Map<number, any>} */
   const details = new Map();
   for (const name of new Set(cards.map((c) => c.kind))) {
     const kind = kinds[name];
     if (!kind) continue;
-    const loaded = await kind.loadDetails(deps.db, cards.filter((c) => c.kind === name).map((c) => c.id));
+    const loaded = await kind.loadDetails(deps.db, cards.filter((c) => c.kind === name).map((c) => c.id), { includePending });
     for (const [id, entry] of loaded) details.set(id, entry);
   }
   return details;
+}
+
+/**
+ * Presents `ordered` cards (already in display order) with their details.
+ * @param {ViewDeps} deps
+ * @param {Card[]} ordered
+ * @param {PresentContext} ctx
+ * @param {{ includePending?: boolean }} [options]
+ * @returns {Promise<{ card: Card, details: any, preview: Preview }[]>}
+ */
+async function presentCards(deps, ordered, ctx, options = {}) {
+  const details = await detailsFor(deps, ordered, options);
+  const kinds = kindsOf(deps);
+  return ordered
+    .filter((card) => kinds[card.kind] && details.has(card.id))
+    .map((card) => {
+      const entry = details.get(card.id);
+      const own = /** @type {KindPreview} */ (kinds[card.kind].present.preview(card, entry, ctx));
+      return { card, details: entry, preview: { ...own, occurredOn: card.occurredOn, placement: card.placement } };
+    });
 }
 
 /**
@@ -91,13 +114,21 @@ export async function detailsFor(deps, cards) {
 export async function previewsFor(deps, itemIds, ctx) {
   const cards = await loadCards(deps.db, itemIds);
   const ordered = itemIds.map((id) => cards.get(id)).filter((c) => c !== undefined);
-  const details = await detailsFor(deps, ordered);
-  const kinds = kindsOf(deps);
-  return ordered
-    .filter((card) => kinds[card.kind] && details.has(card.id))
-    .map((card) => {
-      const entry = details.get(card.id);
-      const own = /** @type {KindPreview} */ (kinds[card.kind].present.preview(card, entry, ctx));
-      return { card, details: entry, preview: { ...own, occurredOn: card.occurredOn, placement: card.placement } };
-    });
+  return presentCards(deps, ordered, ctx);
+}
+
+/**
+ * The submitter's own previews among `itemIds`, in that order, in any
+ * review state and including text still held for review (Task 12's
+ * "added by me"). Same shape as `previewsFor`, but `loadOwnCards` in
+ * place of the visible-only loader.
+ * @param {ViewDeps} deps
+ * @param {number[]} itemIds
+ * @param {PresentContext} ctx
+ * @returns {Promise<{ card: Card, details: any, preview: Preview }[]>}
+ */
+export async function ownPreviewsFor(deps, itemIds, ctx) {
+  const cards = await loadOwnCards(deps.db, itemIds);
+  const ordered = itemIds.map((id) => cards.get(id)).filter((c) => c !== undefined);
+  return presentCards(deps, ordered, ctx, { includePending: true });
 }

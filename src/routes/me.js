@@ -1,16 +1,19 @@
 // @ts-check
 /**
- * The signed-in user's own interface: `GET /api/me` (who am I?), `POST
+ * The signed-in user's own interface: `GET /api/me` (who am I?), `GET
+ * /api/me/added` (the items they submitted, every review state), `POST
  * /api/me/name` (a Google user picks their public name), `POST
  * /api/auth/signout` and `/api/auth/signout-all`.
  */
-import { NO_STORE } from '../http/handler.js';
+import { NO_STORE, PRIVATE_NO_STORE } from '../http/handler.js';
 import { BadRequest } from '../http/errors.js';
 import { jsonWithCookies } from '../http/cookies.js';
 import { currentUser, requireUser, signOut, signOutEverywhere, setDisplayName, isTranslator, needsDisplayName } from '../services/session.js';
 import { limit } from '../services/limits.js';
 import { cleanDisplayName } from '../domain/displayName.js';
 import { deleteAccount } from '../services/deleteAccount.js';
+import { addedPreviews } from '../services/added.js';
+import { HUB_OFFSET_MAX, integer } from '../services/params.js';
 
 /** @param {import('../services/session.js').SessionUser|null} user */
 function meUser(user) {
@@ -32,6 +35,24 @@ export const meRoute = {
   query: [],
   /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
   run: async (input, deps) => ({ user: meUser(await currentUser(deps, input)) }),
+};
+
+/**
+ * The caller's own items, every review state, newest first (Task 12).
+ * Per-user, so it is never shared or stored; `reviewState` lets the page
+ * label a held or rejected entry.
+ */
+export const addedRoute = {
+  method: 'GET',
+  path: '/api/me/added',
+  cache: PRIVATE_NO_STORE,
+  query: ['offset'],
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireUser(deps, input);
+    const offset = integer('offset', input.query.offset, HUB_OFFSET_MAX, 0);
+    return addedPreviews(deps, user.id, { offset });
+  },
 };
 
 export const setNameRoute = {

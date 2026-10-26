@@ -11,7 +11,12 @@ import { signInUser } from '../services/session.js';
 
 /** @param {Record<string, string|undefined>} [env] */
 function devEnabled(env = {}) {
-  return env.DEV_SIGN_IN === '1' && env.VERCEL === undefined;
+  // `!env.VERCEL`, not `env.VERCEL === undefined`: the e2e dev server
+  // forces `VERCEL` to an *empty* string so a value from the shell can
+  // never leak in (e2e/helpers.js), and Vercel itself always sets it to
+  // a non-empty value (its own `1`). An empty or missing `VERCEL` means
+  // "not deployed", which is when this local-only route may exist.
+  return env.DEV_SIGN_IN === '1' && !env.VERCEL;
 }
 
 export const route = {

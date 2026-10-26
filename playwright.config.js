@@ -2,7 +2,9 @@
 /**
  * `npm run e2e`: the engine's browser smoke tests and accessibility
  * checks (Plan 1b Task 7 brief, review round 2), `e2e/smoke.spec.js`
- * and `e2e/embed.spec.js` (Task 10b: the X embed, with X blocked), once
+ * and `e2e/embed.spec.js` (Task 10b: the X embed, with X blocked), plus
+ * `e2e/me.spec.js` (Plan 2a Task 12: the sign-in screen and me page),
+ * once
  * per project (e2e/helpers.js's `PROJECTS`: 390x844 phone and 1280x800
  * desktop, light and dark). Chromium only: `npx playwright
  * install chromium` locally, `npx playwright install --with-deps
@@ -23,7 +25,7 @@ const PORT = Number(process.env.E2E_PORT ?? 4310);
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: ['smoke.spec.js', 'embed.spec.js', 'polish.spec.js', 'search.spec.js'],
+  testMatch: ['smoke.spec.js', 'embed.spec.js', 'polish.spec.js', 'search.spec.js', 'me.spec.js'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0,

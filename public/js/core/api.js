@@ -1,11 +1,16 @@
 // @ts-check
-/** Thrown by `getJson()` when the response isn't OK (2xx). */
+/** Thrown by `getJson()`/`postJson()` when the response isn't OK (2xx). */
 export class ApiError extends Error {
-  /** @param {number} status */
-  constructor(status) {
+  /**
+   * @param {number} status
+   * @param {any} [body] the server's JSON error body, when it sent one
+   */
+  constructor(status, body = null) {
     super(`request failed with status ${status}`);
     this.name = 'ApiError';
     this.status = status;
+    /** The parsed error body (`{ error, message? }`), or null. */
+    this.body = body;
   }
 }
 
@@ -36,5 +41,32 @@ function withQuery(path, params) {
 export async function getJson(path, params) {
   const response = await fetch(withQuery(path, params));
   if (!response.ok) throw new ApiError(response.status);
+  return response.json();
+}
+
+/**
+ * POSTs `body` as JSON to `path` and parses the JSON response. An error
+ * keeps its status and the server's own JSON body: the sign-in/name forms
+ * show the server's `message` (`BadRequest` reasons like
+ * `looks_like_handle`) in the page's words.
+ * @param {string} path @param {unknown} [body]
+ * @returns {Promise<any>}
+ */
+export async function postJson(path, body) {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body ?? {}),
+  });
+  if (!response.ok) {
+    /** @type {any} */
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+    throw new ApiError(response.status, payload);
+  }
   return response.json();
 }

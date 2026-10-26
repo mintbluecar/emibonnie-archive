@@ -260,3 +260,26 @@ export async function updatePlacement(tx, { itemId, placement, eventId }) {
 export async function updateLookups(tx, { itemId, categoryId, clientId }) {
   await tx.query('update items set category_id = $2, client_id = $3 where id = $1', [itemId, categoryId, clientId]);
 }
+
+/**
+ * The ids of one submitter's own added items, newest first, in any review
+ * state: what the me page's "added by me" lists (Task 12). A soft-deleted
+ * item, or one in a deleted event, is left out -- it has no page to link
+ * to; the caller's own pending/rejected state is deliberately not
+ * filtered. `limit + 1` is read so the caller can tell whether a next
+ * page exists without a second count.
+ * @param {Tx} db
+ * @param {string} userId
+ * @param {{ limit: number, offset: number }} page
+ * @returns {Promise<{ ids: number[], hasMore: boolean }>}
+ */
+export async function ownAddedIds(db, userId, { limit, offset }) {
+  const { rows } = await db.query(
+    `select i.id from items i
+     where i.created_by = $1 and i.deleted_at is null and ${EVENT_NOT_DELETED}
+     order by i.id desc limit $2 offset $3`,
+    [userId, limit + 1, offset],
+  );
+  const ids = rows.map((row) => row.id);
+  return { ids: ids.slice(0, limit), hasMore: ids.length > limit };
+}
