@@ -11,7 +11,7 @@ import { upsertAccount } from '../../repo/accounts.js';
 import { tagItem } from '../../repo/tags.js';
 import { link } from '../../repo/itemLinks.js';
 import { remember } from '../../repo/speakerMemory.js';
-import { addParts, insertTranslation, setSpeakers } from './repo.js';
+import { addParts, insertTranslation, setSpeakers, setLineFixes } from './repo.js';
 
 /** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
 /** @typedef {import('./domain.js').TranslationDraft} TranslationDraft */
@@ -155,11 +155,13 @@ async function linkFollowsOn(tx, { itemId, followsOn }) {
 export async function persistTranslation(tx, draft, { itemId, accountId }) {
   const { tweet, common } = draft;
   await insertTranslation(tx, itemId, { textEnteredManually: common.textEnteredManually });
+  if (draft.subbed) await tx.query('update translations set subbed = true where item_id = $1', [itemId]);
   await addMainPost(tx, { itemId, accountId, draft });
   await appendPosts(tx, { itemId, accountId, handle: tweet.authorHandle, posts: tweet.followUps });
   await addMedia(tx, { itemId, accountId, tweet });
   await addQuoted(tx, { itemId, tweet });
   await setSpeakers(tx, itemId, usedSpeakers(draft));
+  await setLineFixes(tx, itemId, draft.lineFixes ?? []);
   await tagItem(tx, itemId, tagsOf(draft));
   await linkFollowsOn(tx, { itemId, followsOn: common.followsOn });
   await remember(tx, accountId, draft.memory);
@@ -170,10 +172,14 @@ export async function persistTranslation(tx, draft, { itemId, accountId }) {
  * `translation.appendFollowUp`: attaches a pasted same-author reply to the
  * item it continues, as its next part.
  * @param {Tx} tx
- * @param {{ itemId: number, accountId: number|null, input: Tweet }} args
+ * @param {{ itemId: number, accountId: number|null, input: Tweet, pending: boolean }} args
  * @returns {Promise<void>}
  */
-export async function appendFollowUp(tx, { itemId, accountId, input }) {
+export async function appendFollowUp(tx, { itemId, accountId, input, pending }) {
   const post = { id: input.id, text: input.text, editableUntil: input.edit.editableUntil, versionIds: input.edit.versionIds };
   await appendPosts(tx, { itemId, accountId, handle: input.authorHandle, posts: [post] });
+  if (pending) {
+    const { rows } = await tx.query('select max(position) as p from translation_parts where item_id = $1', [itemId]);
+    await tx.query('update translation_parts set pending = true where item_id = $1 and position = $2', [itemId, rows[0].p]);
+  }
 }

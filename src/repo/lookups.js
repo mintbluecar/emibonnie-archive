@@ -40,6 +40,20 @@ export function ensureClient(tx, name) {
   return ensureLookup(tx, 'clients', name);
 }
 
+/**
+ * The id of an existing, live lookup row, or null when the name isn't in
+ * the list (the web add flow's `lookups:'existing'` refuses it).
+ * @param {Tx} tx
+ * @param {'categories'|'clients'} table
+ * @param {string} name
+ * @returns {Promise<number|null>}
+ */
+export async function findLookup(tx, table, name) {
+  if (!LOOKUP_TABLES.has(table)) throw new Error(`findLookup: unknown table '${table}'`);
+  const { rows } = await tx.query(`select id from ${table} where lower(name) = lower($1) and deleted_at is null order by id limit 1`, [name]);
+  return rows[0]?.id ?? null;
+}
+
 /** @param {Tx} db @returns {Promise<{ id: number, name: string }[]>} */
 export async function listCategories(db) {
   const { rows } = await db.query('select id, name from categories where deleted_at is null order by id');

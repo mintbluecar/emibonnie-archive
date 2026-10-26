@@ -22,7 +22,7 @@ import { accountState } from '../repo/accounts.js';
 import { recall } from '../repo/speakerMemory.js';
 import { loadContext, occurredOnOf } from './ingestContext.js';
 import { resolvePeopleRefs } from './intakeRefs.js';
-import { writeItem } from './ingestWrite.js';
+import { writeItem, reviewStateOf } from './ingestWrite.js';
 
 /** @typedef {import('../kinds/defineKind.js').Kind} Kind */
 /** @typedef {import('../kinds/defineKind.js').Draft} Draft */
@@ -35,11 +35,12 @@ import { writeItem } from './ingestWrite.js';
  *   now?: () => Date, kinds?: Record<string, Readonly<Kind>> }} IngestDeps
  *   `kinds` replaces the registry (tests inject a failing kind).
  * @typedef {{ kind: string, input: string, chosen?: SpeakerMap, overrides?: DraftOverrides, addedVia: string,
- *   actor: string }} IngestRequest
+ *   actor: string, dryRun?: boolean, allowUnmapped?: boolean, lineFixes?: import('../domain/lineFixes.js').LineFix[],
+ *   subbed?: boolean, lookups?: 'create'|'existing' }} IngestRequest
  * @typedef {{ status: 'added'|'attached'|'pending'|'duplicate'|'removed'|'opted_out'|'deleted'|'unavailable'
- *     |'needs_speakers'|'needs_date',
+ *     |'needs_speakers'|'needs_date'|'ready',
  *   sourceId: string, itemId?: number, eventId?: number|null, missing?: object[], draft?: object,
- *   newTags?: string[] }} IngestResult
+ *   newTags?: string[], unmapped?: object[], lines?: import('../domain/lineFixes.js').FixedLine[], pending?: boolean }} IngestResult
  *   `newTags` is passed through from the draft, unread by ingest logic,
  *   for the add flow and the CLI to surface; it never blocks ingest.
  * @typedef {{ deps: IngestDeps, request: IngestRequest, kind: Readonly<Kind>, sourceId: string,
@@ -87,8 +88,14 @@ async function attachIfFollowUp({ deps, request, kind, sourceId }, { input, cred
   if (!owner || owner.accountExternalId !== credited.externalId) return null;
   if (owner.state !== 'visible') return { status: STATE_STATUS[owner.state], sourceId, itemId: owner.itemId };
   const append = /** @type {NonNullable<Kind['appendFollowUp']>} */ (kind.appendFollowUp);
-  await deps.db.transaction((tx) => append(tx, { itemId: owner.itemId, accountId, input }), { actor: request.actor });
-  return { status: 'attached', sourceId, itemId: owner.itemId };
+  // A pasted follow-up's own text is never hand-typed, so its pending state
+  // is exactly the approval switch (the same rule ingestWrite applies).
+  const pending = await deps.db.transaction(async (tx) => {
+    const review = await reviewStateOf(tx, { common: { textEnteredManually: false }, actor: request.actor, creditedUserId: null });
+    await append(tx, { itemId: owner.itemId, accountId, input, pending: review === 'pending' });
+    return review === 'pending';
+  }, { actor: request.actor });
+  return { status: 'attached', sourceId, itemId: owner.itemId, ...(pending ? { pending: true } : {}) };
 }
 
 /**
@@ -99,7 +106,7 @@ async function attachIfFollowUp({ deps, request, kind, sourceId }, { input, cred
  */
 function readiness({ deps, request, sourceId }, draft) {
   const newTags = draft.newTags ?? [];
-  if (draft.missing.length > 0) {
+  if (draft.missing.length > 0 && !request.allowUnmapped) {
     return { refusal: { status: 'needs_speakers', sourceId, missing: draft.missing, newTags, draft }, occurredOn: null };
   }
   const occurredOn = occurredOnOf(draft.common, request.overrides, deps.site.timezone);
@@ -144,7 +151,7 @@ async function write(run, { draft: drafted, occurredOn, creditedUserId }) {
   const draft = withExtraPeople(drafted, run.extraPeople);
   try {
     const written = await deps.db.transaction(
-      (tx) => writeItem(tx, { kind, draft, occurredOn, addedVia, actor, creditedUserId }),
+      (tx) => writeItem(tx, { kind, draft, occurredOn, addedVia, actor, creditedUserId, lookups: request.lookups ?? 'create' }),
       { actor },
     );
     const status = written.reviewState === 'pending' ? 'pending' : 'added';
@@ -177,6 +184,16 @@ async function screen(run) {
   return { refusal: null, input, ctx, first, account };
 }
 
+/** @param {Run} run @param {Draft} draft @returns {IngestResult} */
+function dryRunResult(run, draft) {
+  return {
+    status: 'ready', sourceId: run.sourceId, draft,
+    unmapped: /** @type {any} */ (draft).unmapped ?? draft.missing,
+    lines: /** @type {any} */ (draft).lines ?? [],
+    newTags: draft.newTags ?? [],
+  };
+}
+
 /**
  * Steps 2-6, once the pasted id is known to be new.
  * @param {Run} run
@@ -186,14 +203,16 @@ async function ingestNew(run) {
   const screened = await screen(run);
   if (screened.refusal) return screened.refusal;
   const { input, ctx, first, account } = screened;
-  const accountId = account?.id ?? null;
+  const accountId = account === null ? null : account.id;
   const attached = await attachIfFollowUp(run, { input, credited: first.common.credited, accountId });
   if (attached) return attached;
 
   const draft = accountId === null ? first : run.kind.draft(input, { ...ctx, remembered: await recall(run.deps.db, accountId) });
-  const { refusal, occurredOn } = readiness(run, draft);
-  if (refusal || !occurredOn) return /** @type {IngestResult} */ (refusal);
-  return write(run, { draft, occurredOn, creditedUserId: account?.userId ?? null });
+  const ready = readiness(run, draft);
+  if (ready.refusal) return /** @type {IngestResult} */ (ready.refusal);
+  const occurredOn = /** @type {string} */ (ready.occurredOn);
+  if (run.request.dryRun) return dryRunResult(run, draft);
+  return write(run, { draft, occurredOn, creditedUserId: account === null ? null : account.userId });
 }
 
 /**
@@ -205,7 +224,14 @@ export async function ingestItem(deps, request) {
   const kind = kindNamed(deps, request.kind);
   const sourceId = kind.matchesUrl(request.input);
   if (!sourceId) throw new BadRequest(`not a ${kind.name} source: ${request.input}`);
-  const extraPeople = await resolvePeopleRefs(deps.db, request.overrides?.people ?? []);
-  const run = { deps, request, kind, sourceId, extraPeople };
+  // The submitter's "already subbed" tick and line fixes ride in overrides,
+  // so the kind's `draft` sees them through `ctx.overrides`.
+  const overrides = {
+    ...request.overrides,
+    ...(request.subbed !== undefined ? { subbed: request.subbed } : {}),
+    ...(request.lineFixes !== undefined ? { lineFixes: request.lineFixes } : {}),
+  };
+  const extraPeople = await resolvePeopleRefs(deps.db, overrides.people ?? []);
+  const run = { deps, request: { ...request, overrides }, kind, sourceId, extraPeople };
   return (await knownSource(run, { platform: kind.platform, externalId: sourceId })) ?? ingestNew(run);
 }

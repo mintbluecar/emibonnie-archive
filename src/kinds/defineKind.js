@@ -45,6 +45,8 @@ import { pages, redirects } from '../pages.js';
  *   text?: string,
  *   occurredOn?: string,
  *   people?: { igHandle: string, role: ItemPerson['role'] }[],
+ *   subbed?: boolean,
+ *   lineFixes?: import('../domain/lineFixes.js').LineFix[],
  * }} DraftOverrides
  *   What the submitter changed in the add flow. `text` is text typed in by
  *   hand (it replaces the source's text and marks it `textEnteredManually`).
@@ -121,7 +123,7 @@ import { pages, redirects } from '../pages.js';
  *   matchesUrl(url: string): string|null,
  *   fetchSource(deps: any, sourceId: string): Promise<SourceInput>,
  *   followUpOf?: (input: any) => SourceRef|null,
- *   appendFollowUp?: (tx: Db, args: { itemId: number, accountId: number|null, input: any }) => Promise<void>,
+ *   appendFollowUp?: (tx: Db, args: { itemId: number, accountId: number|null, input: any, pending: boolean }) => Promise<void>,
  *   draft(input: any, ctx: DraftContext): Draft,
  *   persist(tx: Db, draft: any, meta: object): Promise<number>,
  *   loadDetails(db: Db, itemIds: number[]): Promise<Map<number, object>>,

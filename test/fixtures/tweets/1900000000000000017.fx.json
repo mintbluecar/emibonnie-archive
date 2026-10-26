@@ -1,0 +1,47 @@
+{
+ "status": {
+  "type": "status",
+  "url": "https://x.com/tl_gamma/status/1900000000000000017",
+  "id": "1900000000000000017",
+  "text": "#solluna fan translations, kept. here is a short note with no speakers at all.",
+  "raw_text": {
+   "text": "#solluna fan translations, kept. here is a short note with no speakers at all.",
+   "display_text_range": [
+    0,
+    78
+   ],
+   "facets": []
+  },
+  "author": {
+   "screen_name": "tl_gamma",
+   "url": "https://x.com/tl_gamma",
+   "id": "9003",
+   "name": "gamma live"
+  },
+  "replies": 0,
+  "reposts": 0,
+  "likes": 42,
+  "bookmarks": 0,
+  "quotes": 0,
+  "embed_card": "tweet",
+  "created_at": "Wed Oct 21 09:00:00 +0000 2026",
+  "created_timestamp": 1792573200,
+  "possibly_sensitive": false,
+  "views": 100,
+  "is_note_tweet": false,
+  "community_note": null,
+  "lang": "en",
+  "replying_to": null,
+  "media": {},
+  "provider": "twitter",
+  "reposted_by": null
+ },
+ "thread": null,
+ "code": 200,
+ "author": {
+  "screen_name": "tl_gamma",
+  "url": "https://x.com/tl_gamma",
+  "id": "9003",
+  "name": "gamma live"
+ }
+}
