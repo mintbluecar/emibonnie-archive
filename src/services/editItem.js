@@ -40,6 +40,19 @@ export function canEdit(user, item) {
   return null;
 }
 
+/**
+ * The caller's edit role for an archived item, for a view's `canEdit`
+ * flag. Null when the item doesn't exist. The one place both the edit
+ * service and the item view ask "may this user edit this?".
+ * @param {any} db @param {number} itemId @param {SessionUser} user
+ * @returns {Promise<'submitter'|'translator'|'owner'|null>}
+ */
+export async function editRoleFor(db, itemId, user) {
+  const item = /** @type {any} */ (await getItem(db, itemId));
+  if (!item) return null;
+  return canEdit(user, { createdBy: item.createdBy ?? null, creditedAccountId: item.creditedAccountId ?? null });
+}
+
 /** @param {any} db @param {'categories'|'clients'} table @param {number|null} id @returns {Promise<string|null>} */
 async function nameOf(db, table, id) {
   if (id === null) return null;

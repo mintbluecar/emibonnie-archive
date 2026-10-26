@@ -34,12 +34,15 @@ function parseJwtPayload(token) {
   return JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
 }
 
-/** @param {string} idToken @param {string} clientId @param {string} nonce */
-function requireValidSub(idToken, clientId, nonce) {
+/**
+ * @param {string} idToken @param {string} clientId @param {string} nonce
+ * @param {number} nowMs the current time, injected so expiry is testable
+ */
+function requireValidSub(idToken, clientId, nonce, nowMs) {
   const payload = parseJwtPayload(idToken);
   if (payload.iss !== 'https://accounts.google.com') throw new Error('google id_token issuer mismatch');
   if (payload.aud !== clientId) throw new Error('google id_token audience mismatch');
-  if (typeof payload.exp !== 'number' || payload.exp < Date.now() / 1000) throw new Error('google id_token expired');
+  if (typeof payload.exp !== 'number' || payload.exp < nowMs / 1000) throw new Error('google id_token expired');
   if (payload.nonce !== nonce) throw new Error('google id_token nonce mismatch');
   if (typeof payload.sub !== 'string' || payload.sub === '') throw new Error('google id_token missing sub');
   return payload.sub;
@@ -47,7 +50,7 @@ function requireValidSub(idToken, clientId, nonce) {
 
 /**
  * Exchange the code for an `id_token` and return the validated OIDC `sub`.
- * @param {{ env: Record<string, string|undefined>, fetchImpl: typeof fetch }} deps
+ * @param {{ env: Record<string, string|undefined>, fetchImpl: typeof fetch, now?: () => Date }} deps
  * @param {{ code: string, verifier: string, redirectUri: string, nonce: string }} input
  * @returns {Promise<{ sub: string }>}
  */
@@ -61,5 +64,5 @@ export async function exchangeCode(deps, { code, verifier, redirectUri, nonce })
   const json = await res.json();
   const idToken = json.id_token;
   if (typeof idToken !== 'string') throw new Error('google token exchange returned no id_token');
-  return { sub: requireValidSub(idToken, deps.env.GOOGLE_CLIENT_ID ?? '', nonce) };
+  return { sub: requireValidSub(idToken, deps.env.GOOGLE_CLIENT_ID ?? '', nonce, (deps.now?.() ?? new Date()).getTime()) };
 }

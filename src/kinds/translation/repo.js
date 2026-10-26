@@ -175,23 +175,50 @@ export async function fixesOf(db, itemIds) {
   return byItem;
 }
 
+/** @param {import('../../domain/lineFixes.js').LineFix} fix */
+const fixKey = (fix) => `${fix.part}:${fix.line}`;
+
+/** @param {import('../../domain/lineFixes.js').LineFix} a @param {import('../../domain/lineFixes.js').LineFix} b */
+function sameFix(a, b) {
+  if (a.as !== b.as) return false;
+  if (a.as === 'plain' || b.as === 'plain') return true;
+  return JSON.stringify(a.speaker) === JSON.stringify(b.speaker);
+}
+
+/**
+ * Writes one line fix's row.
+ * @param {Tx} tx @param {number} itemId @param {import('../../domain/lineFixes.js').LineFix} fix
+ */
+async function insertFix(tx, itemId, fix) {
+  const personId = fix.as === 'speech' && 'person' in fix.speaker ? fix.speaker.person : null;
+  const role = fix.as === 'speech' && 'role' in fix.speaker ? fix.speaker.role : null;
+  await tx.query(
+    'insert into translation_line_fixes (item_id, position, line, as_kind, person_id, role) values ($1, $2, $3, $4, $5, $6)',
+    [itemId, fix.part, fix.line, fix.as, personId, role],
+  );
+}
+
 /**
  * Replaces an item's line fixes, writing only the delta (like
- * `setSpeakers`), so the audit log shows exactly what changed.
+ * `setSpeakers`), so the audit log shows exactly what changed rather than
+ * a delete/insert of every unchanged line.
  * @param {Tx} tx
  * @param {number} itemId
  * @param {import('../../domain/lineFixes.js').LineFix[]} fixes
  * @returns {Promise<void>}
  */
 export async function setLineFixes(tx, itemId, fixes) {
-  await tx.query('delete from translation_line_fixes where item_id = $1', [itemId]);
-  for (const fix of fixes) {
-    const personId = fix.as === 'speech' && 'person' in fix.speaker ? fix.speaker.person : null;
-    const role = fix.as === 'speech' && 'role' in fix.speaker ? fix.speaker.role : null;
-    await tx.query(
-      'insert into translation_line_fixes (item_id, position, line, as_kind, person_id, role) values ($1, $2, $3, $4, $5, $6)',
-      [itemId, fix.part, fix.line, fix.as, personId, role],
-    );
+  const existing = new Map(((await fixesOf(tx, [itemId])).get(itemId) ?? []).map((f) => [fixKey(f), f]));
+  const wanted = new Map(fixes.map((f) => [fixKey(f), f]));
+  for (const [key, old] of existing) {
+    const next = wanted.get(key);
+    if (next && sameFix(old, next)) continue;
+    await tx.query('delete from translation_line_fixes where item_id = $1 and position = $2 and line = $3', [itemId, old.part, old.line]);
+  }
+  for (const [key, fix] of wanted) {
+    const old = existing.get(key);
+    if (old && sameFix(old, fix)) continue;
+    await insertFix(tx, itemId, fix);
   }
 }
 

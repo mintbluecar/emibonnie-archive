@@ -36,6 +36,20 @@ test('id_token with wrong aud or nonce is refused', async () => {
   await assert.rejects(exchangeCode({ env: { GOOGLE_CLIENT_ID: 'cid' }, fetchImpl: /** @type {typeof fetch} */ (nn) }, { code: 'c', verifier: 'v', redirectUri: 'r', nonce: 'n' }), /nonce mismatch/);
 });
 
+test('id_token expiry is checked against the injected clock', async () => {
+  const exp = Math.floor(Date.now() / 1000) + 60;
+  const token = jwt({ iss: 'https://accounts.google.com', aud: 'cid', exp, nonce: 'n', sub: 's' });
+  const fi = async () => Response.json({ id_token: token });
+  await assert.rejects(
+    exchangeCode(
+      { env: { GOOGLE_CLIENT_ID: 'cid' }, fetchImpl: /** @type {typeof fetch} */ (fi), now: () => new Date((exp + 1) * 1000) },
+      { code: 'c', verifier: 'v', redirectUri: 'r', nonce: 'n' },
+    ),
+    /expired/,
+    'the token is still valid in real time; the injected clock is what expires it',
+  );
+});
+
 test('id_token with wrong issuer or past exp is refused', async () => {
   const now = Math.floor(Date.now() / 1000);
   const wrongIss = jwt({ iss: 'https://evil.example', aud: 'cid', exp: now + 60, nonce: 'n', sub: 's' });

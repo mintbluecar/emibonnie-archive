@@ -6,6 +6,8 @@
  * could imitate one. Pure.
  */
 
+import { withoutInvisible } from './text.js';
+
 /** Name length bounds (characters after cleaning). */
 const MAX = 30;
 
@@ -14,11 +16,10 @@ const MAX = 30;
  * @returns {{ ok: true, name: string } | { ok: false, reason: 'empty'|'too_long'|'looks_like_handle' }}
  */
 export function cleanDisplayName(raw) {
-  // NFKC, drop format/control characters (including bidi controls), collapse
-  // whitespace and trim.
-  const cleaned = raw
-    .normalize('NFKC')
-    .replace(/[\p{Cf}\p{Cc}]/gu, '')
+  // NFKC and no invisible characters (see domain/text.js), then also drop
+  // control characters, collapse whitespace and trim.
+  const cleaned = withoutInvisible(raw)
+    .replace(/\p{Cc}/gu, '')
     .replace(/\s+/gu, ' ')
     .trim();
   if (cleaned === '') return { ok: false, reason: 'empty' };

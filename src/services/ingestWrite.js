@@ -9,7 +9,7 @@ import { createEvent } from '../repo/events.js';
 import { ensureCategory, ensureClient, findLookup } from '../repo/lookups.js';
 import { insertItem } from '../repo/items.js';
 import { setItemPeople } from '../repo/itemPeople.js';
-import { get as getSetting } from '../repo/settings.js';
+import { approvalRequired } from '../repo/settings.js';
 import { BadRequest } from '../domain/errors.js';
 
 /** @typedef {import('../db/common.js').Tx} Tx */
@@ -58,7 +58,7 @@ async function eventIdOf(tx, common, occurredOn) {
  */
 export async function reviewStateOf(tx, { common, actor, creditedUserId }) {
   if (common.textEnteredManually && creditedUserId !== actor) return 'pending';
-  return (await getSetting(tx, 'approvalRequired')) === true ? 'pending' : 'published';
+  return (await approvalRequired(tx)) ? 'pending' : 'published';
 }
 
 /** @param {string} isoDate */

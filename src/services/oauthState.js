@@ -53,13 +53,14 @@ export function clearStateCookie() {
 
 /**
  * @param {Record<string, string|undefined>} env
- * @param {{ verifier: string|null, returnTo: string, nonce?: string }} input
+ * @param {{ verifier: string|null, returnTo: string, nonce?: string, now?: number }} input
+ *   `now` (epoch ms) is injectable so expiry is testable without mocking the clock.
  * @returns {{ state: string, cookie: string }}
  */
-export function issueState(env, { verifier, returnTo, nonce }) {
+export function issueState(env, { verifier, returnTo, nonce, now = Date.now() }) {
   const secret = env.AUTH_SECRET ?? '';
   const state = randomBytes(24).toString('base64url');
-  const payload = JSON.stringify({ state, verifier, returnTo: safeReturnTo(returnTo), nonce: nonce ?? null, exp: Date.now() + TTL_MS });
+  const payload = JSON.stringify({ state, verifier, returnTo: safeReturnTo(returnTo), nonce: nonce ?? null, exp: now + TTL_MS });
   return { state, cookie: serializeCookie(COOKIE_NAME, `${payload}.${sign(secret, payload)}`, { maxAge: TTL_MS / 1000 }) };
 }
 
@@ -77,6 +78,11 @@ function parseStateCookie(secret, raw) {
   }
 }
 
+/** @param {any} parsed @param {string} state @param {number} now */
+function stateIsValid(parsed, state, now) {
+  return parsed !== null && parsed.state === state && typeof parsed.exp === 'number' && parsed.exp >= now;
+}
+
 /**
  * Reads and validates the state cookie against `state`, returning what was
  * stored. Throws `BadRequest` when the cookie is missing, the signature is
@@ -85,11 +91,11 @@ function parseStateCookie(secret, raw) {
  * @param {Record<string, string|undefined>} env
  * @param {import('../http/handler.js').RouteInput} input
  * @param {string} state
+ * @param {{ now?: number }} [options] `now` (epoch ms) is injectable for tests
  * @returns {{ verifier: string|null, returnTo: string, nonce: string|null }}
  */
-export function takeState(env, input, state) {
+export function takeState(env, input, state, { now = Date.now() } = {}) {
   const parsed = parseStateCookie(env.AUTH_SECRET ?? '', input.cookies[COOKIE_NAME] ?? '');
-  const ok = parsed !== null && parsed.state === state && typeof parsed.exp === 'number' && parsed.exp >= Date.now();
-  if (!ok) throw new BadRequest('bad oauth state');
+  if (!stateIsValid(parsed, state, now)) throw new BadRequest('bad oauth state');
   return { verifier: parsed.verifier ?? null, returnTo: parsed.returnTo ?? '/me', nonce: parsed.nonce ?? null };
 }

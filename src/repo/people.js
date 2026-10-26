@@ -4,7 +4,7 @@
  * Instagram identity account (`accounts.is_identity`); `extraHashtags`
  * from their aliases (`person_aliases`).
  */
-import { cleanDisplayName, norm } from '../domain/text.js';
+import { cleanPersonName, norm } from '../domain/text.js';
 import { camelRow } from './rows.js';
 import { getAccountByHandle } from './accounts.js';
 
@@ -63,7 +63,7 @@ export async function addPerson(tx, { igHandle, displayName, emoji, colour, feat
   const already = await getAccountByHandle(tx, 'instagram', handle);
   if (already?.personId) throw new Error(`duplicate person: @${handle} already identifies someone`);
 
-  const cleaned = cleanDisplayName(displayName);
+  const cleaned = cleanPersonName(displayName);
   const name = lowercaseNames ? cleaned.toLowerCase() : cleaned;
   const { rows } = await tx.query(
     'insert into people (display_name, emoji, colour, featured) values ($1, $2, $3, $4) returning id',

@@ -8,6 +8,7 @@
 import { neighbours } from '../repo/items.js';
 import { findVisibleItemId, loadCards, loadItemExtras } from '../repo/cards.js';
 import { kindsOf, eventRefOf, presenterContext, detailsFor } from './cards.js';
+import { editRoleFor } from './editItem.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
 /** @typedef {import('../http/contracts.js').KindPreview} KindPreview */
@@ -73,10 +74,7 @@ export async function itemView(deps, kindName, sourceId, viewer = null) {
   const detail = /** @type {DetailVM} */ (kind.present.detail(card, details, ctx));
   const { prev, next } = card.event ? await neighbours(deps.db, card.id) : { prev: null, next: null };
   // A signed-in viewer's own permissions, for the edit and follow-up buttons.
-  const rawItem = viewer ? /** @type {any} */ (await getItemRaw(deps.db, card.id)) : null;
-  const role = viewer && rawItem
-    ? canEditRole(viewer, { createdBy: rawItem.created_by, creditedAccountId: rawItem.credited_account_id })
-    : null;
+  const role = viewer ? await editRoleFor(deps.db, card.id, viewer) : null;
   return {
     ...detail, kind: kind.name, sourceId: card.sourceId, url: preview.url, placement: card.placement,
     event: eventRefOf(card.event), people: preview.people,
@@ -86,18 +84,4 @@ export async function itemView(deps, kindName, sourceId, viewer = null) {
     // A kind may not support follow-ups at all (the method is optional).
     canCheckFollowUps: role !== null && typeof kind.checkFollowUps === 'function',
   };
-}
-
-/** @param {any} db @param {number} itemId */
-async function getItemRaw(db, itemId) {
-  const { rows } = await db.query('select created_by, credited_account_id from items where id = $1', [itemId]);
-  return rows[0] ? { created_by: rows[0].created_by, credited_account_id: rows[0].credited_account_id } : null;
-}
-
-/** @param {import('./session.js').SessionUser} user @param {{createdBy: string|null, creditedAccountId: number|null}} item */
-function canEditRole(user, item) {
-  if (user.isOwner) return 'owner';
-  if (item.creditedAccountId !== null && user.translatorAccountIds.includes(item.creditedAccountId)) return 'translator';
-  if (item.createdBy === user.id) return 'submitter';
-  return null;
 }

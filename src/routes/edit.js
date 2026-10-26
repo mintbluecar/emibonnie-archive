@@ -9,7 +9,7 @@ import { NotFound } from '../http/errors.js';
 import { requireUser } from '../services/session.js';
 import { limit } from '../services/limits.js';
 import { editableOf, editItem, revertEdit, resolveForEdit } from '../services/editItem.js';
-import { reviewStateOf } from '../services/ingestWrite.js';
+import { isApprovalRequired } from '../services/settings.js';
 import { partLines, unmappedMarkers } from '../domain/lineFixes.js';
 
 /** @param {any} details */
@@ -81,10 +81,7 @@ export const followUpsRoute = {
     const target = await resolveForEdit(deps, input.params.kind, input.params.sourceId, user);
     if (!target || !target.role) throw new NotFound();
     if (typeof target.kind.checkFollowUps !== 'function') throw new NotFound();
-    const pending = await deps.db.transaction(
-      (/** @type {any} */ tx) => reviewStateOf(tx, { common: { textEnteredManually: false }, actor: user.id, creditedUserId: null }),
-      { actor: user.id },
-    ) === 'pending';
+    const pending = await isApprovalRequired(deps.db);
     const added = await target.kind.checkFollowUps(deps, target.id, { actor: user.id, pending });
     return { ...added, pending };
   },

@@ -12,6 +12,7 @@ import { listCategories, listClients } from '../repo/lookups.js';
 
 /** @typedef {import('../db/common.js').Db} Db */
 /** @typedef {import('../services/session.js').SessionUser} SessionUser */
+/** @typedef {import('./ingest.js').IngestResult} IngestResult */
 
 /**
  * The form's options: known people, generic roles, recent events, and the
@@ -67,7 +68,7 @@ function addingAs(user) {
  * @param {import('./ingest.js').IngestDeps} deps
  * @param {SessionUser} user
  * @param {unknown} body
- * @returns {Promise<any>} the ingest result plus `addingAs`
+ * @returns {Promise<IngestResult & { addingAs: string|null }>} the ingest result plus `addingAs`
  */
 export async function previewAdd(deps, user, body) {
   const result = await ingestItem(deps, requestOf(user, body, { dryRun: true }));
@@ -78,7 +79,7 @@ export async function previewAdd(deps, user, body) {
  * @param {import('./ingest.js').IngestDeps} deps
  * @param {SessionUser} user
  * @param {unknown} body
- * @returns {Promise<any>} the ingest result plus `url` on a saved outcome
+ * @returns {Promise<IngestResult & { addingAs: string|null, url?: string }>} the ingest result plus `url` on a saved outcome
  */
 export async function addItem(deps, user, body) {
   const result = await ingestItem(deps, requestOf(user, body, { dryRun: false }));

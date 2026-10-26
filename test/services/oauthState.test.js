@@ -44,6 +44,14 @@ test('takeState rejects a missing, tampered, mismatched or expired state', () =>
   assert.throws(() => takeState(ENV, input({ oauth: old.raw }), state), BadRequest);
 });
 
+test('the state expires against the caller clock', () => {
+  const t0 = Date.parse('2026-01-01T00:00:00Z');
+  const { state, cookie } = issueState(ENV, { verifier: 'v', returnTo: '/add', now: t0 });
+  const cookies = fromCookie(cookie);
+  assert.equal(takeState(ENV, input(cookies), state, { now: t0 + 60_000 }).returnTo, '/add');
+  assert.throws(() => takeState(ENV, input(cookies), state, { now: t0 + 11 * 60_000 }), BadRequest, 'expired after 10 minutes');
+});
+
 test('returnTo outside the site is rewritten to /me at issue time', () => {
   // A leading backslash is a slash to browsers: '/\evil.example' resolves to
   // https://evil.example/, so it must be refused like '//evil.example'.
