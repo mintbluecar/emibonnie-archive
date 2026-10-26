@@ -34,7 +34,7 @@ function preview(card, details, ctx) {
   return {
     kind: KIND, sourceId: card.sourceId, url: ctx.urlFor(KIND, card.sourceId),
     lines: bubblesOf(details.body).slice(0, PREVIEW_LINES), people: ctx.chips(card.people),
-    accountHandle: card.account?.handle ?? null, hasVideo: false,
+    accountHandle: card.account?.handle ?? null, accountUrl: null, hasVideo: false, thumb: null,
     followsOnFrom: followsOn ? { sourceId: followsOn.sourceId, url: ctx.urlFor(followsOn.kind, followsOn.sourceId) } : null,
   };
 }
@@ -49,7 +49,7 @@ function detail(card, details) {
     bubbles: bubblesOf(details.body),
     cast: [],
     original: details.body,
-    credits: { account: card.account, clipBy: null, postedAt: card.postedAt, occurredOn: card.occurredOn },
+    credits: { account: card.account, clipBy: null, occurredOn: card.occurredOn },
     sources: details.sources.map((s) => ({ role: String(s.role), url: String(s.url), status: /** @type {any} */ (s.status) })),
     media: null,
   };
