@@ -7,9 +7,9 @@
  * pattern (served by the `translation_parts_body_trgm` index); `rank` is
  * the best-matching part's `word_similarity` to the raw query.
  */
-import { splitLines } from '../../domain/lines.js';
 import { excerptAround } from '../../domain/text.js';
-import { componentOf } from './presenter.js';
+import { componentOf, fixedSpeakerOf } from './presenter.js';
+import { partLines } from '../../domain/lineFixes.js';
 
 /** @typedef {import('../defineKind.js').PresentContext} PresentContext */
 /** @typedef {import('../../domain/speakers.js').SpeakerMap} SpeakerMap */
@@ -31,7 +31,8 @@ function placeholder(n) {
  * @param {number} patternIndex the bound `ilike` pattern (`%…%`, wildcards escaped)
  */
 function textClause(patternIndex) {
-  return `i.id in (select tp.item_id from translation_parts tp where tp.body ilike ${placeholder(patternIndex)})`;
+  return `i.id in (select tp.item_id from translation_parts tp where tp.body ilike ${placeholder(patternIndex)} and not tp.pending
+    and tp.item_id not in (select item_id from translations where subbed))`;
 }
 
 /**
@@ -56,39 +57,41 @@ function shownSpeaker({ emoji, name }) {
 }
 
 /**
- * How a matching line reads in a result: a speech line's marker becomes
- * the emoji its bubble shows on the item page (a known person's standard
- * emoji; a generic role's or an unmapped marker's own), with no colon,
- * as the search mockup shows it. Any other line stays as written. A long
- * line's text is cut to a window around the match (`excerptAround`, Task
- * 9b), after the emoji, so the speaker always shows.
- * @param {string} line @param {string} q @param {SpeakerMap} speakers @param {PresentContext} ctx
- * @returns {string}
- */
-function shownLine(line, q, speakers, ctx) {
-  const [parsed] = splitLines(line);
-  if (parsed?.kind !== 'speech') return excerptAround(line, q);
-  return `${parsed.markers.map((marker) => shownSpeaker(componentOf(marker, speakers, ctx))).join('')} ${excerptAround(parsed.text, q)}`;
-}
-
-/**
  * The lines (trimmed) containing `q`, case-insensitively, at most 3,
  * each long one cut to a window around the match. Matched on the
  * verbatim text; with `ctx` (the search service always
- * passes it), each is shown with its speaker resolved (`shownLine`).
- * @param {{ body: string, speakers?: SpeakerMap }} details
+ * passes it), each is shown with its speaker resolved (`shownLine`), and
+ * a line-level fix resolves its speaker from the fix.
+ * @param {{ body: string, parts?: string[], fixes?: import('../../domain/lineFixes.js').LineFix[], speakers?: SpeakerMap }} details
  * @param {string} q
  * @param {PresentContext} [ctx]
  * @returns {string[]}
  */
 function matchLines(details, q, ctx) {
   const needle = q.normalize('NFC').toLowerCase();
-  const found = details.body
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && line.normalize('NFC').toLowerCase().includes(needle))
+  // No context: the verbatim lines only (markers as written), as before.
+  if (!ctx) {
+    const found = details.body
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && line.normalize('NFC').toLowerCase().includes(needle))
+      .slice(0, MAX_MATCH_LINES);
+    return found.map((line) => excerptAround(line, q));
+  }
+  const parts = details.parts ?? [details.body];
+  const found = partLines(parts, details.fixes ?? [])
+    .filter((line) => line.text.normalize('NFC').toLowerCase().includes(needle))
     .slice(0, MAX_MATCH_LINES);
-  return ctx ? found.map((line) => shownLine(line, q, details.speakers ?? {}, ctx)) : found.map((line) => excerptAround(line, q));
+  return found.map((raw) => {
+    const line = /** @type {any} */ (raw);
+    if (line.fixed) {
+      const { emoji, name } = fixedSpeakerOf(line.fixed, line.marker, ctx);
+      const speaker = shownSpeaker({ emoji, name });
+      return `${speaker} ${excerptAround(line.text, q)}`.trim();
+    }
+    if (line.kind !== 'speech') return excerptAround(line.text, q);
+    return `${line.markers.map((/** @type {string} */ marker) => shownSpeaker(componentOf(marker, details.speakers ?? {}, ctx))).join('')} ${excerptAround(line.text, q)}`;
+  });
 }
 
 export const search = { textClause, rank, matchLines };

@@ -398,3 +398,22 @@ test('Task 10c (c): the preview thumbnail is the clip poster (video), else the f
     assert.equal(thumbOf(/** @type {any} */ ({ type: 'images', images: [{ url, width: 1, height: 1 }] })), null, url);
   }
 });
+
+test('a line fix resolves its speaker: a fixed line uses the person\'s emoji and colour; an unmapped marker still renders as itself (Plan 2a Task 7)', () => {
+  const people = new Map([[1, { id: 1, emoji: '☀️', displayName: 'Sol', colour: '#d9a400', igHandle: 'solsunny' }]]);
+  const ctx = /** @type {any} */ ({ ...fakePreviewCtx(), people, formatName: (/** @type {string} */ n) => n.toLowerCase() });
+  const card = { sourceId: 'x', followsOn: null, people: [], account: null };
+  // 🐶 has no marker map entry (unmapped), but a line fix points it at person 1.
+  const details = {
+    parts: ['🐶: hello from sol\n🌧️: still unmapped'],
+    speakers: {}, fixes: [{ part: 0, line: 0, as: 'speech', speaker: { person: 1 } }], sources: [],
+  };
+  const view = /** @type {any} */ (translation.present.preview(card, details, ctx));
+  assert.equal(view.lines[0].kind, 'speech');
+  assert.equal(view.lines[0].emoji, '☀️', 'the fixed speaker\'s standard emoji');
+  assert.equal(view.lines[0].name, 'sol');
+  assert.equal(view.lines[0].colour, '#d9a400');
+  // The unmapped marker's line (no fix) renders as itself, name null.
+  assert.equal(view.lines[1].kind, 'speech');
+  assert.equal(view.lines[1].name, null);
+});

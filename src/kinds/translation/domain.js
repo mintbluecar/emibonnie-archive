@@ -222,19 +222,24 @@ export function draftTranslation(tweet, ctx) {
  * event or unsorted item, `about` (and the tagged sharer) for a shared
  * story, and nothing for a post (its people are its authors). The remap
  * command (src/kinds/translation/remap.js) diffs this for the old and new
- * map, so people that came from anywhere else stay. Pure.
+ * map, so people that came from anywhere else stay. Line fixes contribute
+ * their fixed speakers. Pure.
  * @param {{ parts: string[], placement: import('../../domain/constants.js').Placement }} item
  * @param {SpeakerMap} speakers
  * @param {DraftContext} ctx
+ * @param {import('../../domain/lineFixes.js').LineFix[]} [fixes]
  * @returns {ItemPerson[]}
  */
-export function speakerPeopleOf({ parts, placement }, speakers, ctx) {
+export function speakerPeopleOf({ parts, placement }, speakers, ctx, fixes = []) {
   if (placement === 'post') return [];
   const [first = '', ...rest] = parts;
   const tweet = /** @type {Tweet} */ (/** @type {unknown} */ ({ text: first, createdAt: null, followUps: rest.map((text) => ({ text })) }));
   const { header, markers } = readText(tweet, { ...ctx, overrides: {} });
   const tagIds = peopleForTags(header.personTags, ctx.people).map((p) => p.id);
   const speakerIds = personIdsFrom(speakers, markers);
+  for (const fix of fixes) {
+    if (fix.as === 'speech' && 'person' in fix.speaker && !speakerIds.includes(fix.speaker.person)) speakerIds.push(fix.speaker.person);
+  }
   const story = placement === 'shared_story' ? sharedStoryOf(tagIds, speakerIds, []) : null;
   const placing = { placement, eventId: null, proposal: null, authorIds: [] };
   return itemPeopleOf(placing, story, [...new Set([...speakerIds, ...tagIds])]);

@@ -10,7 +10,7 @@ import { listSourcesFor } from '../../repo/itemSources.js';
 /** @typedef {import('../../domain/speakers.js').SpeakerMap} SpeakerMap */
 /**
  * @typedef {{ parts: string[], body: string, speakers: SpeakerMap, sources: Record<string, unknown>[],
- *   textEnteredManually: boolean }} TranslationDetails
+ *   textEnteredManually: boolean, fixes: import('../../domain/lineFixes.js').LineFix[], subbed: boolean }} TranslationDetails
  */
 
 /**
@@ -55,14 +55,14 @@ export async function addParts(tx, itemId, parts) {
  * Only the edit refresh may call this (the audit log keeps the old body).
  * @param {Tx} tx
  * @param {{ itemId: number, sourceId: number, body: string }} input
- * @returns {Promise<boolean>} whether a body changed
+ * @returns {Promise<number[]>} the positions whose body changed (empty when none)
  */
 export async function updatePartBody(tx, { itemId, sourceId, body }) {
   const { rows } = await tx.query(
     'update translation_parts set body = $3 where item_id = $1 and source_id = $2 and body is distinct from $3 returning position',
     [itemId, sourceId, body],
   );
-  return rows.length > 0;
+  return rows.map((r) => r.position);
 }
 
 /**
@@ -142,6 +142,62 @@ async function manualFlagsOf(db, itemIds) {
   return new Map(rows.map((r) => [r.item_id, r.text_entered_manually]));
 }
 
+/** @param {Tx} db @param {number[]} itemIds @returns {Promise<Map<number, boolean>>} */
+export async function subbedOf(db, itemIds) {
+  const { rows } = await db.query('select item_id, subbed from translations where item_id = any($1::bigint[])', [itemIds]);
+  return new Map(rows.map((r) => [r.item_id, r.subbed === true]));
+}
+
+/** @param {Tx} db @param {number[]} itemIds @returns {Promise<Map<number, import('../../domain/lineFixes.js').LineFix[]>>} */
+export async function fixesOf(db, itemIds) {
+  const { rows } = await db.query(
+    'select item_id, position, line, as_kind, person_id, role from translation_line_fixes where item_id = any($1::bigint[]) order by item_id, position, line',
+    [itemIds],
+  );
+  /** @type {Map<number, import('../../domain/lineFixes.js').LineFix[]>} */
+  const byItem = new Map(itemIds.map((id) => [id, []]));
+  for (const row of rows) {
+    const list = byItem.get(row.item_id);
+    const base = { part: row.position, line: row.line };
+    if (row.as_kind === 'plain') list?.push({ ...base, as: 'plain' });
+    else list?.push({ ...base, as: 'speech', speaker: row.person_id !== null ? { person: row.person_id } : { role: row.role } });
+  }
+  return byItem;
+}
+
+/**
+ * Replaces an item's line fixes, writing only the delta (like
+ * `setSpeakers`), so the audit log shows exactly what changed.
+ * @param {Tx} tx
+ * @param {number} itemId
+ * @param {import('../../domain/lineFixes.js').LineFix[]} fixes
+ * @returns {Promise<void>}
+ */
+export async function setLineFixes(tx, itemId, fixes) {
+  await tx.query('delete from translation_line_fixes where item_id = $1', [itemId]);
+  for (const fix of fixes) {
+    const personId = fix.as === 'speech' && 'person' in fix.speaker ? fix.speaker.person : null;
+    const role = fix.as === 'speech' && 'role' in fix.speaker ? fix.speaker.role : null;
+    await tx.query(
+      'insert into translation_line_fixes (item_id, position, line, as_kind, person_id, role) values ($1, $2, $3, $4, $5, $6)',
+      [itemId, fix.part, fix.line, fix.as, personId, role],
+    );
+  }
+}
+
+/**
+ * Drops the line fixes of one part (the edit-window re-fetch rewrote that
+ * part's body, so its positions no longer apply). Caller runs it in the
+ * same transaction as the part update.
+ * @param {Tx} tx
+ * @param {number} itemId
+ * @param {number} position
+ * @returns {Promise<void>}
+ */
+export async function dropFixesForPart(tx, itemId, position) {
+  await tx.query('delete from translation_line_fixes where item_id = $1 and position = $2', [itemId, position]);
+}
+
 /**
  * Everything a presenter needs for each translation item. `body` is the
  * parts joined with a blank line. Items with no `translations` row are
@@ -151,8 +207,8 @@ async function manualFlagsOf(db, itemIds) {
  * @returns {Promise<Map<number, TranslationDetails>>}
  */
 export async function loadDetails(db, itemIds) {
-  const [parts, speakers, sources, manual] = await Promise.all([
-    partsOf(db, itemIds), speakersOf(db, itemIds), listSourcesFor(db, itemIds), manualFlagsOf(db, itemIds),
+  const [parts, speakers, sources, manual, fixes, subbed] = await Promise.all([
+    partsOf(db, itemIds), speakersOf(db, itemIds), listSourcesFor(db, itemIds), manualFlagsOf(db, itemIds), fixesOf(db, itemIds), subbedOf(db, itemIds),
   ]);
   /** @type {Map<number, TranslationDetails>} */
   const details = new Map();
@@ -162,6 +218,7 @@ export async function loadDetails(db, itemIds) {
     details.set(id, {
       parts: texts, body: texts.join('\n\n'), speakers: speakers.get(id) ?? {},
       sources: sources.get(id) ?? [], textEnteredManually: manual.get(id) === true,
+      fixes: fixes.get(id) ?? [], subbed: subbed.get(id) === true,
     });
   }
   return details;
