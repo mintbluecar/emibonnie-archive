@@ -36,10 +36,11 @@ export function statusUrl(handle, id) {
  * the item already has. Used at intake, by attaching a pasted follow-up
  * and by the "check for follow-ups" button.
  * @param {Tx} tx
- * @param {{ itemId: number, accountId: number|null, handle: string|null, posts: PostPart[] }} input
+ * @param {{ itemId: number, accountId: number|null, handle: string|null, posts: PostPart[],
+ *   pending?: boolean }} input
  * @returns {Promise<number>} how many were appended
  */
-export async function appendPosts(tx, { itemId, accountId, handle, posts }) {
+export async function appendPosts(tx, { itemId, accountId, handle, posts, pending = false }) {
   let position = await nextPosition(tx, itemId, 'follow_up');
   for (const post of posts) {
     const [sourceId] = await addSources(tx, itemId, KIND, [{
@@ -47,7 +48,7 @@ export async function appendPosts(tx, { itemId, accountId, handle, posts }) {
       accountId: accountId ?? undefined, editableUntil: post.editableUntil,
     }]);
     await addAliases(tx, { sourceId, platform: 'x', ids: [post.id, ...(post.versionIds ?? [])] });
-    await addParts(tx, itemId, [{ sourceId, body: post.text }]);
+    await addParts(tx, itemId, [{ sourceId, body: post.text }], { pending });
     position += 1;
   }
   return posts.length;
@@ -177,9 +178,5 @@ export async function persistTranslation(tx, draft, { itemId, accountId }) {
  */
 export async function appendFollowUp(tx, { itemId, accountId, input, pending }) {
   const post = { id: input.id, text: input.text, editableUntil: input.edit.editableUntil, versionIds: input.edit.versionIds };
-  await appendPosts(tx, { itemId, accountId, handle: input.authorHandle, posts: [post] });
-  if (pending) {
-    const { rows } = await tx.query('select max(position) as p from translation_parts where item_id = $1', [itemId]);
-    await tx.query('update translation_parts set pending = true where item_id = $1 and position = $2', [itemId, rows[0].p]);
-  }
+  await appendPosts(tx, { itemId, accountId, handle: input.authorHandle, posts: [post], pending });
 }

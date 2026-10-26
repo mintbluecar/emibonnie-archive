@@ -67,6 +67,6 @@ export const addPersonRoute = {
     const displayName = typeof body?.displayName === 'string' ? body.displayName : '';
     const igHandle = typeof body?.igHandle === 'string' ? body.igHandle : '';
     if (!IG_HANDLE.test(igHandle)) throw new BadRequest('bad_handle');
-    return addNewPerson(deps, { displayName, igHandle });
+    return addNewPerson(deps, { displayName, igHandle, actor: user.id });
   },
 };

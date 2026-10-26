@@ -2,8 +2,8 @@
 /**
  * Sessions and the signed-in user (Plan 2a Task 4). `signInUser` upserts
  * the `users` row and issues a 7-day session; `currentUser`/`requireUser`
- * read the `sid` cookie through `RouteInput`; `requireOwner` gates
- * owner-only work; `signOut`/`signOutEverywhere` end sessions.
+ * read the `sid` cookie through `RouteInput`; `signOut`/`signOutEverywhere`
+ * end sessions.
  *
  * Session cookies are `HttpOnly; Secure; SameSite=Lax; Path=/`
  * (src/http/cookies.js), and only the token's SHA-256 is stored.
@@ -145,18 +145,6 @@ export async function requireUser(deps, input, { allowBlocked = false } = {}) {
   const user = await currentUser(deps, input);
   if (!user) throw new Unauthorized();
   if (user.isBlocked && !allowBlocked) throw new Forbidden('blocked');
-  return user;
-}
-
-/**
- * The owner, or `Forbidden('forbidden')` for anyone else.
- * @param {SessionDeps} deps
- * @param {RouteInput} input
- * @returns {Promise<SessionUser>}
- */
-export async function requireOwner(deps, input) {
-  const user = await requireUser(deps, input, { allowBlocked: true });
-  if (!user.isOwner) throw new Forbidden('forbidden');
   return user;
 }
 

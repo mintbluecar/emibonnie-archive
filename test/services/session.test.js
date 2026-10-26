@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { freshDb } from '../helpers/db.js';
 import {
-  signInUser, currentUser, requireUser, requireOwner, setDisplayName, signOut, signOutEverywhere,
+  signInUser, currentUser, requireUser, setDisplayName, signOut, signOutEverywhere,
 } from '../../src/services/session.js';
 import { Unauthorized, Forbidden } from '../../src/http/errors.js';
 
@@ -88,14 +88,8 @@ test('a blocked user is refused by requireUser but still read by currentUser', a
   assert.ok(await requireUser(deps(), ctx, { allowBlocked: true }));
 });
 
-test('requireUser throws Unauthorized when signed out; requireOwner only for the owner', async () => {
+test('requireUser throws Unauthorized when signed out', async () => {
   await assert.rejects(requireUser(deps(), input({})), Unauthorized);
-  const { cookie } = await signInUser(deps(), { via: 'x', subject: '400', handle: 'h4' });
-  const token = cookie.replace(/^sid=/, '').split(';')[0];
-  await assert.rejects(requireOwner(deps(), input({ sid: token })), Forbidden);
-  const { cookie: ownerCookie } = await signInUser(deps(), { via: 'x', subject: '42', handle: 'owner' });
-  const owner = await requireOwner(deps(), input({ sid: ownerCookie.replace(/^sid=/, '').split(';')[0] }));
-  assert.equal(owner.isOwner, true);
 });
 
 test('sign out ends the session and clears the cookie', async () => {

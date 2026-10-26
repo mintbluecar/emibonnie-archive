@@ -179,6 +179,12 @@ export async function editItem(deps, { kind: kindName, sourceId, changes, actor,
   return { editId: /** @type {number} */ (editId) };
 }
 
+/** @param {unknown} err @returns {boolean} whether the database refused a second revert of one edit */
+function isRevertConflict(err) {
+  const pg = /** @type {any} */ (err);
+  return pg?.code === '23505' && String(pg.constraint ?? '').includes('reverts');
+}
+
 /**
  * Reverts a recorded edit (owner only): re-applies its `before` through
  * `editItem`, marked as reverting it.
@@ -199,7 +205,14 @@ export async function revertEdit(deps, { kind: kindName, sourceId, editId, actor
   const already = await deps.db.query('select 1 from item_edits where reverts = $1 limit 1', [editId]);
   if (already.rows.length > 0) throw new Conflict('already reverted');
   const before = /** @type {EditableFields} */ (rows[0].before);
-  return editItem(deps, { kind: kindName, sourceId, changes: before, actor, reverts: editId });
+  try {
+    return await editItem(deps, { kind: kindName, sourceId, changes: before, actor, reverts: editId });
+  } catch (err) {
+    // The unique index is the real guard against a race between two reverts;
+    // the check above only keeps the common case readable.
+    if (isRevertConflict(err)) throw new Conflict('already reverted');
+    throw err;
+  }
 }
 
 /**

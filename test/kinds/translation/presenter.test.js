@@ -418,6 +418,20 @@ test('a line fix resolves its speaker: a fixed line uses the person\'s emoji and
   assert.equal(view.lines[1].name, null);
 });
 
+test('canCheckFollowUps is false for a kind with no checkFollowUps (the Kind contract makes it optional)', async () => {
+  const own = await ingestDeps();
+  try {
+    await ingest(own, IDS.THREAD);
+    const viewer = /** @type {any} */ ({ id: 'x:0', isOwner: true, translatorAccountIds: [] });
+    const kindWithout = { ...translation, checkFollowUps: undefined };
+    const view = await itemView({ ...own, kinds: { translation: kindWithout } }, 'translation', IDS.THREAD, viewer);
+    assert.equal(view?.canEdit, true, 'the owner may still edit');
+    assert.equal(view?.canCheckFollowUps, false, 'no button for a kind that cannot check follow-ups');
+  } finally {
+    await own.db.end();
+  }
+});
+
 test('a pending follow-up part is hidden from the public view and shown with includePending (Plan 2a Task 8)', async () => {
   const own = await ingestDeps();
   try {

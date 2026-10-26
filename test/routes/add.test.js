@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { IDS } from '../helpers/fixtures.js';
-import { ingestDeps, count, SYSTEM } from '../helpers/ingest.js';
+import { ingestDeps, count, rows, SYSTEM } from '../helpers/ingest.js';
 import { apiFor } from '../helpers/api.js';
 import { signInUser } from '../../src/services/session.js';
 
@@ -133,6 +133,8 @@ test('POST /api/people adds a person and returns its id (or the existing one)', 
   assert.equal(first.status, 200, first.text);
   const { id } = JSON.parse(first.text);
   assert.equal(typeof id, 'number');
+  const [audit] = await rows(deps.db, "select actor from audit_log where table_name = 'people' and row_key = $1 order by id desc limit 1", [String(id)]);
+  assert.equal(audit.actor, 'x:0', 'the signed-in user, not system, created the person');
 
   const again = await api.call('POST', '/api/people', { cookies, body: { displayName: 'New Person', igHandle: 'new_person' } });
   assert.equal(JSON.parse(again.text).id, id, 'the same handle returns the same person');

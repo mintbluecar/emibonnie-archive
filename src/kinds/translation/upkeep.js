@@ -133,16 +133,7 @@ export async function checkFollowUps(deps, itemId, { actor, pending = false }) {
   if (posts.length === 0) return { added: 0 };
   const handle = HANDLE_IN_URL.exec(primary.url)?.[1] ?? null;
   const added = await deps.db.transaction(
-    async (tx) => {
-      const n = await appendPosts(tx, { itemId, accountId: primary.accountId, handle, posts });
-      if (pending && n > 0) {
-        // Hold the newly appended parts for review.
-        const { rows } = await tx.query('select max(position) as p from translation_parts where item_id = $1', [itemId]);
-        const lastPositions = Array.from({ length: n }, (_, i) => rows[0].p - i);
-        await tx.query('update translation_parts set pending = true where item_id = $1 and position = any($2::smallint[])', [itemId, lastPositions]);
-      }
-      return n;
-    },
+    (tx) => appendPosts(tx, { itemId, accountId: primary.accountId, handle, posts, pending }),
     { actor },
   );
   return { added };

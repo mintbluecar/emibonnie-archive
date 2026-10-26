@@ -37,14 +37,24 @@ export async function isTextEnteredManually(db, itemId) {
  * @param {{ sourceId: number|null, body: string }[]} parts
  * @returns {Promise<number[]>} the new parts' positions
  */
-export async function addParts(tx, itemId, parts) {
+/**
+ * @param {Tx} tx
+ * @param {number} itemId
+ * @param {{ sourceId: number|null, body: string }[]} parts
+ * @param {{ pending?: boolean }} [options] hold the new parts for review
+ * @returns {Promise<number[]>} the positions written
+ */
+export async function addParts(tx, itemId, parts, { pending = false } = {}) {
   const { rows } = await tx.query('select coalesce(max(position), -1) as last from translation_parts where item_id = $1', [itemId]);
   let position = rows[0].last;
   /** @type {number[]} */
   const positions = [];
   for (const { sourceId, body } of parts) {
     position += 1;
-    await tx.query('insert into translation_parts (item_id, position, source_id, body) values ($1, $2, $3, $4)', [itemId, position, sourceId, body]);
+    await tx.query(
+      'insert into translation_parts (item_id, position, source_id, body, pending) values ($1, $2, $3, $4, $5)',
+      [itemId, position, sourceId, body, pending],
+    );
     positions.push(position);
   }
   return positions;

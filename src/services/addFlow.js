@@ -90,16 +90,16 @@ export async function addItem(deps, user, body) {
  * `POST /api/people`: creates a person from a display name and IG handle
  * (or returns the person already holding that handle).
  * @param {{ db: Db, site: import('../site/schema.js').Site }} deps
- * @param {{ displayName: string, igHandle: string }} input
+ * @param {{ displayName: string, igHandle: string, actor: string }} input
  * @returns {Promise<{ id: number }>}
  */
-export async function addNewPerson(deps, { displayName, igHandle }) {
+export async function addNewPerson(deps, { displayName, igHandle, actor }) {
   const handle = igHandle.replace(/^@/, '');
   const existing = await getPersonByHandle(deps.db, handle);
   if (existing) return { id: existing.id };
   const person = await deps.db.transaction(
     (tx) => addPerson(tx, { igHandle: handle, displayName, emoji: '🙂', colour: '#888888' }, { lowercaseNames: deps.site.lowercaseNames }),
-    { actor: 'system' },
+    { actor },
   );
   return { id: person.id };
 }

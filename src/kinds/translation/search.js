@@ -31,8 +31,17 @@ function placeholder(n) {
  * @param {number} patternIndex the bound `ilike` pattern (`%…%`, wildcards escaped)
  */
 function textClause(patternIndex) {
-  return `i.id in (select tp.item_id from translation_parts tp where tp.body ilike ${placeholder(patternIndex)} and not tp.pending
-    and tp.item_id not in (select item_id from translations where subbed))`;
+  return `i.id in (select tp.item_id from translation_parts tp where tp.body ilike ${placeholder(patternIndex)} and not tp.pending)`;
+}
+
+/**
+ * A typed query must never return a subbed entry, whichever clause matched
+ * it (text, tag, event, person or translator handle). `textCondition`
+ * applies this to its whole OR group; a filter-only browse is unaffected.
+ * @returns {string}
+ */
+export function typeExclusion() {
+  return 'i.id in (select item_id from translations where subbed)';
 }
 
 /**
@@ -94,4 +103,4 @@ function matchLines(details, q, ctx) {
   });
 }
 
-export const search = { textClause, rank, matchLines };
+export const search = { textClause, rank, matchLines, typeExclusion };

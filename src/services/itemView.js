@@ -82,7 +82,9 @@ export async function itemView(deps, kindName, sourceId, viewer = null) {
     event: eventRefOf(card.event), people: preview.people,
     tags: { keyword: extras.keyword, hashtags: extras.hashtags }, category: extras.category, addedBy: addedByOf(extras.submitter),
     followsOnFrom: preview.followsOnFrom, prev: await linkTo(deps, prev), next: await linkTo(deps, next),
-    canEdit: role !== null, canCheckFollowUps: role !== null,
+    canEdit: role !== null,
+    // A kind may not support follow-ups at all (the method is optional).
+    canCheckFollowUps: role !== null && typeof kind.checkFollowUps === 'function',
   };
 }
 
