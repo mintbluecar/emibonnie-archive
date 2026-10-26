@@ -181,3 +181,19 @@ export async function signOutEverywhere(deps, userId) {
 export async function recordXSignInFailure(deps) {
   await deps.db.transaction((tx) => settingsSet(tx, 'xSignInFailedAt', new Date().toISOString()), { actor: 'system' });
 }
+
+/**
+ * Set (or clear) a user's public display name. Used for the Google "pick a
+ * name" step; `cleanDisplayName` runs first.
+ * @param {{ db: import('../db/common.js').Db }} deps
+ * @param {string} userId
+ * @param {string} name
+ */
+export async function setDisplayName(deps, userId, name) {
+  await deps.db.transaction((tx) => tx.query('update users set display_name = $2 where id = $1', [userId, name]), { actor: userId });
+}
+
+/** Whether a signed-in user is recognised as a credited translator. @param {SessionUser} user */
+export function isTranslator(user) {
+  return user.translatorAccountIds.length > 0;
+}

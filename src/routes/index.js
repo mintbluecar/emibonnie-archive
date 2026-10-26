@@ -21,6 +21,9 @@ import { route as person } from './person.js';
 import { route as account } from './account.js';
 import { route as video } from './video.js';
 import { route as authXStart, callbackRoute as authXCallback } from './authX.js';
+import { route as authGoogleStart, callbackRoute as authGoogleCallback } from './authGoogle.js';
+import { meRoute, setNameRoute, signOutRoute, signOutAllRoute } from './me.js';
+import { route as authDev } from './authDev.js';
 import { metaRoutes } from './meta.js';
 // scaffold:route-imports (`npm run new route <name>` adds its import above this line)
 
@@ -28,6 +31,9 @@ import { metaRoutes } from './meta.js';
 export const routes = [
   home, event, item, refresh, search, filters, person, account, video,
   authXStart, authXCallback,
+  authGoogleStart, authGoogleCallback,
+  meRoute, setNameRoute, signOutRoute, signOutAllRoute,
+  authDev,
   // scaffold:routes (`npm run new route <name>` adds its route above this line)
   ...metaRoutes(pages, Object.values(kindsRegistry)),
 ];

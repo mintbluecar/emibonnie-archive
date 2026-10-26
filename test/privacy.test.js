@@ -95,6 +95,10 @@ async function representativeCalls() {
   for (const s of searches) calls.push(['GET', `/api/search${s}`]);
   // The sign-in flow: start redirects, the callback (a bare probe) is a 400 for a bad state.
   calls.push(['GET', '/api/auth/x/start?return=/add'], ['GET', '/api/auth/x/callback?code=c&state=s'], ['GET', '/api/auth/x/callback']);
+  calls.push(['GET', '/api/auth/google/start?return=/me'], ['GET', '/api/auth/google/callback?code=c&state=s'], ['GET', '/api/auth/google/callback']);
+  // The signed-in user's own routes: /api/me is 200 even signed out; the
+  // writes are 401 (signed out) or 404 (dev sign-in absent in the sweep).
+  calls.push(['GET', '/api/me'], ['POST', '/api/me/name'], ['POST', '/api/auth/signout'], ['POST', '/api/auth/signout-all'], ['POST', '/api/auth/dev']);
   return calls;
 }
 
