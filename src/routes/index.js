@@ -24,6 +24,7 @@ import { route as authXStart, callbackRoute as authXCallback } from './authX.js'
 import { route as authGoogleStart, callbackRoute as authGoogleCallback } from './authGoogle.js';
 import { meRoute, setNameRoute, signOutRoute, signOutAllRoute } from './me.js';
 import { route as authDev } from './authDev.js';
+import { optionsRoute, previewRoute, addRoute, addPersonRoute } from './add.js';
 import { metaRoutes } from './meta.js';
 // scaffold:route-imports (`npm run new route <name>` adds its import above this line)
 
@@ -34,6 +35,7 @@ export const routes = [
   authGoogleStart, authGoogleCallback,
   meRoute, setNameRoute, signOutRoute, signOutAllRoute,
   authDev,
+  optionsRoute, previewRoute, addRoute, addPersonRoute,
   // scaffold:routes (`npm run new route <name>` adds its route above this line)
   ...metaRoutes(pages, Object.values(kindsRegistry)),
 ];

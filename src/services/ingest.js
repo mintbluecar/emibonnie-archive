@@ -23,6 +23,7 @@ import { recall } from '../repo/speakerMemory.js';
 import { loadContext, occurredOnOf } from './ingestContext.js';
 import { resolvePeopleRefs } from './intakeRefs.js';
 import { writeItem, reviewStateOf } from './ingestWrite.js';
+import { findLookup } from '../repo/lookups.js';
 
 /** @typedef {import('../kinds/defineKind.js').Kind} Kind */
 /** @typedef {import('../kinds/defineKind.js').Draft} Draft */
@@ -195,6 +196,23 @@ function dryRunResult(run, draft) {
 }
 
 /**
+ * `lookups:'existing'`: a category/client the submitter names must already
+ * be in the list (only the owner adds to it). Runs before any write, so
+ * the preview and the add refuse the same way.
+ * @param {Run} run @param {Draft} draft
+ */
+async function validateLookups(run, draft) {
+  if (run.request.lookups !== 'existing') return;
+  const { categoryName, clientName } = draft.common;
+  if (categoryName && await findLookup(run.deps.db, 'categories', categoryName) === null) {
+    throw new BadRequest('unknown category');
+  }
+  if (clientName && await findLookup(run.deps.db, 'clients', clientName) === null) {
+    throw new BadRequest('unknown client');
+  }
+}
+
+/**
  * Steps 2-6, once the pasted id is known to be new.
  * @param {Run} run
  * @returns {Promise<IngestResult>}
@@ -211,6 +229,7 @@ async function ingestNew(run) {
   const ready = readiness(run, draft);
   if (ready.refusal) return /** @type {IngestResult} */ (ready.refusal);
   const occurredOn = /** @type {string} */ (ready.occurredOn);
+  await validateLookups(run, draft);
   if (run.request.dryRun) return dryRunResult(run, draft);
   return write(run, { draft, occurredOn, creditedUserId: account === null ? null : account.userId });
 }

@@ -59,3 +59,9 @@ export async function listCategories(db) {
   const { rows } = await db.query('select id, name from categories where deleted_at is null order by id');
   return rows.map((row) => ({ id: row.id, name: row.name }));
 }
+
+/** @param {Tx} db @returns {Promise<{ id: number, name: string }[]>} */
+export async function listClients(db) {
+  const { rows } = await db.query('select id, name from clients where deleted_at is null order by id');
+  return rows.map((row) => ({ id: row.id, name: row.name }));
+}

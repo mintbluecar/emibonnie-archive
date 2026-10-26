@@ -99,6 +99,8 @@ async function representativeCalls() {
   // The signed-in user's own routes: /api/me is 200 even signed out; the
   // writes are 401 (signed out) or 404 (dev sign-in absent in the sweep).
   calls.push(['GET', '/api/me'], ['POST', '/api/me/name'], ['POST', '/api/auth/signout'], ['POST', '/api/auth/signout-all'], ['POST', '/api/auth/dev']);
+  // The signed-in add flow: all 401 without a session, nothing leaks.
+  calls.push(['GET', '/api/add/options'], ['POST', '/api/add/preview'], ['POST', '/api/add'], ['POST', '/api/people']);
   return calls;
 }
 
