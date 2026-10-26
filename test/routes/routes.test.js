@@ -36,7 +36,11 @@ test('every route is { method, path, cache, run }, with a unique method+path', (
     assert.ok(r.path.startsWith('/api/') || pagePaths.includes(r.path), `${r.path}: API paths, plus the original page paths of the meta routes`);
     assert.equal(typeof r.run, 'function');
     assert.ok(r.cache === 'no-store' || r.cache === PUBLIC || r.cache === VIDEO, r.path);
-    assert.equal(r.cache === 'no-store', r.method !== 'GET', `${r.path}: GETs are cached, writes are no-store`);
+    // Auth GETs (OAuth start/callback) set cookies and must never be cached, so
+    // they are no-store despite being GET; every other GET is cached, and every
+    // write (POST) is no-store.
+    const authGet = r.path.startsWith('/api/auth/');
+    assert.equal(r.cache === 'no-store', r.method !== 'GET' || authGet, `${r.path}: GETs are cached, writes are no-store (auth flow excepted)`);
   }
   assert.equal(new Set(routes.map((r) => `${r.method} ${r.path}`)).size, routes.length);
 });

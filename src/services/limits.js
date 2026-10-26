@@ -14,7 +14,7 @@ import { createHash } from 'node:crypto';
 import { RateLimited } from '../domain/errors.js';
 import { recordHit, pruneBefore } from '../repo/rateLimits.js';
 
-/** @typedef {{ db: import('../db/common.js').Db, authSecret?: string, now?: () => Date, random?: () => number }} LimitDeps */
+/** @typedef {{ db: import('../db/common.js').Db, env?: Record<string, string|undefined>, now?: () => Date, random?: () => number }} LimitDeps */
 
 /** The agreed limits, keyed by action name. Frozen. */
 export const LIMITS = Object.freeze({
@@ -54,7 +54,7 @@ export async function limit(deps, name, subject) {
 
   let key;
   if (IP_KEYED.has(name)) {
-    key = subject === null ? 'ip:unknown' : hashIpSubject(deps.authSecret ?? '', subject);
+    key = subject === null ? 'ip:unknown' : hashIpSubject(deps.env?.AUTH_SECRET ?? '', subject);
   } else {
     key = String(subject);
   }

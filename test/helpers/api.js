@@ -17,11 +17,14 @@ export const PAGES_DIR = fileURLToPath(new URL('../fixtures/static/', import.met
  * @param {{ log?: (line: string) => void, env?: Record<string, string> }} [options]
  */
 export function apiFor(deps, options = {}) {
+  const env = options.env ?? {};
   /** @type {Promise<unknown>[]} */
   const pending = [];
-  const makeDeps = () => ({ ...deps, db: { ...deps.db, end: async () => {} }, pages: { dir: PAGES_DIR, logo: '/site/logo.svg' } });
+  const makeDeps = () => ({
+    ...deps, env, db: { ...deps.db, end: async () => {} }, pages: { dir: PAGES_DIR, logo: '/site/logo.svg' },
+  });
   const handle = createHandler({
-    routes, makeDeps, log: options.log ?? ((line) => { throw new Error(`unexpected log: ${line}`); }), env: options.env ?? {},
+    routes, makeDeps, log: options.log ?? ((line) => { throw new Error(`unexpected log: ${line}`); }), env,
     waitUntil: (p) => { pending.push(p); },
   });
   /**

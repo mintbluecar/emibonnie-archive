@@ -13,6 +13,7 @@ import { Unauthorized, Forbidden } from '../domain/errors.js';
 import { serializeCookie } from '../domain/cookies.js';
 import { linkXAccountToUser, xAccountIdsOfUser } from '../repo/accounts.js';
 import { createSession, deleteSession, deleteUserSessions, userIdForToken } from '../repo/sessions.js';
+import { set as settingsSet } from '../repo/settings.js';
 
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days
 const COOKIE_NAME = 'sid';
@@ -174,4 +175,9 @@ export async function signOut(deps, input) {
 /** @param {SessionDeps} deps @param {string} userId */
 export async function signOutEverywhere(deps, userId) {
   await deps.db.transaction((tx) => deleteUserSessions(tx, userId), { actor: userId });
+}
+
+/** Record that an X sign-in failed (for the owner's attention). @param {{ db: import('../db/common.js').Db }} deps */
+export async function recordXSignInFailure(deps) {
+  await deps.db.transaction((tx) => settingsSet(tx, 'xSignInFailedAt', new Date().toISOString()), { actor: 'system' });
 }

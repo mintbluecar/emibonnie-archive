@@ -93,6 +93,8 @@ async function representativeCalls() {
     ...Object.keys(kindsRegistry).map((name) => `?q=tell%20you&kinds=${name}`),
   ];
   for (const s of searches) calls.push(['GET', `/api/search${s}`]);
+  // The sign-in flow: start redirects, the callback (a bare probe) is a 400 for a bad state.
+  calls.push(['GET', '/api/auth/x/start?return=/add'], ['GET', '/api/auth/x/callback?code=c&state=s'], ['GET', '/api/auth/x/callback']);
   return calls;
 }
 

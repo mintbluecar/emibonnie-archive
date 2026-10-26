@@ -20,12 +20,14 @@ import { route as filters } from './filters.js';
 import { route as person } from './person.js';
 import { route as account } from './account.js';
 import { route as video } from './video.js';
+import { route as authXStart, callbackRoute as authXCallback } from './authX.js';
 import { metaRoutes } from './meta.js';
 // scaffold:route-imports (`npm run new route <name>` adds its import above this line)
 
 /** @type {import('../http/handler.js').Route[]} */
 export const routes = [
   home, event, item, refresh, search, filters, person, account, video,
+  authXStart, authXCallback,
   // scaffold:routes (`npm run new route <name>` adds its route above this line)
   ...metaRoutes(pages, Object.values(kindsRegistry)),
 ];

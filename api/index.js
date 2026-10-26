@@ -27,6 +27,7 @@ export function makeDeps(env = process.env) {
     fetchImpl: globalThis.fetch,
     now: () => new Date(),
     site,
+    env,
     pages: { dir: PUBLIC_DIR, logo: assets.logo },
   };
 }

@@ -12,7 +12,7 @@ after(async () => { await db.end(); });
 
 /** @param {string} authSecret @returns deps with a pinned random (never deletes) and now. */
 function depsWith(authSecret = 'test-secret', now = new Date('2026-01-01T00:00:00Z')) {
-  return { db, authSecret, now: () => now, random: () => 1 };
+  return { db, env: { AUTH_SECRET: authSecret }, now: () => now, random: () => 1 };
 }
 
 test('LIMITS holds the agreed limits', () => {
