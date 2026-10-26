@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { freshDb } from '../helpers/db.js';
 import {
-  signInUser, currentUser, requireUser, requireOwner, signOut, signOutEverywhere,
+  signInUser, currentUser, requireUser, requireOwner, setDisplayName, signOut, signOutEverywhere,
 } from '../../src/services/session.js';
 import { Unauthorized, Forbidden } from '../../src/http/errors.js';
 
@@ -40,6 +40,13 @@ test('x sign-in creates the user, links their credited account, and recognises t
   const current = await currentUser(deps(), input({ sid: cookie.replace(/^sid=/, '').split(';')[0] }));
   assert.ok(current);
   assert.equal(current.id, 'x:999');
+});
+
+test('a google user keeps the display name they chose across a later sign-in', async () => {
+  await signInUser(deps(), { via: 'google', subject: 'g-keep', handle: null });
+  await setDisplayName(deps(), 'google:g-keep', 'Nice Fan');
+  const again = await signInUser(deps(), { via: 'google', subject: 'g-keep', handle: null });
+  assert.equal(again.user.displayName, 'Nice Fan');
 });
 
 test('only the owner X id gets role owner', async () => {

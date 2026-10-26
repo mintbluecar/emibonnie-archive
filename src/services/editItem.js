@@ -13,6 +13,7 @@ import { loadContext } from './ingestContext.js';
 import { updatePlacement, updateLookups, getItem } from '../repo/items.js';
 import { findLookup, ensureLookup } from '../repo/lookups.js';
 import { findVisibleItemId } from '../repo/cards.js';
+import { eventExists } from '../repo/events.js';
 import { validateFixes } from '../domain/lineFixes.js';
 
 /** @typedef {import('../db/common.js').Db} Db */
@@ -55,7 +56,7 @@ async function nameOf(db, table, id) {
 export async function editableOf(db, kind, itemId) {
   const row = /** @type {any} */ (await getItem(db, itemId));
   if (!row) throw new BadRequest('item not found');
-  const details = /** @type {any} */ ((await kind.loadDetails(db, [itemId])).get(itemId));
+  const details = /** @type {any} */ ((await kind.loadDetails(db, [itemId], { includePending: true })).get(itemId));
   return {
     placement: /** @type {import('../domain/constants.js').Placement} */ (row.placement),
     eventId: row.eventId ?? null,
@@ -152,9 +153,12 @@ export async function editItem(deps, { kind: kindName, sourceId, changes, actor,
 
   const before = await editableOf(deps.db, kind, id);
   const place = merged(before, changes);
-  if (place.placement === 'event' && place.eventId === null) throw new BadRequest('placement event needs an eventId');
+  if (place.placement === 'event') {
+    if (place.eventId === null) throw new BadRequest('placement event needs an eventId');
+    if (!(await eventExists(deps.db, place.eventId))) throw new BadRequest('unknown event');
+  }
   if (changes.lineFixes !== undefined) {
-    const parts = /** @type {any} */ ((await kind.loadDetails(deps.db, [id])).get(id))?.parts ?? [];
+    const parts = /** @type {any} */ ((await kind.loadDetails(deps.db, [id], { includePending: true })).get(id))?.parts ?? [];
     validateFixes(parts, changes.lineFixes);
   }
 
@@ -183,8 +187,15 @@ export async function editItem(deps, { kind: kindName, sourceId, changes, actor,
  * @returns {Promise<{ editId: number }>}
  */
 export async function revertEdit(deps, { kind: kindName, sourceId, editId, actor }) {
-  const { rows } = await deps.db.query('select before, reverts from item_edits where id = $1', [editId]);
+  const { rows } = await deps.db.query('select item_id, before, reverts from item_edits where id = $1', [editId]);
   if (rows.length === 0) throw new BadRequest('unknown edit');
+  // The edit id must belong to the item the URL addresses: otherwise a
+  // caller could apply one item's `before` to another item.
+  const kind = kindsOf(deps)[kindName];
+  const itemId = kind
+    ? await findVisibleItemId(deps.db, { kind: kind.name, platform: kind.platform, externalId: sourceId })
+    : null;
+  if (itemId === null || itemId !== rows[0].item_id) throw new BadRequest('unknown edit');
   const already = await deps.db.query('select 1 from item_edits where reverts = $1 limit 1', [editId]);
   if (already.rows.length > 0) throw new Conflict('already reverted');
   const before = /** @type {EditableFields} */ (rows[0].before);

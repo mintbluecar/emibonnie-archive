@@ -68,16 +68,16 @@ export async function updatePartBody(tx, { itemId, sourceId, body }) {
 /**
  * @param {Tx} db
  * @param {number[]} itemIds
- * @returns {Promise<Map<number, { position: number, body: string }[]>>}
+ * @returns {Promise<Map<number, { position: number, body: string, pending: boolean }[]>>}
  */
 export async function partsOf(db, itemIds) {
   const { rows } = await db.query(
-    'select item_id, position, body from translation_parts where item_id = any($1::bigint[]) order by item_id, position',
+    'select item_id, position, body, pending from translation_parts where item_id = any($1::bigint[]) order by item_id, position',
     [itemIds],
   );
-  /** @type {Map<number, { position: number, body: string }[]>} */
+  /** @type {Map<number, { position: number, body: string, pending: boolean }[]>} */
   const byItem = new Map(itemIds.map((id) => [id, []]));
-  for (const row of rows) byItem.get(row.item_id)?.push({ position: row.position, body: row.body });
+  for (const row of rows) byItem.get(row.item_id)?.push({ position: row.position, body: row.body, pending: row.pending });
   return byItem;
 }
 
@@ -201,12 +201,15 @@ export async function dropFixesForPart(tx, itemId, position) {
 /**
  * Everything a presenter needs for each translation item. `body` is the
  * parts joined with a blank line. Items with no `translations` row are
- * left out.
+ * left out. A part held for review is left out too, unless the caller
+ * asks for it (`includePending`, the owner's edit screen): the public
+ * page, previews and search must never show unreviewed text.
  * @param {Tx} db
  * @param {number[]} itemIds
+ * @param {{ includePending?: boolean }} [options]
  * @returns {Promise<Map<number, TranslationDetails>>}
  */
-export async function loadDetails(db, itemIds) {
+export async function loadDetails(db, itemIds, { includePending = false } = {}) {
   const [parts, speakers, sources, manual, fixes, subbed] = await Promise.all([
     partsOf(db, itemIds), speakersOf(db, itemIds), listSourcesFor(db, itemIds), manualFlagsOf(db, itemIds), fixesOf(db, itemIds), subbedOf(db, itemIds),
   ]);
@@ -214,7 +217,7 @@ export async function loadDetails(db, itemIds) {
   const details = new Map();
   for (const id of itemIds) {
     if (!manual.has(id)) continue;
-    const texts = (parts.get(id) ?? []).map((p) => p.body);
+    const texts = (parts.get(id) ?? []).filter((p) => includePending || !p.pending).map((p) => p.body);
     details.set(id, {
       parts: texts, body: texts.join('\n\n'), speakers: speakers.get(id) ?? {},
       sources: sources.get(id) ?? [], textEnteredManually: manual.get(id) === true,

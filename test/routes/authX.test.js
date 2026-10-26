@@ -112,7 +112,7 @@ test('a replayed state fails once the cookie is cleared', async () => {
 
 test('returnTo outside the site falls back to /me', async () => {
   const api = apiFor(deps(infra()), { env: ENV });
-  for (const bad of ['//evil.example', 'https://evil.example']) {
+  for (const bad of ['//evil.example', 'https://evil.example', '/\\evil.example']) {
     const { state, oauth } = await start(api, bad);
     const cb = await api.call('GET', `/api/auth/x/callback?code=c&state=${state}`, { cookies: { oauth } });
     assert.equal(cb.status, 302);

@@ -12,6 +12,26 @@ import { serializeCookie } from '../domain/cookies.js';
 
 const COOKIE_NAME = 'oauth';
 const TTL_MS = 10 * 60 * 1000; // 10 minutes
+/** A stand-in origin: only same-origin return paths survive resolution. */
+const SITE = 'https://site.invalid';
+
+/**
+ * Keep a return path on this site. Resolving against a stand-in origin
+ * catches what a prefix test misses: browsers read `\` as `/`, so
+ * `/\evil.example` (and `//evil.example`, `https://evil.example`) would
+ * otherwise redirect off-site. Returns the normalised path, or `/me`.
+ * @param {string} returnTo
+ * @returns {string}
+ */
+function safeReturnTo(returnTo) {
+  try {
+    const url = new URL(returnTo, SITE);
+    if (url.origin !== SITE) return '/me';
+    return `${url.pathname}${url.search}${url.hash}` || '/me';
+  } catch {
+    return '/me';
+  }
+}
 
 /** @param {string} secret @param {string} payload */
 function sign(secret, payload) {
@@ -38,9 +58,8 @@ export function clearStateCookie() {
  */
 export function issueState(env, { verifier, returnTo, nonce }) {
   const secret = env.AUTH_SECRET ?? '';
-  const safeReturnTo = returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/me';
   const state = randomBytes(24).toString('base64url');
-  const payload = JSON.stringify({ state, verifier, returnTo: safeReturnTo, nonce: nonce ?? null, exp: Date.now() + TTL_MS });
+  const payload = JSON.stringify({ state, verifier, returnTo: safeReturnTo(returnTo), nonce: nonce ?? null, exp: Date.now() + TTL_MS });
   return { state, cookie: serializeCookie(COOKIE_NAME, `${payload}.${sign(secret, payload)}`, { maxAge: TTL_MS / 1000 }) };
 }
 

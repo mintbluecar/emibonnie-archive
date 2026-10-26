@@ -48,7 +48,8 @@ async function upsertUserRow(tx, { site, via, subject, handle }) {
   // past items stay "a fan"); a fresh user starts with no display name.
   await tx.query(
     `insert into users (id, role, meta, deleted_at, display_name) values ($1, $2, $3, null, null)
-     on conflict (id) do update set role = excluded.role, deleted_at = null, display_name = null,
+     on conflict (id) do update set role = excluded.role, deleted_at = null,
+       display_name = case when users.deleted_at is null then users.display_name else null end,
        meta = case when users.deleted_at is null then users.meta else excluded.meta end`,
     [userId, role, via === 'x' && handle ? JSON.stringify({ handle }) : '{}'],
   );

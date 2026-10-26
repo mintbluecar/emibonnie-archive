@@ -45,7 +45,9 @@ test('takeState rejects a missing, tampered, mismatched or expired state', () =>
 });
 
 test('returnTo outside the site is rewritten to /me at issue time', () => {
-  for (const bad of ['//evil.example', 'https://evil.example']) {
+  // A leading backslash is a slash to browsers: '/\evil.example' resolves to
+  // https://evil.example/, so it must be refused like '//evil.example'.
+  for (const bad of ['//evil.example', 'https://evil.example', '/\\evil.example']) {
     const { state, cookie } = issueState(ENV, { verifier: null, returnTo: bad });
     const taken = takeState(ENV, input(fromCookie(cookie)), state);
     assert.equal(taken.returnTo, '/me');

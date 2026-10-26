@@ -72,14 +72,22 @@ test('every edit writes item_edits and audit_log', async () => {
   assert.ok(await count(deps.db, "select count(*)::int as n from audit_log where table_name = 'item_edits'") > 0);
 });
 
-test('owner reverts an edit; reverting twice is 409', async () => {
+test('owner reverts an edit: the item goes back, and reverting twice is 409', async () => {
   const own = await ingestDeps();
   try {
     const o = (await signInUser({ db: own.db, site: own.site, now: () => new Date() }, { via: 'x', subject: '0', handle: 'owner' })).user;
     await ingest(own, IDS.EVENT_A);
+    const query = "select i.placement, i.event_id from items i join item_sources s on s.item_id = i.id and s.role = 'primary' where s.external_id = $1";
+    const [before] = await rows(own.db, query, [IDS.EVENT_A]);
+    assert.equal(before.placement, 'event');
+
     const { editId } = await editItem(own, { kind: 'translation', sourceId: IDS.EVENT_A, changes: { placement: 'unsorted' }, actor: o });
     const { editId: revertId } = await revertEdit(own, { kind: 'translation', sourceId: IDS.EVENT_A, editId, actor: o });
     assert.equal(typeof revertId, 'number');
+
+    const [after] = await rows(own.db, query, [IDS.EVENT_A]);
+    assert.deepEqual(after, before, 'the revert restored the placement and event');
+
     await assert.rejects(
       revertEdit(own, { kind: 'translation', sourceId: IDS.EVENT_A, editId, actor: o }),
       Conflict,
@@ -87,4 +95,35 @@ test('owner reverts an edit; reverting twice is 409', async () => {
   } finally {
     await own.db.end();
   }
+});
+
+test('a revert is scoped to the item it addresses; another item is untouched', async () => {
+  const own = await ingestDeps();
+  try {
+    const o = (await signInUser({ db: own.db, site: own.site, now: () => new Date() }, { via: 'x', subject: '0', handle: 'owner' })).user;
+    await ingest(own, IDS.EVENT_A);
+    const photo = await ingest(own, IDS.PHOTO);
+    const { editId } = await editItem(own, { kind: 'translation', sourceId: IDS.EVENT_A, changes: { placement: 'unsorted' }, actor: o });
+
+    const query = 'select placement, event_id from items where id = $1';
+    const [before] = await rows(own.db, query, [photo.itemId]);
+    await assert.rejects(
+      revertEdit(own, { kind: 'translation', sourceId: IDS.PHOTO, editId, actor: o }),
+      BadRequest,
+      'an edit id from another item is refused',
+    );
+    const [after] = await rows(own.db, query, [photo.itemId]);
+    assert.deepEqual(after, before, 'the other item is untouched');
+  } finally {
+    await own.db.end();
+  }
+});
+
+test('an unknown event id is a 400, not a database error', async () => {
+  const o = await owner();
+  await ingest(deps, IDS.EVENT_A);
+  await assert.rejects(
+    editItem(deps, { kind: 'translation', sourceId: IDS.EVENT_A, changes: { placement: 'event', eventId: 999999 }, actor: o }),
+    BadRequest,
+  );
 });

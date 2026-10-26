@@ -83,7 +83,7 @@ function onTextMarkers(map, used) {
  * @returns {Promise<{ speakers: SpeakerMap, people: ItemPerson[], notes: string[] }>}
  */
 export async function remapSpeakers(tx, { itemId, map: given, ctx }) {
-  const details = (await loadDetails(tx, [itemId])).get(itemId);
+  const details = (await loadDetails(tx, [itemId], { includePending: true })).get(itemId);
   if (!details) throw new BadRequest(`item ${itemId} is not a translation`);
   const used = [...new Set(findMarkers(splitLines(details.body)).map((m) => m.marker))];
   const { map, notes } = onTextMarkers(given, used);

@@ -126,7 +126,7 @@ import { pages, redirects } from '../pages.js';
  *   appendFollowUp?: (tx: Db, args: { itemId: number, accountId: number|null, input: any, pending: boolean }) => Promise<void>,
  *   draft(input: any, ctx: DraftContext): Draft,
  *   persist(tx: Db, draft: any, meta: object): Promise<number>,
- *   loadDetails(db: Db, itemIds: number[]): Promise<Map<number, object>>,
+ *   loadDetails(db: Db, itemIds: number[], options?: { includePending?: boolean }): Promise<Map<number, object>>,
  *   present: { preview(item: any, details: any, ctx: any): object, detail(item: any, details: any, ctx: any): object },
  *   search: { textClause(paramIndex: number): string, rank(paramIndex: number): string, matchLines(details: any, q: string, ctx?: any): string[] },
  *   refresh?: (deps: UpkeepDeps, itemId: number, options: { actor: string }) => Promise<{ updated: number, editableUntil: string|null }>,

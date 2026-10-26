@@ -5,7 +5,7 @@ import { IDS } from '../../helpers/fixtures.js';
 import { seededDeps, itemIdOf, SYSTEM, ingestDeps, ingest } from '../../helpers/ingest.js';
 import { itemView } from '../../../src/services/itemView.js';
 import { previewsFor, presenterContext } from '../../../src/services/cards.js';
-import { addParts, setSpeakers } from '../../../src/kinds/translation/repo.js';
+import { addParts, loadDetails, setSpeakers } from '../../../src/kinds/translation/repo.js';
 import { resolveSpeakerRefs } from '../../../src/services/intakeRefs.js';
 import translation from '../../../src/kinds/translation/index.js';
 
@@ -416,4 +416,31 @@ test('a line fix resolves its speaker: a fixed line uses the person\'s emoji and
   // The unmapped marker's line (no fix) renders as itself, name null.
   assert.equal(view.lines[1].kind, 'speech');
   assert.equal(view.lines[1].name, null);
+});
+
+test('a pending follow-up part is hidden from the public view and shown with includePending (Plan 2a Task 8)', async () => {
+  const own = await ingestDeps();
+  try {
+    const result = await ingest(own, IDS.THREAD);
+    const itemId = /** @type {number} */ (result.itemId);
+    // What the approval path does: append the part and hold it for review.
+    await own.db.transaction(
+      (/** @type {any} */ tx) => tx.query(
+        "insert into translation_parts (item_id, position, body, pending) values ($1, 99, 'PENDING SECRET LINE', true)",
+        [itemId],
+      ),
+      SYSTEM,
+    );
+
+    const view = await itemView(own, 'translation', IDS.THREAD);
+    assert.ok(!JSON.stringify(view).includes('PENDING SECRET LINE'), 'the public page hides a pending part');
+
+    const hidden = /** @type {any} */ ((await loadDetails(own.db, [itemId])).get(itemId));
+    assert.ok(!hidden.parts.some((/** @type {string} */ part) => part.includes('PENDING SECRET LINE')), 'default hides it');
+
+    const all = /** @type {any} */ ((await loadDetails(own.db, [itemId], { includePending: true })).get(itemId));
+    assert.ok(all.parts.some((/** @type {string} */ part) => part.includes('PENDING SECRET LINE')), 'includePending shows it');
+  } finally {
+    await own.db.end();
+  }
 });
