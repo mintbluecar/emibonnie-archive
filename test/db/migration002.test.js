@@ -52,6 +52,7 @@ test('002 adds sessions, rate_limits, line fixes, item_edits, subbed and pending
 });
 
 test('a plain line fix may not name a speaker', async () => {
+  // A person is rejected.
   await assert.rejects(
     write(async (tx) => {
       const itemId = await translationItem(tx);
@@ -59,6 +60,17 @@ test('a plain line fix may not name a speaker', async () => {
       await tx.query(
         "insert into translation_line_fixes (item_id, position, line, as_kind, person_id) values ($1, 0, 0, 'plain', $2)",
         [itemId, personId],
+      );
+    }),
+    pgError('23514'),
+  );
+  // A role is rejected too.
+  await assert.rejects(
+    write(async (tx) => {
+      const itemId = await translationItem(tx);
+      await tx.query(
+        "insert into translation_line_fixes (item_id, position, line, as_kind, role) values ($1, 0, 0, 'plain', 'host')",
+        [itemId],
       );
     }),
     pgError('23514'),
