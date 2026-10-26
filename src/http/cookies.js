@@ -1,48 +1,11 @@
 // @ts-check
 /**
- * Cookie parsing, serialising and Response helpers for the web sign-in
- * flow. Session cookies are always `HttpOnly; Secure; SameSite=Lax; Path=/`
- * (Global Constraints: sessions), so `serializeCookie` bakes those in and
- * callers only choose the value and its `maxAge`.
+ * Cookie Response helpers for the web sign-in flow. `parseCookies` and
+ * `serializeCookie` are pure and live in src/domain/cookies.js (services
+ * need them too); this module adds the http-layer Response builders that
+ * set cookies.
  */
-
-/**
- * Parse a `Cookie` request header into a prototype-less name/value map.
- * Values are percent-decoded (RFC 6265); a malformed or empty header gives `{}`.
- * @param {string|null} header
- * @returns {Record<string, string>}
- */
-export function parseCookies(header) {
-  /** @type {Record<string, string>} */
-  const out = Object.create(null);
-  if (!header) return out;
-  for (const part of header.split(';')) {
-    const eq = part.indexOf('=');
-    if (eq === -1) continue;
-    const name = part.slice(0, eq).trim();
-    const raw = part.slice(eq + 1).trim();
-    if (name === '') continue;
-    try {
-      out[name] = decodeURIComponent(raw);
-    } catch {
-      out[name] = raw;
-    }
-  }
-  return out;
-}
-
-/**
- * Serialise a Set-Cookie value for a session cookie. Adds `maxAge` and the
- * fixed `HttpOnly; Secure; SameSite=Lax; Path=/`. `maxAge: 0` clears it
- * (the browser deletes the cookie).
- * @param {string} name
- * @param {string} value
- * @param {{ maxAge: number }} options
- * @returns {string}
- */
-export function serializeCookie(name, value, { maxAge }) {
-  return `${name}=${value}; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax; Path=/`;
-}
+export { parseCookies, serializeCookie } from '../domain/cookies.js';
 
 /**
  * A JSON response that also sets cookies (`Set-Cookie`).

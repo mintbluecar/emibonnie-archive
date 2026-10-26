@@ -13,7 +13,7 @@
  * headers or the query string.
  */
 import { matchRoute } from './router.js';
-import { BadRequest, NotFound, Conflict, RateLimited, PayloadTooLarge } from './errors.js';
+import { BadRequest, NotFound, Conflict, RateLimited, PayloadTooLarge, Unauthorized, Forbidden } from './errors.js';
 import { originAllowed } from './origin.js';
 import { assertKnownParams, parseQuery, readBody } from './query.js';
 import { parseCookies } from './cookies.js';
@@ -54,16 +54,34 @@ function describe(err) {
 }
 
 /**
+ * The status and JSON body for a known request error, or null for an
+ * unexpected one (which the caller logs as a 500). Kept separate so
+ * `errorResponse` stays a simple dispatch.
+ * @param {unknown} err
+ * @returns {{ status: number, body: { error: string, message?: string } } | null}
+ */
+function mappedError(err) {
+  if (err instanceof NotFound) return { status: 404, body: { error: 'not_found' } };
+  if (err instanceof PayloadTooLarge) return { status: 413, body: { error: 'payload_too_large' } };
+  if (err instanceof BadRequest) return { status: 400, body: { error: 'bad_request', message: err.message } };
+  if (err instanceof URIError) return { status: 400, body: { error: 'bad_request', message: 'malformed path' } };
+  if (err instanceof Conflict) return { status: 409, body: { error: err.code } };
+  if (err instanceof RateLimited) return { status: 429, body: { error: 'rate_limited' } };
+  if (err instanceof Unauthorized) return { status: 401, body: { error: 'signed_out' } };
+  if (err instanceof Forbidden) return { status: 403, body: { error: err.code } };
+  return null;
+}
+
+/**
  * @param {unknown} err @param {Route|null} route
  * @param {{ method: string, pathname: string, log: (line: string) => void }} ctx
  */
 function errorResponse(err, route, { method, pathname, log }) {
-  if (err instanceof NotFound) return json(404, { error: 'not_found' }, route?.method === 'GET' ? NOT_FOUND_CACHE : NO_STORE);
-  if (err instanceof PayloadTooLarge) return json(413, { error: 'payload_too_large' }, NO_STORE);
-  if (err instanceof BadRequest) return json(400, { error: 'bad_request', message: err.message }, NO_STORE);
-  if (err instanceof URIError) return json(400, { error: 'bad_request', message: 'malformed path' }, NO_STORE);
-  if (err instanceof Conflict) return json(409, { error: err.code }, NO_STORE);
-  if (err instanceof RateLimited) return json(429, { error: 'rate_limited' }, NO_STORE);
+  const mapped = mappedError(err);
+  if (mapped) {
+    const cache = mapped.status === 404 && route?.method === 'GET' ? NOT_FOUND_CACHE : NO_STORE;
+    return json(mapped.status, mapped.body, cache);
+  }
   log(`[api] ${method} ${pathname} failed: ${describe(err)}`);
   return json(500, { error: 'internal' }, NO_STORE);
 }
