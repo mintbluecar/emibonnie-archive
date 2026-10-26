@@ -71,7 +71,7 @@ test('callback signs in and sets sid, redirecting to returnTo', async () => {
   assert.ok(!JSON.stringify(rows[0].meta).includes('image'));
 });
 
-test('callback rejects a missing, tampered, mismatched or expired state with 400 and no user row', async () => {
+test('callback rejects a missing, tampered or mismatched state with 400 and no user row', async () => {
   const api = apiFor(deps(infra()), { env: ENV });
   const tokenBefore = calls['https://api.x.com/2/oauth2/token'] ?? 0;
   const usersBefore = await db.query("select count(*)::int as n from users where id like 'x:%'").then((r) => r.rows[0].n);

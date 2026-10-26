@@ -129,7 +129,10 @@ async function applyLookups(tx, { id, changes, role, itemRow }) {
 /** @param {any} tx @param {{ kind:any, id:number, changes:Partial<EditableFields>, deps:any }} args */
 async function applyKindChanges(tx, { kind, id, changes, deps }) {
   if (changes.speakers !== undefined && typeof kind.remapSpeakers === 'function') {
-    await kind.remapSpeakers(tx, { itemId: id, map: changes.speakers, ctx: await loadContext(deps, {}) });
+    // Inside the transaction: a query on `deps.db` here would wait for this
+    // transaction to end (the connection is already in use).
+    const ctx = await loadContext({ db: tx, site: deps.site }, {});
+    await kind.remapSpeakers(tx, { itemId: id, map: changes.speakers, ctx });
   }
   if (changes.lineFixes !== undefined && typeof kind.setLineFixes === 'function') {
     await kind.setLineFixes(tx, { itemId: id, fixes: changes.lineFixes });
