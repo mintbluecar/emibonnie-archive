@@ -68,11 +68,22 @@ function addingAs(user) {
  * @param {import('./ingest.js').IngestDeps} deps
  * @param {SessionUser} user
  * @param {unknown} body
- * @returns {Promise<IngestResult & { addingAs: string|null }>} the ingest result plus `addingAs`
+ * @returns {Promise<IngestResult & { addingAs: string|null, url?: string }>} the ingest result plus `addingAs`
  */
 export async function previewAdd(deps, user, body) {
   const result = await ingestItem(deps, requestOf(user, body, { dryRun: true }));
-  return { ...result, addingAs: addingAs(user) };
+  const linkable = result.status === 'duplicate' || result.status === 'attached';
+  return { ...result, addingAs: addingAs(user), ...(linkable ? { url: itemPath(result.sourceId) } : {}) };
+}
+
+/**
+ * The archived entry's public path, for the add flow's "here it is" links
+ * (the add flow is the translation kind's; ingest's results carry no kind).
+ * @param {string} sourceId
+ * @returns {string}
+ */
+function itemPath(sourceId) {
+  return `/t/${sourceId}`;
 }
 
 /**
@@ -84,7 +95,7 @@ export async function previewAdd(deps, user, body) {
 export async function addItem(deps, user, body) {
   const result = await ingestItem(deps, requestOf(user, body, { dryRun: false }));
   const saved = result.status === 'added' || result.status === 'attached' || result.status === 'duplicate';
-  return { ...result, addingAs: addingAs(user), ...(saved ? { url: `/t/${result.sourceId}` } : {}) };
+  return { ...result, addingAs: addingAs(user), ...(saved ? { url: itemPath(result.sourceId) } : {}) };
 }
 
 /**

@@ -4,11 +4,18 @@
  * X's embed -- Task 10b), "follows on from", who added it, a copy-link
  * button, and the report link. Split out of `item.js` to keep that file
  * under the lint line limits (ruling 6's splits are pre-approved).
+ *
+ * Plan 2a Task 13 adds the signed-in editor's controls: an edit link and
+ * "check for follow-ups", shown only when `itemView` says the caller has
+ * that role (`canEdit`/`canCheckFollowUps`). Both are icon-only, so each
+ * carries a `title` *and* an `aria-label` with the same words.
  */
 import { html } from '../core/html.js';
 import { site, t } from '../core/site.js';
 import * as sourceEmbed from '../components/sourceEmbed.js';
-import { TAKEDOWN_PATH } from '../core/routes.js';
+import { editHref, TAKEDOWN_PATH } from '../core/routes.js';
+
+/** @typedef {import('../../../src/http/contracts.js').ItemView & { canEdit?: boolean, canCheckFollowUps?: boolean }} FooterView */
 
 /**
  * The original post: X's embed when the site turns `embedSources` on
@@ -42,7 +49,29 @@ function addedByLine(addedBy) {
 }
 
 /**
- * @param {import('../../../src/http/contracts.js').ItemView} data
+ * The editor's own controls, for a signed-in caller `itemView` gave the
+ * role to: a pencil that opens the entry's edit page, and a button that
+ * asks the kind to check for new same-author follow-ups. A stranger gets
+ * neither -- `footerBlock` then renders no `.c-item__icon` at all.
+ * @param {FooterView} data
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+function ownerControls(data) {
+  if (!data.canEdit && !data.canCheckFollowUps) return html``;
+  return html`
+    <div class="c-item__owner">
+      ${data.canEdit
+        ? html`<a class="c-item__icon" href="${editHref(data.kind, data.sourceId)}" title="${t('item.edit')}" aria-label="${t('item.edit')}">✎</a>`
+        : ''}
+      ${data.canCheckFollowUps
+        ? html`<button type="button" class="c-item__icon" data-action="follow-ups" title="${t('item.followUps')}" aria-label="${t('item.followUps')}">⟳</button>`
+        : ''}
+    </div>
+  `;
+}
+
+/**
+ * @param {FooterView} data
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function footerBlock(data) {
@@ -53,6 +82,8 @@ export function footerBlock(data) {
       ${addedByLine(data.addedBy)}
       <button type="button" class="c-item__copy-link">${t('item.copyLink')}</button>
       <a class="c-item__footer-link" href="${TAKEDOWN_PATH}">${t('item.report')}</a>
+      ${ownerControls(data)}
+      <p class="c-item__follow-status" role="status" data-follow-ups-status hidden></p>
     </div>
   `;
 }

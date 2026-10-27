@@ -10,6 +10,7 @@ import { search } from './search.js';
 import { refreshEdits, checkFollowUps } from './upkeep.js';
 import { remapSpeakers } from './remap.js';
 import { profileUrl } from './profile.js';
+import { draftMedia } from './media.js';
 
 /**
  * A reply is a candidate follow-up of the tweet it replies to. Whether
@@ -41,6 +42,7 @@ export default defineKind({
   search,
   refresh: refreshEdits,
   checkFollowUps,
+  previewDraft: (/** @type {any} */ draft) => ({ media: draftMedia(draft.tweet) }),
   profileUrl,
   remapSpeakers,
   setLineFixes: (/** @type {any} */ tx, /** @type {any} */ { itemId, fixes }) => setLineFixes(tx, itemId, fixes),

@@ -68,6 +68,31 @@ export function resolveMedia(sources) {
   return quoted ? quoteOf(quoted) : null;
 }
 
+/**
+ * The media a *not yet archived* post would pin, from its fetched tweet
+ * (Task 13's add form): `resolveMedia` reads source rows, and a draft has
+ * none yet. A fresh fetch is live, so the same rules apply; the quoted
+ * post is always shown, as it is for a saved item.
+ * @param {import('../../sources/normalize.js').Tweet} tweet
+ * @returns {MediaVM|null}
+ */
+export function draftMedia(tweet) {
+  /** @type {SourceRow[]} */
+  const sources = [];
+  const video = tweet.video && tweet.video.variants.length > 0 ? tweet.video : null;
+  if (video || tweet.images.length > 0) {
+    sources.push({
+      role: 'media', status: 'live', accountHandle: tweet.clipSource?.handle ?? null,
+      media: video ? { ...video } : { images: tweet.images },
+    });
+  }
+  if (tweet.quoted) {
+    const { text, authorHandle, authorName, createdAt, images, video: quotedVideo } = tweet.quoted;
+    sources.push({ role: 'quoted', status: 'live', media: { text, authorHandle, authorName, createdAt, images, video: quotedVideo } });
+  }
+  return resolveMedia(sources);
+}
+
 /** Only X's image host (the same guard as videoPlayer.js's `POSTER_URL`, and CSP's img-src). */
 const THUMB_URL = /^https:\/\/pbs\.twimg\.com\//;
 

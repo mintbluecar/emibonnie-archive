@@ -10,6 +10,11 @@
  * install chromium` locally, `npx playwright install --with-deps
  * chromium` in CI.
  *
+ * These specs never write. The add and edit flow does, and would change
+ * what the counts and lists here are pinned to, so it has its own
+ * database and config (`playwright.add.config.js`, `npm run e2e:add`);
+ * `npm run e2e` runs that one after this one.
+ *
  * The dev server always runs the **bundled example**
  * (`SITE_DIR=examples/solluna`) on its own freshly wiped `.e2e-db`,
  * whatever this repo's `site/` holds (Task 9a item 1), so it passes the
@@ -35,6 +40,6 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: 'retain-on-failure',
   },
-  webServer: devServer({ port: PORT, dbDir: '.e2e-db', siteDir: 'examples/solluna' }),
+  webServer: devServer({ port: PORT, dbDir: '.e2e-db', siteDir: 'examples/solluna', ingestFixtures: 'test/fixtures/tweets' }),
   projects: PROJECTS,
 });

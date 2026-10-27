@@ -3,6 +3,7 @@ node_modules/
 .vercel/
 .devdb/
 .e2e-db/
+.e2e-add-db/
 .e2e-site-db/
 .e2e-build.lock
 .tree-hash

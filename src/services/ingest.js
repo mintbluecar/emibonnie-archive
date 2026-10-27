@@ -41,7 +41,8 @@ import { findLookup } from '../repo/lookups.js';
  * @typedef {{ status: 'added'|'attached'|'pending'|'duplicate'|'removed'|'opted_out'|'deleted'|'unavailable'
  *     |'needs_speakers'|'needs_date'|'ready',
  *   sourceId: string, itemId?: number, eventId?: number|null, missing?: object[], draft?: object,
- *   newTags?: string[], unmapped?: object[], lines?: import('../domain/lineFixes.js').FixedLine[], pending?: boolean }} IngestResult
+ *   newTags?: string[], unmapped?: object[], lines?: import('../domain/lineFixes.js').FixedLine[], pending?: boolean,
+ *   media?: import('../http/contracts.js').MediaVM|null }} IngestResult
  *   `newTags` is passed through from the draft, unread by ingest logic,
  *   for the add flow and the CLI to surface; it never blocks ingest.
  * @typedef {{ deps: IngestDeps, request: IngestRequest, kind: Readonly<Kind>, sourceId: string,
@@ -192,6 +193,7 @@ function dryRunResult(run, draft) {
     unmapped: /** @type {any} */ (draft).unmapped ?? draft.missing,
     lines: /** @type {any} */ (draft).lines ?? [],
     newTags: draft.newTags ?? [],
+    ...(run.kind.previewDraft?.(draft) ?? {}),
   };
 }
 

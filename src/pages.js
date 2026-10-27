@@ -35,6 +35,10 @@ export const pages = [
   // scaffold:pages (`npm run new page <name>` adds its entry above this line)
   { path: '/add', file: 'add.html' },
   { path: '/me', file: 'me.html' },
+  // 2a Task 13: the edit screen for one archived entry. Its two params are
+  // only ever read by public/js/pages/edit.js (the slug is the kind, the id
+  // the source id), so the rewrite is unnamed and no meta renderer applies.
+  { path: '/edit/:kind/:sourceId', file: 'edit.html' },
 ];
 
 /**

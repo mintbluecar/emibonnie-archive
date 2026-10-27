@@ -95,6 +95,44 @@
   border-radius: 10px;
 }
 
+/* The signed-in editor's controls (Task 13): edit and check for
+   follow-ups. Both are icon-only, so each carries a title and an
+   aria-label; the same square tap target as the me page's icons. */
+.c-item__owner {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.c-item__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  padding: 0;
+  font: inherit;
+  font-size: var(--text-16);
+  color: var(--color-ink);
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.c-item__icon[aria-busy='true'] {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.c-item__follow-status {
+  flex: 1 1 100%;
+  font-size: var(--text-11);
+  font-weight: 700;
+  color: var(--color-ink-muted);
+}
+
 @media (min-width: 860px) {
   .c-item {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

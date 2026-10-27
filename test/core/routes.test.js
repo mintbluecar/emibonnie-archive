@@ -13,6 +13,7 @@ import {
   EVENT_PATH_PREFIX, eventHref, slugFromEventPath,
   PERSON_PATH_PREFIX, personHref, igFromPersonPath,
   ACCOUNT_PATH_PREFIX, accountHref, accountFromAccountPath,
+  EDIT_PATH_PREFIX, editHref,
 } from '../../public/js/core/routes.js';
 
 test('EVENT_PATH_PREFIX matches the /e/:slug page route in src/pages.js', () => {
@@ -51,6 +52,18 @@ test('ACCOUNT_PATH_PREFIX matches the /tl/:handle page route in src/pages.js', (
   assert.ok(accountPage, 'src/pages.js lists a /tl/:handle route');
   assert.ok(accountPage?.path.startsWith(ACCOUNT_PATH_PREFIX), `${accountPage?.path} should start with ${ACCOUNT_PATH_PREFIX}`);
   assert.equal(ACCOUNT_PATH_PREFIX, '/tl/');
+});
+
+test('EDIT_PATH_PREFIX matches the /edit/:kind/:sourceId page route in src/pages.js', () => {
+  const editPage = pages.find((p) => p.path === '/edit/:kind/:sourceId');
+  assert.ok(editPage, 'src/pages.js lists an /edit/:kind/:sourceId route');
+  assert.ok(editPage?.path.startsWith(EDIT_PATH_PREFIX), `${editPage?.path} should start with ${EDIT_PATH_PREFIX}`);
+  assert.equal(EDIT_PATH_PREFIX, '/edit/');
+});
+
+test('editHref: builds the edit page path, encoding the kind and the source id', () => {
+  assert.equal(editHref('translation', '123'), '/edit/translation/123');
+  assert.equal(editHref('translation', 'a b'), '/edit/translation/a%20b');
 });
 
 test('personHref/igFromPersonPath: builds and parses the person page path, encoding/decoding the handle', () => {

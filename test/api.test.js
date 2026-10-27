@@ -23,6 +23,23 @@ test('outside production the dev fallbacks stay available', async () => {
   }
 });
 
+test('INGEST_FIXTURES_DIR: the e2e dev server reads sources from the synthetic fixtures, never the network', async () => {
+  const deps = makeDeps({ INGEST_FIXTURES_DIR: 'test/fixtures/tweets' });
+  try {
+    const res = await deps.fetchImpl('https://cdn.syndication.twimg.com/tweet-result?id=1900000000000000017&lang=en');
+    assert.equal(res.status, 200, 'a fixture the add-flow e2e pastes is served offline');
+    assert.equal((await deps.fetchImpl('https://cdn.syndication.twimg.com/tweet-result?id=1&lang=en')).status, 404);
+  } finally {
+    await deps.db.end();
+  }
+  const prod = makeDeps({ VERCEL: '1', DATABASE_URL: 'postgres://u@h/d', INGEST_FIXTURES_DIR: 'test/fixtures/tweets' });
+  try {
+    assert.equal(prod.fetchImpl, globalThis.fetch, 'never on a deployment, even if the variable leaks in');
+  } finally {
+    await prod.db.end();
+  }
+});
+
 test('routes see cookies and ip; ip never appears in logs', async () => {
   const db = await freshDb();
   const logs = /** @type {string[]} */ ([]);

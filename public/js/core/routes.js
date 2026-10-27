@@ -71,11 +71,11 @@ export function accountHref(handle) {
 }
 
 /**
- * The edit page's own prefix (`/edit/:kind/:sourceId`). Plan 2a Task 14
- * adds the page to `src/pages.js`; the me page links to it from Task 12,
- * so the prefix lives here (like the others) rather than being typed into
- * the page. `EDIT_PATH_PREFIX` can't be pinned to `src/pages.js` until
- * that route exists.
+ * The edit page's own prefix (`/edit/:kind/:sourceId`). The me page links
+ * to it from Task 12 and the item page's footer from Task 13, so the
+ * prefix lives here (like the others) rather than being typed into a page.
+ * Task 13 added the page to `src/pages.js`; `test/core/routes.test.js`
+ * pins the two together.
  */
 export const EDIT_PATH_PREFIX = '/edit/';
 

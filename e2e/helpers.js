@@ -83,7 +83,7 @@ async function assertNoHorizontalScroll(page) {
 }
 
 /** @param {import('@playwright/test').Page} page @returns {Promise<void>} */
-async function assertNoSeriousA11yViolations(page) {
+export async function assertNoSeriousA11yViolations(page) {
   const { violations } = await new AxeBuilder({ page }).analyze();
   const serious = violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
   const details = serious.map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.map((n) => n.target) }));
@@ -116,6 +116,31 @@ export async function checkPage(page, path, { status = 200 } = {}) {
   expect(errors.filter((e) => !(status === 404 && e === EXPECTED_404_NAVIGATION_ERROR)), path).toEqual([]);
 }
 
+/**
+ * Signs the page's browser context in as `as`, through a page on the
+ * origin the app uses -- the me page's own signed-out screen, which loads
+ * no media, so nothing from a richer page is still in flight when the
+ * caller's checks start. The caller navigates next, so `checkPage` sees a
+ * fresh load with the session already in place. `POST /api/auth/dev`
+ * (src/routes/authDev.js) only exists when the dev server runs with
+ * `DEV_SIGN_IN=1` (this file's `devServer`); it is a 404 in production.
+ * @param {import('@playwright/test').Page} page
+ * @param {'owner'|'member'|'google'} as
+ * @returns {Promise<void>}
+ */
+export async function signInAs(page, as) {
+  await gotoReady(page, '/me');
+  const status = await page.evaluate(async (who) => {
+    const res = await fetch('/api/auth/dev', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ as: who }),
+    });
+    return res.status;
+  }, as);
+  expect(status, 'the dev-only sign-in route answered').toBe(200);
+}
+
 /** The four browser projects both specs run: the brief's two widths, light and dark (review round 2, I1). */
 export const PROJECTS = [
   { name: 'phone', use: { browserName: /** @type {const} */ ('chromium'), viewport: { width: 390, height: 844 }, colorScheme: /** @type {const} */ ('light') } },
@@ -143,16 +168,21 @@ export function e2eLockToken() {
  * `siteDir` first) -- the same rewrites and security headers production
  * uses. `DATABASE_URL`/`VERCEL` are forced empty (review round 2, I2) so
  * it can never fall through to a real database from the shell.
- * Playwright merges `env` over `process.env`.
- * @param {{ port: number, dbDir: string, siteDir: string }} options
+ * `ingestFixtures` (the add-flow spec only): the API reads pasted links
+ * from those synthetic fixtures instead of X, so the add flow is testable
+ * offline (`INGEST_FIXTURES_DIR`, api/index.js). Playwright merges `env`
+ * over `process.env`.
+ * @param {{ port: number, dbDir: string, siteDir: string, ingestFixtures?: string }} options
  */
-export function devServer({ port, dbDir, siteDir }) {
+export function devServer({ port, dbDir, siteDir, ingestFixtures = '' }) {
   const wipe = `node -e "require('node:fs').rmSync('${dbDir}', { recursive: true, force: true })"`;
+  const env = { PORT: String(port), PGLITE_DIR: dbDir, SITE_DIR: siteDir, DATABASE_URL: '', VERCEL: '', DEV_SIGN_IN: '1', E2E_LOCK_TOKEN: e2eLockToken() };
+  if (ingestFixtures) env.INGEST_FIXTURES_DIR = ingestFixtures;
   return {
     command: `node scripts/e2eLock.js && ${wipe} && npm run seed-dev && npm run dev`,
     url: `http://127.0.0.1:${port}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { PORT: String(port), PGLITE_DIR: dbDir, SITE_DIR: siteDir, DATABASE_URL: '', VERCEL: '', DEV_SIGN_IN: '1', E2E_LOCK_TOKEN: e2eLockToken() },
+    env,
   };
 }
