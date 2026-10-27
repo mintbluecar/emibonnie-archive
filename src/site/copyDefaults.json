@@ -36,7 +36,6 @@
   "me.name.reason.looks_like_handle": "a name can't start with @",
   "me.name.reason.unknown": "that name can't be used",
   "add.title": "add a translation",
-  "add.placeholder": "the add form is coming next",
   "add.intro": "paste the link to a translator's tweet. we'll fill in the rest.",
   "add.addingAs": "adding as {who}",
   "add.urlLabel": "link to the tweet",

@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented here. Versions are semver tags (`vX.Y.Z`). Each release lists its **upgrade steps**; to take one, see `docs/start-your-own.md`, step 10.
 
+## 0.2.0
+
+Sign-in, adding and editing. Visitors sign in with X or Google. A signed-in member adds a translation from its link and edits the entries they added or are credited on; the owner can edit any entry, see its history and revert a change. Signed-in readers see their editor controls on the item page.
+
+**Upgrade steps:**
+
+1. `git fetch upstream --tags && git merge v0.2.0`.
+2. **Create the sign-in apps and set their secrets.** Follow [start-your-own](docs/start-your-own.md) step 4 for the X and Google apps, then set `AUTH_SECRET`, `X_CLIENT_ID`, `X_CLIENT_SECRET` and `GOOGLE_CLIENT_ID` in Vercel for Production and Preview ([step 7](docs/start-your-own.md#7-set-the-secrets)). Until they're set, sign-in fails at X or Google.
+3. **Migrate.** This release adds migrations 002 (sessions, rate limits, line fixes, item edits, and a `subbed` flag on translations) and 003 (a unique index on item edits). Both only add to the schema, so the live site keeps working. Run `npm run migrate` on each database before the deploy that needs it. On the Git-integration path, follow [step 6](docs/start-your-own.md#git-integration-path-repo-on-a-personal-github-account): preview first, then production, then merge.
+4. **Copy keys.** No key you may have overridden was removed. The new keys you may override are `signIn.*`, `me.*`, `add.*`, `edit.*`, `item.edit` and `item.followUps*`. Each has an English default.
+5. `npm run build`, then redeploy. On the Git-integration path, commit the `vercel.json` the build writes.
+6. Signed-in visitors' item pages are now private and uncached, because they carry the editor's controls. Signed-out readers still get the cached page. Nothing to change.
+
+- **Sign in with X or Google** (`/me`). Google users pick a public name before anything else. The me page lists the entries you added, and offers sign out, sign out everywhere, and delete my account.
+- **Add a translation** (`/add`). Paste a link, then check the placement, event, type, client, hashtags and clip credit, then say who's speaking. Each outcome has its own screen with a way onward, such as the entry already archived, waiting for approval, or the translator opted out. An unmapped speaker marker never blocks saving.
+- **Edit an entry** (`/edit/:kind/:sourceId`, from the item page). The same steps, filled from the saved entry, with one Save bar. Saving sends only the fields you changed. The owner sees each change in the entry's history and can revert it.
+- **Speaker fixes per line.** Tapping a line on the speakers step, or on the edit page, opens a sheet to make it speech with a chosen speaker, or plain text. A refreshed post keeps its marker speakers and loses its line fixes.
+- **Check for follow-ups.** An editor can ask an entry to look for new follow-ups by the same translator.
+- **Subbed entries.** A clip marked as already subbed skips the speakers step.
+- **Rate limits** on sign-in, adding, editing and follow-up checks ([limits](docs/limits.md#rate-limits)).
+
 ## 0.1.5
 
 UI polish. Entries and events browse as picture-led cards, translators get a linked credit line, events can have a typed title, and the embedded X post sits at the site's text size.

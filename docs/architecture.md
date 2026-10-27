@@ -88,6 +88,18 @@ There is no search page. Home is the search, and the event, person and translato
 - `public/js/state/searchScope.js` (pure): a scoped page's own filter (`event`, one of `people`, or `account`) is preset and implied by the path, so the URL reads `/e/x?q=hi`; removing its chip writes `scope=all` so a reload keeps it removed. `viewOf()` decides what shows: the page's own `list` (nothing typed, no filter beyond the page's own), `results`, or a `hint` to type when a scoped page's own filter was removed and nothing else is set. Leaving results for the list or hint empties `.c-search` and forgets its data; a search in flight marks it `aria-busy`. One `role="status"` live region, outside `.c-search`, announces each result count, "no results" or the error.
 - The server API (`/api/search`) is unchanged. The meta routes (`query: null`) never parse their query, so a page URL with repeated params (`?people=1&people=2`) can't 400.
 
+## Sign-in, adding and editing (v0.2.0)
+
+Visitors sign in with X or Google (`/me`); a signed-in member adds entries (`/add`) and edits them (`/edit/:kind/:sourceId`); the owner also sees and reverts edit history.
+
+- **Sign-in is hand-written OAuth**, not an auth library (no adapter over the database). X uses PKCE (`src/services/xSignIn.js`); Google uses an `openid` code exchange with a nonce and checks the id token's audience and expiry (`src/services/googleSignIn.js`). The state a flow carries between its start and callback is HMAC-signed with `AUTH_SECRET` and expires after 10 minutes (`src/services/oauthState.js`). The start routes are rate-limited by address (`docs/limits.md`).
+- **Sessions** are a `sid` cookie with a row in `sessions`, so sign-out and sign-out everywhere revoke a session server-side. `src/services/session.js` reads the cookie; `/api/me`, `/api/me/name`, `/api/me/added` and `/api/me/delete` are the me page's API.
+- **Adding** is `POST /api/add/preview` (a dry run that writes nothing) and then `POST /api/add`, both in `src/services/addFlow.js` over the same `ingestItem` the CLI uses. A member's add is visible at once unless the owner has turned approval on. Ingest allows unmapped markers here, so an entry can be saved before its speakers are chosen, and a member may only pick existing categories and clients.
+- **Editing** is `POST /api/item/:kind/:sourceId/edit`: it changes only the fields sent, writes one `item_edits` row with the before and after, and the owner reverts any entry with `…/edits/:editId/revert`. Line fixes are stored as a list of fixes, not as edited text, so a refreshed part keeps its speaker map and loses only its line fixes.
+- **The item page is private for signed-in visitors.** Its editor controls differ per user, so `/api/item/…` answers `private, no-store` to them. Signed-out readers keep the cached page.
+- **The front end shares one set of rules.** The add and edit pages render the same components (`public/js/components/addLink.js`, `addDetails.js`, `speakerStep.js`, `lineFixSheet.js`, `personPicker.js`), with markup in `addView.js` and `editView.js`. `public/js/state/addState.js` is the only place that turns the choices into request bodies, so the two pages can't disagree about what a save sends. `pages/add.js` and `pages/edit.js` own state, the network and the 300 ms re-preview.
+- **Dev only:** `DEV_SIGN_IN=1` enables `POST /api/auth/dev` (refused whenever `VERCEL` is set). The browser tests run the dev server against offline fixtures with `INGEST_FIXTURES_DIR`, which `api/index.js` ignores on Vercel.
+
 ## File structure (fan-archive, v0.1.1)
 
 ```

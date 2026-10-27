@@ -55,6 +55,13 @@ You need Vercel, Neon and GitHub accounts, plus later an X developer app and Goo
 - **Never add a card to GitHub or X.** Without one, hitting a free limit stops the service instead of billing you ([what happens at each limit](limits.md)).
 - **Turn on 2FA everywhere:** GitHub, Vercel, Neon, X and Google.
 
+### Sign-in apps (X and Google)
+
+Visitors sign in with X or Google to add and edit entries, so each needs an app you create once. Both check the callback URL exactly. Register the one on your site's domain (`https://<domain>/…` below). Preview deploys have their own URLs, so sign-in there needs those registered too, or test it on production.
+
+- **X:** in the X developer portal, create an app with **OAuth 2.0** on and the type **Web App** (a confidential client: the engine sends its client secret). Set the callback URL to `https://<domain>/api/auth/x/callback` and the scopes to `users.read tweet.read`. Sign-in works on a zero-credit app ([limits](limits.md)).
+- **Google:** in Google Cloud, create an OAuth client of type **Web application** with the authorised redirect URI `https://<domain>/api/auth/google/callback`. The scope is `openid` only, so Google never sends a name or email. Set the consent screen to **In Production**: testing mode caps sign-ins at 100 users ([limits](limits.md)).
+
 ## 5. Create the Neon project
 
 1. Sign up at [neon.com](https://neon.com/) directly, not through the Vercel Marketplace (that moves billing to Vercel).
@@ -120,7 +127,10 @@ Secrets live only in Vercel environment variables, GitHub environment secrets an
   - Environment **`preview`**: `DATABASE_URL_PREVIEW`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
   - Optional repository variable `APP_DB_ROLE` (Settings → Secrets and variables → Actions → Variables): the app role from step 5. The migrate steps then grant it access to new tables.
   - Keeping them in separate environments means a pull request's preview job never receives the production database URL.
-- Sign-in secrets (X, Google) arrive with the release that adds sign-in. Its `CHANGELOG.md` entry lists them.
+- **Sign-in** (Vercel, Production and Preview; the values come from the apps in step 4):
+  - `AUTH_SECRET`: 32 or more random bytes, e.g. `openssl rand -base64 32`. It signs sessions and sign-in state, so changing it signs everyone out.
+  - `X_CLIENT_ID` and `X_CLIENT_SECRET` from the X app; `GOOGLE_CLIENT_ID` from the Google client. The engine doesn't read a Google client secret.
+  - `DEV_SIGN_IN=1` is for local development and the browser tests only, and the engine refuses it on Vercel. Export it in your shell, never set it on the site.
 
 ## 8. Set up the database and check
 
@@ -136,6 +146,7 @@ DATABASE_URL='<main branch string>' npm run doctor    # every line should be ✓
 - Read your **about**, **privacy** and **takedown** pages (`/about`, `/privacy`, `/takedown`) and adjust their wording in `site/copy.json` (the `about.*`, `privacy.*` and `takedown.*` keys) to match how you actually run the archive.
 - Set `contactUrl` in `site.json` to the one public contact: a form or a profile link, never a personal email. Then check the link works.
 - Check the site on a phone, in light and dark mode.
+- Sign in with X and with Google on your production domain, add a test entry, then sign out. Check the sign-in buttons work before you share the link.
 - Run `npm run e2e:site` (once: `npx playwright install chromium`). It builds your own `site/`, seeds `site/seed/` into a throwaway database, and checks your real pages (home, the first event and item, every featured person, a translator, a search, about, privacy, takedown and a 404) at phone and desktop widths in light and dark mode: each must answer, log no errors, never scroll sideways and pass the accessibility check, colour contrast included. It needs a `site/seed/maps.json` with at least one post.
 
 ## 10. Pull engine updates
@@ -186,6 +197,7 @@ The merge should be conflict-free as long as you've only changed `site/` (and de
 | You see | What it means | Fix |
 |---|---|---|
 | `/api/...` answers 400 `unknown query parameter: ...` naming a parameter your request never sent | A `vercel.json` rewrite with a named param (`/t/:id`), or a function file with one in its name, made Vercel add that param to the query string. The engine refuses unknown query params. | Take the latest engine release, run `npm run build`, and (Git-integration path) commit the `vercel.json` it writes. The engine has one function, `api/index.js`, and writes only unnamed rewrites (`/t/(.*)` to `/api`). |
+| Sign-in ends on X's or Google's own error page (a redirect URL or client problem) | The callback URL, client ID or secret in the app doesn't match the deployed site. Both providers compare the URL exactly, scheme and path included. | Compare the app's callback URL with `https://<domain>/api/auth/<x or google>/callback`, and the Vercel values with the app's, then redeploy. A preview URL needs its own callback registered (step 4). |
 | `/t/<id>` or `/e/<slug>` shows Vercel's own `404: NOT_FOUND` | The request never reached the function: `vercel.json` is missing the page's rewrite to `/api`, or is out of date. | Same fix: rebuild and redeploy (and commit `vercel.json` on the Git-integration path). |
 
 See also: [what happens at each free-tier limit, and how to spot it early](limits.md).
