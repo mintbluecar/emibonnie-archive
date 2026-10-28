@@ -55,6 +55,10 @@
  *   kind has (added by src/services/cards.js): the date it happened on
  *   and its placement.
  *
+ * @typedef {{ type: 'item', kind: string, sourceId: string } | { type: 'event', slug: string }} ReportTarget
+ *   What a public report names: a visible item (by kind and source id) or a
+ *   visible event (by slug).
+ *
  * @typedef {{ translations: number, events: number, sharedStories: number }} TranslatorTotals
  *   A translator's welcome totals: visible credited entries, the distinct
  *   events they cover, and how many are shared stories.

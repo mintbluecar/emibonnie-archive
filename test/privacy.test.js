@@ -101,6 +101,8 @@ async function representativeCalls() {
   calls.push(['GET', '/api/me'], ['GET', '/api/me/added'], ['GET', '/api/me/translations'], ['POST', '/api/me/translations/remove'], ['POST', '/api/me/translations/restore'], ['POST', '/api/me/translations/opt-out'], ['POST', '/api/me/translations/opt-in'], ['POST', '/api/me/welcomed'], ['POST', '/api/me/name'], ['POST', '/api/auth/signout'], ['POST', '/api/auth/signout-all'], ['POST', '/api/auth/dev'], ['POST', '/api/me/delete']);
   // The signed-in add flow: all 401 without a session, nothing leaks.
   calls.push(['GET', '/api/add/options'], ['POST', '/api/add/preview'], ['POST', '/api/add'], ['POST', '/api/people']);
+  // The public report form: no session, writes only a report.
+  calls.push(['POST', '/api/reports']);
   // Editing and follow-ups: all signed-in, a bare probe is 401 (no session).
   calls.push(['GET', '/api/item/translation/1/edit'], ['POST', '/api/item/translation/1/edit'], ['POST', '/api/item/translation/1/edits/1/revert'], ['POST', '/api/item/translation/1/follow-ups']);
   return calls;
