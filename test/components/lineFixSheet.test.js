@@ -14,7 +14,7 @@ import { mount } from '../../public/js/core/dom.js';
 const { render, bind } = await import('../../public/js/components/lineFixSheet.js');
 
 const OPTIONS = {
-  people: [{ id: 1, displayName: 'emi', emoji: '🧡', igHandle: 'emiamily' }],
+  people: [{ id: 1, displayName: 'luna', emoji: '🌙', igHandle: 'lunamoon' }],
   roles: ['host', 'fan', 'speaker', 'crowd'],
   events: [],
   categories: [],

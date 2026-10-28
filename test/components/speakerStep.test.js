@@ -13,7 +13,7 @@ const { render } = await import('../../public/js/components/speakerStep.js');
 const { t, tCount } = await import('../../public/js/core/site.js');
 
 const OPTIONS = {
-  people: [{ id: 1, displayName: 'emi', emoji: '🧡', igHandle: 'emiamily' }],
+  people: [{ id: 1, displayName: 'luna', emoji: '🌙', igHandle: 'lunamoon' }],
   roles: ['host', 'fan', 'speaker', 'crowd'],
   events: [],
   categories: [],
@@ -61,8 +61,8 @@ test('speakerStep: every marker gets a picker, the known person first and the ge
   const markup = markupOf({ open: '🐱' });
   assert.match(markup, /🐶/);
   assert.match(markup, /🐱/);
-  assert.match(markup, /🧡/);
-  assert.match(markup, /emi/);
+  assert.match(markup, /🌙/);
+  assert.match(markup, /luna/);
   for (const role of OPTIONS.roles) assert.match(markup, copyRe(t(`add.role.${role}`)), role);
   assert.match(markup, copyRe(t('add.newPerson')));
   assert.match(markup, copyRe(t('add.searchPeople')));
