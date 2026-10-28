@@ -10,6 +10,7 @@ import { after, before, test } from 'node:test';
 import { seededDeps } from '../helpers/ingest.js';
 import { itemChangeTags, accountChangeTags, purgeItem, purgeTags } from '../../src/services/cache.js';
 import { editItem } from '../../src/services/editItem.js';
+import { insertItem } from '../helpers/seed.js';
 
 /** @type {Awaited<ReturnType<typeof seededDeps>>} */
 let deps;
@@ -104,4 +105,57 @@ test('an edit purges the item it changed', async () => {
   const purged = calls.flat();
   assert.ok(purged.includes(`item:${sample.id}`), purged.join(','));
   assert.ok(purged.includes('home'));
+});
+
+// --- fix pass: deletion semantics, complete account coverage, old relationships
+
+test('a hard purge deletes (dangerouslyDeleteByTag), not invalidates', async () => {
+  const hard = /** @type {string[][]} */ ([]);
+  const soft = /** @type {string[][]} */ ([]);
+  const deps = {
+    ...depsWith({ env: { VERCEL: '1' } }),
+    invalidateByTag: async (tags) => soft.push(tags),
+    dangerouslyDeleteByTag: async (tags) => hard.push(tags),
+  };
+  await purgeTags(deps, ['item:1'], { hard: true });
+  assert.deepEqual(hard, [['item:1']]);
+  assert.deepEqual(soft, []);
+  await purgeTags(deps, ['item:1']);
+  assert.deepEqual(soft, [['item:1']]);
+  assert.equal(hard.length, 1);
+});
+
+test('a prolific translator\'s account purge reaches every item', async () => {
+  const accountId = await deps.db.transaction(async (tx) => {
+    const { rows } = await tx.query("insert into accounts (platform, handle) values ('x', 'prolific_tl') returning id");
+    for (let i = 0; i < 205; i++) await insertItem(tx, { creditedAccountId: rows[0].id });
+    return rows[0].id;
+  }, { actor: 'system' });
+  const tags = await accountChangeTags(deps.db, accountId);
+  const itemTags = tags.filter((tag) => tag.startsWith('item:'));
+  assert.equal(itemTags.length, 205, 'every credited item is named, not just the first 200');
+});
+
+test('an edit purges the old event as well as the new one', async () => {
+  const calls = /** @type {string[][]} */ ([]);
+  const deferred = /** @type {(() => Promise<unknown>)[]} */ ([]);
+  const editing = depsWith({ calls, deferred });
+  const { rows } = await deps.db.query(
+    `select i.id, s.external_id as source_id, ev.slug as old_slug
+     from items i join item_sources s on s.item_id = i.id and s.role = 'primary'
+     join events ev on ev.id = i.event_id
+     where i.deleted_at is null order by i.id limit 1`,
+  );
+  const { rows: other } = await deps.db.query(
+    "select id, slug from events where slug <> $1 and deleted_at is null limit 1", [rows[0].old_slug],
+  );
+  const owner = /** @type {any} */ ({ id: 'x:0', isOwner: true, translatorAccountIds: [] });
+  await editItem(editing, {
+    kind: 'translation', sourceId: rows[0].source_id,
+    changes: { placement: 'event', eventId: other[0].id }, actor: owner,
+  });
+  while (deferred.length > 0) await /** @type {any} */ (deferred.shift())();
+  const purged = calls.flat();
+  assert.ok(purged.includes(`event:${rows[0].old_slug}`), `old event in ${purged.join(',')}`);
+  assert.ok(purged.includes(`event:${other[0].slug}`), `new event in ${purged.join(',')}`);
 });

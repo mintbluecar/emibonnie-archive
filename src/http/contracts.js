@@ -61,7 +61,7 @@
  *
  * @typedef {{ id: number, at: string, reason: string, reporter: AddedByVM|null,
  *   status: 'open'|'resolved'|'dismissed',
- *   target: { type: 'item'|'event', url: string, label: string, hidden: boolean } }} ReportVM
+ *   target: { type: 'item'|'event', url: string, label: string, hidden: boolean, restorable: boolean } }} ReportVM
  *   One report in the owner's queue, with a link back to what it names.
  *
  * @typedef {{ approvalRequired: boolean, signInFailedAt: string|null,

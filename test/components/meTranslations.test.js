@@ -77,6 +77,11 @@ test('the opt-out box names the total, warns, and its button is the red full-wid
   assert.match(markup, /class="c-me__optout-confirm"/);
 });
 
+test('a list with more pages offers a translator-specific "more" action', () => {
+  const markup = String(render(state({ hasMore: true, items: [item()] })));
+  assert.match(markup, /data-action="more-translations"/);
+});
+
 test('opted out: the box offers "opt back in" instead of the confirm', () => {
   const markup = String(render(state({ optedOut: true })));
   assert.match(markup, copyRe(t('me.optOut.done')));

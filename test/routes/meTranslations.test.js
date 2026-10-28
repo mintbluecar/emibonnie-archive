@@ -84,7 +84,11 @@ test('a bad offset is a 400', async () => {
 test('a removed entry leaves every public surface and is purged', async () => {
   const calls = /** @type {string[][]} */ ([]);
   const env = { VERCEL: '1' };
-  const purging = apiFor({ ...deps, env, invalidateByTag: async (/** @type {string[]} */ tags) => calls.push(tags), log: () => {} }, { env });
+  const capture = async (/** @type {string[]} */ tags) => { calls.push(tags); };
+  const purging = apiFor({
+    ...deps, env, log: () => {},
+    invalidateByTag: capture, dangerouslyDeleteByTag: capture,
+  }, { env });
 
   const list = JSON.parse((await purging.call('GET', '/api/me/translations', { cookies: { sid: translator.sid } })).text);
   const entry = list.items.find((/** @type {any} */ item) => !item.removedByYou && !item.hidden);

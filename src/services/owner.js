@@ -7,7 +7,7 @@
 import { BadRequest, Conflict, NotFound } from '../domain/errors.js';
 import { pendingItemIds, findItemIdBySource, restoreItem, setReviewState, softDeleteItem } from '../repo/itemState.js';
 import { listVisibleItemIds } from '../repo/items.js';
-import { softDeleteEvent } from '../repo/events.js';
+import { hideEvent } from '../repo/events.js';
 import { get as settingsGet, set as settingsSet } from '../repo/settings.js';
 import { eventTag, HOME_TAG, SEARCH_TAG } from '../domain/cacheTags.js';
 import { kindsOf, presenterContext, previewsForAny } from './cards.js';
@@ -31,7 +31,7 @@ export async function ownerView(deps) {
   const [approvalRequired, signInFailedAt, ids] = await Promise.all([
     settingsGet(deps.db, 'approvalRequired').then((value) => value === true),
     settingsGet(deps.db, 'xSignInFailedAt'),
-    pendingItemIds(deps.db, { limit: WAITING_LIMIT }),
+    waitingIds(deps),
   ]);
   const ctx = await presenterContext(deps);
   const entries = await previewsForAny(deps, ids, ctx);
@@ -41,6 +41,21 @@ export async function ownerView(deps) {
     waiting: entries.map(({ card, preview }) => ({ ...preview, reviewState: card.reviewState })),
     reports: await reportQueue(deps),
   };
+}
+
+/**
+ * Held entries: the items whose own review state is pending, plus any item
+ * with a held follow-up part (each kind's `heldItemIds`), oldest first.
+ * @param {ViewDeps} deps
+ * @returns {Promise<number[]>}
+ */
+async function waitingIds(deps) {
+  const kinds = Object.values(kindsOf(deps)).filter((kind) => typeof kind.heldItemIds === 'function');
+  const [items, ...held] = await Promise.all([
+    pendingItemIds(deps.db, { limit: WAITING_LIMIT }),
+    ...kinds.map((kind) => /** @type {NonNullable<typeof kind.heldItemIds>} */ (kind.heldItemIds)(deps.db, { limit: WAITING_LIMIT })),
+  ]);
+  return [...new Set([...items, ...held.flat()])].sort((a, b) => a - b).slice(0, WAITING_LIMIT);
 }
 
 /**
@@ -71,8 +86,12 @@ export async function reviewItem(deps, { kind: kindName, sourceId, state, actor 
   if (!kind) throw new BadRequest(`unknown kind: ${kindName}`);
   const id = await findItemIdBySource(deps.db, { kind: kind.name, platform: kind.platform, externalId: sourceId });
   if (id === null) throw new BadRequest(`unknown item: ${sourceId}`);
-  await deps.db.transaction((tx) => setReviewState(tx, { itemId: id, state }), { actor: actor.id });
-  await purgeItem(deps, id);
+  await deps.db.transaction(async (tx) => {
+    await setReviewState(tx, { itemId: id, state });
+    // A held follow-up part is reviewed by the same approve/reject.
+    if (typeof kind.reviewHeld === 'function') await kind.reviewHeld(tx, { itemId: id, approve: state === 'published' });
+  }, { actor: actor.id });
+  await purgeItem(deps, id, { hard: state === 'rejected' });
   return { state };
 }
 
@@ -112,7 +131,10 @@ export async function reportQueue(deps) {
     'select id, target_table, target_id, reason, status, created_by, created_at from reports where status = $1 order by id desc limit $2',
     ['open', REPORT_LIMIT],
   );
-  const reports = rows.map((row) => ({ ...row, reporter: null, target: { type: row.target_table === 'events' ? 'event' : 'item', url: '', label: '', hidden: true } }));
+  const reports = rows.map((row) => ({
+    ...row, reporter: null,
+    target: { type: row.target_table === 'events' ? 'event' : 'item', url: '', label: '', hidden: true, restorable: false },
+  }));
   const reporters = await Promise.all(reports.map((report) => reporterOf(deps.db, report.created_by)));
   await attachItemTargets(deps, reports);
   await attachEventTargets(deps, reports);
@@ -134,10 +156,10 @@ async function attachItemTargets(deps, reports) {
   const ctx = await presenterContext(deps);
   const [entries, states] = await Promise.all([
     previewsForAny(deps, ids, ctx),
-    deps.db.query('select id, deleted_at from items where id = any($1::bigint[])', [ids]),
+    deps.db.query('select id, deleted_at, deleted_reason from items where id = any($1::bigint[])', [ids]),
   ]);
   const previews = new Map(entries.map((entry) => [entry.card.id, entry]));
-  const deleted = new Map(states.rows.map((row) => [row.id, row.deleted_at !== null]));
+  const deleted = new Map(states.rows.map((row) => [row.id, { hidden: row.deleted_at !== null, restorable: row.deleted_reason === 'hidden_by_owner' }]));
   for (const report of items) {
     const id = Number(report.target_id);
     const entry = previews.get(id);
@@ -147,7 +169,8 @@ async function attachItemTargets(deps, reports) {
       type: 'item',
       url: entry.preview.url,
       label: line && 'text' in line ? line.text.trim() : entry.card.sourceId,
-      hidden: deleted.get(id) === true,
+      hidden: deleted.get(id)?.hidden === true,
+      restorable: deleted.get(id)?.restorable === true,
     };
   }
 }
@@ -162,7 +185,10 @@ async function attachEventTargets(deps, reports) {
   for (const report of events) {
     const event = byId.get(Number(report.target_id));
     if (!event) continue;
-    report.target = { type: 'event', url: `/e/${event.slug}`, label: event.name, hidden: event.deleted_at !== null };
+    report.target = {
+      type: 'event', url: `/e/${event.slug}`, label: event.name,
+      hidden: event.deleted_at !== null, restorable: event.deleted_at !== null,
+    };
   }
 }
 
@@ -185,15 +211,16 @@ export async function hideReportTarget(deps, { reportId, actor }) {
   const report = await openReportOf(deps.db, reportId);
   if (report.target_table === 'items') {
     await deps.db.transaction((tx) => softDeleteItem(tx, { itemId: Number(report.target_id), reason: 'hidden_by_owner', actor: actor.id }), { actor: actor.id });
-    await purgeItem(deps, Number(report.target_id));
+    await purgeItem(deps, Number(report.target_id), { hard: true });
     return { hidden: true };
   }
   const eventId = Number(report.target_id);
   const itemIds = (await listVisibleItemIds(deps.db, { eventId })).map((item) => item.id);
   const { rows } = await deps.db.query('select slug from events where id = $1', [eventId]);
-  await deps.db.transaction((tx) => softDeleteEvent(tx, eventId), { actor: actor.id });
+  // Hide the event only: its items keep their placement and come back with it.
+  await deps.db.transaction((tx) => hideEvent(tx, eventId), { actor: actor.id });
   if (rows[0]) await purgeTags(deps, [HOME_TAG, SEARCH_TAG, eventTag(rows[0].slug)]);
-  for (const itemId of itemIds) await purgeItem(deps, itemId);
+  for (const itemId of itemIds) await purgeItem(deps, itemId, { hard: true });
   return { hidden: true };
 }
 

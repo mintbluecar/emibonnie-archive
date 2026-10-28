@@ -26,7 +26,10 @@ const PORT = Number(process.env.E2E_ADD_PORT ?? 4312);
 export default defineConfig({
   testDir: './e2e',
   testMatch: ['add.spec.js', 'me-translator.spec.js', 'report.spec.js', 'owner.spec.js'],
-  fullyParallel: true,
+  fullyParallel: false,
+  // One worker: these specs share one writable database and mutate the same
+  // fixtures (approval, blocks, removal, opt-out), so parallel files race.
+  workers: 1,
   forbidOnly: !!process.env.CI,
   retries: 0,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',

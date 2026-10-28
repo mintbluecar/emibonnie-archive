@@ -37,7 +37,9 @@ Writes and sign-in are capped per visitor, so one account or one address can't u
 | Report | 5 | 1 hour | address |
 | Remove entries (translator) | 30 | 1 hour | user |
 | Restore entries (translator) | 30 | 1 hour | user |
-| Opt out or back in | 3 | 1 day | user |
+| Opt out | 3 | 1 day | user |
+| Opt back in | 10 | 1 day | user |
+| Mark the translator welcome seen | 10 | 1 hour | user |
 | Owner actions (approval, review, reports, users) | 300 | 1 hour | user |
 
 The source of truth is `LIMITS` in `src/services/limits.js`.

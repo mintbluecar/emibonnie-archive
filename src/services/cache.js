@@ -14,10 +14,13 @@
  * (`invalidateByTag`), read 2026-10-28.
  */
 import { HOME_TAG, SEARCH_TAG, accountTag, eventTag, itemTag, personTag } from '../domain/cacheTags.js';
+import { findItemIdBySource } from '../repo/itemState.js';
+import { kindsOf } from './cards.js';
 
 /** @typedef {import('../db/common.js').Db} Db */
 /** @typedef {{ db: Db, env?: Record<string, string|undefined>,
  *   invalidateByTag?: (tags: string[]) => Promise<void>,
+ *   dangerouslyDeleteByTag?: (tags: string[], options?: { revalidationDeadlineSeconds?: number }) => Promise<void>,
  *   defer?: (task: () => Promise<unknown>) => void,
  *   log?: (line: string) => void }} CacheDeps */
 
@@ -57,9 +60,6 @@ export async function itemChangeTags(db, itemId) {
   ];
 }
 
-/** Bounded so one very prolific account can't make a purge unbounded. */
-const ACCOUNT_ITEM_CAP = 200;
-
 /**
  * A translator page plus every entry credited to the account (the whole
  * account hides on opt-out, so all of its items' event/person copies go
@@ -73,47 +73,98 @@ export async function accountChangeTags(db, accountId) {
   const { rows: items } = await db.query(
     `select id from items where credited_account_id = $1
        and (deleted_reason is null or deleted_reason <> 'erased')
-     order by id limit ${ACCOUNT_ITEM_CAP}`,
+     order by id`,
     [accountId],
   );
   for (const item of items) tags.push(...(await itemChangeTags(db, item.id)));
   return [...new Set(tags)];
 }
 
+/** How many tags one purge call carries (well under the 128-tag response cap). */
+const PURGE_BATCH = 100;
+
 /**
- * Invalidates `tags` on Vercel. No-op elsewhere; a failure is one log
- * line with no tags, no path and no headers.
- * @param {CacheDeps} deps @param {string[]} tags @returns {Promise<void>}
+ * Purges `tags` on Vercel. No-op elsewhere; a failure is one log line per
+ * batch, with no tags, path or headers.
+ *
+ * `hard` chooses deletion over invalidation. Vercel's `invalidateByTag`
+ * marks content stale and serves it once more while revalidating, which is
+ * fine for a new or edited entry but wrong for a removal: `dangerouslyDeleteByTag`
+ * fetches from the origin on the next request, so removed content is never
+ * served again (see https://vercel.com/docs/caching/cdn-cache/purge).
+ * @param {CacheDeps} deps @param {string[]} tags
+ * @param {{ hard?: boolean }} [options]
+ * @returns {Promise<void>}
  */
-export async function purgeTags(deps, tags) {
+export async function purgeTags(deps, tags, { hard = false } = {}) {
   const unique = [...new Set(tags)];
   if (unique.length === 0 || !deps.env?.VERCEL) return;
+  const fn = hard
+    ? deps.dangerouslyDeleteByTag ?? (await import('@vercel/functions')).dangerouslyDeleteByTag
+    : deps.invalidateByTag ?? (await import('@vercel/functions')).invalidateByTag;
+  for (let i = 0; i < unique.length; i += PURGE_BATCH) {
+    await purgeBatch(deps, fn, unique.slice(i, i + PURGE_BATCH), hard);
+  }
+}
+
+/**
+ * One purge call; a rejection is logged once and swallowed.
+ * @param {CacheDeps} deps
+ * @param {(tags: string[], options?: { revalidationDeadlineSeconds?: number }) => Promise<void>} fn
+ * @param {string[]} batch
+ * @param {boolean} hard
+ * @returns {Promise<void>}
+ */
+async function purgeBatch(deps, fn, batch, hard) {
   try {
-    const invalidate = deps.invalidateByTag ?? (await import('@vercel/functions')).invalidateByTag;
-    await invalidate(unique);
+    if (hard) await fn(batch, { revalidationDeadlineSeconds: 0 });
+    else await fn(batch);
   } catch {
     (deps.log ?? console.error)('cache purge failed');
   }
 }
 
 /**
- * @param {CacheDeps} deps @param {string[]} tags
+ * Purges an explicit tag list, deferred when the request can defer it.
+ * @param {CacheDeps} deps @param {string[]} tags @param {{ hard?: boolean }} [options]
  * @returns {Promise<void>}
  */
-async function purgeWhenPossible(deps, tags) {
+export async function purgeForTags(deps, tags, options = {}) {
+  await purgeWhenPossible(deps, tags, options);
+}
+
+/**
+ * The item a kind and source id name, purged (never fails the caller).
+ * @param {CacheDeps & { site?: any, kinds?: Record<string, any> }} deps
+ * @param {string} kindName @param {string} sourceId @param {{ hard?: boolean }} [options]
+ * @returns {Promise<void>}
+ */
+export async function purgeSource(deps, kindName, sourceId, options = {}) {
+  const kinds = kindsOf(/** @type {any} */ (deps));
+  const kind = Object.hasOwn(kinds, kindName) ? kinds[kindName] : undefined;
+  if (!kind) return;
+  const id = await findItemIdBySource(deps.db, { kind: kind.name, platform: kind.platform, externalId: sourceId });
+  if (id !== null) await purgeItem(deps, id, options);
+}
+
+/**
+ * @param {CacheDeps} deps @param {string[]} tags @param {{ hard?: boolean }} [options]
+ * @returns {Promise<void>}
+ */
+async function purgeWhenPossible(deps, tags, { hard = false } = {}) {
   if (typeof deps.defer === 'function') {
-    deps.defer(() => purgeTags(deps, tags));
+    deps.defer(() => purgeTags(deps, tags, { hard }));
     return;
   }
-  await purgeTags(deps, tags);
+  await purgeTags(deps, tags, { hard });
 }
 
-/** @param {CacheDeps} deps @param {number} itemId @returns {Promise<void>} */
-export async function purgeItem(deps, itemId) {
-  await purgeWhenPossible(deps, await itemChangeTags(deps.db, itemId));
+/** @param {CacheDeps} deps @param {number} itemId @param {{ hard?: boolean }} [options] @returns {Promise<void>} */
+export async function purgeItem(deps, itemId, options = {}) {
+  await purgeWhenPossible(deps, await itemChangeTags(deps.db, itemId), options);
 }
 
-/** @param {CacheDeps} deps @param {number} accountId @returns {Promise<void>} */
-export async function purgeAccount(deps, accountId) {
-  await purgeWhenPossible(deps, await accountChangeTags(deps.db, accountId));
+/** @param {CacheDeps} deps @param {number} accountId @param {{ hard?: boolean }} [options] @returns {Promise<void>} */
+export async function purgeAccount(deps, accountId, options = {}) {
+  await purgeWhenPossible(deps, await accountChangeTags(deps.db, accountId), options);
 }

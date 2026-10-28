@@ -9,7 +9,7 @@ Translators and the owner. A recognised translator gets a one-time welcome and t
 **Upgrade steps:**
 
 1. `git fetch upstream --tags && git merge v0.3.0`.
-2. **No migrations.** Every column and table this release needs exists from 001/002 (the translator welcome lives in `users.meta`).
+2. **Migrate.** Migration 004 adds `translation_parts.rejected`, so a held follow-up part the owner rejects stays hidden without its text being deleted. Run `npm run migrate` on each database before the deploy that needs it.
 3. **Copy keys.** No key you may have overridden was removed. The new keys you may override are `me.translatorBadge`, `me.translations.*`, `me.optOut.*`, `me.welcome.*`, `report.*` and `owner.*`. Each has an English default.
 4. `npm run build`, then redeploy. Cache tagging needs no setup: responses carry a `Vercel-Cache-Tag` header and the function invalidates it with `invalidateByTag()` from `@vercel/functions`. Outside Vercel (local dev, the CLI) purging is a no-op.
 5. The item and event pages' report link now opens a form; `/takedown` stays for everything else.

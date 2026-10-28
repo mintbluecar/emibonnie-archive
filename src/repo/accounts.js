@@ -121,7 +121,11 @@ export async function linkXAccountToUser(tx, { externalId, userId }) {
  */
 export async function xAccountIdsOfUser(db, userId) {
   const { rows } = await db.query(
-    "select id from accounts where platform = 'x' and user_id = $1 and deleted_at is null order by id",
+    `select a.id from accounts a
+     where a.platform = 'x' and a.user_id = $1 and a.deleted_at is null
+       and exists (select 1 from items i where i.credited_account_id = a.id
+         and (i.deleted_reason is null or i.deleted_reason <> 'erased'))
+     order by a.id`,
     [userId],
   );
   return rows.map((r) => r.id);

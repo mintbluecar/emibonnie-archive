@@ -110,10 +110,11 @@ export async function refreshItem(deps, kindName, sourceId) {
  * The stored variants of a visible item's clip (its own, or the quoted
  * post's), shown only while that source is live; null otherwise.
  * @param {ItemDeps} deps @param {string} kindName @param {string} sourceId
- * @returns {Promise<{ variants: VariantVM[] } | null>}
+ * @returns {Promise<{ itemId: number, variants: VariantVM[] } | null>}
  */
 export async function videoVariants(deps, kindName, sourceId) {
-  const media = (await itemView(deps, kindName, sourceId))?.media ?? null;
+  const target = await visibleItem(deps, kindName, sourceId);
+  const media = target ? (await itemView(deps, kindName, sourceId))?.media ?? null : null;
   const video = media?.type === 'quote' ? media.inner : media;
-  return video?.type === 'video' ? { variants: video.variants } : null;
+  return target && video?.type === 'video' ? { itemId: target.id, variants: video.variants } : null;
 }

@@ -97,3 +97,17 @@ test('a hidden target\'s meta page carries no tags', async () => {
   const res = await api.call('GET', '/t/does-not-exist');
   assert.equal(res.headers.get('vercel-cache-tag'), null);
 });
+
+test('the filters and video responses carry tags too', async () => {
+  const filters = await api.call('GET', '/api/filters');
+  const filterTags = (filters.headers.get('vercel-cache-tag') ?? '').split(',');
+  assert.ok(filterTags.includes(HOME_TAG) && filterTags.includes(SEARCH_TAG), filters.headers.get('vercel-cache-tag') ?? '');
+
+  const live = '1900000000000000004';
+  const { rows } = await deps.db.query(
+    "select i.id from items i join item_sources s on s.item_id = i.id and s.role = 'primary' where s.external_id = $1", [live],
+  );
+  const video = await api.call('GET', `/api/video/translation/${live}`);
+  assert.equal(video.status, 200, video.text);
+  assert.ok((video.headers.get('vercel-cache-tag') ?? '').split(',').includes(`item:${rows[0].id}`));
+});

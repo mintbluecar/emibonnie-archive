@@ -83,7 +83,7 @@ export async function setBlocked(deps, { userId, blocked, actor }) {
     }
     return ids;
   }, { actor: actor.id });
-  for (const id of changed) await purgeItem(deps, id);
+  for (const id of changed) await purgeItem(deps, id, { hard: wanting });
   return wanting ? { hidden: changed.length, restored: 0 } : { hidden: 0, restored: changed.length };
 }
 

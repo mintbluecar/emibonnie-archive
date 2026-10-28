@@ -90,7 +90,7 @@ test('item: a removed item and an unknown kind throw NotFound', async () => {
 });
 
 test('video: stored variants of a visible item with a live clip; TOMB and items without video throw NotFound', async () => {
-  const { variants } = await videoRoute.run(input({ kind: 'translation', sourceId: IDS.EVENT_A }), routeDeps());
+  const { variants } = await bodyOf(await videoRoute.run(input({ kind: 'translation', sourceId: IDS.EVENT_A }), routeDeps()));
   assert.ok(variants.length > 0);
   for (const v of variants) assert.match(v.url, /^https:\/\/video\.twimg\.com\//);
   await assert.rejects(videoRoute.run(input({ kind: 'translation', sourceId: IDS.TOMB }), routeDeps()), NotFound);
@@ -120,7 +120,7 @@ test('video: given the outer item\'s own sourceId, resolves the quoted post\'s i
     SYSTEM,
   );
   try {
-    const { variants } = await videoRoute.run(input({ kind: 'translation', sourceId: IDS.POST }), routeDeps());
+    const { variants } = await bodyOf(await videoRoute.run(input({ kind: 'translation', sourceId: IDS.POST }), routeDeps()));
     assert.deepEqual(variants, innerVariants);
   } finally {
     await deps.db.transaction(
@@ -133,7 +133,7 @@ test('video: given the outer item\'s own sourceId, resolves the quoted post\'s i
 test('filters lists only visible accounts', async () => {
   await deps.db.transaction((/** @type {any} */ tx) => tx.query("update accounts set opted_out_at = now() where handle = 'tl_gamma'"), SYSTEM);
   try {
-    const view = await filtersRoute.run(input({}), routeDeps());
+    const view = await bodyOf(await filtersRoute.run(input({}), routeDeps()));
     assert.deepEqual(view.accounts, [{ handle: 'tl_alpha' }, { handle: 'tl_beta' }]);
   } finally {
     await deps.db.transaction((/** @type {any} */ tx) => tx.query("update accounts set opted_out_at = null where handle = 'tl_gamma'"), SYSTEM);

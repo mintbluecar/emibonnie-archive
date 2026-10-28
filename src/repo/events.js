@@ -10,7 +10,7 @@ import { camelRow } from './rows.js';
 import { ensureTags } from './tags.js';
 import { visibleEvent } from './visibility.js';
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[], rowCount?: number }> }} Tx */
 /** @typedef {import('../domain/events.js').Event} Event */
 /** @typedef {import('../domain/events.js').EventProposal} EventProposal */
 
@@ -121,6 +121,23 @@ export async function createEvent(tx, proposal) {
   await linkLivePeople(tx, eventId, livePeopleIds);
   await linkTags(tx, eventId, keywords, hashtags);
   return /** @type {Event} */ (await getEventBySlug(tx, slug));
+}
+
+/**
+ * Hides an event **without moving its items**: every public query already
+ * requires the event not to be deleted (`EVENT_NOT_DELETED`), so the items
+ * disappear with it and come back exactly where they were when the event is
+ * restored. Used by the owner's report hide (Plan 2b).
+ * @param {Tx} tx
+ * @param {number} id
+ * @returns {Promise<boolean>}
+ */
+export async function hideEvent(tx, id) {
+  const { rowCount } = await tx.query(
+    "update events set deleted_at = now(), deleted_by = current_setting('app.actor', true) where id = $1 and deleted_at is null",
+    [id],
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 /**

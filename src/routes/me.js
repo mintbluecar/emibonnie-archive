@@ -126,7 +126,7 @@ export const optInRoute = {
   /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
   run: async (input, deps) => {
     const user = await requireUser(deps, input);
-    await limit(deps, 'optOut', user.id);
+    await limit(deps, 'optIn', user.id);
     if (user.translatorAccountIds.length === 0) throw new BadRequest('not_a_translator');
     return setOptOut(deps, user, false);
   },
@@ -140,6 +140,7 @@ export const welcomedRoute = {
   /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
   run: async (input, deps) => {
     const user = await requireUser(deps, input);
+    await limit(deps, 'welcome', user.id);
     if (isTranslator(user)) await markWelcomed(deps, user.id);
     return { ok: true };
   },

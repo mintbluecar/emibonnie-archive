@@ -4,7 +4,7 @@ import { draftTranslation } from './domain.js';
 import { fetchTranslationSource } from './source.js';
 import { parseTweetId } from '../../sources/url.js';
 import { appendFollowUp, persistTranslation } from './persist.js';
-import { loadDetails, setLineFixes } from './repo.js';
+import { heldItemIds, loadDetails, reviewHeld, setLineFixes } from './repo.js';
 import { present } from './presenter.js';
 import { search } from './search.js';
 import { refreshEdits, checkFollowUps } from './upkeep.js';
@@ -47,4 +47,6 @@ export default defineKind({
   remapSpeakers,
   setLineFixes: (/** @type {any} */ tx, /** @type {any} */ { itemId, fixes }) => setLineFixes(tx, itemId, fixes),
   setSubbed,
+  heldItemIds,
+  reviewHeld,
 });

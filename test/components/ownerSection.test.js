@@ -29,7 +29,7 @@ const WAITING = {
 const REPORT = {
   id: 4, at: '2026-10-28T00:00:00.000Z', reason: 'wrong credit', status: 'open',
   reporter: { kind: 'handle', handle: 'someone' },
-  target: { type: 'item', url: '/t/1900000000000000004', label: 'a line', hidden: false },
+  target: { type: 'item', url: '/t/1900000000000000004', label: 'a line', hidden: false, restorable: false },
 };
 
 test('the approval switch reflects its state and is a labelled checkbox', () => {
@@ -55,7 +55,7 @@ test('a report row shows its reason and reporter, and hide/restore swaps by stat
   assert.match(open, /data-action="hide-report"/);
   assert.ok(!open.includes('data-action="restore-report"'));
 
-  const hidden = String(render(owner({ reports: [{ ...REPORT, target: { ...REPORT.target, hidden: true } }] })));
+  const hidden = String(render(owner({ reports: [{ ...REPORT, target: { ...REPORT.target, hidden: true, restorable: true } }] })));
   assert.match(hidden, copyRe(t('owner.hidden')));
   assert.match(hidden, /data-action="restore-report"/);
   assert.ok(!hidden.includes('data-action="hide-report"'));

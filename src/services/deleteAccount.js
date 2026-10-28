@@ -26,7 +26,7 @@ export async function deleteAccount(deps, userId) {
   }, { actor: userId });
   // Their items stay, but "added by" now reads "a fan": purge each page.
   const { rows } = await deps.db.query(
-    `select id from items where created_by = $1 and (deleted_reason is null or deleted_reason <> 'erased') order by id limit 200`,
+    `select id from items where created_by = $1 and (deleted_reason is null or deleted_reason <> 'erased') order by id`,
     [userId],
   );
   for (const row of rows) await purgeItem(deps, row.id);

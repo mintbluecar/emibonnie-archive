@@ -10,7 +10,7 @@ import { seededDeps } from '../helpers/ingest.js';
 import { insertAccount, insertItem } from '../helpers/seed.js';
 import { translatorList, markWelcomed, TRANSLATOR_PAGE_SIZE } from '../../src/services/translator.js';
 import { translatorTotals } from '../../src/repo/itemState.js';
-import { accountState, linkXAccountToUser } from '../../src/repo/accounts.js';
+import { accountState, linkXAccountToUser, xAccountIdsOfUser } from '../../src/repo/accounts.js';
 
 /** @type {Awaited<ReturnType<typeof seededDeps>>} */
 let deps;
@@ -116,7 +116,11 @@ const { removeEntries, restoreEntries } = await import('../../src/services/trans
 
 /** @param {Partial<{ env: Record<string, string>, calls: string[][] }>} [options] */
 function purgingDeps({ env = { VERCEL: '1' }, calls = [] } = {}) {
-  return { ...deps, env, invalidateByTag: async (/** @type {string[]} */ tags) => calls.push(tags), defer: undefined };
+  return {
+    ...deps, env, defer: undefined,
+    invalidateByTag: async (/** @type {string[]} */ tags) => calls.push(tags),
+    dangerouslyDeleteByTag: async (/** @type {string[]} */ tags) => calls.push(tags),
+  };
 }
 
 test('a translator removes and restores their own entry', async () => {
@@ -208,4 +212,26 @@ test('opting out leaves an owner-hidden entry hidden', async () => {
 test('a user with no linked X account cannot opt out', async () => {
   const google = { ...user(), via: 'google', translatorAccountIds: [] };
   await assert.rejects(setOptOut(purgingDeps(), /** @type {any} */ (google), true), { name: 'Forbidden' });
+});
+
+// --- fix pass: recognition and the welcome's once-only write
+
+test('only an account credited on an item counts as a translator account', async () => {
+  const uncredited = await deps.db.transaction((tx) => insertAccount(tx, { handle: 'uncredited_x' }), { actor: 'system' });
+  await deps.db.transaction(
+    (tx) => tx.query("update accounts set user_id = 'x:3800001', external_id = '3800001' where id = $1", [uncredited]),
+    { actor: 'system' },
+  );
+  const ids = await xAccountIdsOfUser(deps.db, 'x:3800001');
+  assert.ok(ids.includes(accountId), 'the credited account still counts');
+  assert.ok(!ids.includes(uncredited), 'an account with no credited item does not');
+});
+
+test('markWelcomed never rewrites the first time', async () => {
+  await markWelcomed({ db: deps.db }, userId);
+  const { rows: first } = await deps.db.query('select meta from users where id = $1', [userId]);
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  await markWelcomed({ db: deps.db }, userId);
+  const { rows: second } = await deps.db.query('select meta from users where id = $1', [userId]);
+  assert.equal(second[0].meta.translatorWelcomedAt, first[0].meta.translatorWelcomedAt);
 });

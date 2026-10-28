@@ -65,7 +65,7 @@ export async function translatorList(deps, user, { offset }) {
 export async function markWelcomed(deps, userId) {
   await deps.db.transaction(
     (tx) => tx.query(
-      "update users set meta = meta || jsonb_build_object('translatorWelcomedAt', $2::text) where id = $1",
+      "update users set meta = meta || jsonb_build_object('translatorWelcomedAt', $2::text) where id = $1 and meta->>'translatorWelcomedAt' is null",
       [userId, new Date().toISOString()],
     ),
     { actor: userId },
@@ -143,7 +143,7 @@ export async function removeEntries(deps, user, entries) {
     }
     return ids;
   }, { actor: user.id });
-  for (const id of changed) await purgeItem(deps, id);
+  for (const id of changed) await purgeItem(deps, id, { hard: true });
   return { removed: changed.length };
 }
 
@@ -196,6 +196,6 @@ export async function setOptOut(deps, user, optedOut) {
       [accounts],
     );
   }, { actor: user.id });
-  for (const accountId of accounts) await purgeAccount(deps, accountId);
+  for (const accountId of accounts) await purgeAccount(deps, accountId, { hard: optedOut });
   return { optedOut, entries: rows[0].n };
 }

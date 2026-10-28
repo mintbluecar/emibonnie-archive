@@ -52,7 +52,7 @@ function reportRow(report) {
       </div>
       <div class="c-owner__actions">
         ${report.target.hidden
-          ? iconButton('restore-report', t('owner.restore'), '↺', { 'data-id': String(report.id) })
+          ? (report.target.restorable ? iconButton('restore-report', t('owner.restore'), '↺', { 'data-id': String(report.id) }) : '')
           : iconButton('hide-report', t('owner.hide'), '⤫', { 'data-id': String(report.id) })}
         ${iconButton('dismiss-report', t('owner.dismiss'), '✕', { 'data-id': String(report.id) })}
       </div>

@@ -31,6 +31,8 @@ export const LIMITS = Object.freeze({
   remove: { limit: 30, windowSeconds: 3600 },
   restore: { limit: 30, windowSeconds: 3600 },
   optOut: { limit: 3, windowSeconds: 86400 },
+  optIn: { limit: 10, windowSeconds: 86400 },
+  welcome: { limit: 10, windowSeconds: 3600 },
   owner: { limit: 300, windowSeconds: 3600 },
 });
 

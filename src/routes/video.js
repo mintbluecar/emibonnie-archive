@@ -1,5 +1,7 @@
 // @ts-check
-import { VIDEO_CACHE } from '../http/handler.js';
+import { VIDEO_CACHE, jsonWithCache } from '../http/handler.js';
+import { withCacheTags } from '../http/cacheTags.js';
+import { itemTag } from '../domain/cacheTags.js';
 import { NotFound } from '../http/errors.js';
 import { videoVariants } from '../services/itemPage.js';
 
@@ -12,6 +14,7 @@ export const route = {
   run: async ({ params }, deps) => {
     const video = await videoVariants(deps, params.kind, params.sourceId);
     if (!video) throw new NotFound();
-    return video;
+    // The clip's URLs must stop being served the moment its entry goes.
+    return withCacheTags(jsonWithCache({ variants: video.variants }, VIDEO_CACHE), [itemTag(video.itemId)]);
   },
 };

@@ -37,7 +37,8 @@ test('setApproval writes only a change and is idempotent', async () => {
 
 test('reviewItem moves the state and purges the item', async () => {
   const calls = /** @type {string[][]} */ ([]);
-  const purging = { ...deps, env: { VERCEL: '1' }, invalidateByTag: async (tags) => calls.push(tags) };
+  const capture = async (/** @type {string[]} */ tags) => calls.push(tags);
+  const purging = { ...deps, env: { VERCEL: '1' }, invalidateByTag: capture, dangerouslyDeleteByTag: capture };
   const { rows } = await deps.db.query(
     `select s.external_id from items i join item_sources s on s.item_id = i.id and s.role = 'primary'
      where i.review_state = 'published' and i.deleted_at is null order by i.id limit 1`,
@@ -90,7 +91,8 @@ test('open reports list their reason, reporter and a link to the target', async 
 test('hiding an item report soft-deletes it everywhere, keeps the report open, and purges', async () => {
   const t = await sampleTargets();
   const calls = /** @type {string[][]} */ ([]);
-  const purging = { ...deps, env: { VERCEL: '1' }, invalidateByTag: async (tags) => calls.push(tags) };
+  const capture = async (/** @type {string[]} */ tags) => calls.push(tags);
+  const purging = { ...deps, env: { VERCEL: '1' }, invalidateByTag: capture, dangerouslyDeleteByTag: capture };
   const { id } = await createReport(deps, { target: { type: 'item', kind: t.itemKind, sourceId: t.itemSourceId }, reason: 'hide me', reporter: null });
   await hideReportTarget(purging, { reportId: id, actor: /** @type {any} */ ({ id: 'x:0' }) });
   const queue = await reportQueue(deps);
@@ -185,7 +187,8 @@ test('users are searchable by handle or display name, never the system user', as
 test('blocking hides submissions and refuses their writes; a credited item stays', async () => {
   const { userId } = await blockedFixture();
   const calls = /** @type {string[][]} */ ([]);
-  const purging = { ...deps, env: { VERCEL: '1' }, invalidateByTag: async (tags) => calls.push(tags) };
+  const capture = async (/** @type {string[]} */ tags) => calls.push(tags);
+  const purging = { ...deps, env: { VERCEL: '1' }, invalidateByTag: capture, dangerouslyDeleteByTag: capture };
   const hidden = await setBlocked(purging, { userId, blocked: true, actor: /** @type {any} */ ({ id: 'system' }) });
   assert.equal(hidden.hidden, 1);
   const { rows } = await deps.db.query('select created_by, deleted_reason from items where created_by = $1', [userId]);
@@ -219,4 +222,62 @@ test('clearing the sign-in alert empties it', async () => {
   assert.ok((await ownerView(deps)).signInFailedAt);
   await clearSignInAlert({ db: deps.db }, 'system');
   assert.equal((await ownerView(deps)).signInFailedAt, null);
+});
+
+// --- fix pass: held follow-up parts and event placement on restore
+
+let heldSeq = 99;
+
+/** A published item with a held follow-up part. */
+async function itemWithHeldPart() {
+  heldSeq += 1;
+  const { rows } = await deps.db.query(
+    `select i.id, s.external_id from items i join item_sources s on s.item_id = i.id and s.role = 'primary'
+     where i.deleted_at is null order by i.id limit 1`,
+  );
+  await deps.db.transaction(async (tx) => {
+    const { rows: src } = await tx.query("select id from item_sources where item_id = $1 and role = 'primary'", [rows[0].id]);
+    await tx.query(
+      'insert into translation_parts (item_id, position, source_id, body, pending) values ($1, $4, $2, $3, true)',
+      [rows[0].id, src[0].id, 'held follow-up text', heldSeq],
+    );
+  }, { actor: 'system' });
+  return rows[0];
+}
+
+test('a held follow-up part is in the waiting list and approving publishes it', async () => {
+  const item = await itemWithHeldPart();
+  const view = await ownerView(deps);
+  assert.ok(view.waiting.some((entry) => entry.sourceId === item.external_id), 'waiting lists the parent item');
+
+  await reviewItem({ ...deps, env: {} }, { kind: 'translation', sourceId: item.external_id, state: 'published', actor: /** @type {any} */ ({ id: 'x:0' }) });
+  const { rows } = await deps.db.query('select pending, rejected from translation_parts where item_id = $1 and position = $2', [item.id, heldSeq]);
+  assert.equal(rows[0].pending, false);
+  assert.equal(rows[0].rejected, false);
+  assert.ok(!(await ownerView(deps)).waiting.some((entry) => entry.sourceId === item.external_id));
+});
+
+test('rejecting a held part keeps it hidden without destroying the text', async () => {
+  const item = await itemWithHeldPart();
+  await reviewItem({ ...deps, env: {} }, { kind: 'translation', sourceId: item.external_id, state: 'rejected', actor: /** @type {any} */ ({ id: 'x:0' }) });
+  const { rows } = await deps.db.query('select pending, rejected, body from translation_parts where item_id = $1 and position = $2', [item.id, heldSeq]);
+  assert.equal(rows[0].pending, true);
+  assert.equal(rows[0].rejected, true);
+  assert.equal(rows[0].body, 'held follow-up text');
+  assert.ok(!(await ownerView(deps)).waiting.some((entry) => entry.sourceId === item.external_id));
+});
+
+test('restoring a hidden event brings its entries back where they were', async () => {
+  const { rows } = await deps.db.query(
+    `select e.id, e.slug, count(i.id)::int as n from events e
+     join items i on i.event_id = e.id and i.deleted_at is null and i.review_state = 'published'
+     where e.deleted_at is null group by e.id, e.slug having count(i.id) > 0 limit 1`,
+  );
+  const before = rows[0];
+  const { id: reportId } = await createReport(deps, { target: { type: 'event', slug: before.slug }, reason: 'restore placement', reporter: null });
+  const actor = /** @type {any} */ ({ id: 'system' });
+  await hideReportTarget(deps, { reportId, actor });
+  await restoreReportTarget(deps, { reportId, actor });
+  const { rows: after } = await deps.db.query("select count(*)::int as n from items where event_id = $1 and deleted_at is null and review_state = 'published'", [before.id]);
+  assert.equal(after[0].n, before.n, 'every entry still sits on its event');
 });

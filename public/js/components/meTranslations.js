@@ -133,7 +133,7 @@ export function render(state) {
       ${state.welcome ? welcomeBlock(state) : ''}
       ${state.items.length > 0 ? removeBar(state) : ''}
       ${list}
-      ${state.hasMore ? html`<button class="c-me__more" type="button" data-action="more">${t('me.translations.more')}</button>` : ''}
+      ${state.hasMore ? html`<button class="c-me__more" type="button" data-action="more-translations">${t('me.translations.more')}</button>` : ''}
       ${optOutBox(state)}
       <p class="c-me__status" role="status" data-status>${state.error}</p>
     </section>

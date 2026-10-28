@@ -51,4 +51,3 @@ export function bindAccount(root, state, rerender) {
     }
   });
 }
-

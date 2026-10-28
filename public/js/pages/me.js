@@ -180,6 +180,13 @@ export function bind(root, state) {
   bindTranslator(root, state, { rerender, reload });
   if (state.user.isOwner) ownerSection.bind(root, { owner: state.owner, reload: reloadOwner, rerender });
   bindAccount(root, state, rerender);
+  on(root, '[data-action="more-translations"]', 'click', async (_event, button) => {
+    button.disabled = true;
+    const page = await getJson('/api/me/translations', { offset: state.translations.items.length });
+    state.translations.items.push(...page.items);
+    state.translations.hasMore = page.hasMore;
+    rerender();
+  });
   on(root, '[data-action="more"]', 'click', async (_event, button) => {
     button.disabled = true;
     const page = await getJson('/api/me/added', { offset: state.added.length });

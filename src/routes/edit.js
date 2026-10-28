@@ -8,6 +8,7 @@ import { NO_STORE } from '../http/handler.js';
 import { NotFound } from '../http/errors.js';
 import { requireUser } from '../services/session.js';
 import { limit } from '../services/limits.js';
+import { purgeSource } from '../services/cache.js';
 import { editableOf, editItem, revertEdit, resolveForEdit } from '../services/editItem.js';
 import { isApprovalRequired } from '../services/settings.js';
 import { partLines, unmappedMarkers } from '../domain/lineFixes.js';
@@ -83,6 +84,8 @@ export const followUpsRoute = {
     if (typeof target.kind.checkFollowUps !== 'function') throw new NotFound();
     const pending = await isApprovalRequired(deps.db);
     const added = await target.kind.checkFollowUps(deps, target.id, { actor: user.id, pending });
+    // A new public part changes the entry, its event and its translator pages.
+    if (added.added > 0 && !pending) await purgeSource(deps, input.params.kind, input.params.sourceId);
     return { ...added, pending };
   },
 };

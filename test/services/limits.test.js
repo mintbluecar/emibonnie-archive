@@ -29,6 +29,8 @@ test('LIMITS holds the agreed limits', () => {
     remove: { limit: 30, windowSeconds: 3600 },
     restore: { limit: 30, windowSeconds: 3600 },
     optOut: { limit: 3, windowSeconds: 86400 },
+    optIn: { limit: 10, windowSeconds: 86400 },
+    welcome: { limit: 10, windowSeconds: 3600 },
     owner: { limit: 300, windowSeconds: 3600 },
   });
 });
@@ -63,4 +65,11 @@ test('a null ip uses ip:unknown and never stores a raw ip', async () => {
   await limit(deps, 'report', null);
   const { rows } = await db.query("select key from rate_limits where key like 'report:%'");
   assert.ok(rows.some((r) => r.key.includes('ip:')), 'ip subject is an ip: key');
+});
+
+test('opting back in has its own budget, so opt-out cannot strand a translator', async () => {
+  const deps = depsWith();
+  for (let i = 0; i < 3; i++) await limit(deps, 'optOut', 'x:1');
+  await assert.rejects(limit(deps, 'optOut', 'x:1'), RateLimited);
+  await limit(deps, 'optIn', 'x:1');
 });
