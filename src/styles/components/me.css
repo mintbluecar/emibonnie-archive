@@ -275,8 +275,8 @@
   margin-left: 6px;
   padding: 1px 8px;
   border-radius: 999px;
-  background: color-mix(in srgb, #2f9a5b 12%, transparent);
-  color: #2f9a5b;
+  background: var(--color-label-tint);
+  color: var(--color-ink);
   font-size: var(--text-11);
   font-weight: 800;
   vertical-align: 1px;
@@ -317,6 +317,17 @@
   border-radius: var(--radius-card);
   box-shadow: 0 2px 0 var(--color-card-shadow);
   text-align: center;
+}
+
+.c-me__welcome-badge {
+  margin: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  display: inline-block;
+  background: var(--color-label-tint);
+  color: var(--color-ink);
+  font-size: var(--text-12);
+  font-weight: 800;
 }
 
 .c-me__welcome-hi {
@@ -426,7 +437,7 @@
   margin: 0 0 8px;
   font-size: var(--text-12);
   line-height: 1.45;
-  color: #ffe3e0;
+  color: #fff;
 }
 
 .c-me__optout-confirm,

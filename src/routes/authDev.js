@@ -38,12 +38,14 @@ export const route = {
       return jsonWithCookies({ ok: true }, [signedIn.cookie]);
     }
     if (as === 'translator') {
-      // The first X account a source has credited: the e2e's way into a real
-      // translator's own pages without knowing a fixture's numeric id.
+      // The first X account with a visible credited entry: the e2e's way into
+      // a real translator's own pages without knowing a fixture's numeric id.
       const { rows } = await deps.db.query(
-        `select external_id, handle from accounts
-         where platform = 'x' and external_id is not null and deleted_at is null and opted_out_at is null
-         order by id limit 1`,
+        `select a.external_id, a.handle from accounts a
+         where a.platform = 'x' and a.external_id is not null and a.deleted_at is null and a.opted_out_at is null
+           and exists (select 1 from items i where i.credited_account_id = a.id
+             and i.deleted_at is null and i.review_state = 'published')
+         order by a.id limit 1`,
       );
       if (!rows[0]) return jsonWithCookies({ error: 'not_found' }, [], 404);
       const signedIn = await signInUser(deps, { via: 'x', subject: rows[0].external_id, handle: rows[0].handle });

@@ -13,7 +13,8 @@
  */
 import { html } from '../core/html.js';
 import { mountPage, on } from '../core/dom.js';
-import { getJson, postJson, ApiError } from '../core/api.js';
+import { bindAccount } from './meAccount.js';
+import { getJson, postJson } from '../core/api.js';
 import { getMe } from '../core/session.js';
 import { site, t } from '../core/site.js';
 import * as pageShell from '../components/pageShell.js';
@@ -22,7 +23,8 @@ import * as signIn from '../components/signIn.js';
 import * as nameForm from '../components/nameForm.js';
 import * as meTranslations from '../components/meTranslations.js';
 import * as meSections from '../components/meSections.js';
-import { HOME_PATH, ME_PATH } from '../core/routes.js';
+import * as ownerSection from '../components/ownerSection.js';
+import { ME_PATH } from '../core/routes.js';
 import { mountLoadError } from './pageError.js';
 
 const APP_SELECTOR = 'app';
@@ -36,9 +38,10 @@ const APP_SELECTOR = 'app';
  *   showTranslatorWelcome: boolean, isOptedOut: boolean,
  * }} MeUser
  * @typedef {{ items: TranslatorPreview[], hasMore: boolean, totals: TranslatorTotals }} Translations
+ * @typedef {import('../components/ownerSection.js').OwnerState} OwnerState
  * @typedef {{ user: MeUser, added: AddedPreview[], hasMore: boolean, translations: Translations,
  *   tab: 'translations'|'added', selected: Set<string>, welcome: boolean, optedOut: boolean,
- *   name?: { value?: string, reason?: string } }} MeState
+ *   owner: OwnerState, name?: { value?: string, reason?: string } }} MeState
  */
 
 /** @returns {import('../core/html.js').SafeHtml} */
@@ -129,6 +132,7 @@ export function composeSignedIn(state) {
         </div>
       </div>
       ${panelsOf(state)}
+      ${user.isOwner && !user.needsName ? ownerSection.render(state.owner) : ''}
       ${nameStep}
       <section class="c-me__danger">
         <button class="c-me__delete" type="button" data-action="open-delete">${t('me.deleteAccount')}</button>
@@ -153,48 +157,6 @@ function bindTranslator(root, state, { rerender, reload }) {
 }
 
 /**
- * Sign in/out, the delete dialog and the Google name form.
- * @param {Element} root @param {MeState} state @param {() => void} rerender
- */
-function bindAccount(root, state, rerender) {
-  on(root, '[data-action="signout"]', 'click', async () => {
-    await postJson('/api/auth/signout');
-    window.location.reload();
-  });
-  on(root, '[data-action="signout-all"]', 'click', async () => {
-    await postJson('/api/auth/signout-all');
-    window.location.reload();
-  });
-  on(root, '[data-action="open-delete"]', 'click', () => {
-    /** @type {HTMLDialogElement|null} */ (root.querySelector('.c-me__dialog'))?.showModal();
-  });
-  on(root, '[data-action="cancel-delete"]', 'click', () => {
-    /** @type {HTMLDialogElement|null} */ (root.querySelector('.c-me__dialog'))?.close();
-  });
-  on(root, '.c-me__delete-input', 'input', (_event, input) => {
-    const confirm = /** @type {HTMLButtonElement|null} */ (root.querySelector('[data-action="confirm-delete"]'));
-    if (confirm) confirm.disabled = input.value.trim() !== 'delete';
-  });
-  on(root, '[data-action="confirm-delete"]', 'click', async () => {
-    await postJson('/api/me/delete', { confirm: 'delete' });
-    window.location.assign(HOME_PATH);
-  });
-  on(root, '.c-name-form', 'submit', async (event, form) => {
-    event.preventDefault();
-    const input = /** @type {HTMLInputElement|null} */ (form.querySelector('.c-name-form__input'));
-    const value = input?.value ?? '';
-    try {
-      await postJson('/api/me/name', { name: value });
-      window.location.reload();
-    } catch (err) {
-      const reason = err instanceof ApiError && err.body?.message ? String(err.body.message) : 'unknown';
-      state.name = { value, reason };
-      rerender();
-    }
-  });
-}
-
-/**
  * @param {Element} root @param {MeState} state
  * @returns {void}
  */
@@ -204,10 +166,19 @@ export function bind(root, state) {
   const rerender = () => { mountPage(root, composeSignedIn(state)); bind(root, state); };
   const reload = async () => {
     state.welcome = false;
+    const fresh = await getMe();
+    state.user = fresh.user ?? state.user;
+    state.optedOut = fresh.user?.isOptedOut === true;
     await loadTranslations(state);
     rerender();
   };
+  /** Refetches the owner view, keeping the user search the owner typed. */
+  const reloadOwner = async () => {
+    state.owner = { ...(await getJson('/api/owner')), users: state.owner.users, query: state.owner.query };
+    rerender();
+  };
   bindTranslator(root, state, { rerender, reload });
+  if (state.user.isOwner) ownerSection.bind(root, { owner: state.owner, reload: reloadOwner, rerender });
   bindAccount(root, state, rerender);
   on(root, '[data-action="more"]', 'click', async (_event, button) => {
     button.disabled = true;
@@ -248,6 +219,7 @@ export async function start() {
     translations: { items: [], hasMore: false, totals: { translations: 0, events: 0, sharedStories: 0 } },
     tab: me.user.isTranslator ? 'translations' : 'added', selected: new Set(),
     welcome: me.user.showTranslatorWelcome === true, optedOut: me.user.isOptedOut === true,
+    owner: { approvalRequired: false, signInFailedAt: null, waiting: [], reports: [], users: null, query: '' },
   };
   if (!me.user.needsName) {
     try {
@@ -255,6 +227,7 @@ export async function start() {
       state.added = page.items;
       state.hasMore = page.hasMore;
       if (me.user.isTranslator) await loadTranslations(state);
+      if (me.user.isOwner) state.owner = { ...(await getJson('/api/owner')), users: null, query: '' };
     } catch {
       mountLoadError(root, { active: 'me' });
       return;

@@ -50,7 +50,7 @@ function welcomeBlock(state) {
   return html`
     <div class="c-me__welcome">
       <p class="c-me__welcome-hi">${t('me.welcome.hi', { handle: handle ?? '' })}</p>
-      <p class="c-me__badge">${t('me.welcome.badge')}</p>
+      <p class="c-me__welcome-badge">${t('me.welcome.badge')}</p>
       <p class="c-me__welcome-totals">${t('me.welcome.totals', {
         translations: totals.translations, events: totals.events, sharedStories: totals.sharedStories,
       })}</p>

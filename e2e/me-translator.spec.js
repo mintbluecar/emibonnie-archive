@@ -12,7 +12,7 @@ import { checkPage, signInAs } from './helpers.js';
 test('me as a translator: the badge, the two tabs and an accessible page', async ({ page }) => {
   await signInAs(page, 'translator');
   await checkPage(page, '/me');
-  await expect(page.locator('.c-me__badge')).toContainText('translator');
+  await expect(page.locator('.c-me__who .c-me__badge')).toContainText('translator');
   await expect(page.locator('[data-action="tab"]')).toHaveCount(2);
   await expect(page.locator('.c-me__translations')).toBeVisible();
   await expect(page.locator('[data-action="opt-out"]')).toBeVisible();

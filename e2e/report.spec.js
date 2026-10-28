@@ -8,10 +8,11 @@ import { test, expect } from '@playwright/test';
 import { AxeBuilder } from '@axe-core/playwright';
 import { gotoReady } from './helpers.js';
 
-const LIVE = '1900000000000000004';
+// An entry neither mutating spec touches (they share a database).
+const TARGET = '1900000000000000002';
 
 test('the report dialog is accessible at both widths', async ({ page }) => {
-  await gotoReady(page, `/t/${LIVE}`);
+  await gotoReady(page, `/t/${TARGET}`);
   await page.locator('[data-action="report"]').click();
   await expect(page.locator('.c-report')).toBeVisible();
   const results = await new AxeBuilder({ page }).analyze();
@@ -20,7 +21,7 @@ test('the report dialog is accessible at both widths', async ({ page }) => {
 
 test('reporting an item shows the thank-you and keeps the dialog usable', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'phone', 'one submission: the per-IP report limit is shared');
-  await gotoReady(page, `/t/${LIVE}`);
+  await gotoReady(page, `/t/${TARGET}`);
   await page.locator('[data-action="report"]').click();
   await page.locator('.c-report__reason').fill('wrong credit');
   await page.locator('.c-report__submit').click();
