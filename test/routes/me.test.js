@@ -60,7 +60,7 @@ test('a google user needs a name until they set one', async () => {
   const api = apiFor(deps());
   const me = JSON.parse((await api.call('GET', '/api/me', { cookies: { sid: token } })).text);
   assert.deepEqual(me.user, {
-    via: 'google', handle: null, displayName: null, isOwner: false, isTranslator: false, needsName: true,
+    via: 'google', handle: null, displayName: null, isOwner: false, isTranslator: false, needsName: true, showTranslatorWelcome: false, isOptedOut: false,
   });
 
   // Set a name.
@@ -88,7 +88,7 @@ test('an X user shows their handle, never needsName', async () => {
   const api = apiFor(deps());
   const me = JSON.parse((await api.call('GET', '/api/me', { cookies: { sid: token } })).text);
   assert.deepEqual(me.user, {
-    via: 'x', handle: 'the_owner', displayName: null, isOwner: true, isTranslator: false, needsName: false,
+    via: 'x', handle: 'the_owner', displayName: null, isOwner: true, isTranslator: false, needsName: false, showTranslatorWelcome: false, isOptedOut: false,
   });
 });
 

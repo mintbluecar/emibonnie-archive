@@ -98,9 +98,13 @@ async function representativeCalls() {
   calls.push(['GET', '/api/auth/google/start?return=/me'], ['GET', '/api/auth/google/callback?code=c&state=s'], ['GET', '/api/auth/google/callback']);
   // The signed-in user's own routes: /api/me is 200 even signed out; the
   // writes are 401 (signed out) or 404 (dev sign-in absent in the sweep).
-  calls.push(['GET', '/api/me'], ['GET', '/api/me/added'], ['POST', '/api/me/name'], ['POST', '/api/auth/signout'], ['POST', '/api/auth/signout-all'], ['POST', '/api/auth/dev'], ['POST', '/api/me/delete']);
+  calls.push(['GET', '/api/me'], ['GET', '/api/me/added'], ['GET', '/api/me/translations'], ['POST', '/api/me/translations/remove'], ['POST', '/api/me/translations/restore'], ['POST', '/api/me/translations/opt-out'], ['POST', '/api/me/translations/opt-in'], ['POST', '/api/me/welcomed'], ['POST', '/api/me/name'], ['POST', '/api/auth/signout'], ['POST', '/api/auth/signout-all'], ['POST', '/api/auth/dev'], ['POST', '/api/me/delete']);
   // The signed-in add flow: all 401 without a session, nothing leaks.
   calls.push(['GET', '/api/add/options'], ['POST', '/api/add/preview'], ['POST', '/api/add'], ['POST', '/api/people']);
+  // The public report form: no session, writes only a report.
+  calls.push(['POST', '/api/reports']);
+  // The owner section: 401 without a session.
+  calls.push(['GET', '/api/owner'], ['POST', '/api/owner/approval'], ['POST', '/api/owner/items/translation/1/review'], ['POST', '/api/owner/reports/1/hide'], ['POST', '/api/owner/reports/1/restore'], ['POST', '/api/owner/reports/1/dismiss'], ['GET', '/api/owner/users?q=ab'], ['POST', '/api/owner/users/block'], ['POST', '/api/owner/users/unblock'], ['POST', '/api/owner/sign-in-alert/dismiss']);
   // Editing and follow-ups: all signed-in, a bare probe is 401 (no session).
   calls.push(['GET', '/api/item/translation/1/edit'], ['POST', '/api/item/translation/1/edit'], ['POST', '/api/item/translation/1/edits/1/revert'], ['POST', '/api/item/translation/1/follow-ups']);
   return calls;

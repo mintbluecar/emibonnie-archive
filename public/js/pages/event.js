@@ -26,11 +26,12 @@ import { site, t, tCount } from '../core/site.js';
 import { dayLabel } from '../core/format.js';
 import * as chips from '../components/chips.js';
 import * as eventTags from '../components/eventTags.js';
+import * as reportForm from '../components/reportForm.js';
 import * as emptyState from '../components/emptyState.js';
 import * as pageShell from '../components/pageShell.js';
 import * as inlineSearch from '../components/inlineSearch.js';
 import { filtersSlot, headerProps, region } from '../components/inlineSearchView.js';
-import { slugFromEventPath, HOME_PATH, TAKEDOWN_PATH } from '../core/routes.js';
+import { slugFromEventPath, HOME_PATH } from '../core/routes.js';
 import { KIND_UI, renderSections } from '../kinds/_registry.js';
 
 /** Entries are compact previews, as on the person and translator pages (spec: "Entries show their opening lines ... as its preview"; mockups/screens-v2.html's event screen; fix round 1, I2). */
@@ -127,7 +128,8 @@ export function composeEvent(data, search = eventSearch(data.event)) {
     ${eventTags.render(data.event)}
     ${pillsRow(data.event)}
     ${region(search, list)}
-    <a class="c-event__report" href="${TAKEDOWN_PATH}">${t('event.report')}</a>
+    <button class="c-event__report" type="button" data-action="report">${t('event.report')}</button>
+    ${reportForm.render()}
   `;
   return pageShell.render({ active: 'home', compact: true, headerProps: headerProps(search), content });
 }
@@ -214,6 +216,7 @@ async function toggleOrder(root, slug, state, toggle) {
  */
 export function bind(root, data, slug) {
   chips.bind(root);
+  reportForm.bind(root, { type: 'event', slug });
   for (const section of data.sections) KIND_UI[section.kind]?.section.bind?.(root);
   const sectionsEl = root.querySelector('.c-event-sections');
   /** @type {EventPageState} */

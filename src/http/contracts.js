@@ -55,6 +55,32 @@
  *   kind has (added by src/services/cards.js): the date it happened on
  *   and its placement.
  *
+ * @typedef {{ id: string, handle: string|null, displayName: string|null, blocked: boolean,
+ *   isTranslator: boolean, addedCount: number }} OwnerUser
+ *   One row of the owner's user search.
+ *
+ * @typedef {{ id: number, at: string, reason: string, reporter: AddedByVM|null,
+ *   status: 'open'|'resolved'|'dismissed',
+ *   target: { type: 'item'|'event', url: string, label: string, hidden: boolean, restorable: boolean } }} ReportVM
+ *   One report in the owner's queue, with a link back to what it names.
+ *
+ * @typedef {{ approvalRequired: boolean, signInFailedAt: string|null,
+ *   waiting: AddedPreview[], reports: ReportVM[] }} OwnerView
+ *
+ * @typedef {{ type: 'item', kind: string, sourceId: string } | { type: 'event', slug: string }} ReportTarget
+ *   What a public report names: a visible item (by kind and source id) or a
+ *   visible event (by slug).
+ *
+ * @typedef {{ translations: number, events: number, sharedStories: number }} TranslatorTotals
+ *   A translator's welcome totals: visible credited entries, the distinct
+ *   events they cover, and how many are shared stories.
+ *
+ * @typedef {AddedPreview & { removedByYou: boolean, hidden: boolean }} TranslatorPreview
+ *   One of a translator's credited entries: `removedByYou` is restorable by
+ *   them; `hidden` covers every other removal (owner hide, block, spam).
+ *
+ * @typedef {{ items: TranslatorPreview[], hasMore: boolean, totals: TranslatorTotals }} TranslatorList
+ *
  * @typedef {Preview & { reviewState: import('../domain/constants.js').ReviewState }} AddedPreview
  *   One of the signed-in submitter's own items (Task 12's "added by me"):
  *   every review state is listed, so the page can label a held or rejected

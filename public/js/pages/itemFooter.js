@@ -13,7 +13,8 @@
 import { html } from '../core/html.js';
 import { site, t } from '../core/site.js';
 import * as sourceEmbed from '../components/sourceEmbed.js';
-import { editHref, TAKEDOWN_PATH } from '../core/routes.js';
+import * as reportForm from '../components/reportForm.js';
+import { editHref } from '../core/routes.js';
 
 /** @typedef {import('../../../src/http/contracts.js').ItemView & { canEdit?: boolean, canCheckFollowUps?: boolean }} FooterView */
 
@@ -81,9 +82,10 @@ export function footerBlock(data) {
       ${followsOnLine(data.followsOnFrom)}
       ${addedByLine(data.addedBy)}
       <button type="button" class="c-item__copy-link">${t('item.copyLink')}</button>
-      <a class="c-item__footer-link" href="${TAKEDOWN_PATH}">${t('item.report')}</a>
+      <button class="c-item__footer-link" type="button" data-action="report">${t('item.report')}</button>
       ${ownerControls(data)}
       <p class="c-item__follow-status" role="status" data-follow-ups-status hidden></p>
+      ${reportForm.render()}
     </div>
   `;
 }

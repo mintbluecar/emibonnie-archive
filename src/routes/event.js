@@ -1,5 +1,7 @@
 // @ts-check
-import { PUBLIC_CACHE } from '../http/handler.js';
+import { PUBLIC_CACHE, jsonWithCache } from '../http/handler.js';
+import { withCacheTags } from '../http/cacheTags.js';
+import { eventTag } from '../domain/cacheTags.js';
 import { NotFound } from '../http/errors.js';
 import { eventView } from '../services/hubs.js';
 
@@ -15,6 +17,6 @@ export const route = {
   run: async ({ params, query }, deps) => {
     const view = await eventView(deps, params.slug, query);
     if (!view) throw new NotFound();
-    return view;
+    return withCacheTags(jsonWithCache(view, PUBLIC_CACHE), [eventTag(view.event.slug)]);
   },
 };

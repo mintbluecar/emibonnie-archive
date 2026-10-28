@@ -9,6 +9,7 @@ import { ROLES } from '../domain/constants.js';
 import { listPeople, addPerson, getPersonByHandle } from '../repo/people.js';
 import { listVisibleEvents } from '../repo/events.js';
 import { listCategories, listClients } from '../repo/lookups.js';
+import { purgeItem } from './cache.js';
 
 /** @typedef {import('../db/common.js').Db} Db */
 /** @typedef {import('../services/session.js').SessionUser} SessionUser */
@@ -95,6 +96,10 @@ function itemPath(sourceId) {
 export async function addItem(deps, user, body) {
   const result = await ingestItem(deps, requestOf(user, body, { dryRun: false }));
   const saved = result.status === 'added' || result.status === 'attached' || result.status === 'duplicate';
+  // A new item (or a follow-up part) changes home, search and the entry's pages.
+  if ((result.status === 'added' || result.status === 'attached') && result.itemId !== undefined) {
+    await purgeItem(/** @type {any} */ (deps), result.itemId);
+  }
   return { ...result, addingAs: addingAs(user), ...(saved ? { url: itemPath(result.sourceId) } : {}) };
 }
 

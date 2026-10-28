@@ -11,7 +11,7 @@
 import { randomBytes } from 'node:crypto';
 import { Unauthorized, Forbidden, Conflict } from '../domain/errors.js';
 import { serializeCookie } from '../domain/cookies.js';
-import { linkXAccountToUser, xAccountIdsOfUser } from '../repo/accounts.js';
+import { linkXAccountToUser, xAccountIdsOfUser, xAccountsOptedOutOfUser } from '../repo/accounts.js';
 import { createSession, deleteSession, deleteUserSessions, userIdForToken } from '../repo/sessions.js';
 import { set as settingsSet } from '../repo/settings.js';
 
@@ -23,7 +23,8 @@ const COOKIE_NAME = 'sid';
 
 /**
  * @typedef {{ id: string, via: 'x'|'google', xUserId: string|null, handle: string|null,
- *   displayName: string|null, isOwner: boolean, isBlocked: boolean, translatorAccountIds: number[] }} SessionUser
+ *   displayName: string|null, isOwner: boolean, isBlocked: boolean, translatorAccountIds: number[],
+ *   welcomedTranslator: boolean, isOptedOut: boolean }} SessionUser
  */
 
 /** @param {string} userId */
@@ -80,13 +81,24 @@ export async function signInUser(deps, { via, subject, handle }) {
 /** @param {unknown} value @returns {string|null} */
 const str = (value) => (value == null ? null : String(value));
 
+/** @param {any} row @returns {string|null} */
+function xHandleOf(row) {
+  return str(row?.meta?.handle);
+}
+
+/** @param {any} row @returns {boolean} */
+function welcomedOf(row) {
+  return row?.meta?.translatorWelcomedAt != null;
+}
+
 /**
  * @param {string} userId
  * @param {any} row
  * @param {number[]} translatorAccountIds
+ * @param {boolean} isOptedOut
  * @returns {SessionUser}
  */
-function toSessionUser(userId, row, translatorAccountIds) {
+function toSessionUser(userId, row, translatorAccountIds, isOptedOut) {
   const parsed = userViaAndSubject(userId);
   const displayName = str(row?.display_name);
   const isOwner = row?.role === 'owner';
@@ -95,8 +107,10 @@ function toSessionUser(userId, row, translatorAccountIds) {
   return {
     id: userId, via: isX ? 'x' : 'google',
     xUserId: isX ? parsed.subject : null,
-    handle: isX ? str(row?.meta?.handle) : null,
+    handle: isX ? xHandleOf(row) : null,
     displayName, isOwner, isBlocked, translatorAccountIds,
+    welcomedTranslator: welcomedOf(row),
+    isOptedOut,
   };
 }
 
@@ -109,8 +123,11 @@ function toSessionUser(userId, row, translatorAccountIds) {
  */
 async function loadSessionUser(deps, userId) {
   const { rows } = await deps.db.query('select display_name, role, blocked_at, meta from users where id = $1', [userId]);
-  const translatorAccountIds = await xAccountIdsOfUser(deps.db, userId);
-  return toSessionUser(userId, rows[0], translatorAccountIds);
+  const [translatorAccountIds, isOptedOut] = await Promise.all([
+    xAccountIdsOfUser(deps.db, userId),
+    xAccountsOptedOutOfUser(deps.db, userId),
+  ]);
+  return toSessionUser(userId, rows[0], translatorAccountIds, isOptedOut);
 }
 
 /** Caches one user lookup per request's `input` object, so a request that reads
@@ -145,6 +162,19 @@ export async function requireUser(deps, input, { allowBlocked = false } = {}) {
   const user = await currentUser(deps, input);
   if (!user) throw new Unauthorized();
   if (user.isBlocked && !allowBlocked) throw new Forbidden('blocked');
+  return user;
+}
+
+/**
+ * The owner, or throws: `Unauthorized` when signed out, `Forbidden('forbidden')`
+ * for anyone who isn't the owner.
+ * @param {SessionDeps} deps
+ * @param {RouteInput} input
+ * @returns {Promise<SessionUser>}
+ */
+export async function requireOwner(deps, input) {
+  const user = await requireUser(deps, input);
+  if (!user.isOwner) throw new Forbidden('forbidden');
   return user;
 }
 

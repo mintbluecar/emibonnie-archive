@@ -13,13 +13,14 @@ import path from 'node:path';
 import { findVisibleItemId } from '../repo/cards.js';
 import { getVisibleEventBySlug } from '../repo/events.js';
 import { kindsOf, presenterContext, previewsFor } from './cards.js';
+import { accountTag, eventTag, itemTag, personTag } from '../domain/cacheTags.js';
 
 /** @typedef {import('./cards.js').ViewDeps & { pages?: { dir: string, logo: string|null } }} MetaDeps */
 /** @typedef {{ title: string, description: string, image: string|null }} Meta */
 /**
- * @typedef {{ html: string, found: boolean }} MetaPage
+ * @typedef {{ html: string, found: boolean, tags: string[] }} MetaPage
  *   `found`: false when the target is hidden or missing (the generic meta),
- *   so the route can cache it as briefly as a 404.
+ *   so the route can cache it as briefly as a 404; `tags` is empty then.
  */
 
 const DESCRIPTION_MAX = 200;
@@ -93,10 +94,16 @@ export async function itemMetaPage(deps, { prefix, sourceId, origin }) {
   const id = kind ? await findVisibleItemId(deps.db, { kind: kind.name, platform: kind.platform, externalId: sourceId }) : null;
   const [entry] = id === null ? [] : await previewsFor(deps, [id], await presenterContext(deps));
   const html = await readPage(deps, 'item.html');
-  if (!entry) return { html: injectMeta(html, metaOf(deps, origin, deps.site.name)), found: false };
+  if (!entry) return { html: injectMeta(html, metaOf(deps, origin, deps.site.name)), found: false, tags: [] };
   const line = entry.preview.lines.find((l) => 'text' in l && l.text.trim() !== '');
   const title = entry.card.event ? titled(deps, entry.card.event.name) : deps.site.name;
-  return { html: injectMeta(html, metaOf(deps, origin, title, line && 'text' in line ? line.text : undefined)), found: true };
+  const tags = [
+    itemTag(entry.card.id),
+    ...(entry.card.event ? [eventTag(entry.card.event.slug)] : []),
+    ...entry.card.people.map((person) => personTag(person.personId)),
+    ...(entry.card.account ? [accountTag(entry.card.account.handle)] : []),
+  ];
+  return { html: injectMeta(html, metaOf(deps, origin, title, line && 'text' in line ? line.text : undefined)), found: true, tags };
 }
 
 /**
@@ -107,7 +114,7 @@ export async function itemMetaPage(deps, { prefix, sourceId, origin }) {
 export async function eventMetaPage(deps, { slug, origin }) {
   const event = await getVisibleEventBySlug(deps.db, slug);
   const html = await readPage(deps, 'event.html');
-  if (!event) return { html: injectMeta(html, metaOf(deps, origin, deps.site.name)), found: false };
+  if (!event) return { html: injectMeta(html, metaOf(deps, origin, deps.site.name)), found: false, tags: [] };
   const description = [event.occurredOn, ...(event.hashtags[0] ? [`#${event.hashtags[0]}`] : [])].join(' · ');
-  return { html: injectMeta(html, metaOf(deps, origin, titled(deps, event.name), description)), found: true };
+  return { html: injectMeta(html, metaOf(deps, origin, titled(deps, event.name), description)), found: true, tags: [eventTag(event.slug)] };
 }

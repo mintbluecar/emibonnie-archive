@@ -28,6 +28,12 @@ export const LIMITS = Object.freeze({
   setName: { limit: 5, windowSeconds: 3600 },
   deleteAccount: { limit: 3, windowSeconds: 86400 },
   report: { limit: 5, windowSeconds: 3600, subject: 'ip' },
+  remove: { limit: 30, windowSeconds: 3600 },
+  restore: { limit: 30, windowSeconds: 3600 },
+  optOut: { limit: 3, windowSeconds: 86400 },
+  optIn: { limit: 10, windowSeconds: 86400 },
+  welcome: { limit: 10, windowSeconds: 3600 },
+  owner: { limit: 300, windowSeconds: 3600 },
 });
 
 /**

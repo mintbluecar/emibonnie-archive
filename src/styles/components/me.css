@@ -266,3 +266,219 @@
   border: 1.5px solid var(--color-label);
   border-radius: 14px;
 }
+
+/* Plan 2b: the translator's section — badge, tabs, welcome, selection bar,
+ * removed rows and the opt-out box. Same card/token language as the page. */
+
+.c-me__badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--color-label-tint);
+  color: var(--color-ink);
+  font-size: var(--text-11);
+  font-weight: 800;
+  vertical-align: 1px;
+}
+
+.c-me__tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  margin-bottom: 10px;
+  background: var(--color-card);
+  border: 1px solid var(--color-card-shadow);
+  border-radius: 999px;
+}
+
+.c-me__tab {
+  flex: 1;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-ink-muted);
+  font: inherit;
+  font-size: var(--text-12);
+  cursor: pointer;
+}
+
+.c-me__tab--on {
+  background: var(--color-label-tint);
+  color: var(--color-label-on-tint);
+  font-weight: 800;
+}
+
+.c-me__welcome {
+  padding: 14px;
+  margin-bottom: 12px;
+  background: var(--color-card);
+  border-radius: var(--radius-card);
+  box-shadow: 0 2px 0 var(--color-card-shadow);
+  text-align: center;
+}
+
+.c-me__welcome-badge {
+  margin: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  display: inline-block;
+  background: var(--color-label-tint);
+  color: var(--color-ink);
+  font-size: var(--text-12);
+  font-weight: 800;
+}
+
+.c-me__welcome-hi {
+  margin: 0 0 4px;
+  font-size: var(--text-18);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.c-me__welcome-totals {
+  margin: 8px 0 10px;
+  color: var(--color-ink-muted);
+  font-size: var(--text-12);
+}
+
+.c-me__welcome-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.c-me__welcome-see,
+.c-me__welcome-add {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: var(--text-12);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.c-me__welcome-see {
+  border: 0;
+  background: var(--color-label);
+  color: var(--color-accent-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.c-me__welcome-add {
+  border: 1px solid var(--color-card-shadow);
+  color: var(--color-ink);
+}
+
+.c-me__selection {
+  justify-content: space-between;
+}
+
+.c-me__selected {
+  font-size: var(--text-12);
+  color: var(--color-ink-muted);
+}
+
+.c-me__link {
+  border: 0;
+  background: none;
+  padding: 4px 0;
+  font: inherit;
+  font-size: var(--text-12);
+  font-weight: 800;
+  color: var(--color-label-on-tint);
+  cursor: pointer;
+}
+
+.c-me__danger-link {
+  color: #c8433a;
+}
+
+.c-me__link:disabled {
+  color: var(--color-ink-muted);
+  cursor: default;
+}
+
+.c-me__check {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 2px 8px 0 0;
+  accent-color: #c8433a;
+}
+
+.c-me__entry-top {
+  display: flex;
+  align-items: flex-start;
+}
+
+.c-me__entry--faded {
+  opacity: 0.55;
+}
+
+.c-me__optout {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: var(--radius-card);
+  background: #c8433a;
+  color: #fff;
+}
+
+.c-me__optout-title {
+  margin: 0 0 4px;
+  font-size: var(--text-14);
+  font-weight: 800;
+  color: #fff;
+}
+
+.c-me__optout-body {
+  margin: 0 0 8px;
+  font-size: var(--text-12);
+  line-height: 1.45;
+  color: #fff;
+}
+
+.c-me__optout-confirm,
+.c-me__optout-back {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: #fff;
+  color: #c8433a;
+  font: inherit;
+  font-size: var(--text-12);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.c-me__optout--done {
+  background: var(--color-card);
+  color: var(--color-ink);
+  box-shadow: 0 2px 0 var(--color-card-shadow);
+}
+
+.c-me__optout-done {
+  margin: 0 0 8px;
+  font-size: var(--text-12);
+  font-weight: 800;
+}
+
+.c-me__optout-back {
+  border: 1px solid #c8433a;
+  background: transparent;
+  color: #c8433a;
+}
+
+.c-me__status {
+  margin: 8px 2px 0;
+  font-size: var(--text-12);
+  color: #c8433a;
+}
+
+.c-me__status:empty {
+  display: none;
+}

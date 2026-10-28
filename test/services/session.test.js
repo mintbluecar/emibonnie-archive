@@ -25,11 +25,15 @@ const deps = () => ({ db, site: SITE, now: () => new Date(clock) });
 const input = (cookies = {}) => ({ cookies, params: {}, query: {}, body: undefined, origin: 'https://a', ip: null });
 
 test('x sign-in creates the user, links their credited account, and recognises them as translator', async () => {
-  // An account already credited (external_id known) becomes the user's.
-  const accountId = await db.transaction(
-    (tx) => tx.query("insert into accounts (platform, handle, external_id) values ('x', 'acct_1', '999') returning id"),
-    { actor: 'system' },
-  ).then((r) => r.rows[0].id);
+  // An account already credited on an item (external_id known) becomes the user's.
+  const accountId = await db.transaction(async (tx) => {
+    const { rows: created } = await tx.query("insert into accounts (platform, handle, external_id) values ('x', 'acct_1', '999') returning id");
+    await tx.query(
+      "insert into items (kind, placement, occurred_on, added_via, review_state, sort_key, credited_account_id) values ('translation', 'unsorted', '2026-10-01', 'cli', 'published', 1, $1)",
+      [created[0].id],
+    );
+    return created[0].id;
+  }, { actor: 'system' });
   const { user, cookie } = await signInUser(deps(), { via: 'x', subject: '999', handle: 'acct_1' });
   assert.equal(user.id, 'x:999');
   assert.equal(user.xUserId, '999');

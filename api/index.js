@@ -7,7 +7,7 @@
  * Deps are built per request and closed in `finally` (src/http/handler.js).
  */
 import { fileURLToPath } from 'node:url';
-import { waitUntil } from '@vercel/functions';
+import { waitUntil, invalidateByTag, dangerouslyDeleteByTag } from '@vercel/functions';
 import { createDb, dbOptionsFromEnv } from '../src/db/client.js';
 import { site, assets } from '../src/site/generated.js';
 import { routes } from '../src/routes/index.js';
@@ -44,6 +44,8 @@ export function makeDeps(env = process.env) {
     site,
     env,
     pages: { dir: PUBLIC_DIR, logo: assets.logo },
+    invalidateByTag,
+    dangerouslyDeleteByTag,
   };
 }
 

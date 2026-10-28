@@ -121,7 +121,11 @@ export async function linkXAccountToUser(tx, { externalId, userId }) {
  */
 export async function xAccountIdsOfUser(db, userId) {
   const { rows } = await db.query(
-    "select id from accounts where platform = 'x' and user_id = $1 and deleted_at is null order by id",
+    `select a.id from accounts a
+     where a.platform = 'x' and a.user_id = $1 and a.deleted_at is null
+       and exists (select 1 from items i where i.credited_account_id = a.id
+         and (i.deleted_reason is null or i.deleted_reason <> 'erased'))
+     order by a.id`,
     [userId],
   );
   return rows.map((r) => r.id);
@@ -209,4 +213,19 @@ export async function findAccountForView(db, platform, handle) {
     id: row.id, handle: row.handle, displayName: row.display_name, personId: row.person_id,
     optedOut: row.opted_out, current: row.current,
   };
+}
+
+/**
+ * Whether every X account linked to the user has opted out (false when
+ * the user has none). The me page shows "opt back in" from this.
+ * @param {Tx} db
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+export async function xAccountsOptedOutOfUser(db, userId) {
+  const { rows } = await db.query(
+    "select count(*)::int as n, count(*) filter (where opted_out_at is not null)::int as out from accounts where platform = 'x' and user_id = $1 and deleted_at is null",
+    [userId],
+  );
+  return rows[0].n > 0 && rows[0].out === rows[0].n;
 }

@@ -83,7 +83,8 @@ test('composeItem: the footer -- original tweet, follows on, added by, copy link
   assert.match(markup, /<a class="c-item__footer-link" href="\/t\/3">follows on from<\/a>/);
   assert.match(markup, /added by @tl_alpha/);
   assert.match(markup, /<button type="button" class="c-item__copy-link">copy link<\/button>/);
-  assert.match(markup, /<a class="c-item__footer-link" href="\/takedown">report<\/a>/);
+  assert.match(markup, /<button class="c-item__footer-link" type="button" data-action="report">report<\/button>/);
+  assert.match(markup, /class="c-report"/);
 });
 
 test('composeItem (Task 10b): with embedSources off, one "original tweet" link -- no "original media" or "quoted tweet"', () => {
@@ -118,7 +119,7 @@ test('composeItem (Task 10b): with embedSources on, X\'s embed blockquote replac
     assert.match(markup, /<a class="c-embed__link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">/);
     assert.ok(!markup.includes('class="c-item__footer-link" href="https://x.com'), 'the embed replaces the footer link');
     assert.match(markup, /class="c-item__copy-link"/);
-    assert.match(markup, /href="\/takedown">report<\/a>/);
+    assert.match(markup, /data-action="report">report<\/button>/);
   });
 });
 

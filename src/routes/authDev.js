@@ -2,7 +2,9 @@
 /**
  * `POST /api/auth/dev`: a local-only sign-in for e2e and dev. Works only
  * when `env.DEV_SIGN_IN === '1'` and `env.VERCEL` is unset; otherwise it
- * is a 404 (so the endpoint doesn't exist in production).
+ * is a 404 (so the endpoint doesn't exist in production). `as:
+ * 'translator'` signs in as the first credited X account, so the browser
+ * can reach a real translator's own pages.
  */
 import { NO_STORE } from '../http/handler.js';
 import { NotFound } from '../http/errors.js';
@@ -34,6 +36,20 @@ export const route = {
     if (as === 'member') {
       const signedIn = await signInUser(deps, { via: 'x', subject: '999999', handle: 'dev_member' });
       return jsonWithCookies({ ok: true }, [signedIn.cookie]);
+    }
+    if (as === 'translator') {
+      // The first X account with a visible credited entry: the e2e's way into
+      // a real translator's own pages without knowing a fixture's numeric id.
+      const { rows } = await deps.db.query(
+        `select a.external_id, a.handle from accounts a
+         where a.platform = 'x' and a.external_id is not null and a.deleted_at is null and a.opted_out_at is null
+           and exists (select 1 from items i where i.credited_account_id = a.id
+             and i.deleted_at is null and i.review_state = 'published')
+         order by a.id limit 1`,
+      );
+      if (!rows[0]) return jsonWithCookies({ error: 'not_found' }, [], 404);
+      const signedIn = await signInUser(deps, { via: 'x', subject: rows[0].external_id, handle: rows[0].handle });
+      return jsonWithCookies({ ok: true, handle: rows[0].handle }, [signedIn.cookie]);
     }
     if (as === 'google') {
       const signedIn = await signInUser(deps, { via: 'google', subject: 'dev-google', handle: null });

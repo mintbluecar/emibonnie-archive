@@ -132,6 +132,8 @@ Secrets live only in Vercel environment variables, GitHub environment secrets an
   - `X_CLIENT_ID` and `X_CLIENT_SECRET` from the X app; `GOOGLE_CLIENT_ID` from the Google client. The engine doesn't read a Google client secret.
   - `DEV_SIGN_IN=1` is for local development and the browser tests only, and the engine refuses it on Vercel. Export it in your shell, never set it on the site.
 
+**Cache purging (v0.3.0) needs no settings.** Public responses carry a `Vercel-Cache-Tag` header and the function invalidates it with `invalidateByTag()` from `@vercel/functions`; locally, and anywhere `VERCEL` is unset, nothing is purged. Purging is available on every Vercel plan (see [Purging Vercel CDN Cache](https://vercel.com/docs/caching/cdn-cache/purge)).
+
 ## 8. Set up the database and check
 
 ```sh

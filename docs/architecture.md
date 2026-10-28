@@ -100,6 +100,17 @@ Visitors sign in with X or Google (`/me`); a signed-in member adds entries (`/ad
 - **The front end shares one set of rules.** The add and edit pages render the same components (`public/js/components/addLink.js`, `addDetails.js`, `speakerStep.js`, `lineFixSheet.js`, `personPicker.js`), with markup in `addView.js` and `editView.js`. `public/js/state/addState.js` is the only place that turns the choices into request bodies, so the two pages can't disagree about what a save sends. `pages/add.js` and `pages/edit.js` own state, the network and the 300 ms re-preview.
 - **Dev only:** `DEV_SIGN_IN=1` enables `POST /api/auth/dev` (refused whenever `VERCEL` is set). The browser tests run the dev server against offline fixtures with `INGEST_FIXTURES_DIR`, which `api/index.js` ignores on Vercel.
 
+
+## Translators, reports and the owner (v0.3.0)
+
+A translator recognised by an X sign-in controls their own work; anyone can report a page; the owner gets the minimum moderation tools until Plan 3's admin.
+
+- **`/api/me/translations`** (signed in, `private, no-store`) lists every item credited to the caller's linked X accounts, in any review state, with removed rows flagged for restore (`src/services/translator.js`). `…/remove` and `…/restore` take 1–50 `{ kind, sourceId }` entries and are all-or-nothing; only `removed_by_account` is a translator's to undo. `…/opt-out` and `…/opt-in` set `accounts.opted_out_at` for every linked account (`purgeAccount` afterwards); nothing is soft-deleted, so opting back in restores exactly those entries.
+- **Reports** are `POST /api/reports` (no sign-in, rate-limited by hashed address): a target must be a visible item or event right now, so a hidden one is a 404 (`src/services/reports.js`).
+- **The owner section** is `GET /api/owner` plus `POST /api/owner/{approval,items/:kind/:sourceId/review,reports/:id/hide|restore|dismiss,users/block|unblock,sign-in-alert/dismiss}` (`src/services/owner.js`, `ownerUsers.js`), all `requireOwner`. Approving publishes; rejecting sets `review_state = 'rejected'`, which the public visibility rule already hides. Hiding an event reuses 1a's `softDeleteEvent` (its items move to unsorted and stay archived), so restoring the event row does not re-place them.
+- **Cache tags and purging.** Public GETs set `Vercel-Cache-Tag` (`src/domain/cacheTags.js`, `src/http/cacheTags.js`): `home`, `search`, `item:<id>`, `event:<slug>`, `person:<id>`, `account:<handle>`. A write that changes a public page calls `purgeItem`/`purgeAccount`/`purgeTags` (`src/services/cache.js`) after its transaction, deferred through `waitUntil`. A **removal** (remove, opt-out, hide, block, reject) uses `dangerouslyDeleteByTag`, because `invalidateByTag` would serve the stale copy once more; an add, edit, restore or approval uses `invalidateByTag`. Tag lists are batched at 100 per call, and a prolific translator's account purge covers every credited entry. People are tagged by numeric id so a handle change can't orphan a page. Off Vercel it is a no-op, and a purge failure is logged, never thrown.
+- **The me page** composes the account block (`pages/meAccount.js`), the translator component (`components/meTranslations.js`), the shared panels (`components/meSections.js`) and the owner section (`components/ownerSection.js`). The report dialog is `components/reportForm.js`, used by the item footer and the event page.
+
 ## File structure (fan-archive, v0.1.1)
 
 ```

@@ -8,7 +8,7 @@
  */
 import { kindsRegistry } from '../kinds/_registry.js';
 import { listPeople } from '../repo/people.js';
-import { loadCards, loadOwnCards } from '../repo/cards.js';
+import { loadCards, loadOwnCards, loadCardsAny } from '../repo/cards.js';
 import { formatName } from '../site/loadSite.js';
 import { ROLE_EMOJI } from '../domain/constants.js';
 
@@ -129,6 +129,22 @@ export async function previewsFor(deps, itemIds, ctx) {
  */
 export async function ownPreviewsFor(deps, itemIds, ctx) {
   const cards = await loadOwnCards(deps.db, itemIds);
+  const ordered = itemIds.map((id) => cards.get(id)).filter((c) => c !== undefined);
+  return presentCards(deps, ordered, ctx, { includePending: true });
+}
+
+/**
+ * The previews of `itemIds` **including soft-deleted items**, in that
+ * order (Plan 2b): a translator's own removed entries stay listed for
+ * restore, so the me page still needs their preview. Same shape as
+ * `previewsFor`; held text is included, as on "added by me".
+ * @param {ViewDeps} deps
+ * @param {number[]} itemIds
+ * @param {PresentContext} ctx
+ * @returns {Promise<{ card: Card, details: any, preview: Preview }[]>}
+ */
+export async function previewsForAny(deps, itemIds, ctx) {
+  const cards = await loadCardsAny(deps.db, itemIds);
   const ordered = itemIds.map((id) => cards.get(id)).filter((c) => c !== undefined);
   return presentCards(deps, ordered, ctx, { includePending: true });
 }

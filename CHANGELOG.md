@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented here. Versions are semver tags (`vX.Y.Z`). Each release lists its **upgrade steps**; to take one, see `docs/start-your-own.md`, step 10.
 
+## 0.3.0
+
+Translators and the owner. A recognised translator gets a one-time welcome and their own list, and can remove, restore, opt out and opt back in. Reports have a form, and the owner gets a section on the me page: the approval switch, the waiting list, open reports, and users with blocking. Every removal now purges the CDN, so removed content stops being served.
+
+**Upgrade steps:**
+
+1. `git fetch upstream --tags && git merge v0.3.0`.
+2. **Migrate.** Migration 004 adds `translation_parts.rejected`, so a held follow-up part the owner rejects stays hidden without its text being deleted. Run `npm run migrate` on each database before the deploy that needs it.
+3. **Copy keys.** No key you may have overridden was removed. The new keys you may override are `me.translatorBadge`, `me.translations.*`, `me.optOut.*`, `me.welcome.*`, `report.*` and `owner.*`. Each has an English default.
+4. `npm run build`, then redeploy. Cache tagging needs no setup: responses carry a `Vercel-Cache-Tag` header and the function invalidates it with `invalidateByTag()` from `@vercel/functions`. Outside Vercel (local dev, the CLI) purging is a no-op.
+5. The item and event pages' report link now opens a form; `/takedown` stays for everything else.
+
+- **Translator recognition.** An X sign-in that matches a credited account sees the ✓ badge, "my translations" and "added by me" as two tabs on `/me`, and the one-time welcome (handle, totals, a way onward).
+- **Remove and restore.** Select entries and remove them from the archive; removed entries stay listed, faded, with "restore". A hide or a block is the owner's and can't be restored by a translator.
+- **Opt out and back in.** Opting out sets `accounts.opted_out_at` on every X account linked to the sign-in: their entries leave every public surface, their translator page says "this translator has opted out", and pasting one of their tweets is refused. Opting back in restores exactly those entries, never an owner-hidden one.
+- **The report form.** Item and event pages get a short form (reason up to 2,000 characters, no sign-in, rate-limited by address). A hidden or unknown target is a 404, so the form can't probe for removed content.
+- **The owner section.** `/me`, owner only: an X sign-in failure note, the approval switch, held entries with approve/reject, open reports with hide/restore/dismiss, and a user search with block/unblock. Blocking hides that submitter's live items (`blocked_submitter`) and refuses their writes; unblocking restores only those. An item merely credited to their X account stays (opt-out governs credit).
+- **Rejecting** sets `review_state = 'rejected'`: the entry leaves the public surfaces but stays in its submitter's "added by me" as "not accepted".
+- **CDN purging.** Public pages carry cache tags (`home`, `search`, `item:<id>`, `event:<slug>`, `person:<id>`, `account:<handle>`); adds, edits, refreshes, removals, opt-outs, reviews, hides, blocks, restores and account deletion invalidate the affected tags after the response, through `waitUntil`. A purge failure is logged and never fails the write.
+- **Rate limits** for remove, restore, opt-out and owner actions ([limits](docs/limits.md#rate-limits)).
+- **Dev only:** `POST /api/auth/dev` gains `as: 'translator'` (first credited X account), for the browser tests.
+
 ## 0.2.0
 
 Sign-in, adding and editing. Visitors sign in with X or Google. A signed-in member adds a translation from its link and edits the entries they added or are credited on; the owner can edit any entry, see its history and revert a change. Signed-in readers see their editor controls on the item page.

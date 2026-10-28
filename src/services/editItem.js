@@ -15,6 +15,7 @@ import { findLookup, ensureLookup } from '../repo/lookups.js';
 import { findVisibleItemId } from '../repo/cards.js';
 import { eventExists } from '../repo/events.js';
 import { validateFixes } from '../domain/lineFixes.js';
+import { itemChangeTags, purgeForTags } from './cache.js';
 
 /** @typedef {import('../db/common.js').Db} Db */
 /** @typedef {import('./session.js').SessionUser} SessionUser */
@@ -167,6 +168,7 @@ async function resolveEditInput(deps, kindName, { sourceId, changes, actor }) {
 export async function editItem(deps, { kind: kindName, sourceId, changes, actor, reverts = null }) {
   const { kind, id, itemRow, role } = await resolveEditInput(deps, kindName, { sourceId, changes, actor });
 
+  const tagsBefore = await itemChangeTags(deps.db, id);
   const before = await editableOf(deps.db, kind, id);
   const place = merged(before, changes);
   if (place.placement === 'event') {
@@ -192,6 +194,10 @@ export async function editItem(deps, { kind: kindName, sourceId, changes, actor,
     return rows[0].id;
   }, { actor: actor.id });
 
+  // Both the old and the new relationships: moving an entry to another
+  // event (or changing its cast) leaves the previous pages stale too.
+  const tagsAfter = await itemChangeTags(deps.db, id);
+  await purgeForTags(/** @type {any} */ (deps), [...tagsBefore, ...tagsAfter]);
   return { editId: /** @type {number} */ (editId) };
 }
 

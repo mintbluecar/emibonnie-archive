@@ -13,6 +13,7 @@ import { limit } from '../services/limits.js';
 import { cleanDisplayName } from '../domain/displayName.js';
 import { deleteAccount } from '../services/deleteAccount.js';
 import { addedPreviews } from '../services/added.js';
+import { translatorList, markWelcomed, removeEntries, restoreEntries, setOptOut } from '../services/translator.js';
 import { HUB_OFFSET_MAX, integer } from '../services/params.js';
 
 /** @param {import('../services/session.js').SessionUser|null} user */
@@ -25,6 +26,8 @@ function meUser(user) {
     isOwner: user.isOwner,
     isTranslator: isTranslator(user),
     needsName: needsDisplayName(user),
+    showTranslatorWelcome: isTranslator(user) && !user.welcomedTranslator,
+    isOptedOut: user.isOptedOut,
   };
 }
 
@@ -52,6 +55,94 @@ export const addedRoute = {
     const user = await requireUser(deps, input);
     const offset = integer('offset', input.query.offset, HUB_OFFSET_MAX, 0);
     return addedPreviews(deps, user.id, { offset });
+  },
+};
+
+/** The translator's own entries, every review state, removed ones flagged. */
+export const translationsRoute = {
+  method: 'GET',
+  path: '/api/me/translations',
+  cache: PRIVATE_NO_STORE,
+  query: ['offset'],
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireUser(deps, input);
+    const offset = integer('offset', input.query.offset, HUB_OFFSET_MAX, 0);
+    return translatorList(deps, user, { offset });
+  },
+};
+
+/**
+ * Removes the caller's own entries: `{ items: [{ kind, sourceId }] }`.
+ * All or nothing, 1 to 50 per request.
+ */
+export const removeEntriesRoute = {
+  method: 'POST',
+  path: '/api/me/translations/remove',
+  cache: NO_STORE,
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireUser(deps, input);
+    await limit(deps, 'remove', user.id);
+    return removeEntries(deps, user, (/** @type {any} */ (input.body))?.items);
+  },
+};
+
+/** Restores entries the caller removed themselves; owner hides stay hidden. */
+export const restoreEntriesRoute = {
+  method: 'POST',
+  path: '/api/me/translations/restore',
+  cache: NO_STORE,
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireUser(deps, input);
+    await limit(deps, 'restore', user.id);
+    return restoreEntries(deps, user, (/** @type {any} */ (input.body))?.items);
+  },
+};
+
+/**
+ * Opts the caller's X accounts out of the archive (or back in): no
+ * soft delete, just `accounts.opted_out_at`, which every public query
+ * already respects.
+ */
+export const optOutRoute = {
+  method: 'POST',
+  path: '/api/me/translations/opt-out',
+  cache: NO_STORE,
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireUser(deps, input);
+    await limit(deps, 'optOut', user.id);
+    return setOptOut(deps, user, true);
+  },
+};
+
+/** Clears the opt-out; the account's entries become visible again. */
+export const optInRoute = {
+  method: 'POST',
+  path: '/api/me/translations/opt-in',
+  cache: NO_STORE,
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireUser(deps, input);
+    await limit(deps, 'optIn', user.id);
+    if (user.translatorAccountIds.length === 0) throw new BadRequest('not_a_translator');
+    return setOptOut(deps, user, false);
+  },
+};
+
+/** Marks the one-time translator welcome as shown. Idempotent. */
+export const welcomedRoute = {
+  method: 'POST',
+  path: '/api/me/welcomed',
+  cache: NO_STORE,
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireUser(deps, input);
+    await limit(deps, 'welcome', user.id);
+    if (isTranslator(user)) await markWelcomed(deps, user.id);
+    return { ok: true };
   },
 };
 
@@ -101,7 +192,7 @@ export const deleteAccountRoute = {
     await limit(deps, 'deleteAccount', user.id);
     const confirm = /** @type {any} */ (input.body)?.confirm;
     if (confirm !== 'delete') throw new BadRequest('confirm must be "delete"');
-    const clear = await deleteAccount({ db: deps.db }, user.id);
+    const clear = await deleteAccount(deps, user.id);
     return jsonWithCookies({ ok: true }, [clear]);
   },
 };

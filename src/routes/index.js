@@ -22,11 +22,13 @@ import { route as account } from './account.js';
 import { route as video } from './video.js';
 import { route as authXStart, callbackRoute as authXCallback } from './authX.js';
 import { route as authGoogleStart, callbackRoute as authGoogleCallback } from './authGoogle.js';
-import { meRoute, addedRoute, setNameRoute, signOutRoute, signOutAllRoute, deleteAccountRoute } from './me.js';
+import { meRoute, addedRoute, translationsRoute, removeEntriesRoute, restoreEntriesRoute, optOutRoute, optInRoute, welcomedRoute, setNameRoute, signOutRoute, signOutAllRoute, deleteAccountRoute } from './me.js';
 import { route as authDev } from './authDev.js';
 import { optionsRoute, previewRoute, addRoute, addPersonRoute } from './add.js';
 import { editRoute, applyRoute, revertRoute, followUpsRoute } from './edit.js';
 import { metaRoutes } from './meta.js';
+import { route as reportsRoute } from './reports.js';
+import { ownerRoute, approvalRoute, reviewRoute, hideReportRoute, restoreReportRoute, dismissReportRoute, usersRoute, blockUserRoute, unblockUserRoute, signInAlertRoute } from './owner.js';
 // scaffold:route-imports (`npm run new route <name>` adds its import above this line)
 
 /** @type {import('../http/handler.js').Route[]} */
@@ -34,10 +36,13 @@ export const routes = [
   home, event, item, refresh, search, filters, person, account, video,
   authXStart, authXCallback,
   authGoogleStart, authGoogleCallback,
-  meRoute, addedRoute, setNameRoute, signOutRoute, signOutAllRoute, deleteAccountRoute,
+  meRoute, addedRoute, translationsRoute, removeEntriesRoute, restoreEntriesRoute, optOutRoute, optInRoute, welcomedRoute, setNameRoute, signOutRoute, signOutAllRoute, deleteAccountRoute,
   authDev,
   optionsRoute, previewRoute, addRoute, addPersonRoute,
   editRoute, applyRoute, revertRoute, followUpsRoute,
+  reportsRoute,
+  ownerRoute, approvalRoute, reviewRoute, hideReportRoute, restoreReportRoute, dismissReportRoute,
+  usersRoute, blockUserRoute, unblockUserRoute, signInAlertRoute,
   // scaffold:routes (`npm run new route <name>` adds its route above this line)
   ...metaRoutes(pages, Object.values(kindsRegistry)),
 ];

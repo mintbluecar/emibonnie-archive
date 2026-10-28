@@ -138,6 +138,11 @@ export class MiniElement {
     }
   }
 
+  /** The DOM methods a `<dialog>` and form focus need (Plan 2b's report form). */
+  showModal() { this.open = true; }
+  close() { this.open = false; }
+  focus() { this.focused = true; }
+
   /** Convenience: dispatch a bubbling click as if the user activated this element (mouse, or Enter/Space on a real `<button>`). */
   click() {
     this.dispatchEvent({ type: 'click', target: this });

@@ -263,3 +263,33 @@ export async function loadDetails(db, itemIds, { includePending = false } = {}) 
   }
   return details;
 }
+
+/**
+ * The items with a held follow-up part the owner hasn't rejected: Plan 2b's
+ * waiting list includes them beside items whose own review state is pending.
+ * @param {Tx} db @param {{ limit: number }} page
+ * @returns {Promise<number[]>}
+ */
+export async function heldItemIds(db, { limit }) {
+  const { rows } = await db.query(
+    'select distinct item_id from translation_parts where pending and not rejected order by item_id limit $1',
+    [limit],
+  );
+  return rows.map((row) => row.item_id);
+}
+
+/**
+ * Approves or rejects every held part of one item: approving publishes them
+ * (`pending = false`), rejecting keeps them hidden (`rejected = true`) so
+ * they leave the waiting list and the verbatim text is never destroyed.
+ * @param {Tx} tx
+ * @param {{ itemId: number, approve: boolean }} input
+ * @returns {Promise<void>}
+ */
+export async function reviewHeld(tx, { itemId, approve }) {
+  if (approve) {
+    await tx.query('update translation_parts set pending = false where item_id = $1 and pending', [itemId]);
+    return;
+  }
+  await tx.query('update translation_parts set rejected = true where item_id = $1 and pending and not rejected', [itemId]);
+}

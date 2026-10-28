@@ -54,7 +54,7 @@ test('every route is { method, path, cache, run }, with a unique method+path', (
     // never be cached, so they are no-store despite being GET; the add form's
     // `options` list is also per-user. Every other GET is cached, and every
     // write (POST) is no-store.
-    const authGet = r.path.startsWith('/api/auth/') || r.path === '/api/me' || r.path === '/api/me/added'
+    const authGet = r.path.startsWith('/api/auth/') || r.path === '/api/me' || r.path === '/api/me/added' || r.path === '/api/me/translations' || r.path === '/api/owner' || r.path === '/api/owner/users'
       || r.path === '/api/add/options' || r.path === '/api/item/:kind/:sourceId/edit';
     assert.equal(neverStored(r.cache), r.method !== 'GET' || authGet, `${r.path}: GETs are cached, writes are no-store (auth flow excepted)`);
   }
@@ -62,14 +62,14 @@ test('every route is { method, path, cache, run }, with a unique method+path', (
 });
 
 test('event returns sections[0].kind', async () => {
-  const view = await eventRoute.run(input({ slug: SLUG }), routeDeps());
+  const view = await bodyOf(await eventRoute.run(input({ slug: SLUG }), routeDeps()));
   assert.equal(view.sections[0].kind, 'translation');
   await assert.rejects(eventRoute.run(input({ slug: 'no-such-event' }), routeDeps()), NotFound);
 });
 
 test('event: ?order=desc reverses the section; an unknown order is a BadRequest', async () => {
-  const asc = await eventRoute.run(input({ slug: SLUG }, { order: 'asc' }), routeDeps());
-  const desc = await eventRoute.run(input({ slug: SLUG }, { order: 'desc' }), routeDeps());
+  const asc = await bodyOf(await eventRoute.run(input({ slug: SLUG }, { order: 'asc' }), routeDeps()));
+  const desc = await bodyOf(await eventRoute.run(input({ slug: SLUG }, { order: 'desc' }), routeDeps()));
   assert.deepEqual(desc.sections[0].items.map((/** @type {any} */ i) => i.sourceId).reverse(), asc.sections[0].items.map((/** @type {any} */ i) => i.sourceId));
   await assert.rejects(eventRoute.run(input({ slug: SLUG }, { order: 'bogus' }), routeDeps()), { name: 'BadRequest' });
 });
@@ -90,7 +90,7 @@ test('item: a removed item and an unknown kind throw NotFound', async () => {
 });
 
 test('video: stored variants of a visible item with a live clip; TOMB and items without video throw NotFound', async () => {
-  const { variants } = await videoRoute.run(input({ kind: 'translation', sourceId: IDS.EVENT_A }), routeDeps());
+  const { variants } = await bodyOf(await videoRoute.run(input({ kind: 'translation', sourceId: IDS.EVENT_A }), routeDeps()));
   assert.ok(variants.length > 0);
   for (const v of variants) assert.match(v.url, /^https:\/\/video\.twimg\.com\//);
   await assert.rejects(videoRoute.run(input({ kind: 'translation', sourceId: IDS.TOMB }), routeDeps()), NotFound);
@@ -120,7 +120,7 @@ test('video: given the outer item\'s own sourceId, resolves the quoted post\'s i
     SYSTEM,
   );
   try {
-    const { variants } = await videoRoute.run(input({ kind: 'translation', sourceId: IDS.POST }), routeDeps());
+    const { variants } = await bodyOf(await videoRoute.run(input({ kind: 'translation', sourceId: IDS.POST }), routeDeps()));
     assert.deepEqual(variants, innerVariants);
   } finally {
     await deps.db.transaction(
@@ -133,7 +133,7 @@ test('video: given the outer item\'s own sourceId, resolves the quoted post\'s i
 test('filters lists only visible accounts', async () => {
   await deps.db.transaction((/** @type {any} */ tx) => tx.query("update accounts set opted_out_at = now() where handle = 'tl_gamma'"), SYSTEM);
   try {
-    const view = await filtersRoute.run(input({}), routeDeps());
+    const view = await bodyOf(await filtersRoute.run(input({}), routeDeps()));
     assert.deepEqual(view.accounts, [{ handle: 'tl_alpha' }, { handle: 'tl_beta' }]);
   } finally {
     await deps.db.transaction((/** @type {any} */ tx) => tx.query("update accounts set opted_out_at = null where handle = 'tl_gamma'"), SYSTEM);
@@ -141,9 +141,9 @@ test('filters lists only visible accounts', async () => {
 });
 
 test('search passes list params through as lists', async () => {
-  const all = await searchRoute.run(input({}, {}), routeDeps());
+  const all = await bodyOf(await searchRoute.run(input({}, {}), routeDeps()));
   assert.ok(all.count > 0);
-  const some = await searchRoute.run(input({}, { kinds: ['translation'], q: 'everyone', limit: '2' }), routeDeps());
+  const some = await bodyOf(await searchRoute.run(input({}, { kinds: ['translation'], q: 'everyone', limit: '2' }), routeDeps()));
   assert.equal(some.results.length, 2);
 });
 

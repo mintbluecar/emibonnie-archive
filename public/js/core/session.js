@@ -9,9 +9,10 @@ import { getJson } from './api.js';
 /**
  * `GET /api/me`: `{ user: null }` signed out, otherwise the session's
  * public fields (`via`, `handle`, `displayName`, `isOwner`,
- * `isTranslator`, `needsName`).
+ * `isTranslator`, `needsName`, `showTranslatorWelcome`, `isOptedOut`).
  * @returns {Promise<{ user: null | { via: 'x'|'google', handle: string|null, displayName: string|null,
- *   isOwner: boolean, isTranslator: boolean, needsName: boolean } }>}
+ *   isOwner: boolean, isTranslator: boolean, needsName: boolean,
+ *   showTranslatorWelcome: boolean, isOptedOut: boolean } }>}
  */
 export function getMe() {
   return getJson('/api/me');

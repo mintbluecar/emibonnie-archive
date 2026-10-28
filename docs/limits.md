@@ -34,9 +34,17 @@ Writes and sign-in are capped per visitor, so one account or one address can't u
 | Check for follow-ups | 10 | 1 hour | user |
 | Set display name | 5 | 1 hour | user |
 | Delete my account | 3 | 1 day | user |
-| Report (reserved) | 5 | 1 hour | address |
+| Report | 5 | 1 hour | address |
+| Remove entries (translator) | 30 | 1 hour | user |
+| Restore entries (translator) | 30 | 1 hour | user |
+| Opt out | 3 | 1 day | user |
+| Opt back in | 10 | 1 day | user |
+| Mark the translator welcome seen | 10 | 1 hour | user |
+| Owner actions (approval, review, reports, users) | 300 | 1 hour | user |
 
-The report limit is defined but no route uses it yet. The source of truth is `LIMITS` in `src/services/limits.js`.
+The source of truth is `LIMITS` in `src/services/limits.js`.
+
+**Cache purging** (v0.3.0) is not rate-limited by the engine: a removal, opt-out, hide, block, reject, review or edit names the affected pages' cache tags and invalidates them. Vercel caps purges per plan (Hobby 50 calls/s per team, Pro 200, Enterprise 500; a call may carry many tags), and one report names at most 128 tags per response. See [Purging Vercel CDN Cache](https://vercel.com/docs/caching/cdn-cache/purge). Off Vercel nothing is purged.
 
 **Plan B for hosting:** if Vercel's limits stop fitting, the handlers are written in the standard web style and routes come from one table, so moving to Cloudflare is cheap. Cloudflare's free tier resets daily, and its paid plan is $5 a month. See [Cloudflare Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/).
 
