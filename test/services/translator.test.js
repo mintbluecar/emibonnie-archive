@@ -109,3 +109,66 @@ test('linkXAccountToUser is the sign-in path the recognition uses', async () => 
   const { rows } = await deps.db.query("select id from accounts where platform = 'x' and user_id = 'x:nobody'");
   assert.equal(rows.length, 0, 'no account with that external id exists, so nothing is linked');
 });
+
+// --- Task 5: remove and restore -------------------------------------------
+
+const { removeEntries, restoreEntries } = await import('../../src/services/translator.js');
+
+/** @param {Partial<{ env: Record<string, string>, calls: string[][] }>} [options] */
+function purgingDeps({ env = { VERCEL: '1' }, calls = [] } = {}) {
+  return { ...deps, env, invalidateByTag: async (/** @type {string[]} */ tags) => calls.push(tags), defer: undefined };
+}
+
+test('a translator removes and restores their own entry', async () => {
+  const itemId = await creditedItem(accountId);
+  const { rows } = await deps.db.query("select external_id from item_sources where item_id = $1 and role = 'primary'", [itemId]);
+  const calls = /** @type {string[][]} */ ([]);
+  const removing = purgingDeps({ calls });
+
+  const removed = await removeEntries(removing, user(), [{ kind: 'translation', sourceId: rows[0].external_id }]);
+  assert.deepEqual(removed, { removed: 1 });
+  const { rows: after } = await deps.db.query('select deleted_reason from items where id = $1', [itemId]);
+  assert.equal(after[0].deleted_reason, 'removed_by_account');
+  const purged = calls.flat();
+  assert.ok(purged.includes(`item:${itemId}`), purged.join(','));
+  assert.ok(purged.includes('home'));
+
+  const restored = await restoreEntries(removing, user(), [{ kind: 'translation', sourceId: rows[0].external_id }]);
+  assert.deepEqual(restored, { restored: 1 });
+  const { rows: back } = await deps.db.query('select deleted_at from items where id = $1', [itemId]);
+  assert.equal(back[0].deleted_at, null);
+});
+
+test('a batch with another translator\'s entry changes nothing', async () => {
+  const mine = await creditedItem(accountId);
+  const theirs = await creditedItem(accountId);
+  const { rows } = await deps.db.query(
+    `select i.id, s.external_id from items i join item_sources s on s.item_id = i.id and s.role = 'primary'
+     where i.id = any($1::bigint[])`, [[mine, theirs]],
+  );
+  const otherAccount = await deps.db.transaction((tx) => insertAccount(tx, { handle: 'other_owner' }), { actor: 'system' });
+  await deps.db.transaction((tx) => tx.query('update items set credited_account_id = $2 where id = $1', [theirs, otherAccount]), { actor: 'system' });
+
+  const attempts = [
+    { kind: 'translation', sourceId: rows.find((r) => r.id === mine).external_id },
+    { kind: 'translation', sourceId: rows.find((r) => r.id === theirs).external_id },
+  ];
+  await assert.rejects(removeEntries(purgingDeps(), user(), attempts), { name: 'Forbidden' });
+  const { rows: untouched } = await deps.db.query('select count(*)::int as n from items where id = any($1::bigint[]) and deleted_at is null', [[mine, theirs]]);
+  assert.equal(untouched[0].n, 2, 'the first entry was not removed either');
+});
+
+test('an empty batch or more than 50 entries is a BadRequest', async () => {
+  await assert.rejects(removeEntries(purgingDeps(), user(), []), { name: 'BadRequest' });
+  const many = Array.from({ length: 51 }, () => ({ kind: 'translation', sourceId: 'x' }));
+  await assert.rejects(removeEntries(purgingDeps(), user(), many), { name: 'BadRequest' });
+});
+
+test('restoring an entry the owner hid is a Conflict', async () => {
+  const hidden = await creditedItem(accountId, { deletedReason: 'hidden_by_owner' });
+  const { rows } = await deps.db.query("select external_id from item_sources where item_id = $1 and role = 'primary'", [hidden]);
+  await assert.rejects(
+    restoreEntries(purgingDeps(), user(), [{ kind: 'translation', sourceId: rows[0].external_id }]),
+    { name: 'Conflict' },
+  );
+});

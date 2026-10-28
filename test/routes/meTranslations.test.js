@@ -77,3 +77,51 @@ test('a bad offset is a 400', async () => {
   const res = await api.call('GET', '/api/me/translations?offset=-1', { cookies: { sid: translator.sid } });
   assert.equal(res.status, 400);
 });
+
+// --- Task 5: remove and restore -------------------------------------------
+
+test('a removed entry leaves every public surface and is purged', async () => {
+  const calls = /** @type {string[][]} */ ([]);
+  const env = { VERCEL: '1' };
+  const purging = apiFor({ ...deps, env, invalidateByTag: async (/** @type {string[]} */ tags) => calls.push(tags), log: () => {} }, { env });
+
+  const list = JSON.parse((await purging.call('GET', '/api/me/translations', { cookies: { sid: translator.sid } })).text);
+  const entry = list.items.find((/** @type {any} */ item) => !item.removedByYou && !item.hidden);
+  assert.ok(entry, 'a live credited entry');
+  const line = entry.lines.find((/** @type {any} */ l) => 'text' in l && l.text.trim().length > 6);
+  const q = [...line.text.trim()].slice(0, 12).join('');
+
+  const res = await purging.call('POST', '/api/me/translations/remove', {
+    cookies: { sid: translator.sid }, body: { items: [{ kind: entry.kind, sourceId: entry.sourceId }] },
+  });
+  assert.equal(res.status, 200, res.text);
+  assert.deepEqual(JSON.parse(res.text), { removed: 1 });
+  await purging.settle();
+
+  const item = await purging.call('GET', `/api/item/${entry.kind}/${entry.sourceId}`);
+  assert.equal(item.status, 404, 'the item page is gone');
+  const search = JSON.parse((await purging.call('GET', `/api/search?q=${encodeURIComponent(q)}`)).text);
+  assert.ok(!search.results.some((/** @type {any} */ r) => r.sourceId === entry.sourceId), 'no search hit');
+
+  const purged = calls.flat();
+  for (const expected of ['home', 'search']) assert.ok(purged.includes(expected), `${expected} in ${purged.join(',')}`);
+  assert.ok(purged.some((tag) => tag.startsWith('item:')), 'the entry tag is purged');
+
+  const restored = await purging.call('POST', '/api/me/translations/restore', {
+    cookies: { sid: translator.sid }, body: { items: [{ kind: entry.kind, sourceId: entry.sourceId }] },
+  });
+  assert.equal(restored.status, 200, restored.text);
+  assert.deepEqual(JSON.parse(restored.text), { restored: 1 });
+  assert.equal((await purging.call('GET', `/api/item/${entry.kind}/${entry.sourceId}`)).status, 200);
+});
+
+test('remove wants a session, and the 31st remove in an hour is 429', async () => {
+  assert.equal((await api.call('POST', '/api/me/translations/remove', { body: { items: [] } })).status, 401);
+  const { cookie } = await signInUser(deps, { via: 'x', subject: '5150', handle: 'rate_limited' });
+  const sid = cookie.replace(/^sid=/, '').split(';')[0];
+  let status = 0;
+  for (let i = 0; i < 31; i++) {
+    status = (await api.call('POST', '/api/me/translations/remove', { cookies: { sid }, body: { items: [] } })).status;
+  }
+  assert.equal(status, 429);
+});

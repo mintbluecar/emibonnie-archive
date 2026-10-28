@@ -5,8 +5,13 @@
  * removed entries kept for restore -- their totals for the one-time
  * welcome, and the flag that shows that welcome once.
  */
-import { translatorItemIds, translatorStates, translatorTotals } from '../repo/itemState.js';
-import { presenterContext, previewsForAny } from './cards.js';
+import { BadRequest, Conflict, Forbidden } from '../domain/errors.js';
+import {
+  findItemIdBySource, restoreItem, softDeleteItem, translatorItemIds, translatorStates, translatorTotals,
+} from '../repo/itemState.js';
+import { getItem } from '../repo/items.js';
+import { kindsOf, presenterContext, previewsForAny } from './cards.js';
+import { purgeItem } from './cache.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
 /** @typedef {import('./session.js').SessionUser} SessionUser */
@@ -65,4 +70,103 @@ export async function markWelcomed(deps, userId) {
     ),
     { actor: userId },
   );
+}
+
+/** The reason a translator's own removal carries; the only one they may undo. */
+const REMOVED_BY_ACCOUNT = 'removed_by_account';
+/** One request may remove or restore this many entries. */
+const MAX_BATCH = 50;
+
+/**
+ * One batch entry as a registered kind and its source id.
+ * @param {Record<string, any>} kinds @param {any} raw
+ * @returns {{ kind: any, sourceId: string }}
+ */
+function entryOf(kinds, raw) {
+  const kind = Object.hasOwn(kinds, String(raw?.kind ?? '')) ? kinds[raw.kind] : undefined;
+  const sourceId = typeof raw?.sourceId === 'string' ? raw.sourceId : '';
+  if (!kind || sourceId === '') throw new BadRequest(`unknown item: ${String(raw?.sourceId ?? '')}`);
+  return { kind, sourceId };
+}
+
+/**
+ * The item one entry names, with the caller's ownership checked: only an
+ * item credited to one of their linked X accounts is theirs to change.
+ * @param {import('../db/common.js').Db} db @param {SessionUser} user
+ * @param {{ kind: any, sourceId: string }} entry
+ * @returns {Promise<{ id: number, reason: string|null }>}
+ */
+async function ownedTarget(db, user, { kind, sourceId }) {
+  const id = await findItemIdBySource(db, { kind: kind.name, platform: kind.platform, externalId: sourceId });
+  if (id === null) throw new BadRequest(`unknown item: ${sourceId}`);
+  const item = /** @type {any} */ (await getItem(db, id));
+  if (!item) throw new BadRequest(`unknown item: ${sourceId}`);
+  if (item.creditedAccountId === null || !user.translatorAccountIds.includes(item.creditedAccountId)) {
+    throw new Forbidden('forbidden');
+  }
+  return { id, reason: item.deletedReason ?? null };
+}
+
+/**
+ * The resolved, owned targets of a batch, all validated before anything
+ * changes: one unknown or foreign entry refuses the whole batch.
+ * @param {ViewDeps} deps @param {SessionUser} user @param {unknown} entries
+ * @returns {Promise<{ id: number, reason: string|null }[]>}
+ */
+async function resolveOwned(deps, user, entries) {
+  if (!Array.isArray(entries) || entries.length < 1 || entries.length > MAX_BATCH) {
+    throw new BadRequest(`items must be 1-${MAX_BATCH} entries`);
+  }
+  const kinds = kindsOf(deps);
+  /** @type {{ id: number, reason: string|null }[]} */
+  const targets = [];
+  for (const raw of /** @type {any[]} */ (entries)) targets.push(await ownedTarget(deps.db, user, entryOf(kinds, raw)));
+  return targets;
+}
+
+/**
+ * Removes the caller's own entries (Plan 2b): one transaction, all or
+ * nothing, then the CDN purge for every entry that changed. An entry
+ * already removed is a no-op.
+ * @param {ViewDeps & { env?: Record<string, string|undefined> }} deps
+ * @param {SessionUser} user
+ * @param {unknown} entries `{ kind, sourceId }[]`, 1 to 50
+ * @returns {Promise<{ removed: number }>}
+ */
+export async function removeEntries(deps, user, entries) {
+  const targets = await resolveOwned(deps, user, entries);
+  const changed = await deps.db.transaction(async (tx) => {
+    /** @type {number[]} */
+    const ids = [];
+    for (const target of targets) {
+      if (await softDeleteItem(tx, { itemId: target.id, reason: REMOVED_BY_ACCOUNT, actor: user.id })) ids.push(target.id);
+    }
+    return ids;
+  }, { actor: user.id });
+  for (const id of changed) await purgeItem(deps, id);
+  return { removed: changed.length };
+}
+
+/**
+ * Restores entries the caller removed themselves. Only
+ * `removed_by_account` is theirs to undo; a hide or a block stays the
+ * owner's, so a batch containing one changes nothing.
+ * @param {ViewDeps & { env?: Record<string, string|undefined> }} deps
+ * @param {SessionUser} user
+ * @param {unknown} entries `{ kind, sourceId }[]`, 1 to 50
+ * @returns {Promise<{ restored: number }>}
+ */
+export async function restoreEntries(deps, user, entries) {
+  const targets = await resolveOwned(deps, user, entries);
+  if (targets.some((target) => target.reason !== REMOVED_BY_ACCOUNT)) throw new Conflict('not_removed_by_you');
+  const changed = await deps.db.transaction(async (tx) => {
+    /** @type {number[]} */
+    const ids = [];
+    for (const target of targets) {
+      if (await restoreItem(tx, { itemId: target.id, reason: REMOVED_BY_ACCOUNT })) ids.push(target.id);
+    }
+    return ids;
+  }, { actor: user.id });
+  for (const id of changed) await purgeItem(deps, id);
+  return { restored: changed.length };
 }

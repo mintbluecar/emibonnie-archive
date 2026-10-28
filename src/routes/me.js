@@ -13,7 +13,7 @@ import { limit } from '../services/limits.js';
 import { cleanDisplayName } from '../domain/displayName.js';
 import { deleteAccount } from '../services/deleteAccount.js';
 import { addedPreviews } from '../services/added.js';
-import { translatorList, markWelcomed } from '../services/translator.js';
+import { translatorList, markWelcomed, removeEntries, restoreEntries } from '../services/translator.js';
 import { HUB_OFFSET_MAX, integer } from '../services/params.js';
 
 /** @param {import('../services/session.js').SessionUser|null} user */
@@ -68,6 +68,35 @@ export const translationsRoute = {
     const user = await requireUser(deps, input);
     const offset = integer('offset', input.query.offset, HUB_OFFSET_MAX, 0);
     return translatorList(deps, user, { offset });
+  },
+};
+
+/**
+ * Removes the caller's own entries: `{ items: [{ kind, sourceId }] }`.
+ * All or nothing, 1 to 50 per request.
+ */
+export const removeEntriesRoute = {
+  method: 'POST',
+  path: '/api/me/translations/remove',
+  cache: NO_STORE,
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireUser(deps, input);
+    await limit(deps, 'remove', user.id);
+    return removeEntries(deps, user, (/** @type {any} */ (input.body))?.items);
+  },
+};
+
+/** Restores entries the caller removed themselves; owner hides stay hidden. */
+export const restoreEntriesRoute = {
+  method: 'POST',
+  path: '/api/me/translations/restore',
+  cache: NO_STORE,
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireUser(deps, input);
+    await limit(deps, 'restore', user.id);
+    return restoreEntries(deps, user, (/** @type {any} */ (input.body))?.items);
   },
 };
 
