@@ -165,3 +165,19 @@ test('the 21st person added in an hour is 429', async () => {
   assert.equal(last.status, 429);
   assert.deepEqual(JSON.parse(last.text), { error: 'rate_limited' });
 });
+
+test('an add on Vercel purges home, search and the new item', async () => {
+  const cookies = await sidFor({ via: 'x', subject: '77', handle: 'purger' });
+  const calls = /** @type {string[][]} */ ([]);
+  const env = { ...ENV, VERCEL: '1' };
+  const api = apiFor({ ...deps, env, invalidateByTag: async (tags) => calls.push(tags), log: () => {} }, { env });
+  const res = await api.call('POST', '/api/add', { cookies, body: { url: `https://x.com/i/status/${IDS.POST}` } });
+  assert.equal(res.status, 200, res.text);
+  const itemId = JSON.parse(res.text).itemId;
+  assert.ok(itemId, 'the result carries the item id');
+  await api.settle();
+  const purged = calls.flat();
+  for (const expected of ['home', 'search', `item:${itemId}`]) {
+    assert.ok(purged.includes(expected), `${expected} in ${purged.join(',')}`);
+  }
+});

@@ -94,7 +94,7 @@ export async function itemPage(deps, kindName, sourceId, viewer = null) {
  * one whose kind has no `refresh`; `Conflict('edit_window_closed')` once
  * every post is finalized.
  * @param {ItemDeps} deps @param {string} kindName @param {string} sourceId
- * @returns {Promise<{ updated: number, editOpenUntil: string|null, throttled?: true } | null>}
+ * @returns {Promise<{ itemId: number, updated: number, editOpenUntil: string|null, throttled?: true } | null>}
  */
 export async function refreshItem(deps, kindName, sourceId) {
   const target = await visibleItem(deps, kindName, sourceId);
@@ -102,8 +102,8 @@ export async function refreshItem(deps, kindName, sourceId) {
   const open = await unfinalizedSources(deps.db, target.id);
   if (open.length === 0) throw new Conflict('edit_window_closed');
   const result = await guardedRefresh(deps, target);
-  if (!result) return { updated: 0, editOpenUntil: latestUntil(open), throttled: true };
-  return { updated: result.updated, editOpenUntil: result.editableUntil };
+  if (!result) return { itemId: target.id, updated: 0, editOpenUntil: latestUntil(open), throttled: true };
+  return { itemId: target.id, updated: result.updated, editOpenUntil: result.editableUntil };
 }
 
 /**

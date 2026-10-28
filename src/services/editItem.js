@@ -15,6 +15,7 @@ import { findLookup, ensureLookup } from '../repo/lookups.js';
 import { findVisibleItemId } from '../repo/cards.js';
 import { eventExists } from '../repo/events.js';
 import { validateFixes } from '../domain/lineFixes.js';
+import { purgeItem } from './cache.js';
 
 /** @typedef {import('../db/common.js').Db} Db */
 /** @typedef {import('./session.js').SessionUser} SessionUser */
@@ -192,6 +193,7 @@ export async function editItem(deps, { kind: kindName, sourceId, changes, actor,
     return rows[0].id;
   }, { actor: actor.id });
 
+  await purgeItem(/** @type {any} */ (deps), id);
   return { editId: /** @type {number} */ (editId) };
 }
 

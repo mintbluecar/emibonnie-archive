@@ -101,7 +101,7 @@ export const deleteAccountRoute = {
     await limit(deps, 'deleteAccount', user.id);
     const confirm = /** @type {any} */ (input.body)?.confirm;
     if (confirm !== 'delete') throw new BadRequest('confirm must be "delete"');
-    const clear = await deleteAccount({ db: deps.db }, user.id);
+    const clear = await deleteAccount(deps, user.id);
     return jsonWithCookies({ ok: true }, [clear]);
   },
 };
