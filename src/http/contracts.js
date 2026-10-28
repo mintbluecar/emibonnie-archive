@@ -55,6 +55,16 @@
  *   kind has (added by src/services/cards.js): the date it happened on
  *   and its placement.
  *
+ * @typedef {{ translations: number, events: number, sharedStories: number }} TranslatorTotals
+ *   A translator's welcome totals: visible credited entries, the distinct
+ *   events they cover, and how many are shared stories.
+ *
+ * @typedef {AddedPreview & { removedByYou: boolean, hidden: boolean }} TranslatorPreview
+ *   One of a translator's credited entries: `removedByYou` is restorable by
+ *   them; `hidden` covers every other removal (owner hide, block, spam).
+ *
+ * @typedef {{ items: TranslatorPreview[], hasMore: boolean, totals: TranslatorTotals }} TranslatorList
+ *
  * @typedef {Preview & { reviewState: import('../domain/constants.js').ReviewState }} AddedPreview
  *   One of the signed-in submitter's own items (Task 12's "added by me"):
  *   every review state is listed, so the page can label a held or rejected

@@ -13,6 +13,7 @@ import { limit } from '../services/limits.js';
 import { cleanDisplayName } from '../domain/displayName.js';
 import { deleteAccount } from '../services/deleteAccount.js';
 import { addedPreviews } from '../services/added.js';
+import { translatorList, markWelcomed } from '../services/translator.js';
 import { HUB_OFFSET_MAX, integer } from '../services/params.js';
 
 /** @param {import('../services/session.js').SessionUser|null} user */
@@ -25,6 +26,7 @@ function meUser(user) {
     isOwner: user.isOwner,
     isTranslator: isTranslator(user),
     needsName: needsDisplayName(user),
+    showTranslatorWelcome: isTranslator(user) && !user.welcomedTranslator,
   };
 }
 
@@ -52,6 +54,33 @@ export const addedRoute = {
     const user = await requireUser(deps, input);
     const offset = integer('offset', input.query.offset, HUB_OFFSET_MAX, 0);
     return addedPreviews(deps, user.id, { offset });
+  },
+};
+
+/** The translator's own entries, every review state, removed ones flagged. */
+export const translationsRoute = {
+  method: 'GET',
+  path: '/api/me/translations',
+  cache: PRIVATE_NO_STORE,
+  query: ['offset'],
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireUser(deps, input);
+    const offset = integer('offset', input.query.offset, HUB_OFFSET_MAX, 0);
+    return translatorList(deps, user, { offset });
+  },
+};
+
+/** Marks the one-time translator welcome as shown. Idempotent. */
+export const welcomedRoute = {
+  method: 'POST',
+  path: '/api/me/welcomed',
+  cache: NO_STORE,
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireUser(deps, input);
+    if (isTranslator(user)) await markWelcomed(deps, user.id);
+    return { ok: true };
   },
 };
 

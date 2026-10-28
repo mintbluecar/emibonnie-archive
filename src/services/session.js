@@ -23,7 +23,8 @@ const COOKIE_NAME = 'sid';
 
 /**
  * @typedef {{ id: string, via: 'x'|'google', xUserId: string|null, handle: string|null,
- *   displayName: string|null, isOwner: boolean, isBlocked: boolean, translatorAccountIds: number[] }} SessionUser
+ *   displayName: string|null, isOwner: boolean, isBlocked: boolean, translatorAccountIds: number[],
+ *   welcomedTranslator: boolean }} SessionUser
  */
 
 /** @param {string} userId */
@@ -80,6 +81,16 @@ export async function signInUser(deps, { via, subject, handle }) {
 /** @param {unknown} value @returns {string|null} */
 const str = (value) => (value == null ? null : String(value));
 
+/** @param {any} row @returns {string|null} */
+function xHandleOf(row) {
+  return str(row?.meta?.handle);
+}
+
+/** @param {any} row @returns {boolean} */
+function welcomedOf(row) {
+  return row?.meta?.translatorWelcomedAt != null;
+}
+
 /**
  * @param {string} userId
  * @param {any} row
@@ -95,8 +106,9 @@ function toSessionUser(userId, row, translatorAccountIds) {
   return {
     id: userId, via: isX ? 'x' : 'google',
     xUserId: isX ? parsed.subject : null,
-    handle: isX ? str(row?.meta?.handle) : null,
+    handle: isX ? xHandleOf(row) : null,
     displayName, isOwner, isBlocked, translatorAccountIds,
+    welcomedTranslator: welcomedOf(row),
   };
 }
 
