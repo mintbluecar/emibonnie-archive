@@ -1,22 +1,23 @@
 // @ts-check
 import { NOT_FOUND_CACHE, PUBLIC_CACHE } from '../http/handler.js';
+import { withCacheTags } from '../http/cacheTags.js';
 import { eventMetaPage, itemMetaPage } from '../services/meta.js';
 
 /**
  * The page, cached as briefly as a 404 when it carries the generic meta
  * of a hidden or missing target (so a newly visible one gets its preview
  * within a minute); the handler keeps that shorter cache for a GET.
- * @param {{ html: string, found: boolean }} page
+ * @param {{ html: string, found: boolean, tags: string[] }} page
  */
-const htmlResponse = ({ html, found }) => new Response(html, {
+const htmlResponse = ({ html, found, tags }) => withCacheTags(new Response(html, {
   headers: { 'content-type': 'text/html; charset=utf-8', ...(found ? {} : { 'cache-control': NOT_FOUND_CACHE }) },
-});
+}), found ? tags ?? [] : []);
 
 /**
  * One link-preview meta route on a page path. Shared links carry
  * tracking params (`?s=20`), so any query is accepted and ignored.
  * @param {string} path
- * @param {(input: import('../http/handler.js').RouteInput, deps: any) => Promise<{ html: string, found: boolean }>} render
+ * @param {(input: import('../http/handler.js').RouteInput, deps: any) => Promise<{ html: string, found: boolean, tags: string[] }>} render
  */
 const metaRoute = (path, render) => ({
   method: 'GET',
@@ -30,7 +31,7 @@ const metaRoute = (path, render) => ({
 /**
  * The renderer each `src/pages.js` `meta` name stands for. `event` reads
  * the page path's `:slug`.
- * @type {Record<string, (input: import('../http/handler.js').RouteInput, deps: any) => Promise<{ html: string, found: boolean }>>}
+ * @type {Record<string, (input: import('../http/handler.js').RouteInput, deps: any) => Promise<{ html: string, found: boolean, tags: string[] }>>}
  */
 const PAGE_META = {
   event: ({ params, origin }, deps) => eventMetaPage(deps, { slug: params.slug, origin }),

@@ -1,5 +1,7 @@
 // @ts-check
-import { PUBLIC_CACHE } from '../http/handler.js';
+import { PUBLIC_CACHE, jsonWithCache } from '../http/handler.js';
+import { withCacheTags } from '../http/cacheTags.js';
+import { accountTag } from '../domain/cacheTags.js';
 import { NotFound } from '../http/errors.js';
 import { accountView } from '../services/hubs.js';
 
@@ -18,6 +20,6 @@ export const route = {
   run: async ({ params, query }, deps) => {
     const view = await accountView(deps, params.handle, query);
     if (!view) throw new NotFound();
-    return view;
+    return withCacheTags(jsonWithCache(view, PUBLIC_CACHE), [accountTag(view.account.handle)]);
   },
 };

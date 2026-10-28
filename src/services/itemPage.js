@@ -16,6 +16,7 @@ import { touchRefresh, unfinalizedSources } from '../repo/sourceEdits.js';
 import { Conflict } from '../domain/errors.js';
 import { kindsOf } from './cards.js';
 import { itemView } from './itemView.js';
+import { accountTag, eventTag, itemTag, personTag } from '../domain/cacheTags.js';
 
 /** @typedef {import('./cards.js').ViewDeps & { fetchImpl: typeof fetch, now?: () => Date }} ItemDeps */
 /** @typedef {import('../http/contracts.js').ItemView} ItemView */
@@ -33,6 +34,20 @@ async function visibleItem(deps, kindName, sourceId) {
   const kind = Object.hasOwn(kindsOf(deps), kindName) ? kindsOf(deps)[kindName] : undefined;
   const id = kind ? await findVisibleItemId(deps.db, { kind: kind.name, platform: kind.platform, externalId: sourceId }) : null;
   return kind && id !== null ? { kind, id } : null;
+}
+
+/**
+ * The public page's cache tags: the entry, its event, its people and its
+ * translator. A signed-in view is private and never tagged.
+ * @param {number} id @param {ItemView} view @returns {string[]}
+ */
+function tagsOfView(id, view) {
+  return [
+    itemTag(id),
+    ...(view.event ? [eventTag(view.event.slug)] : []),
+    ...view.people.map((person) => personTag(person.id)),
+    ...(view.credits?.account?.handle ? [accountTag(view.credits.account.handle)] : []),
+  ];
 }
 
 /** @param {{ editableUntil: Date|string|null }[]} open @returns {string|null} */
@@ -60,17 +75,18 @@ async function guardedRefresh(deps, { kind, id }) {
  * window is finalized at intake, so it never schedules one.
  * @param {ItemDeps} deps @param {string} kindName @param {string} sourceId
  * @param {import('./session.js').SessionUser|null} [viewer]
- * @returns {Promise<{ view: ItemView & { editOpenUntil: string|null, canEdit: boolean, canCheckFollowUps: boolean }, refresh: (() => Promise<unknown>)|null } | null>}
+ * @returns {Promise<{ view: ItemView & { editOpenUntil: string|null, canEdit: boolean, canCheckFollowUps: boolean }, refresh: (() => Promise<unknown>)|null, tags: string[] } | null>}
  */
 export async function itemPage(deps, kindName, sourceId, viewer = null) {
   const target = await visibleItem(deps, kindName, sourceId);
   const view = target ? await itemView(deps, kindName, sourceId, viewer) : null;
   if (!target || !view) return null;
-  if (!target.kind.refresh) return { view: { ...view, editOpenUntil: null }, refresh: null };
+  const tags = tagsOfView(target.id, view);
+  if (!target.kind.refresh) return { view: { ...view, editOpenUntil: null }, refresh: null, tags };
   const open = await unfinalizedSources(deps.db, target.id);
   const now = (deps.now?.() ?? new Date()).getTime();
   const elapsed = open.some((s) => s.editableUntil !== null && new Date(s.editableUntil).getTime() < now);
-  return { view: { ...view, editOpenUntil: latestUntil(open) }, refresh: elapsed ? () => guardedRefresh(deps, target) : null };
+  return { view: { ...view, editOpenUntil: latestUntil(open) }, refresh: elapsed ? () => guardedRefresh(deps, target) : null, tags };
 }
 
 /**

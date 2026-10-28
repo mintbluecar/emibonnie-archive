@@ -1,5 +1,6 @@
 // @ts-check
 import { PUBLIC_CACHE, PRIVATE_NO_STORE, jsonWithCache } from '../http/handler.js';
+import { withCacheTags } from '../http/cacheTags.js';
 import { NotFound } from '../http/errors.js';
 import { itemPage } from '../services/itemPage.js';
 import { currentUser } from '../services/session.js';
@@ -22,6 +23,8 @@ export const route = {
     const page = await itemPage(deps, input.params.kind, input.params.sourceId, viewer);
     if (!page) throw new NotFound();
     if (page.refresh) deps.defer(page.refresh);
-    return jsonWithCache(page.view, viewer ? PRIVATE_NO_STORE : PUBLIC_CACHE);
+    // A signed-in view carries per-user buttons: private, and never tagged.
+    if (viewer) return jsonWithCache(page.view, PRIVATE_NO_STORE);
+    return withCacheTags(jsonWithCache(page.view, PUBLIC_CACHE), page.tags);
   },
 };

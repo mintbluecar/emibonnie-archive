@@ -62,14 +62,14 @@ test('every route is { method, path, cache, run }, with a unique method+path', (
 });
 
 test('event returns sections[0].kind', async () => {
-  const view = await eventRoute.run(input({ slug: SLUG }), routeDeps());
+  const view = await bodyOf(await eventRoute.run(input({ slug: SLUG }), routeDeps()));
   assert.equal(view.sections[0].kind, 'translation');
   await assert.rejects(eventRoute.run(input({ slug: 'no-such-event' }), routeDeps()), NotFound);
 });
 
 test('event: ?order=desc reverses the section; an unknown order is a BadRequest', async () => {
-  const asc = await eventRoute.run(input({ slug: SLUG }, { order: 'asc' }), routeDeps());
-  const desc = await eventRoute.run(input({ slug: SLUG }, { order: 'desc' }), routeDeps());
+  const asc = await bodyOf(await eventRoute.run(input({ slug: SLUG }, { order: 'asc' }), routeDeps()));
+  const desc = await bodyOf(await eventRoute.run(input({ slug: SLUG }, { order: 'desc' }), routeDeps()));
   assert.deepEqual(desc.sections[0].items.map((/** @type {any} */ i) => i.sourceId).reverse(), asc.sections[0].items.map((/** @type {any} */ i) => i.sourceId));
   await assert.rejects(eventRoute.run(input({ slug: SLUG }, { order: 'bogus' }), routeDeps()), { name: 'BadRequest' });
 });
@@ -141,9 +141,9 @@ test('filters lists only visible accounts', async () => {
 });
 
 test('search passes list params through as lists', async () => {
-  const all = await searchRoute.run(input({}, {}), routeDeps());
+  const all = await bodyOf(await searchRoute.run(input({}, {}), routeDeps()));
   assert.ok(all.count > 0);
-  const some = await searchRoute.run(input({}, { kinds: ['translation'], q: 'everyone', limit: '2' }), routeDeps());
+  const some = await bodyOf(await searchRoute.run(input({}, { kinds: ['translation'], q: 'everyone', limit: '2' }), routeDeps()));
   assert.equal(some.results.length, 2);
 });
 
