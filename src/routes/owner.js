@@ -8,7 +8,7 @@
 import { NO_STORE, PRIVATE_NO_STORE } from '../http/handler.js';
 import { requireOwner } from '../services/session.js';
 import { limit } from '../services/limits.js';
-import { ownerView, setApproval, reviewItem } from '../services/owner.js';
+import { ownerView, setApproval, reviewItem, hideReportTarget, restoreReportTarget, dismissReport } from '../services/owner.js';
 
 export const ownerRoute = {
   method: 'GET',
@@ -45,5 +45,45 @@ export const reviewRoute = {
     await limit(deps, 'owner', user.id);
     const body = /** @type {any} */ (input.body);
     return reviewItem(deps, { kind: input.params.kind, sourceId: input.params.sourceId, state: body?.state, actor: user });
+  },
+};
+
+/**
+ * The three report actions: hide what a report names (the report stays
+ * open so its row can offer restore), undo that hide, or just close.
+ */
+export const hideReportRoute = {
+  method: 'POST',
+  path: '/api/owner/reports/:id/hide',
+  cache: NO_STORE,
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireOwner(deps, input);
+    await limit(deps, 'owner', user.id);
+    return hideReportTarget(deps, { reportId: Number(input.params.id), actor: user });
+  },
+};
+
+export const restoreReportRoute = {
+  method: 'POST',
+  path: '/api/owner/reports/:id/restore',
+  cache: NO_STORE,
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireOwner(deps, input);
+    await limit(deps, 'owner', user.id);
+    return restoreReportTarget(deps, { reportId: Number(input.params.id), actor: user });
+  },
+};
+
+export const dismissReportRoute = {
+  method: 'POST',
+  path: '/api/owner/reports/:id/dismiss',
+  cache: NO_STORE,
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireOwner(deps, input);
+    await limit(deps, 'owner', user.id);
+    return dismissReport(deps, { reportId: Number(input.params.id), actor: user });
   },
 };

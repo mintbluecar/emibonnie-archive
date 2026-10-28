@@ -104,3 +104,40 @@ test('the owner write limit is 300 an hour', async () => {
   await assert.rejects(limit(quiet, 'owner', 'x:limit-test'), RateLimited);
   assert.equal(LIMITS.owner.limit, 300);
 });
+
+// --- Task 9: the reports queue ---------------------------------------------
+
+/** @param {string} reason @returns {Promise<number>} the report id */
+async function reportItem(reason) {
+  const res = await api.call('POST', '/api/reports', {
+    body: { target: { type: 'item', kind: 'translation', sourceId: IDS.EVENT_A }, reason },
+    headers: { 'x-forwarded-for': `203.0.113.${200 + reason.length}` },
+  });
+  assert.equal(res.status, 200, res.text);
+  return JSON.parse(res.text).id;
+}
+
+test('the owner sees open reports and can hide, restore and dismiss through the API', async () => {
+  const id = await reportItem('owner queue route check');
+  const queue = JSON.parse((await get('/api/owner', owner)).text);
+  assert.ok(queue.reports.some((report) => report.id === id && report.reason === 'owner queue route check'));
+
+  assert.equal((await post(`/api/owner/reports/${id}/hide`, owner)).status, 200);
+  assert.equal((await api.call('GET', `/api/item/translation/${IDS.EVENT_A}`)).status, 404);
+  const hidden = JSON.parse((await get('/api/owner', owner)).text).reports.find((report) => report.id === id);
+  assert.equal(hidden.target.hidden, true);
+
+  assert.equal((await post(`/api/owner/reports/${id}/restore`, owner)).status, 200);
+  assert.equal((await api.call('GET', `/api/item/translation/${IDS.EVENT_A}`)).status, 200);
+
+  assert.equal((await post(`/api/owner/reports/${id}/dismiss`, owner)).status, 200);
+  assert.ok(!JSON.parse((await get('/api/owner', owner)).text).reports.some((report) => report.id === id));
+});
+
+test('a member cannot hide, restore or dismiss; an unknown report is 404', async () => {
+  const id = await reportItem('member may not act');
+  for (const action of ['hide', 'restore', 'dismiss']) {
+    assert.equal((await post(`/api/owner/reports/${id}/${action}`, member)).status, 403);
+  }
+  assert.equal((await post('/api/owner/reports/999999/dismiss', owner)).status, 404);
+});
