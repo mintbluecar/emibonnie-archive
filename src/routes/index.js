@@ -28,6 +28,7 @@ import { optionsRoute, previewRoute, addRoute, addPersonRoute } from './add.js';
 import { editRoute, applyRoute, revertRoute, followUpsRoute } from './edit.js';
 import { metaRoutes } from './meta.js';
 import { route as reportsRoute } from './reports.js';
+import { ownerRoute, approvalRoute, reviewRoute } from './owner.js';
 // scaffold:route-imports (`npm run new route <name>` adds its import above this line)
 
 /** @type {import('../http/handler.js').Route[]} */
@@ -40,6 +41,7 @@ export const routes = [
   optionsRoute, previewRoute, addRoute, addPersonRoute,
   editRoute, applyRoute, revertRoute, followUpsRoute,
   reportsRoute,
+  ownerRoute, approvalRoute, reviewRoute,
   // scaffold:routes (`npm run new route <name>` adds its route above this line)
   ...metaRoutes(pages, Object.values(kindsRegistry)),
 ];

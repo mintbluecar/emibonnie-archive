@@ -103,6 +103,8 @@ async function representativeCalls() {
   calls.push(['GET', '/api/add/options'], ['POST', '/api/add/preview'], ['POST', '/api/add'], ['POST', '/api/people']);
   // The public report form: no session, writes only a report.
   calls.push(['POST', '/api/reports']);
+  // The owner section: 401 without a session.
+  calls.push(['GET', '/api/owner'], ['POST', '/api/owner/approval'], ['POST', '/api/owner/items/translation/1/review']);
   // Editing and follow-ups: all signed-in, a bare probe is 401 (no session).
   calls.push(['GET', '/api/item/translation/1/edit'], ['POST', '/api/item/translation/1/edit'], ['POST', '/api/item/translation/1/edits/1/revert'], ['POST', '/api/item/translation/1/follow-ups']);
   return calls;

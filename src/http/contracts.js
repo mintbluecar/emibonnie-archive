@@ -55,6 +55,18 @@
  *   kind has (added by src/services/cards.js): the date it happened on
  *   and its placement.
  *
+ * @typedef {{ id: string, handle: string|null, displayName: string|null, blocked: boolean,
+ *   isTranslator: boolean, addedCount: number }} OwnerUser
+ *   One row of the owner's user search.
+ *
+ * @typedef {{ id: number, at: string, reason: string, reporter: AddedByVM|null,
+ *   status: 'open'|'resolved'|'dismissed',
+ *   target: { type: 'item'|'event', url: string, label: string, hidden: boolean } }} ReportVM
+ *   One report in the owner's queue, with a link back to what it names.
+ *
+ * @typedef {{ approvalRequired: boolean, signInFailedAt: string|null,
+ *   waiting: AddedPreview[], reports: ReportVM[] }} OwnerView
+ *
  * @typedef {{ type: 'item', kind: string, sourceId: string } | { type: 'event', slug: string }} ReportTarget
  *   What a public report names: a visible item (by kind and source id) or a
  *   visible event (by slug).

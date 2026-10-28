@@ -166,6 +166,19 @@ export async function requireUser(deps, input, { allowBlocked = false } = {}) {
 }
 
 /**
+ * The owner, or throws: `Unauthorized` when signed out, `Forbidden('forbidden')`
+ * for anyone who isn't the owner.
+ * @param {SessionDeps} deps
+ * @param {RouteInput} input
+ * @returns {Promise<SessionUser>}
+ */
+export async function requireOwner(deps, input) {
+  const user = await requireUser(deps, input);
+  if (!user.isOwner) throw new Forbidden('forbidden');
+  return user;
+}
+
+/**
  * Sign the request out: delete the session and return the cookie that
  * clears it. Safe to call when there is no active session.
  * @param {SessionDeps} deps
