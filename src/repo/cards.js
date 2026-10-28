@@ -89,6 +89,22 @@ export async function loadOwnCards(db, itemIds) {
 }
 
 /**
+ * Cards for the caller's own listings, **including soft-deleted items**
+ * (Plan 2b): a translator's "my translations" keeps a removed entry
+ * listed, faded, with a restore control, so it still needs its preview.
+ * The event must still exist; an `erased` item is filtered out by the
+ * listing that asks for ids, not here.
+ * @param {Tx} db
+ * @param {number[]} itemIds
+ * @returns {Promise<Map<number, Card>>}
+ */
+export async function loadCardsAny(db, itemIds) {
+  if (itemIds.length === 0) return new Map();
+  const { rows } = await db.query(`${CARDS_SELECT} and ${EVENT_NOT_DELETED}`, [itemIds]);
+  return new Map(rows.map((row) => [row.id, toCard(row)]));
+}
+
+/**
  * The visible item of `kind` whose primary source is `externalId` (or
  * was, before an edit: any version id resolves through `source_aliases`).
  * @param {Tx} db

@@ -10,7 +10,7 @@ import { camelRow } from './rows.js';
 import { visibleItem } from './visibility.js';
 import { BadRequest } from '../domain/errors.js';
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[], rowCount?: number }> }} Tx */
 /**
  * @typedef {object} ItemRow
  * @property {string} kind
