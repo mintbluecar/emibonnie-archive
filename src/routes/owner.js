@@ -9,6 +9,7 @@ import { NO_STORE, PRIVATE_NO_STORE } from '../http/handler.js';
 import { requireOwner } from '../services/session.js';
 import { limit } from '../services/limits.js';
 import { ownerView, setApproval, reviewItem, hideReportTarget, restoreReportTarget, dismissReport } from '../services/owner.js';
+import { searchUsers, setBlocked, clearSignInAlert } from '../services/ownerUsers.js';
 
 export const ownerRoute = {
   method: 'GET',
@@ -85,5 +86,57 @@ export const dismissReportRoute = {
     const user = await requireOwner(deps, input);
     await limit(deps, 'owner', user.id);
     return dismissReport(deps, { reportId: Number(input.params.id), actor: user });
+  },
+};
+
+/** Users search, by handle or chosen name; two characters minimum. */
+export const usersRoute = {
+  method: 'GET',
+  path: '/api/owner/users',
+  cache: PRIVATE_NO_STORE,
+  query: ['q'],
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    await requireOwner(deps, input);
+    return { users: await searchUsers(deps, input.query.q) };
+  },
+};
+
+/** `{ userId }`: hides that submitter's live items and stops them writing. */
+export const blockUserRoute = {
+  method: 'POST',
+  path: '/api/owner/users/block',
+  cache: NO_STORE,
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireOwner(deps, input);
+    await limit(deps, 'owner', user.id);
+    return setBlocked(deps, { userId: String(/** @type {any} */ (input.body)?.userId ?? ''), blocked: true, actor: user });
+  },
+};
+
+/** `{ userId }`: restores only what the block hid. */
+export const unblockUserRoute = {
+  method: 'POST',
+  path: '/api/owner/users/unblock',
+  cache: NO_STORE,
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireOwner(deps, input);
+    await limit(deps, 'owner', user.id);
+    return setBlocked(deps, { userId: String(/** @type {any} */ (input.body)?.userId ?? ''), blocked: false, actor: user });
+  },
+};
+
+/** Clears the "an X sign-in failed" note. */
+export const signInAlertRoute = {
+  method: 'POST',
+  path: '/api/owner/sign-in-alert/dismiss',
+  cache: NO_STORE,
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireOwner(deps, input);
+    await limit(deps, 'owner', user.id);
+    return clearSignInAlert(deps, user.id);
   },
 };

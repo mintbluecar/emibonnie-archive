@@ -141,3 +141,35 @@ test('a member cannot hide, restore or dismiss; an unknown report is 404', async
   }
   assert.equal((await post('/api/owner/reports/999999/dismiss', owner)).status, 404);
 });
+
+// --- Task 10: users, blocking and the sign-in alert ------------------------
+
+test('the owner searches users, blocks and unblocks one, and clears the alert', async () => {
+  await post('/api/owner/approval', owner, { required: false });
+  const fan = await sidFor({ via: 'x', subject: '8888009', handle: 'blockable_fan' });
+  await post('/api/add', fan, { url: `https://x.com/i/status/${IDS.EVENT_B}` });
+  await api.settle();
+
+  const found = JSON.parse((await api.call('GET', '/api/owner/users?q=blockable_fan', { cookies: { sid: owner } })).text);
+  assert.ok(found.users.some((user) => user.handle === 'blockable_fan'));
+
+  const blocked = await post('/api/owner/users/block', owner, { userId: 'x:8888009' });
+  assert.equal(blocked.status, 200, blocked.text);
+  assert.equal((await api.call('GET', `/api/item/translation/${IDS.EVENT_B}`)).status, 404, 'their submission is hidden');
+  assert.equal((await api.call('GET', '/api/me', { cookies: { sid: fan } })).status, 200);
+  assert.equal((await post('/api/add', fan, { url: `https://x.com/i/status/${IDS.EVENT_B}` })).status, 403);
+
+  assert.equal((await post('/api/owner/users/unblock', owner, { userId: 'x:8888009' })).status, 200);
+  assert.equal((await api.call('GET', `/api/item/translation/${IDS.EVENT_B}`)).status, 200);
+
+  await deps.db.transaction((tx) => tx.query("insert into settings (key, value) values ('xSignInFailedAt', '\"2026-10-28T00:00:00Z\"'::jsonb) on conflict (key) do update set value = excluded.value"), { actor: 'system' });
+  assert.ok(JSON.parse((await get('/api/owner', owner)).text).signInFailedAt);
+  assert.equal((await post('/api/owner/sign-in-alert/dismiss', owner)).status, 200);
+  assert.equal(JSON.parse((await get('/api/owner', owner)).text).signInFailedAt, null);
+});
+
+test('a member cannot search users or block anyone', async () => {
+  assert.equal((await get('/api/owner/users?q=blockable', member)).status, 403);
+  assert.equal((await post('/api/owner/users/block', member, { userId: 'x:8888009' })).status, 403);
+  assert.equal((await post('/api/owner/sign-in-alert/dismiss', member)).status, 403);
+});
