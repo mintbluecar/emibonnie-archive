@@ -1,0 +1,97 @@
+/*
+ * public/js/components/reportForm.js (Plan 2b): the public report dialog
+ * on the item and event pages. Plain fields on the card background, the
+ * same shape as the me page's delete dialog.
+ */
+
+.c-report {
+  width: min(92vw, 420px);
+  border: 0;
+  border-radius: var(--radius-card);
+  padding: 16px;
+  background: var(--color-card);
+  color: var(--color-ink);
+}
+
+.c-report::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.c-report__title {
+  margin: 0 0 10px;
+  font-size: var(--text-16);
+  font-weight: 800;
+}
+
+.c-report__label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--text-12);
+  font-weight: 800;
+}
+
+.c-report__reason {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-card-shadow);
+  border-radius: 10px;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--text-14);
+  resize: vertical;
+}
+
+.c-report__status {
+  min-height: 1em;
+  margin: 8px 0 0;
+  font-size: var(--text-12);
+  color: var(--color-ink-muted);
+}
+
+.c-report__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.c-report__cancel,
+.c-report__submit {
+  padding: 7px 12px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: var(--text-12);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.c-report__cancel {
+  border: 1px solid var(--color-card-shadow);
+  background: transparent;
+  color: var(--color-ink);
+}
+
+.c-report__submit {
+  border: 0;
+  background: var(--color-label);
+  color: var(--color-accent-text);
+}
+
+.c-report__submit:disabled {
+  opacity: 0.6;
+}
+
+/* The trigger is a button now (it opens a dialog), styled as the footer
+ * and event links it replaces. */
+.c-item__footer-link[data-action="report"],
+.c-event__report[data-action="report"] {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}

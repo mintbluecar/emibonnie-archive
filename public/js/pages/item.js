@@ -21,6 +21,7 @@ import * as refreshButton from '../components/refreshButton.js';
 import * as sourceEmbed from '../components/sourceEmbed.js';
 import { KIND_UI } from '../kinds/_registry.js';
 import { footerBlock } from './itemFooter.js';
+import * as reportForm from '../components/reportForm.js';
 import { mountLoadError } from './pageError.js';
 
 const APP_SELECTOR = 'app';
@@ -149,6 +150,7 @@ export function bind(root, data) {
   bindCopyLink(root, data.url);
   bindFollowUps(root, target);
   sourceEmbed.bind(root);
+  reportForm.bind(root, { type: 'item', kind: data.kind, sourceId: data.sourceId });
 }
 
 /**

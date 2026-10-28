@@ -292,5 +292,13 @@
   "event.keywordLabel.one": "keyword:",
   "event.keywordLabel.other": "keywords:",
   "event.hashtagLabel.one": "hashtag:",
-  "event.hashtagLabel.other": "hashtags:"
+  "event.hashtagLabel.other": "hashtags:",
+  "report.title": "report this",
+  "report.reason": "what's wrong?",
+  "report.submit": "send report",
+  "report.cancel": "cancel",
+  "report.done": "thanks — the owner will look at it",
+  "report.failed": "couldn't send that — try again",
+  "report.tooLong": "keep it under 2,000 characters",
+  "report.close": "close"
 }
