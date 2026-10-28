@@ -125,7 +125,7 @@ export async function checkPage(page, path, { status = 200 } = {}) {
  * (src/routes/authDev.js) only exists when the dev server runs with
  * `DEV_SIGN_IN=1` (this file's `devServer`); it is a 404 in production.
  * @param {import('@playwright/test').Page} page
- * @param {'owner'|'member'|'google'} as
+ * @param {'owner'|'member'|'google'|'translator'} as
  * @returns {Promise<void>}
  */
 export async function signInAs(page, as) {

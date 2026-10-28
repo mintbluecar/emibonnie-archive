@@ -158,3 +158,22 @@ test('a Google user with no X account cannot opt out', async () => {
   assert.equal(res.status, 403);
   assert.deepEqual(JSON.parse(res.text), { error: 'not_a_translator' });
 });
+
+// --- Task 11: the dev translator sign-in for e2e ---------------------------
+
+test('dev sign-in as a translator returns the handle and a working session', async () => {
+  const dev = apiFor({ ...deps, env: { DEV_SIGN_IN: '1' } }, { env: { DEV_SIGN_IN: '1' } });
+  const res = await dev.call('POST', '/api/auth/dev', { body: { as: 'translator' } });
+  assert.equal(res.status, 200, res.text);
+  const body = JSON.parse(res.text);
+  assert.ok(body.handle, 'the signed-in translator handle');
+  const sid = res.setCookies.find((cookie) => cookie.startsWith('sid='))?.replace(/^sid=/, '').split(';')[0];
+  assert.ok(sid);
+  const me = JSON.parse((await dev.call('GET', '/api/me', { cookies: { sid } })).text);
+  assert.equal(me.user.isTranslator, true);
+});
+
+test('dev sign-in is a 404 when DEV_SIGN_IN is off', async () => {
+  const res = await api.call('POST', '/api/auth/dev', { body: { as: 'translator' } });
+  assert.equal(res.status, 404);
+});

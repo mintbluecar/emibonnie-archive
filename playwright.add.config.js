@@ -1,8 +1,9 @@
 // @ts-check
 /**
- * `npm run e2e:add` (and the second half of `npm run e2e`): the add and
- * edit flow's own browser run (`e2e/add.spec.js`), on **its own** freshly
- * wiped database (`.e2e-add-db`) and port.
+ * `npm run e2e:add` (and the second half of `npm run e2e`): the flow's own
+ * browser run (`e2e/add.spec.js`, plus Plan 2b's translator, report and
+ * owner specs), on **its own** freshly wiped database (`.e2e-add-db`) and
+ * port.
  *
  * It is separate from playwright.config.js because these tests write: they
  * archive fixtures, and the read-only specs pin counts and states that come
@@ -24,7 +25,7 @@ const PORT = Number(process.env.E2E_ADD_PORT ?? 4312);
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: 'add.spec.js',
+  testMatch: ['add.spec.js', 'me-translator.spec.js', 'report.spec.js', 'owner.spec.js'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0,
