@@ -9,6 +9,7 @@ import { seededDeps } from '../helpers/ingest.js';
 import { apiFor } from '../helpers/api.js';
 import { signInUser } from '../../src/services/session.js';
 
+
 /** @type {Awaited<ReturnType<typeof seededDeps>>} */
 let deps;
 /** @type {ReturnType<typeof apiFor>} */
@@ -124,4 +125,36 @@ test('remove wants a session, and the 31st remove in an hour is 429', async () =
     status = (await api.call('POST', '/api/me/translations/remove', { cookies: { sid }, body: { items: [] } })).status;
   }
   assert.equal(status, 429);
+});
+
+// --- Task 6: opt out / opt in ---------------------------------------------
+
+test('opting out hides the translator everywhere and refuses new intake; opting in restores', async () => {
+  const list = JSON.parse((await api.call('GET', '/api/me/translations', { cookies: { sid: translator.sid } })).text);
+  const entry = list.items.find((/** @type {any} */ item) => !item.removedByYou && !item.hidden);
+  assert.ok(entry, 'a live credited entry');
+
+  const out = await api.call('POST', '/api/me/translations/opt-out', { cookies: { sid: translator.sid } });
+  assert.equal(out.status, 200, out.text);
+  assert.equal(JSON.parse(out.text).optedOut, true);
+
+  assert.equal((await api.call('GET', `/api/item/${entry.kind}/${entry.sourceId}`)).status, 404);
+  const page = await api.call('GET', `/api/account/${translator.handle}`);
+  assert.deepEqual(JSON.parse(page.text), { account: { handle: translator.handle, optedOut: true } });
+
+  const me = JSON.parse((await api.call('GET', '/api/me', { cookies: { sid: translator.sid } })).text);
+  assert.equal(me.user.isOptedOut, true);
+
+  const back = await api.call('POST', '/api/me/translations/opt-in', { cookies: { sid: translator.sid } });
+  assert.equal(back.status, 200, back.text);
+  assert.equal(JSON.parse(back.text).optedOut, false);
+  assert.equal((await api.call('GET', `/api/item/${entry.kind}/${entry.sourceId}`)).status, 200);
+});
+
+test('a Google user with no X account cannot opt out', async () => {
+  const { cookie } = await signInUser(deps, { via: 'google', subject: 'g-optout', handle: null });
+  const sid = cookie.replace(/^sid=/, '').split(';')[0];
+  const res = await api.call('POST', '/api/me/translations/opt-out', { cookies: { sid } });
+  assert.equal(res.status, 403);
+  assert.deepEqual(JSON.parse(res.text), { error: 'not_a_translator' });
 });

@@ -210,3 +210,18 @@ export async function findAccountForView(db, platform, handle) {
     optedOut: row.opted_out, current: row.current,
   };
 }
+
+/**
+ * Whether every X account linked to the user has opted out (false when
+ * the user has none). The me page shows "opt back in" from this.
+ * @param {Tx} db
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+export async function xAccountsOptedOutOfUser(db, userId) {
+  const { rows } = await db.query(
+    "select count(*)::int as n, count(*) filter (where opted_out_at is not null)::int as out from accounts where platform = 'x' and user_id = $1 and deleted_at is null",
+    [userId],
+  );
+  return rows[0].n > 0 && rows[0].out === rows[0].n;
+}

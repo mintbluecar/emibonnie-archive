@@ -13,7 +13,7 @@ import { limit } from '../services/limits.js';
 import { cleanDisplayName } from '../domain/displayName.js';
 import { deleteAccount } from '../services/deleteAccount.js';
 import { addedPreviews } from '../services/added.js';
-import { translatorList, markWelcomed, removeEntries, restoreEntries } from '../services/translator.js';
+import { translatorList, markWelcomed, removeEntries, restoreEntries, setOptOut } from '../services/translator.js';
 import { HUB_OFFSET_MAX, integer } from '../services/params.js';
 
 /** @param {import('../services/session.js').SessionUser|null} user */
@@ -27,6 +27,7 @@ function meUser(user) {
     isTranslator: isTranslator(user),
     needsName: needsDisplayName(user),
     showTranslatorWelcome: isTranslator(user) && !user.welcomedTranslator,
+    isOptedOut: user.isOptedOut,
   };
 }
 
@@ -97,6 +98,37 @@ export const restoreEntriesRoute = {
     const user = await requireUser(deps, input);
     await limit(deps, 'restore', user.id);
     return restoreEntries(deps, user, (/** @type {any} */ (input.body))?.items);
+  },
+};
+
+/**
+ * Opts the caller's X accounts out of the archive (or back in): no
+ * soft delete, just `accounts.opted_out_at`, which every public query
+ * already respects.
+ */
+export const optOutRoute = {
+  method: 'POST',
+  path: '/api/me/translations/opt-out',
+  cache: NO_STORE,
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireUser(deps, input);
+    await limit(deps, 'optOut', user.id);
+    return setOptOut(deps, user, true);
+  },
+};
+
+/** Clears the opt-out; the account's entries become visible again. */
+export const optInRoute = {
+  method: 'POST',
+  path: '/api/me/translations/opt-in',
+  cache: NO_STORE,
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    const user = await requireUser(deps, input);
+    await limit(deps, 'optOut', user.id);
+    if (user.translatorAccountIds.length === 0) throw new BadRequest('not_a_translator');
+    return setOptOut(deps, user, false);
   },
 };
 

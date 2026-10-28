@@ -11,7 +11,7 @@ import {
 } from '../repo/itemState.js';
 import { getItem } from '../repo/items.js';
 import { kindsOf, presenterContext, previewsForAny } from './cards.js';
-import { purgeItem } from './cache.js';
+import { purgeAccount, purgeItem } from './cache.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
 /** @typedef {import('./session.js').SessionUser} SessionUser */
@@ -169,4 +169,33 @@ export async function restoreEntries(deps, user, entries) {
   }, { actor: user.id });
   for (const id of changed) await purgeItem(deps, id);
   return { restored: changed.length };
+}
+
+/**
+ * Opts every X account linked to the caller out (or back in). Nothing is
+ * soft-deleted: `accounts.opted_out_at` already hides the credited items
+ * everywhere, and clearing it restores exactly those. Returns how many
+ * entries the change affects, for the opt-out box's count.
+ * @param {ViewDeps & { env?: Record<string, string|undefined> }} deps
+ * @param {SessionUser} user
+ * @param {boolean} optedOut
+ * @returns {Promise<{ optedOut: boolean, entries: number }>}
+ */
+export async function setOptOut(deps, user, optedOut) {
+  const accounts = user.translatorAccountIds;
+  if (accounts.length === 0) throw new Forbidden('not_a_translator');
+  const { rows } = await deps.db.transaction(async (tx) => {
+    await tx.query(
+      'update accounts set opted_out_at = case when $2 then now() else null end where id = any($1::bigint[])',
+      [accounts, optedOut],
+    );
+    return tx.query(
+      `select count(*)::int as n from items
+       where credited_account_id = any($1::bigint[])
+         and (deleted_reason is null or deleted_reason <> 'erased')`,
+      [accounts],
+    );
+  }, { actor: user.id });
+  for (const accountId of accounts) await purgeAccount(deps, accountId);
+  return { optedOut, entries: rows[0].n };
 }

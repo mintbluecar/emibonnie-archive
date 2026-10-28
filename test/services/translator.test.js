@@ -10,7 +10,7 @@ import { seededDeps } from '../helpers/ingest.js';
 import { insertAccount, insertItem } from '../helpers/seed.js';
 import { translatorList, markWelcomed, TRANSLATOR_PAGE_SIZE } from '../../src/services/translator.js';
 import { translatorTotals } from '../../src/repo/itemState.js';
-import { linkXAccountToUser } from '../../src/repo/accounts.js';
+import { accountState, linkXAccountToUser } from '../../src/repo/accounts.js';
 
 /** @type {Awaited<ReturnType<typeof seededDeps>>} */
 let deps;
@@ -171,4 +171,41 @@ test('restoring an entry the owner hid is a Conflict', async () => {
     restoreEntries(purgingDeps(), user(), [{ kind: 'translation', sourceId: rows[0].external_id }]),
     { name: 'Conflict' },
   );
+});
+
+// --- Task 6: opt out / opt in ---------------------------------------------
+
+const { setOptOut } = await import('../../src/services/translator.js');
+const { findVisibleItemId } = await import('../../src/repo/cards.js');
+
+test('opting out hides every credited item; opting back in restores exactly those', async () => {
+  const itemId = await creditedItem(accountId);
+  const { rows } = await deps.db.query("select external_id from item_sources where item_id = $1 and role = 'primary'", [itemId]);
+  const calls = /** @type {string[][]} */ ([]);
+  const depsWithPurge = purgingDeps({ calls });
+
+  const out = await setOptOut(depsWithPurge, user(), true);
+  assert.equal(out.optedOut, true);
+  const { rows: acct } = await deps.db.query('select external_id, handle from accounts where id = $1', [accountId]);
+  assert.equal((await accountState(deps.db, { platform: 'x', externalId: acct[0].external_id, handle: acct[0].handle }))?.optedOut, true);
+  assert.ok(out.entries >= 1);
+  assert.equal(await findVisibleItemId(deps.db, { kind: 'translation', platform: 'x', externalId: rows[0].external_id }), null);
+  assert.ok(calls.flat().includes(`account:plan2b_tl`), calls.flat().join(','));
+
+  const back = await setOptOut(depsWithPurge, user(), false);
+  assert.equal(back.optedOut, false);
+  assert.notEqual(await findVisibleItemId(deps.db, { kind: 'translation', platform: 'x', externalId: rows[0].external_id }), null);
+});
+
+test('opting out leaves an owner-hidden entry hidden', async () => {
+  const hidden = await creditedItem(accountId, { deletedReason: 'hidden_by_owner' });
+  const { rows } = await deps.db.query("select external_id from item_sources where item_id = $1 and role = 'primary'", [hidden]);
+  await setOptOut(purgingDeps(), user(), true);
+  await setOptOut(purgingDeps(), user(), false);
+  assert.equal(await findVisibleItemId(deps.db, { kind: 'translation', platform: 'x', externalId: rows[0].external_id }), null);
+});
+
+test('a user with no linked X account cannot opt out', async () => {
+  const google = { ...user(), via: 'google', translatorAccountIds: [] };
+  await assert.rejects(setOptOut(purgingDeps(), /** @type {any} */ (google), true), { name: 'Forbidden' });
 });
