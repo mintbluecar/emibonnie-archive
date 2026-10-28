@@ -1,0 +1,268 @@
+/*
+ * public/js/pages/me.js and public/js/components/nameForm.js (Task 12):
+ * the page title, who is signed in with the two icon controls, the
+ * "added by me" list (compact preview cards with a small bar for the
+ * review state and the edit icon), the name form, and delete my account
+ * with its typed-confirmation dialog.
+ */
+
+.c-me__title {
+  font-size: var(--text-22);
+  font-weight: 800;
+  margin: 12px 4px 8px;
+}
+
+.c-me__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: var(--color-card);
+  border-radius: var(--radius-card);
+  box-shadow: 0 2px 0 var(--color-card-shadow);
+}
+
+.c-me__who {
+  margin: 0;
+  font-size: var(--text-14);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.c-me__controls {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+/* Every icon-only control (sign out, sign out everywhere, edit): a square
+   tap target with a tooltip and an aria-label, per the owner's rule. */
+.c-me__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  padding: 0;
+  color: var(--color-ink);
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: 12px;
+  text-decoration: none;
+}
+
+.c-me__heading {
+  font-size: var(--text-12);
+  font-weight: 800;
+  color: var(--color-label);
+  margin: 14px 4px 8px;
+}
+
+.c-me__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.c-me__entry {
+  margin-bottom: 10px;
+}
+
+.c-me__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: var(--tap-target);
+  padding: 2px 2px 0 4px;
+}
+
+.c-me__state {
+  font-size: var(--text-11);
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.c-me__state--pending {
+  color: var(--color-ink);
+  background: var(--color-highlight);
+}
+
+.c-me__state--rejected {
+  color: var(--color-label-on-tint);
+  background: var(--color-label-tint);
+}
+
+.c-me__empty {
+  font-size: var(--text-12);
+  color: var(--color-ink-muted);
+  margin: 4px 4px 12px;
+}
+
+.c-me__more,
+.c-me__delete,
+.c-me__cancel,
+.c-me__confirm {
+  min-height: var(--tap-target);
+  padding: 8px 14px;
+  font-size: var(--text-12);
+  font-weight: 800;
+  border-radius: 14px;
+}
+
+.c-me__more {
+  display: block;
+  width: 100%;
+  margin: 4px 0 12px;
+  color: var(--color-ink);
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+}
+
+.c-me__more:disabled {
+  color: var(--color-ink-muted);
+}
+
+.c-me__danger {
+  margin: 20px 0 8px;
+  padding-top: 14px;
+  border-top: 1.5px solid var(--color-card-shadow);
+}
+
+.c-me__delete {
+  width: 100%;
+  color: var(--color-label);
+  background: var(--color-card);
+  border: 1.5px solid var(--color-label);
+}
+
+.c-me__dialog {
+  width: min(100% - 24px, 380px);
+  padding: 18px;
+  color: var(--color-ink);
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: var(--radius-card);
+}
+
+.c-me__dialog::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.c-me__dialog-title {
+  font-size: var(--text-16);
+  margin: 0 0 8px;
+}
+
+.c-me__dialog-body {
+  font-size: var(--text-12);
+  color: var(--color-ink-muted);
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.c-me__dialog-label {
+  display: block;
+  font-size: var(--text-11);
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.c-me__delete-input {
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--color-ink);
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: 10px;
+}
+
+.c-me__dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.c-me__cancel {
+  color: var(--color-ink);
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+}
+
+.c-me__confirm {
+  color: var(--color-accent-text);
+  background: var(--color-label);
+  border: 1.5px solid var(--color-label);
+}
+
+.c-me__confirm:disabled {
+  color: var(--color-ink-muted);
+  background: var(--color-bg);
+  border-color: var(--color-card-shadow);
+}
+
+/* public/js/components/nameForm.js: the Google user's one-time name step. */
+.c-name-form {
+  padding: 14px;
+  margin: 8px 0 12px;
+  background: var(--color-card);
+  border-radius: var(--radius-card);
+  box-shadow: 0 2px 0 var(--color-card-shadow);
+}
+
+.c-name-form__title {
+  font-size: var(--text-16);
+  margin: 0 0 10px;
+}
+
+.c-name-form__label {
+  display: block;
+  font-size: var(--text-11);
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.c-name-form__input {
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--color-ink);
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: 10px;
+}
+
+.c-name-form__hint {
+  font-size: var(--text-11);
+  color: var(--color-ink-muted);
+  line-height: 1.45;
+  margin: 6px 0 10px;
+}
+
+.c-name-form__error {
+  font-size: var(--text-12);
+  font-weight: 700;
+  color: var(--color-ink);
+  background: var(--color-label-tint);
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin: 0 0 10px;
+}
+
+.c-name-form__save {
+  min-height: var(--tap-target);
+  padding: 8px 18px;
+  font-size: var(--text-12);
+  font-weight: 800;
+  color: var(--color-accent-text);
+  background: var(--color-label);
+  border: 1.5px solid var(--color-label);
+  border-radius: 14px;
+}

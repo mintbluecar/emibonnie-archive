@@ -97,6 +97,37 @@ export async function upsertAccount(tx, { platform, externalId, handle, displayN
 }
 
 /**
+ * Links the X account whose `external_id` is `externalId` to the user
+ * `userId` (sets `accounts.user_id`). Used at sign-in so a translator is
+ * recognised by the numeric X id they signed in with. No-op when there is
+ * no such account row yet (it is linked when intake first credits it).
+ * @param {Tx} tx
+ * @param {{ externalId: string, userId: string }} input
+ * @returns {Promise<void>}
+ */
+export async function linkXAccountToUser(tx, { externalId, userId }) {
+  await tx.query(
+    "update accounts set user_id = $2 where platform = 'x' and external_id = $1 and deleted_at is null",
+    [externalId, userId],
+  );
+}
+
+/**
+ * The `accounts.id`s of the user's X accounts: the translator identifier
+ * used by recognition and edit permission checks.
+ * @param {Tx} db
+ * @param {string} userId
+ * @returns {Promise<number[]>}
+ */
+export async function xAccountIdsOfUser(db, userId) {
+  const { rows } = await db.query(
+    "select id from accounts where platform = 'x' and user_id = $1 and deleted_at is null order by id",
+    [userId],
+  );
+  return rows.map((r) => r.id);
+}
+
+/**
  * @param {Tx} db
  * @param {number} id
  * @returns {Promise<Account|null>}

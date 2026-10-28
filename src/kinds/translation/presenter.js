@@ -4,11 +4,12 @@
  * every name, standard emoji, colour and continuation resolved here, the
  * cast, credits and the pinned media. Text stays raw; the page escapes it.
  */
-import { BARE_MARKER, splitLines } from '../../domain/lines.js';
+import { BARE_MARKER } from '../../domain/lines.js';
 import { parseHeader } from '../../domain/header.js';
 import { LIVE_PATTERNS, ROLE_EMOJI } from '../../domain/constants.js';
 import { resolveMedia, hasVideo, thumbOf, clipByOf, publicSources } from './media.js';
 import { profileUrl } from './profile.js';
+import { partLines } from '../../domain/lineFixes.js';
 
 /** @typedef {import('../../http/contracts.js').BubbleVM} BubbleVM */
 /** @typedef {import('../../http/contracts.js').CastVM} CastVM */
@@ -133,6 +134,53 @@ function bubbleOf(line, speakers, ctx) {
 }
 
 /**
+ * A line with a line-level `fixed` speaker: resolved from `fixed`, not the
+ * marker map, and shown as speech (crowd stays the neutral crowd bubble).
+ * @param {Extract<Line, { kind: 'speech' }> & { fixed: any }} line
+ * @param {PresentContext} ctx
+ * @returns {KeyedBubble}
+ */
+function fixedBubble(line, ctx) {
+  const view = fixedSpeakerOf(line.fixed, line.marker, ctx);
+  if ('role' in line.fixed && line.fixed.role === 'crowd') return { kind: 'crowd', text: line.text };
+  const person = 'person' in line.fixed ? ctx.people.get(line.fixed.person) : undefined;
+  if (person) {
+    return { kind: 'speech', key: `p:${person.id}`, emoji: person.emoji, name: ctx.formatName(person.displayName), colour: person.colour, text: line.text, cont: false };
+  }
+  return { kind: 'speech', key: `m:${line.marker}`, emoji: view.emoji, name: view.name, text: line.text, cont: false };
+}
+
+/**
+ * A fixed `Speaker`'s display emoji and name (for search match lines and
+ * the cast, where no identity colour is needed).
+ * @param {import('../../domain/speakers.js').Speaker} speaker
+ * @param {string} marker
+ * @param {PresentContext} ctx
+ * @returns {{ emoji: string, name: string|null }}
+ */
+export function fixedSpeakerOf(speaker, marker, ctx) {
+  if ('person' in speaker) {
+    const person = ctx.people.get(speaker.person);
+    return person ? { emoji: person.emoji, name: ctx.formatName(person.displayName) } : { emoji: ownEmojiOf(marker), name: null };
+  }
+  return { emoji: roleEmojiOf(marker, speaker.role, ctx), name: speaker.role };
+}
+
+/**
+ * Every line of every part as a bubble, with line-level fixes applied
+ * (a fixed line resolves its speaker from the fix, not the marker map).
+ * @param {TranslationDetails} details
+ * @param {PresentContext} ctx
+ */
+function keyedBubbles(details, ctx) {
+  const parts = details.parts ?? [details.body];
+  return partLines(parts, details.fixes ?? []).map((line) => {
+    if (line.fixed) return fixedBubble(/** @type {any} */ (line), ctx);
+    return bubbleOf(line, details.speakers, ctx);
+  });
+}
+
+/**
  * Sets `cont` from the bubble before, and drops the speaker keys. A
  * joint bubble's key is the whole joint (its markers, in order), so
  * consecutive identical joint lines collapse the same way a repeated
@@ -148,11 +196,6 @@ function withContinuation(bubbles) {
     const keyed = before?.kind === 'speech' || before?.kind === 'joint';
     return { ...rest, cont: keyed && before.key === key };
   });
-}
-
-/** @param {TranslationDetails} details @param {PresentContext} ctx */
-function keyedBubbles(details, ctx) {
-  return splitLines(details.body).map((line) => bubbleOf(line, details.speakers, ctx));
 }
 
 /** Every line as a bubble; footnotes moved to the end. @param {TranslationDetails} details @param {PresentContext} ctx */
@@ -213,12 +256,23 @@ function castEntryOf(marker, speaker, ctx) {
   return null;
 }
 
+/** @param {import('../../domain/speakers.js').Speaker} speaker @param {any} line @param {PresentContext} ctx @returns {[string, CastVM] | null} */
+function fixedCastEntry(speaker, line, ctx) {
+  if ('person' in speaker) {
+    const person = ctx.people.get(speaker.person);
+    if (!person) return null;
+    return [`p:${person.id}`, { kind: 'person', id: person.id, emoji: person.emoji, name: ctx.formatName(person.displayName), colour: person.colour, igHandle: person.igHandle }];
+  }
+  if (speaker.role === 'crowd') return null;
+  return [`m:${line.marker}`, { kind: 'role', role: speaker.role, emoji: roleEmojiOf(line.marker, speaker.role, ctx), name: speaker.role }];
+}
+
 /**
  * The people and generic roles who speak, in order of first line. A
  * joint line's components count as speaking too, each on its own
  * (review round 1, M5): a component that only ever speaks inside a
  * joint line still appears here, deduped the same way a repeated solo
- * speaker is.
+ * speaker is. A line-level fix contributes its fixed speaker.
  * @param {TranslationDetails} details
  * @param {PresentContext} ctx
  * @returns {CastVM[]}
@@ -226,12 +280,19 @@ function castEntryOf(marker, speaker, ctx) {
 function castOf(details, ctx) {
   /** @type {Map<string, CastVM>} */
   const cast = new Map();
-  for (const line of splitLines(details.body)) {
+  const add = (/** @type {[string, CastVM] | null} */ entry) => {
+    if (entry && !cast.has(entry[0])) cast.set(entry[0], entry[1]);
+  };
+  for (const entry of partLines(details.parts ?? [details.body], details.fixes ?? [])) {
+    const line = /** @type {any} */ (entry);
+    if (line.fixed) {
+      add(fixedCastEntry(line.fixed, line, ctx));
+      continue;
+    }
     if (line.kind !== 'speech') continue;
     for (const marker of line.markers) {
       if (!Object.hasOwn(details.speakers, marker)) continue;
-      const entry = castEntryOf(marker, details.speakers[marker], ctx);
-      if (entry && !cast.has(entry[0])) cast.set(entry[0], entry[1]);
+      add(castEntryOf(marker, details.speakers[marker], ctx));
     }
   }
   return [...cast.values()];

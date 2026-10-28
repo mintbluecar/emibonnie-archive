@@ -10,8 +10,8 @@
  */
 import { html } from '../core/html.js';
 import { mount, mountPage } from '../core/dom.js';
-import { getJson, ApiError } from '../core/api.js';
-import { site, t } from '../core/site.js';
+import { getJson, postJson, ApiError } from '../core/api.js';
+import { site, t, tCount } from '../core/site.js';
 import { eventHref } from '../core/routes.js';
 import * as chips from '../components/chips.js';
 import * as emptyState from '../components/emptyState.js';
@@ -132,8 +132,9 @@ async function reloadBody(root, target) {
 /**
  * Called exactly once, on page load: binds the media box, the refresh
  * button (delegated at `root`, so a later body reload never
- * re-registers its click listener), the copy-link button, and the
- * body's own content, and X's embed when the footer has one (Task 10b).
+ * re-registers its click listener), the copy-link button, the
+ * follow-ups check, and the body's own content, and X's embed when the
+ * footer has one (Task 10b).
  * @param {Element} root
  * @param {import('../../../src/http/contracts.js').ItemView & { editOpenUntil: string|null }} data
  * @returns {void}
@@ -146,7 +147,39 @@ export function bind(root, data) {
   const target = { kind: data.kind, sourceId: data.sourceId };
   refreshButton.bind(root, target, () => reloadBody(root, target));
   bindCopyLink(root, data.url);
+  bindFollowUps(root, target);
   sourceEmbed.bind(root);
+}
+
+/**
+ * "check for follow-ups" (Plan 2a Task 13): asks the kind to look for new
+ * same-author replies and reports what happened in the footer's own
+ * `role="status"` line -- none, how many landed, or that review is
+ * holding them. A body reload follows only when new parts really landed
+ * and are visible, so the bubbles pick them up.
+ * @param {Element} root @param {{ kind: string, sourceId: string }} target
+ * @returns {void}
+ */
+function bindFollowUps(root, target) {
+  const button = root.querySelector('[data-action="follow-ups"]');
+  const status = root.querySelector('[data-follow-ups-status]');
+  if (!button || !status) return;
+  button.addEventListener('click', async () => {
+    button.setAttribute('aria-busy', 'true');
+    /** @type {HTMLElement} */ (status).hidden = false;
+    status.textContent = '';
+    try {
+      const { added, pending } = await postJson(`/api/item/${encodeURIComponent(target.kind)}/${encodeURIComponent(target.sourceId)}/follow-ups`);
+      status.textContent = added === 0
+        ? t('item.followUpsNone')
+        : pending ? t('item.followUpsPending') : tCount('item.followUpsAdded', added, { n: added });
+      if (added > 0 && !pending) await reloadBody(root, target);
+    } catch {
+      status.textContent = t('item.followUpsFailed');
+    } finally {
+      button.removeAttribute('aria-busy');
+    }
+  });
 }
 
 /** @param {Element} root @param {string} path @returns {void} */

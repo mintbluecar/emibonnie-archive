@@ -43,6 +43,17 @@ export async function listEvents(db) {
   return rows.map(toEvent);
 }
 
+/**
+ * Whether `id` names an event a caller may attach an item to (not
+ * soft-deleted). Used to turn a stale or forged edit form's event id into
+ * a 400 instead of a foreign-key error.
+ * @param {Tx} db @param {number} id @returns {Promise<boolean>}
+ */
+export async function eventExists(db, id) {
+  const { rows } = await db.query('select 1 from events where id = $1 and deleted_at is null', [id]);
+  return rows.length > 0;
+}
+
 /** @param {Tx} db @param {string} slug @returns {Promise<Event|null>} */
 export async function getEventBySlug(db, slug) {
   const { rows } = await db.query(`${SELECT} and e.slug = $1`, [slug]);

@@ -483,8 +483,37 @@ function buildReplies() {
   write(DIR, IDS.THREAD_OTHER, other);
 }
 
-function buildEdited() {
-  const editControl = {
+function buildNoMarkers() {
+  // A text-only post with no speaker markers and no media: the add flow's
+  // "no markers, save as plain" case.
+  const text = `#solluna fan translations, kept. here is a short note with no speakers at all.`;
+  const pair = buildTweet({
+    id: IDS.NO_MARKERS,
+    author: AUTHORS.gamma,
+    text,
+    createdAtIso: '2026-10-21T09:00:00.000Z',
+    hashtags: ['solluna'],
+  });
+  write(DIR, IDS.NO_MARKERS, pair);
+}
+
+function buildSubbed() {
+  // A clip whose English subtitles are already burned in: no speaker markers
+  // in the caption, but it carries a video (its own translation needs no
+  // mapping). "subbed" is a flag on the entry, set by the adder.
+  const text = 'SOLLUNA AT STARFEST\n#SolLunaStarfest\n\n\nFull english-subtitled clip of the countdown moment.';
+  const pair = buildTweet({
+    id: IDS.SUBBED,
+    author: AUTHORS.beta,
+    text,
+    createdAtIso: '2026-10-18T10:20:00.000Z',
+    hashtags: ['SolLunaStarfest'],
+    mediaDetails: [videoMediaDetail({ id: `${IDS.SUBBED}v`, width: 1080, height: 1920, durationMs: 30000 })],
+  });
+  write(DIR, IDS.SUBBED, pair);
+}
+
+function buildEdited() {  const editControl = {
     edit_tweet_ids: [IDS.EDITED_OLD, IDS.EDITED_NEW],
     editable_until_msecs: String(new Date('2026-10-14T00:00:00.000Z').getTime()),
     edits_remaining: '4',
@@ -530,6 +559,8 @@ export const IDS = {
   THREAD_REPLY: '1900000000000000014',
   EDITED_OLD: '1900000000000000015',
   EDITED_NEW: '1900000000000000016',
+  NO_MARKERS: '1900000000000000017',
+  SUBBED: '1900000000000000018',
 };
 
 export function build() {
@@ -545,6 +576,8 @@ export function build() {
   buildThread();
   buildReplies();
   buildEdited();
+  buildNoMarkers();
+  buildSubbed();
 }
 
 // Only regenerate the committed fixtures when run directly; importing this

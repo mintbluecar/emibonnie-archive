@@ -5,6 +5,7 @@ import { IDS } from '../helpers/fixtures.js';
 import { seededDeps, itemIdOf, rows, SYSTEM } from '../helpers/ingest.js';
 import { apiFor } from '../helpers/api.js';
 import { NotFound } from '../../src/http/errors.js';
+import { PRIVATE_NO_STORE } from '../../src/http/handler.js';
 import { routes } from '../../src/routes/index.js';
 import { kindsRegistry } from '../../src/kinds/_registry.js';
 import { route as eventRoute } from '../../src/routes/event.js';
@@ -27,16 +28,35 @@ const input = (params, query = {}) => ({ params, query, body: undefined, origin:
 /** Route deps with a no-op `defer` (run-level tests don't need background work). */
 const routeDeps = () => ({ ...deps, defer: () => {} });
 
+/**
+ * A route's returned body, whether it returned a plain value or its own
+ * Response (the item route does, to set a per-request cache header).
+ * @param {unknown} result
+ * @returns {Promise<any>}
+ */
+async function bodyOf(result) {
+  return result instanceof Response ? result.json() : result;
+}
+
 test('every route is { method, path, cache, run }, with a unique method+path', () => {
   // The original page paths of the meta routes: the event page, and each kind's item page.
   const pagePaths = ['/e/:slug', ...Object.values(kindsRegistry).map((kind) => `${kind.urlPrefix}:sourceId`)];
   assert.ok(pagePaths.includes('/t/:sourceId'));
+  /** A cache value that guarantees the response is never stored. @param {string} cache */
+  const neverStored = (cache) => cache === 'no-store' || cache === PRIVATE_NO_STORE;
   for (const r of routes) {
     assert.ok(['GET', 'POST'].includes(r.method), r.path);
     assert.ok(r.path.startsWith('/api/') || pagePaths.includes(r.path), `${r.path}: API paths, plus the original page paths of the meta routes`);
     assert.equal(typeof r.run, 'function');
-    assert.ok(r.cache === 'no-store' || r.cache === PUBLIC || r.cache === VIDEO, r.path);
-    assert.equal(r.cache === 'no-store', r.method !== 'GET', `${r.path}: GETs are cached, writes are no-store`);
+    assert.ok(neverStored(r.cache) || r.cache === PUBLIC || r.cache === VIDEO, r.path);
+    // Auth GETs (OAuth start/callback) and the signed-in user's own `/api/me`
+    // (and `/api/me/added`) set cookies or depend on the session and must
+    // never be cached, so they are no-store despite being GET; the add form's
+    // `options` list is also per-user. Every other GET is cached, and every
+    // write (POST) is no-store.
+    const authGet = r.path.startsWith('/api/auth/') || r.path === '/api/me' || r.path === '/api/me/added'
+      || r.path === '/api/add/options' || r.path === '/api/item/:kind/:sourceId/edit';
+    assert.equal(neverStored(r.cache), r.method !== 'GET' || authGet, `${r.path}: GETs are cached, writes are no-store (auth flow excepted)`);
   }
   assert.equal(new Set(routes.map((r) => `${r.method} ${r.path}`)).size, routes.length);
 });
@@ -55,7 +75,7 @@ test('event: ?order=desc reverses the section; an unknown order is a BadRequest'
 });
 
 test('item: a removed item and an unknown kind throw NotFound', async () => {
-  const view = await itemRoute.run(input({ kind: 'translation', sourceId: IDS.EVENT_A }), routeDeps());
+  const view = await bodyOf(await itemRoute.run(input({ kind: 'translation', sourceId: IDS.EVENT_A }), routeDeps()));
   assert.equal(view.sourceId, IDS.EVENT_A);
   assert.ok('editOpenUntil' in view);
   await assert.rejects(itemRoute.run(input({ kind: 'no_such_kind', sourceId: IDS.EVENT_A }), routeDeps()), NotFound);
@@ -231,7 +251,7 @@ test('a post with no edit window is finalized at intake, so viewing it never sch
   let fetches = 0;
   let defers = 0;
   const counting = { ...deps, fetchImpl: /** @type {typeof fetch} */ (async (...args) => { fetches += 1; return deps.fetchImpl(...args); }) };
-  const view = await itemRoute.run(input({ kind: 'translation', sourceId: IDS.LONG }), { ...counting, defer: () => { defers += 1; } });
+  const view = await bodyOf(await itemRoute.run(input({ kind: 'translation', sourceId: IDS.LONG }), { ...counting, defer: () => { defers += 1; } }));
   assert.equal(view.editOpenUntil, null);
   assert.equal(defers, 0);
   assert.equal(fetches, 0);

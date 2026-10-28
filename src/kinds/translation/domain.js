@@ -4,6 +4,7 @@ import { parseHeader, postTags } from '../../domain/header.js';
 import { norm } from '../../domain/text.js';
 import { resolveSpeakers, missingMarkers, personIdsFrom } from '../../domain/speakers.js';
 import { matchEvent, proposeEvent, peopleForTags } from '../../domain/events.js';
+import { validateFixes, partLines, unmappedMarkers } from '../../domain/lineFixes.js';
 
 /**
  * @typedef {import('../../sources/normalize.js').Tweet} Tweet
@@ -29,6 +30,11 @@ import { matchEvent, proposeEvent, peopleForTags } from '../../domain/events.js'
  *   memory: SpeakerMap,
  *   sharedStory: SharedStory|null,
  *   newTags: string[],
+ *   subbed: boolean,
+ *   lineFixes: import('../../domain/lineFixes.js').LineFix[],
+ *   parts: string[],
+ *   lines: import('../../domain/lineFixes.js').FixedLine[],
+ *   unmapped: MissingMarker[],
  * }} TranslationDraft
  *   `tweet` is the fetched source (sources, media, follow-ups and quote
  *   are persisted from it); `text` is the main text actually used.
@@ -36,6 +42,9 @@ import { matchEvent, proposeEvent, peopleForTags } from '../../domain/events.js'
  *   `memory` is what to remember for the credited account (what was
  *   remembered, overlaid with what the submitter chose -- never the
  *   site's defaults, so a changed default isn't shadowed later).
+ *   `subbed`/`lineFixes` are the submitter's "already subbed" tick and
+ *   line-level fixes; `parts` is the text split per part (main, then each
+ *   follow-up), and `lines` is those parts through the fixes.
  * @typedef {{placement: import('../../domain/constants.js').Placement, eventId: number|null,
  *   proposal: EventProposal|null, authorIds: number[]}} Placing
  */
@@ -211,8 +220,18 @@ export function draftTranslation(tweet, ctx) {
     ...sourceFieldsOf(tweet, ctx.overrides),
   };
   const memory = { ...ctx.remembered, ...ctx.chosen };
-  const missing = missingMarkers(markers, speakers);
-  return { common, missing, suggestions: match.suggestions, tweet, text, header, speakers, markers, memory, sharedStory, newTags: match.newTags };
+  const subbed = ctx.overrides.subbed === true;
+  const lineFixes = ctx.overrides.lineFixes ?? [];
+  // Every part of the post (main + follow-ups), in order: what line fixes
+  // are validated against and what `lines` renders.
+  const parts = [text, ...tweet.followUps.map((f) => f.text)];
+  validateFixes(parts, lineFixes);
+  const missing = subbed ? [] : missingMarkers(markers, speakers);
+  const unmapped = subbed ? [] : unmappedMarkers(parts, lineFixes, speakers);
+  return {
+    common, missing, suggestions: match.suggestions, tweet, text, header, speakers, markers, memory, sharedStory, newTags: match.newTags,
+    subbed, lineFixes, parts, lines: partLines(parts, lineFixes), unmapped,
+  };
 }
 
 /**
@@ -222,19 +241,24 @@ export function draftTranslation(tweet, ctx) {
  * event or unsorted item, `about` (and the tagged sharer) for a shared
  * story, and nothing for a post (its people are its authors). The remap
  * command (src/kinds/translation/remap.js) diffs this for the old and new
- * map, so people that came from anywhere else stay. Pure.
+ * map, so people that came from anywhere else stay. Line fixes contribute
+ * their fixed speakers. Pure.
  * @param {{ parts: string[], placement: import('../../domain/constants.js').Placement }} item
  * @param {SpeakerMap} speakers
  * @param {DraftContext} ctx
+ * @param {import('../../domain/lineFixes.js').LineFix[]} [fixes]
  * @returns {ItemPerson[]}
  */
-export function speakerPeopleOf({ parts, placement }, speakers, ctx) {
+export function speakerPeopleOf({ parts, placement }, speakers, ctx, fixes = []) {
   if (placement === 'post') return [];
   const [first = '', ...rest] = parts;
   const tweet = /** @type {Tweet} */ (/** @type {unknown} */ ({ text: first, createdAt: null, followUps: rest.map((text) => ({ text })) }));
   const { header, markers } = readText(tweet, { ...ctx, overrides: {} });
   const tagIds = peopleForTags(header.personTags, ctx.people).map((p) => p.id);
   const speakerIds = personIdsFrom(speakers, markers);
+  for (const fix of fixes) {
+    if (fix.as === 'speech' && 'person' in fix.speaker && !speakerIds.includes(fix.speaker.person)) speakerIds.push(fix.speaker.person);
+  }
   const story = placement === 'shared_story' ? sharedStoryOf(tagIds, speakerIds, []) : null;
   const placing = { placement, eventId: null, proposal: null, authorIds: [] };
   return itemPeopleOf(placing, story, [...new Set([...speakerIds, ...tagIds])]);

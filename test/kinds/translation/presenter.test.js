@@ -5,7 +5,7 @@ import { IDS } from '../../helpers/fixtures.js';
 import { seededDeps, itemIdOf, SYSTEM, ingestDeps, ingest } from '../../helpers/ingest.js';
 import { itemView } from '../../../src/services/itemView.js';
 import { previewsFor, presenterContext } from '../../../src/services/cards.js';
-import { addParts, setSpeakers } from '../../../src/kinds/translation/repo.js';
+import { addParts, loadDetails, setSpeakers } from '../../../src/kinds/translation/repo.js';
 import { resolveSpeakerRefs } from '../../../src/services/intakeRefs.js';
 import translation from '../../../src/kinds/translation/index.js';
 
@@ -396,5 +396,65 @@ test('Task 10c (c): the preview thumbnail is the clip poster (video), else the f
   for (const url of ['http://pbs.twimg.com/p.jpg', 'https://evil.example/p.jpg', 'https://pbs.twimg.com.evil.example/p.jpg', 'javascript:alert(1)']) {
     assert.equal(thumbOf(/** @type {any} */ ({ ...video, poster: url })), null, url);
     assert.equal(thumbOf(/** @type {any} */ ({ type: 'images', images: [{ url, width: 1, height: 1 }] })), null, url);
+  }
+});
+
+test('a line fix resolves its speaker: a fixed line uses the person\'s emoji and colour; an unmapped marker still renders as itself (Plan 2a Task 7)', () => {
+  const people = new Map([[1, { id: 1, emoji: '☀️', displayName: 'Sol', colour: '#d9a400', igHandle: 'solsunny' }]]);
+  const ctx = /** @type {any} */ ({ ...fakePreviewCtx(), people, formatName: (/** @type {string} */ n) => n.toLowerCase() });
+  const card = { sourceId: 'x', followsOn: null, people: [], account: null };
+  // 🐶 has no marker map entry (unmapped), but a line fix points it at person 1.
+  const details = {
+    parts: ['🐶: hello from sol\n🌧️: still unmapped'],
+    speakers: {}, fixes: [{ part: 0, line: 0, as: 'speech', speaker: { person: 1 } }], sources: [],
+  };
+  const view = /** @type {any} */ (translation.present.preview(card, details, ctx));
+  assert.equal(view.lines[0].kind, 'speech');
+  assert.equal(view.lines[0].emoji, '☀️', 'the fixed speaker\'s standard emoji');
+  assert.equal(view.lines[0].name, 'sol');
+  assert.equal(view.lines[0].colour, '#d9a400');
+  // The unmapped marker's line (no fix) renders as itself, name null.
+  assert.equal(view.lines[1].kind, 'speech');
+  assert.equal(view.lines[1].name, null);
+});
+
+test('canCheckFollowUps is false for a kind with no checkFollowUps (the Kind contract makes it optional)', async () => {
+  const own = await ingestDeps();
+  try {
+    await ingest(own, IDS.THREAD);
+    const viewer = /** @type {any} */ ({ id: 'x:0', isOwner: true, translatorAccountIds: [] });
+    const kindWithout = { ...translation, checkFollowUps: undefined };
+    const view = await itemView({ ...own, kinds: { translation: kindWithout } }, 'translation', IDS.THREAD, viewer);
+    assert.equal(view?.canEdit, true, 'the owner may still edit');
+    assert.equal(view?.canCheckFollowUps, false, 'no button for a kind that cannot check follow-ups');
+  } finally {
+    await own.db.end();
+  }
+});
+
+test('a pending follow-up part is hidden from the public view and shown with includePending (Plan 2a Task 8)', async () => {
+  const own = await ingestDeps();
+  try {
+    const result = await ingest(own, IDS.THREAD);
+    const itemId = /** @type {number} */ (result.itemId);
+    // What the approval path does: append the part and hold it for review.
+    await own.db.transaction(
+      (/** @type {any} */ tx) => tx.query(
+        "insert into translation_parts (item_id, position, body, pending) values ($1, 99, 'PENDING SECRET LINE', true)",
+        [itemId],
+      ),
+      SYSTEM,
+    );
+
+    const view = await itemView(own, 'translation', IDS.THREAD);
+    assert.ok(!JSON.stringify(view).includes('PENDING SECRET LINE'), 'the public page hides a pending part');
+
+    const hidden = /** @type {any} */ ((await loadDetails(own.db, [itemId])).get(itemId));
+    assert.ok(!hidden.parts.some((/** @type {string} */ part) => part.includes('PENDING SECRET LINE')), 'default hides it');
+
+    const all = /** @type {any} */ ((await loadDetails(own.db, [itemId], { includePending: true })).get(itemId));
+    assert.ok(all.parts.some((/** @type {string} */ part) => part.includes('PENDING SECRET LINE')), 'includePending shows it');
+  } finally {
+    await own.db.end();
   }
 });

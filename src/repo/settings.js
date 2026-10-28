@@ -18,6 +18,16 @@ export async function get(db, key) {
 }
 
 /**
+ * Whether new or appended text waits for the owner's review
+ * (`settings.approvalRequired`, off unless the owner turns it on).
+ * @param {Tx} db
+ * @returns {Promise<boolean>}
+ */
+export async function approvalRequired(db) {
+  return (await get(db, 'approvalRequired')) === true;
+}
+
+/**
  * @param {Tx} tx
  * @param {string} key
  * @param {unknown} value

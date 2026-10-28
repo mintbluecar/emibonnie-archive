@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createHandler, PUBLIC_CACHE, NO_STORE, NOT_FOUND_CACHE } from '../../src/http/handler.js';
-import { BadRequest, NotFound, Conflict, RateLimited } from '../../src/http/errors.js';
+import { BadRequest, NotFound, Conflict, RateLimited, Unauthorized, Forbidden } from '../../src/http/errors.js';
 import { originAllowed } from '../../src/http/origin.js';
 import { parseQuery } from '../../src/http/query.js';
 
@@ -69,7 +69,8 @@ test('errors map to 404, 400, 409, 429; unknown paths are 404; bad encodings are
   const thrower = (/** @type {string} */ path, /** @type {() => Error} */ make) => ({ method: 'GET', path, cache: PUBLIC_CACHE, run: async () => { throw make(); } });
   const { handle, state } = handlerFor([
     thrower('/api/nf', () => new NotFound()), thrower('/api/br', () => new BadRequest('q is not valid')),
-    thrower('/api/cf', () => new Conflict('edit_window_closed')), thrower('/api/rl', () => new RateLimited()), echo,
+    thrower('/api/cf', () => new Conflict('edit_window_closed')), thrower('/api/rl', () => new RateLimited()),
+    thrower('/api/ua', () => new Unauthorized()), thrower('/api/fb', () => new Forbidden('blocked')), echo,
   ]);
   const get = async (/** @type {string} */ path) => handle(new Request(`${BASE}${path}`));
   const nf = await get('/api/nf');
@@ -85,10 +86,16 @@ test('errors map to 404, 400, 409, 429; unknown paths are 404; bad encodings are
   assert.equal(cf.status, 409);
   assert.deepEqual(await cf.json(), { error: 'edit_window_closed' });
   assert.equal((await get('/api/rl')).status, 429);
+  const ua = await get('/api/ua');
+  assert.equal(ua.status, 401);
+  assert.deepEqual(await ua.json(), { error: 'signed_out' });
+  const fb = await get('/api/fb');
+  assert.equal(fb.status, 403);
+  assert.deepEqual(await fb.json(), { error: 'blocked' });
   assert.equal((await get('/api/nope')).status, 404);
   assert.equal((await get('/api/echo/%E0%A4%A')).status, 400);
   assert.equal((await get('/api/echo/x?x=1&x=2')).status, 400, 'a repeated single-value param');
-  assert.equal(state.ended, 4, 'db.end() even when the route throws (and no deps for unmatched or malformed requests)');
+  assert.equal(state.ended, 6, 'db.end() even when the route throws (and no deps for unmatched or malformed requests)');
 });
 
 test('a thrown error is a 500 whose log line has no request headers', async () => {

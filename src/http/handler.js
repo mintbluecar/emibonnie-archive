@@ -13,9 +13,10 @@
  * headers or the query string.
  */
 import { matchRoute } from './router.js';
-import { BadRequest, NotFound, Conflict, RateLimited, PayloadTooLarge } from './errors.js';
+import { BadRequest, NotFound, Conflict, RateLimited, PayloadTooLarge, Unauthorized, Forbidden } from './errors.js';
 import { originAllowed } from './origin.js';
 import { assertKnownParams, parseQuery, readBody } from './query.js';
+import { parseCookies } from './cookies.js';
 
 /** Every public GET (Global Constraints: Caching). */
 export const PUBLIC_CACHE = 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400';
@@ -23,13 +24,16 @@ export const PUBLIC_CACHE = 'public, s-maxage=300, stale-while-revalidate=86400,
 export const VIDEO_CACHE = 'public, s-maxage=600, stale-while-revalidate=86400, stale-if-error=86400';
 /** A public GET's 404: cached briefly, so a newly visible item appears within a minute. */
 export const NOT_FOUND_CACHE = 'public, s-maxage=60';
+/** A signed-in GET: per-user, never shared or stored. */
+export const PRIVATE_NO_STORE = 'private, no-store';
 /** Writes and errors. */
 export const NO_STORE = 'no-store';
 
 /**
  * @typedef {{ db: { end(): Promise<void> }, fetchImpl: typeof fetch, now: () => Date, site: any, [key: string]: unknown }} BaseDeps
  * @typedef {BaseDeps & { defer: (task: () => Promise<unknown>) => void }} Deps
- * @typedef {{ params: Record<string, string>, query: Record<string, string|string[]>, body: unknown, origin: string }} RouteInput
+ * @typedef {{ params: Record<string, string>, query: Record<string, string|string[]>, body: unknown, origin: string,
+ *   cookies: Record<string, string>, ip: string|null }} RouteInput
  * @typedef {{ method: string, path: string, cache: string, query?: readonly string[]|null, lists?: readonly string[],
  *   run: (input: RouteInput, deps: any) => Promise<unknown> }} Route
  *   `query`: the query params a GET accepts (default none; null accepts any,
@@ -46,9 +50,42 @@ function json(status, body, cache) {
   return Response.json(body, { status, headers: { 'cache-control': cache } });
 }
 
+/**
+ * A route's own JSON response with an explicit cache header, for a route
+ * whose cache depends on the request: the item page is `private, no-store`
+ * for a signed-in viewer and public otherwise. `toResponse` keeps a
+ * `PRIVATE_NO_STORE` (or `NOT_FOUND_CACHE`) header; anything else is
+ * replaced by the route's declared cache, so returning the route's own
+ * public cache here is harmless.
+ * @param {unknown} body @param {string} cache
+ * @returns {Response}
+ */
+export function jsonWithCache(body, cache) {
+  return Response.json(body, { headers: { 'cache-control': cache } });
+}
+
 /** @param {unknown} err @returns {string} */
 function describe(err) {
   return err instanceof Error ? (err.stack ?? `${err.name}: ${err.message}`) : String(err);
+}
+
+/**
+ * The status and JSON body for a known request error, or null for an
+ * unexpected one (which the caller logs as a 500). Kept separate so
+ * `errorResponse` stays a simple dispatch.
+ * @param {unknown} err
+ * @returns {{ status: number, body: { error: string, message?: string } } | null}
+ */
+function mappedError(err) {
+  if (err instanceof NotFound) return { status: 404, body: { error: 'not_found' } };
+  if (err instanceof PayloadTooLarge) return { status: 413, body: { error: 'payload_too_large' } };
+  if (err instanceof BadRequest) return { status: 400, body: { error: 'bad_request', message: err.message } };
+  if (err instanceof URIError) return { status: 400, body: { error: 'bad_request', message: 'malformed path' } };
+  if (err instanceof Conflict) return { status: 409, body: { error: err.code } };
+  if (err instanceof RateLimited) return { status: 429, body: { error: 'rate_limited' } };
+  if (err instanceof Unauthorized) return { status: 401, body: { error: 'signed_out' } };
+  if (err instanceof Forbidden) return { status: 403, body: { error: err.code } };
+  return null;
 }
 
 /**
@@ -56,26 +93,28 @@ function describe(err) {
  * @param {{ method: string, pathname: string, log: (line: string) => void }} ctx
  */
 function errorResponse(err, route, { method, pathname, log }) {
-  if (err instanceof NotFound) return json(404, { error: 'not_found' }, route?.method === 'GET' ? NOT_FOUND_CACHE : NO_STORE);
-  if (err instanceof PayloadTooLarge) return json(413, { error: 'payload_too_large' }, NO_STORE);
-  if (err instanceof BadRequest) return json(400, { error: 'bad_request', message: err.message }, NO_STORE);
-  if (err instanceof URIError) return json(400, { error: 'bad_request', message: 'malformed path' }, NO_STORE);
-  if (err instanceof Conflict) return json(409, { error: err.code }, NO_STORE);
-  if (err instanceof RateLimited) return json(429, { error: 'rate_limited' }, NO_STORE);
+  const mapped = mappedError(err);
+  if (mapped) {
+    const cache = mapped.status === 404 && route?.method === 'GET' ? NOT_FOUND_CACHE : NO_STORE;
+    return json(mapped.status, mapped.body, cache);
+  }
   log(`[api] ${method} ${pathname} failed: ${describe(err)}`);
   return json(500, { error: 'internal' }, NO_STORE);
 }
 
 /**
- * The route's cache header always wins, with one exception: a GET route's
- * own Response may shorten it to `NOT_FOUND_CACHE` (the meta pages'
- * generic meta for a hidden or missing target).
+ * The route's cache header always wins, with two exceptions: a GET route's
+ * own Response may shorten it to `NOT_FOUND_CACHE` (the meta pages' generic
+ * meta for a hidden or missing target), or mark it `PRIVATE_NO_STORE` (the
+ * item page for a signed-in viewer, so the per-user edit buttons are never
+ * shared or cached).
  * @param {unknown} result @param {Route} route
  */
 function toResponse(result, route) {
   const response = result instanceof Response ? result : json(200, result, route.cache);
   const own = response.headers.get('cache-control');
-  const cache = route.method === 'GET' && own === NOT_FOUND_CACHE ? own : route.cache;
+  const kept = own === NOT_FOUND_CACHE || own === PRIVATE_NO_STORE;
+  const cache = route.method === 'GET' && kept ? /** @type {string} */ (own) : route.cache;
   response.headers.set('cache-control', cache);
   return response;
 }
@@ -101,6 +140,19 @@ export async function withDeps(makeDeps, { waitUntil, onError }, fn) {
     if (tasks.length > 0) waitUntil(Promise.allSettled(tasks).then(end));
     else await end();
   }
+}
+
+/**
+ * The client IP from the proxy headers: the first entry of
+ * `x-forwarded-for`, else `x-real-ip`, else null. It is never logged.
+ * @param {Request} request
+ * @returns {string|null}
+ */
+function ipOf(request) {
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim() || null;
+  const real = request.headers.get('x-real-ip');
+  return real ? real.trim() || null : null;
 }
 
 /**
@@ -133,7 +185,8 @@ export function createHandler({ routes, makeDeps, waitUntil, log = console.error
       if (route.method !== 'GET' && !originAllowed(request, env)) return json(403, { error: 'forbidden' }, NO_STORE);
       const query = route.query === null ? {} : parseQuery(url.searchParams, route.lists);
       if (route.method === 'GET') assertKnownParams(query, route.query);
-      const input = { params: match.params, query, body: await readBody(request), origin: url.origin };
+      const input = { params: match.params, query, body: await readBody(request), origin: url.origin,
+        cookies: parseCookies(request.headers.get('cookie')), ip: ipOf(request) };
       const onError = (/** @type {unknown} */ err) => log(`[api] ${ctx.method} ${ctx.pathname} background work failed: ${describe(err)}`);
       const result = await withDeps(makeDeps, { waitUntil, onError }, (deps) => /** @type {Route} */ (route).run(input, deps));
       return toResponse(result, route);

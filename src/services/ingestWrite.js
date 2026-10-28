@@ -6,10 +6,11 @@
  */
 import { upsertAccount } from '../repo/accounts.js';
 import { createEvent } from '../repo/events.js';
-import { ensureCategory, ensureClient } from '../repo/lookups.js';
+import { ensureCategory, ensureClient, findLookup } from '../repo/lookups.js';
 import { insertItem } from '../repo/items.js';
 import { setItemPeople } from '../repo/itemPeople.js';
-import { get as getSetting } from '../repo/settings.js';
+import { approvalRequired } from '../repo/settings.js';
+import { BadRequest } from '../domain/errors.js';
 
 /** @typedef {import('../db/common.js').Tx} Tx */
 /** @typedef {import('../kinds/defineKind.js').Kind} Kind */
@@ -18,7 +19,7 @@ import { get as getSetting } from '../repo/settings.js';
 /** @typedef {import('../domain/constants.js').ReviewState} ReviewState */
 /**
  * @typedef {{ kind: Readonly<Kind>, draft: Draft, occurredOn: string, addedVia: string, actor: string,
- *   creditedUserId: string|null }} WriteRequest
+ *   creditedUserId: string|null, lookups?: 'create'|'existing' }} WriteRequest
  */
 
 /**
@@ -52,12 +53,12 @@ async function eventIdOf(tx, common, occurredOn) {
  * Hand-typed text waits for review unless the credited account's own user
  * typed it; everything else follows `settings.approvalRequired`.
  * @param {Tx} tx
- * @param {{ common: DraftCommon, actor: string, creditedUserId: string|null }} input
+ * @param {{ common: { textEnteredManually: boolean }, actor: string, creditedUserId: string|null }} input
  * @returns {Promise<ReviewState>}
  */
-async function reviewStateOf(tx, { common, actor, creditedUserId }) {
+export async function reviewStateOf(tx, { common, actor, creditedUserId }) {
   if (common.textEnteredManually && creditedUserId !== actor) return 'pending';
-  return (await getSetting(tx, 'approvalRequired')) === true ? 'pending' : 'published';
+  return (await approvalRequired(tx)) ? 'pending' : 'published';
 }
 
 /** @param {string} isoDate */
@@ -66,16 +67,38 @@ function epochOf(isoDate) {
 }
 
 /**
+ * Resolve a category/client name to its id, creating it (`ensureCategory`/
+ * `ensureClient`) or only matching an existing one (`lookups:'existing'`,
+ * which throws `BadRequest('unknown category'|'unknown client')` when it
+ * isn't in the list).
+ * @param {Tx} tx
+ * @param {string|null} name
+ * @param {boolean} existing
+ * @param {'category'|'client'} kind
+ * @returns {Promise<number|null>}
+ */
+async function lookupId(tx, name, existing, kind) {
+  if (!name) return null;
+  if (existing) {
+    const id = await findLookup(tx, kind === 'category' ? 'categories' : 'clients', name);
+    if (id === null) throw new BadRequest(`unknown ${kind}`);
+    return id;
+  }
+  return kind === 'category' ? ensureCategory(tx, name) : ensureClient(tx, name);
+}
+
+/**
  * @param {Tx} tx
  * @param {WriteRequest} request
  * @returns {Promise<{ itemId: number, eventId: number|null, reviewState: ReviewState }>}
  */
-export async function writeItem(tx, { kind, draft, occurredOn, addedVia, actor, creditedUserId }) {
+export async function writeItem(tx, { kind, draft, occurredOn, addedVia, actor, creditedUserId, lookups = 'create' }) {
   const { common } = draft;
   const accountId = await upsertCredited(tx, common.credited);
   const eventId = await eventIdOf(tx, common, occurredOn);
-  const categoryId = common.categoryName ? await ensureCategory(tx, common.categoryName) : null;
-  const clientId = common.clientName ? await ensureClient(tx, common.clientName) : null;
+  const existing = lookups === 'existing';
+  const categoryId = await lookupId(tx, common.categoryName, existing, 'category');
+  const clientId = await lookupId(tx, common.clientName, existing, 'client');
   const reviewState = await reviewStateOf(tx, { common, actor, creditedUserId });
   const itemId = await insertItem(tx, {
     kind: kind.name, placement: common.placement, eventId, categoryId, clientId, creditedAccountId: accountId,

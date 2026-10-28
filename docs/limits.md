@@ -20,6 +20,24 @@ An archive runs on free plans: Vercel Hobby, Neon Free, GitHub Actions, and free
 | Google sign-in | Free with basic scopes. An app left in testing mode has a 100-user testing cap. | Users beyond the cap can't sign in. | Set the app to **In Production** before launch. |
 | X | Sign in with X works on a zero-credit app. The paid X API (charged per post read) is never used: tweet data comes from free, unofficial sources. | If those sources break, intake falls back to the other source, then to typed text. | Intake starts asking for typed text, or new posts come back `unavailable`. |
 
+## Rate limits
+
+Writes and sign-in are capped per visitor, so one account or one address can't use up a free plan. The counts live in the database (`rate_limits`), and a request over its limit gets HTTP 429 (`rate_limited`) until its window rolls over. Limits are per user unless the row says otherwise; an address is stored hashed with `AUTH_SECRET`, never raw.
+
+| Action | Limit | Window | Keyed by |
+|---|---|---|---|
+| Sign in (X and Google, each start) | 10 | 15 minutes | address |
+| Add preview | 60 | 1 hour | user |
+| Add an entry | 20 | 1 hour | user |
+| Add a new person | 20 | 1 hour | user |
+| Edit an entry | 60 | 1 hour | user |
+| Check for follow-ups | 10 | 1 hour | user |
+| Set display name | 5 | 1 hour | user |
+| Delete my account | 3 | 1 day | user |
+| Report (reserved) | 5 | 1 hour | address |
+
+The report limit is defined but no route uses it yet. The source of truth is `LIMITS` in `src/services/limits.js`.
+
 **Plan B for hosting:** if Vercel's limits stop fitting, the handlers are written in the standard web style and routes come from one table, so moving to Cloudflare is cheap. Cloudflare's free tier resets daily, and its paid plan is $5 a month. See [Cloudflare Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/).
 
 For current Vercel Hobby terms see [Vercel pricing](https://vercel.com/pricing) and [the Hobby plan](https://vercel.com/docs/plans/hobby).

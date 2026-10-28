@@ -11,7 +11,7 @@ import { upsertAccount } from '../../repo/accounts.js';
 import { tagItem } from '../../repo/tags.js';
 import { link } from '../../repo/itemLinks.js';
 import { remember } from '../../repo/speakerMemory.js';
-import { addParts, insertTranslation, setSpeakers } from './repo.js';
+import { addParts, insertTranslation, setSpeakers, setLineFixes } from './repo.js';
 
 /** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
 /** @typedef {import('./domain.js').TranslationDraft} TranslationDraft */
@@ -36,10 +36,11 @@ export function statusUrl(handle, id) {
  * the item already has. Used at intake, by attaching a pasted follow-up
  * and by the "check for follow-ups" button.
  * @param {Tx} tx
- * @param {{ itemId: number, accountId: number|null, handle: string|null, posts: PostPart[] }} input
+ * @param {{ itemId: number, accountId: number|null, handle: string|null, posts: PostPart[],
+ *   pending?: boolean }} input
  * @returns {Promise<number>} how many were appended
  */
-export async function appendPosts(tx, { itemId, accountId, handle, posts }) {
+export async function appendPosts(tx, { itemId, accountId, handle, posts, pending = false }) {
   let position = await nextPosition(tx, itemId, 'follow_up');
   for (const post of posts) {
     const [sourceId] = await addSources(tx, itemId, KIND, [{
@@ -47,7 +48,7 @@ export async function appendPosts(tx, { itemId, accountId, handle, posts }) {
       accountId: accountId ?? undefined, editableUntil: post.editableUntil,
     }]);
     await addAliases(tx, { sourceId, platform: 'x', ids: [post.id, ...(post.versionIds ?? [])] });
-    await addParts(tx, itemId, [{ sourceId, body: post.text }]);
+    await addParts(tx, itemId, [{ sourceId, body: post.text }], { pending });
     position += 1;
   }
   return posts.length;
@@ -155,11 +156,13 @@ async function linkFollowsOn(tx, { itemId, followsOn }) {
 export async function persistTranslation(tx, draft, { itemId, accountId }) {
   const { tweet, common } = draft;
   await insertTranslation(tx, itemId, { textEnteredManually: common.textEnteredManually });
+  if (draft.subbed) await tx.query('update translations set subbed = true where item_id = $1', [itemId]);
   await addMainPost(tx, { itemId, accountId, draft });
   await appendPosts(tx, { itemId, accountId, handle: tweet.authorHandle, posts: tweet.followUps });
   await addMedia(tx, { itemId, accountId, tweet });
   await addQuoted(tx, { itemId, tweet });
   await setSpeakers(tx, itemId, usedSpeakers(draft));
+  await setLineFixes(tx, itemId, draft.lineFixes ?? []);
   await tagItem(tx, itemId, tagsOf(draft));
   await linkFollowsOn(tx, { itemId, followsOn: common.followsOn });
   await remember(tx, accountId, draft.memory);
@@ -170,10 +173,10 @@ export async function persistTranslation(tx, draft, { itemId, accountId }) {
  * `translation.appendFollowUp`: attaches a pasted same-author reply to the
  * item it continues, as its next part.
  * @param {Tx} tx
- * @param {{ itemId: number, accountId: number|null, input: Tweet }} args
+ * @param {{ itemId: number, accountId: number|null, input: Tweet, pending: boolean }} args
  * @returns {Promise<void>}
  */
-export async function appendFollowUp(tx, { itemId, accountId, input }) {
+export async function appendFollowUp(tx, { itemId, accountId, input, pending }) {
   const post = { id: input.id, text: input.text, editableUntil: input.edit.editableUntil, versionIds: input.edit.versionIds };
-  await appendPosts(tx, { itemId, accountId, handle: input.authorHandle, posts: [post] });
+  await appendPosts(tx, { itemId, accountId, handle: input.authorHandle, posts: [post], pending });
 }

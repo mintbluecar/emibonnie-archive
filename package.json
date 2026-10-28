@@ -1,6 +1,6 @@
 {
   "name": "fan-archive",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -22,7 +22,8 @@
     "remap": "node scripts/remap.js",
     "init-site": "node scripts/initSite.js",
     "seed-dev": "node scripts/seedDev.js",
-    "e2e": "playwright test",
+    "e2e": "playwright test && npm run e2e:add",
+    "e2e:add": "playwright test -c playwright.add.config.js",
     "e2e:site": "node scripts/e2eSite.js",
     "new": "node scripts/new.js",
     "test:kind": "node --test test/kinds/scaffoldedKind.test.js"

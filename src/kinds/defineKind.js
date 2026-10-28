@@ -45,6 +45,8 @@ import { pages, redirects } from '../pages.js';
  *   text?: string,
  *   occurredOn?: string,
  *   people?: { igHandle: string, role: ItemPerson['role'] }[],
+ *   subbed?: boolean,
+ *   lineFixes?: import('../domain/lineFixes.js').LineFix[],
  * }} DraftOverrides
  *   What the submitter changed in the add flow. `text` is text typed in by
  *   hand (it replaces the source's text and marks it `textEnteredManually`).
@@ -121,16 +123,19 @@ import { pages, redirects } from '../pages.js';
  *   matchesUrl(url: string): string|null,
  *   fetchSource(deps: any, sourceId: string): Promise<SourceInput>,
  *   followUpOf?: (input: any) => SourceRef|null,
- *   appendFollowUp?: (tx: Db, args: { itemId: number, accountId: number|null, input: any }) => Promise<void>,
+ *   appendFollowUp?: (tx: Db, args: { itemId: number, accountId: number|null, input: any, pending: boolean }) => Promise<void>,
  *   draft(input: any, ctx: DraftContext): Draft,
  *   persist(tx: Db, draft: any, meta: object): Promise<number>,
- *   loadDetails(db: Db, itemIds: number[]): Promise<Map<number, object>>,
+ *   loadDetails(db: Db, itemIds: number[], options?: { includePending?: boolean }): Promise<Map<number, object>>,
  *   present: { preview(item: any, details: any, ctx: any): object, detail(item: any, details: any, ctx: any): object },
  *   search: { textClause(paramIndex: number): string, rank(paramIndex: number): string, matchLines(details: any, q: string, ctx?: any): string[] },
  *   refresh?: (deps: UpkeepDeps, itemId: number, options: { actor: string }) => Promise<{ updated: number, editableUntil: string|null }>,
  *   checkFollowUps?: (deps: UpkeepDeps, itemId: number, options: { actor: string }) => Promise<{ added: number }>,
+ *   previewDraft?: (draft: any) => object,
  *   profileUrl?: (handle: string) => string,
  *   remapSpeakers?: (tx: Db, args: { itemId: number, map: SpeakerMap, ctx: DraftContext }) => Promise<RemapResult>,
+ *   setLineFixes?: (tx: Db, args: { itemId: number, fixes: import('../domain/lineFixes.js').LineFix[] }) => Promise<void>,
+ *   setSubbed?: (tx: Db, args: { itemId: number, subbed: boolean }) => Promise<void>,
  * }} Kind
  *   `remapSpeakers(tx, …)` (optional, Task 10c): the owner's `npm run
  *   remap` for an archived item -- sets the given markers' speakers and
@@ -142,6 +147,10 @@ import { pages, redirects } from '../pages.js';
  *   (src/services/hubs.js) sets `AccountView.account.profileUrl` from it
  *   when the kind defines one, so the translator page never hardcodes a
  *   platform itself.
+ *   `previewDraft(draft)` (optional, Plan 2a Task 13): the extra fields
+ *   the add form needs from a dry-run draft but that no saved row has yet
+ *   -- today just the translation's pinned `media`. Ingest merges them
+ *   into the `ready` result.
  *
  * `present.preview(card, details, ctx)` / `present.detail(card, details, ctx)`
  * build the `Preview` / `DetailVM` of src/http/contracts.js from a
@@ -184,7 +193,7 @@ export const RESERVED_URL_PREFIXES = Object.freeze([
 const OWNED_URL_PREFIXES = Object.freeze({ '/t/': 'translation' });
 const REQUIRED_FUNCTIONS = ['matchesUrl', 'fetchSource', 'draft', 'persist', 'loadDetails'];
 const REQUIRED_GROUPS = { present: ['preview', 'detail'], search: ['textClause', 'rank', 'matchLines'] };
-const OPTIONAL_FUNCTIONS = ['refresh', 'checkFollowUps', 'profileUrl', 'remapSpeakers'];
+const OPTIONAL_FUNCTIONS = ['refresh', 'checkFollowUps', 'previewDraft', 'profileUrl', 'remapSpeakers', 'setLineFixes', 'setSubbed'];
 
 /**
  * Each string field of the spec, the pattern it must match, and the problem when it doesn't.

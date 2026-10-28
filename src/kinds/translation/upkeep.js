@@ -17,7 +17,7 @@ import { fetchTweet } from '../../sources/fetchTweet.js';
 import { fetchThread } from '../../sources/thread.js';
 import { findSourceOwner, primarySource } from '../../repo/itemSources.js';
 import { addAliases, unfinalizedSources, updateEditState } from '../../repo/sourceEdits.js';
-import { isTextEnteredManually, updatePartBody } from './repo.js';
+import { isTextEnteredManually, updatePartBody, dropFixesForPart } from './repo.js';
 import { appendPosts } from './persist.js';
 import { asFetched } from './source.js';
 import { GONE_GRACE_HOURS } from '../../domain/constants.js';
@@ -64,13 +64,16 @@ function isClosed({ live, editableUntil, source, now }) {
  */
 async function applyRefetch(tx, { itemId, source, tweet, now, manual }) {
   const live = tweet.status === 'live';
-  const changed = live && !(manual && source.role === 'primary')
+  const changedPositions = live && !(manual && source.role === 'primary')
     ? await updatePartBody(tx, { itemId, sourceId: source.id, body: tweet.text })
-    : false;
+    : [];
+  // A part whose body was rewritten loses its line fixes (the positions no
+  // longer apply); marker-level speakers are kept.
+  for (const position of changedPositions) await dropFixesForPart(tx, itemId, position);
   if (live) await addAliases(tx, { sourceId: source.id, platform: source.platform, ids: [...tweet.edit.versionIds, tweet.id] });
   const editableUntil = live ? tweet.edit.editableUntil : null;
   await updateEditState(tx, { sourceId: source.id, editableUntil, finalizedAt: isClosed({ live, editableUntil, source, now }) ? now : null });
-  return changed;
+  return changedPositions.length > 0;
 }
 
 /**
@@ -120,17 +123,17 @@ async function newPosts(deps, { kind, followUps }) {
 /**
  * @param {UpkeepDeps} deps
  * @param {number} itemId
- * @param {{ actor: string }} options
+ * @param {{ actor: string, pending?: boolean }} options
  * @returns {Promise<{ added: number }>}
  */
-export async function checkFollowUps(deps, itemId, { actor }) {
+export async function checkFollowUps(deps, itemId, { actor, pending = false }) {
   const primary = /** @type {any} */ (await primarySource(deps.db, itemId));
   if (!primary || primary.platform !== 'x' || !primary.externalId) return { added: 0 };
   const posts = await newPosts(deps, { kind: primary.kind, followUps: await fetchThread(deps, primary.externalId) });
   if (posts.length === 0) return { added: 0 };
   const handle = HANDLE_IN_URL.exec(primary.url)?.[1] ?? null;
   const added = await deps.db.transaction(
-    (tx) => appendPosts(tx, { itemId, accountId: primary.accountId, handle, posts }),
+    (tx) => appendPosts(tx, { itemId, accountId: primary.accountId, handle, posts, pending }),
     { actor },
   );
   return { added };

@@ -93,6 +93,16 @@ async function representativeCalls() {
     ...Object.keys(kindsRegistry).map((name) => `?q=tell%20you&kinds=${name}`),
   ];
   for (const s of searches) calls.push(['GET', `/api/search${s}`]);
+  // The sign-in flow: start redirects, the callback (a bare probe) is a 400 for a bad state.
+  calls.push(['GET', '/api/auth/x/start?return=/add'], ['GET', '/api/auth/x/callback?code=c&state=s'], ['GET', '/api/auth/x/callback']);
+  calls.push(['GET', '/api/auth/google/start?return=/me'], ['GET', '/api/auth/google/callback?code=c&state=s'], ['GET', '/api/auth/google/callback']);
+  // The signed-in user's own routes: /api/me is 200 even signed out; the
+  // writes are 401 (signed out) or 404 (dev sign-in absent in the sweep).
+  calls.push(['GET', '/api/me'], ['GET', '/api/me/added'], ['POST', '/api/me/name'], ['POST', '/api/auth/signout'], ['POST', '/api/auth/signout-all'], ['POST', '/api/auth/dev'], ['POST', '/api/me/delete']);
+  // The signed-in add flow: all 401 without a session, nothing leaks.
+  calls.push(['GET', '/api/add/options'], ['POST', '/api/add/preview'], ['POST', '/api/add'], ['POST', '/api/people']);
+  // Editing and follow-ups: all signed-in, a bare probe is 401 (no session).
+  calls.push(['GET', '/api/item/translation/1/edit'], ['POST', '/api/item/translation/1/edit'], ['POST', '/api/item/translation/1/edits/1/revert'], ['POST', '/api/item/translation/1/follow-ups']);
   return calls;
 }
 

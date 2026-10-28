@@ -8,6 +8,7 @@
 import { neighbours } from '../repo/items.js';
 import { findVisibleItemId, loadCards, loadItemExtras } from '../repo/cards.js';
 import { kindsOf, eventRefOf, presenterContext, detailsFor } from './cards.js';
+import { editRoleFor } from './editItem.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
 /** @typedef {import('../http/contracts.js').KindPreview} KindPreview */
@@ -59,10 +60,11 @@ async function loadVisible(deps, kindName, sourceId) {
  * One visible item's page: its kind's detail, with the shared header
  * fields and its neighbours in its event. Null for an unknown kind, an
  * unknown id or a hidden item.
- * @param {ViewDeps} deps @param {string} kindName @param {string} sourceId
- * @returns {Promise<ItemView|null>}
+ * @param {ViewDeps & { kinds?: any }} deps @param {string} kindName @param {string} sourceId
+ * @param {import('./session.js').SessionUser|null} [viewer] the signed-in caller, for `canEdit`/`canCheckFollowUps`
+ * @returns {Promise<(ItemView & { canEdit: boolean, canCheckFollowUps: boolean })|null>}
  */
-export async function itemView(deps, kindName, sourceId) {
+export async function itemView(deps, kindName, sourceId, viewer = null) {
   const found = await loadVisible(deps, kindName, sourceId);
   const extras = found ? await loadItemExtras(deps.db, found.card.id) : null;
   if (!found || !extras) return null;
@@ -71,10 +73,15 @@ export async function itemView(deps, kindName, sourceId) {
   const preview = /** @type {KindPreview} */ (kind.present.preview(card, details, ctx));
   const detail = /** @type {DetailVM} */ (kind.present.detail(card, details, ctx));
   const { prev, next } = card.event ? await neighbours(deps.db, card.id) : { prev: null, next: null };
+  // A signed-in viewer's own permissions, for the edit and follow-up buttons.
+  const role = viewer ? await editRoleFor(deps.db, card.id, viewer) : null;
   return {
     ...detail, kind: kind.name, sourceId: card.sourceId, url: preview.url, placement: card.placement,
     event: eventRefOf(card.event), people: preview.people,
     tags: { keyword: extras.keyword, hashtags: extras.hashtags }, category: extras.category, addedBy: addedByOf(extras.submitter),
     followsOnFrom: preview.followsOnFrom, prev: await linkTo(deps, prev), next: await linkTo(deps, next),
+    canEdit: role !== null,
+    // A kind may not support follow-ups at all (the method is optional).
+    canCheckFollowUps: role !== null && typeof kind.checkFollowUps === 'function',
   };
 }

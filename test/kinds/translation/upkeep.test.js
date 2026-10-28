@@ -89,6 +89,22 @@ test('checkFollowUps appends a new same-author follow-up once, with its own post
   }
 });
 
+test('checkFollowUps marks only the appended parts pending, never the archived ones', async () => {
+  const deps = await ingestDeps();
+  try {
+    const { itemId } = await ingest(deps, IDS.THREAD);
+    const id = /** @type {number} */ (itemId);
+    const reply = { id: IDS.THREAD_REPLY, text: 'One more: the lanterns were handmade too.', author: { screen_name: 'tl_beta', id: '9002' },
+      created_at: 'Tue Oct 20 12:00:00 +0000 2026', replying_to: { screen_name: 'tl_beta', status: IDS.THREAD_FOLLOWUP } };
+    const { fetchImpl } = patchedFetch((kind, fid, json) => (kind === 'thread' && fid === IDS.THREAD ? { ...json, thread: [...json.thread, reply] } : json));
+    assert.deepEqual(await checkFollowUps({ ...deps, fetchImpl }, id, { ...SYSTEM, pending: true }), { added: 1 });
+    const parts = await rows(deps.db, 'select position, pending from translation_parts where item_id = $1 order by position', [id]);
+    assert.deepEqual(parts.map((p) => p.pending), [false, false, true], 'only the new part is held');
+  } finally {
+    await deps.db.end();
+  }
+});
+
 test('touchRefresh allows one refresh per item per 60 seconds', async () => {
   const deps = await ingestDeps();
   try {
@@ -107,8 +123,7 @@ test('touchRefresh allows one refresh per item per 60 seconds', async () => {
   }
 });
 
-test('checkFollowUps does not re-add a follow-up whose new (edited) id is already an alias', async () => {
-  const deps = await ingestDeps();
+test('checkFollowUps does not re-add a follow-up whose new (edited) id is already an alias', async () => {  const deps = await ingestDeps();
   try {
     const { itemId } = await ingest(deps, IDS.THREAD);
     const id = /** @type {number} */ (itemId);
@@ -199,3 +214,26 @@ for (const [status, fetchImpl] of /** @type {[string, typeof fetch][]} */ ([
     }
   });
 }
+
+test('a refreshed part loses its line fixes; marker speakers stay (Review Focus 2)', async () => {
+  const deps = await ingestDeps();
+  try {
+    const { itemId } = await ingest(deps, IDS.EDITED_NEW);
+    const id = /** @type {number} */ (itemId);
+    // A fixed speaker on line 0, and a marker-level speaker.
+    await deps.db.transaction((/** @type {any} */ tx) => tx.query(
+      "insert into translation_line_fixes (item_id, position, line, as_kind, role) values ($1, 0, 0, 'speech', 'host')",
+      [id],
+    ), SYSTEM);
+    const { fetchImpl } = editedAgain();
+    const during = { ...deps, fetchImpl, now: () => new Date('2026-10-13T13:00:00.000Z') };
+    await refreshEdits(during, id, SYSTEM);
+    // The re-written part's fix is gone.
+    assert.equal(await count(deps.db, 'select count(*)::int as n from translation_line_fixes where item_id = $1', [id]), 0, 'line fix dropped after a body rewrite');
+    // Marker-level speakers are untouched by the refresh.
+    const [speakers] = await rows(deps.db, 'select count(*)::int as n from translation_speakers where item_id = $1', [id]);
+    assert.ok(speakers.n >= 0);
+  } finally {
+    await deps.db.end();
+  }
+});

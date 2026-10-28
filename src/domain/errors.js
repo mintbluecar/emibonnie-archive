@@ -41,6 +41,24 @@ export class RateLimited extends Error {
   }
 }
 
+/** Signed out (401). Carries no detail: the public error code is fixed. */
+export class Unauthorized extends Error {
+  constructor() {
+    super('signed out');
+    this.name = 'Unauthorized';
+  }
+}
+
+/** Signed in but not allowed (403); `code` is the public error code. */
+export class Forbidden extends Error {
+  /** @param {string} code */
+  constructor(code) {
+    super(code);
+    this.name = 'Forbidden';
+    this.code = code;
+  }
+}
+
 /** A request body over the size limit (413). */
 export class PayloadTooLarge extends Error {
   constructor() {

@@ -70,6 +70,20 @@ export function accountHref(handle) {
   return `${ACCOUNT_PATH_PREFIX}${encodeURIComponent(handle)}`;
 }
 
+/**
+ * The edit page's own prefix (`/edit/:kind/:sourceId`). The me page links
+ * to it from Task 12 and the item page's footer from Task 13, so the
+ * prefix lives here (like the others) rather than being typed into a page.
+ * Task 13 added the page to `src/pages.js`; `test/core/routes.test.js`
+ * pins the two together.
+ */
+export const EDIT_PATH_PREFIX = '/edit/';
+
+/** `('translation', '123')` -> `'/edit/translation/123'`. @param {string} kind @param {string} sourceId @returns {string} */
+export function editHref(kind, sourceId) {
+  return `${EDIT_PATH_PREFIX}${encodeURIComponent(kind)}/${encodeURIComponent(sourceId)}`;
+}
+
 /** The translator handle out of an account page's own pathname, or `null` if it isn't one. @param {string} pathname @returns {string|null} */
 export function accountFromAccountPath(pathname) {
   const match = ACCOUNT_PATH_PATTERN.exec(pathname);
@@ -82,9 +96,10 @@ export function accountFromAccountPath(pathname) {
  * route in `src/pages.js` has, so they 404'd). Each mirrors a
  * `src/pages.js` entry exactly, with no trailing slash, and
  * `test/core/routes.test.js` pins each one to it, so no page or
- * component types a page path itself. `/add` and `/me` are reserved
- * there for pages a later plan builds. There is no search page (Task
- * 10d): search happens in place, and `/search` only redirects home.
+ * component types a page path itself. `/add` and `/me` were reserved
+ * placeholders in Plan 1b; Plan 2a built them (Task 12 for `/me`,
+ * Task 13 for the add form). There is no search page (Task 10d): search
+ * happens in place, and `/search` only redirects home.
  */
 export const HOME_PATH = '/';
 export const ABOUT_PATH = '/about';

@@ -6,7 +6,7 @@
  * not compatibility), then lower-cased, then trimmed with internal
  * whitespace runs collapsed to one space. NFC deliberately leaves
  * compatibility variants (fullwidth, etc.) distinct from their ASCII
- * forms, unlike `cleanDisplayName`'s NFKC below: a tag is an exact key,
+ * forms, unlike `cleanPersonName`'s NFKC below: a tag is an exact key,
  * not a display string meant to fold look-alikes together.
  * @param {string} s
  * @returns {string}
@@ -16,16 +16,28 @@ export function norm(s) {
 }
 
 /**
- * Removes characters from directional overrides/marks and zero-width
+ * NFKC-normalise and drop directional overrides/marks and zero-width
  * joiners/spaces (Unicode category `Cf`, "Format") — the trick used to
- * make a handle look different from how it reads. NFKC first folds
- * compatibility variants (fullwidth, etc.) to their ordinary form, since
- * a display name should read the same either way.
+ * make a handle look different from how it reads. Both name cleaners
+ * start here (the display-name validator also drops control characters).
  * @param {string} s
  * @returns {string}
  */
-export function cleanDisplayName(s) {
-  const cleaned = s.normalize('NFKC').replace(/\p{Cf}/gu, '').trim();
+export function withoutInvisible(s) {
+  return s.normalize('NFKC').replace(/\p{Cf}/gu, '');
+}
+
+/**
+ * A person's name from an Instagram or manually entered profile: fold
+ * compatibility variants, drop invisible characters, strip a leading `@`
+ * and cap the length. (Distinct from `domain/displayName.js`'s
+ * `cleanDisplayName`, which *validates* a signed-in user's chosen name
+ * and rejects one that looks like a handle.)
+ * @param {string} s
+ * @returns {string}
+ */
+export function cleanPersonName(s) {
+  const cleaned = withoutInvisible(s).trim();
   const withoutAt = cleaned.startsWith('@') ? cleaned.slice(1) : cleaned;
   return withoutAt.trim().slice(0, 40);
 }

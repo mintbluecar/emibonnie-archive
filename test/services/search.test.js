@@ -57,6 +57,38 @@ test('Thai: "ครบ" ranks LONG first', async () => {
   assert.equal(results[0].sourceId, IDS.LONG);
 });
 
+test('a subbed item is left out of a typed query, but a filter-only browse still lists it (Plan 2a Task 7)', async () => {
+  const id = await itemIdOf(deps.db, IDS.LONG);
+  await deps.db.transaction((/** @type {any} */ tx) => tx.query('update translations set subbed = true where item_id = $1', [id]), SYSTEM);
+  try {
+    // Typed query: no LONG.
+    assert.ok(!(await ids({ q: 'hug' })).includes(IDS.LONG), 'typed query skips a subbed item');
+    // Filter-only browse (empty q): still listed.
+    const browsing = await search(deps, { q: null });
+    assert.ok(browsing.results.some((r) => r.sourceId === IDS.LONG), 'a filter-only browse lists the subbed item');
+  } finally {
+    await deps.db.transaction((/** @type {any} */ tx) => tx.query('update translations set subbed = false where item_id = $1', [id]), SYSTEM);
+  }
+});
+
+test('a subbed item is not returned by a typed query even when one of its tags matches', async () => {
+  const id = await itemIdOf(deps.db, IDS.LONG);
+  await deps.db.transaction(async (/** @type {any} */ tx) => {
+    const { rows: [tag] } = await tx.query("insert into tags (kind, display, norm) values ('hashtag', 'subbedprobe', 'subbedprobe') returning id");
+    await tx.query('insert into item_tags (item_id, tag_id) values ($1, $2)', [id, tag.id]);
+    await tx.query('update translations set subbed = true where item_id = $1', [id]);
+  }, SYSTEM);
+  try {
+    assert.ok(!(await ids({ q: 'subbedprobe' })).includes(IDS.LONG), 'a tag match must not resurrect a subbed item');
+  } finally {
+    await deps.db.transaction(async (/** @type {any} */ tx) => {
+      await tx.query("delete from item_tags where tag_id in (select id from tags where norm = 'subbedprobe')");
+      await tx.query("delete from tags where norm = 'subbedprobe'");
+      await tx.query('update translations set subbed = false where item_id = $1', [id]);
+    }, SYSTEM);
+  }
+});
+
 test('the text clause can use the trigram index (EXPLAIN)', async () => {
   const kinds = Object.values(kindsRegistry);
   const { sql, params } = searchSql({ q: 'ครบ', kinds, filters: {}, limit: 50, offset: 0 });

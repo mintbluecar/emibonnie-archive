@@ -1,0 +1,86 @@
+{
+ "__typename": "Tweet",
+ "favorite_count": 42,
+ "lang": "en",
+ "possibly_sensitive": false,
+ "created_at": "2026-10-18T10:20:00.000Z",
+ "display_text_range": [
+  0,
+  91
+ ],
+ "entities": {
+  "hashtags": [
+   {
+    "indices": [
+     20,
+     36
+    ],
+    "text": "SolLunaStarfest"
+   }
+  ],
+  "media": [
+   {
+    "indices": [
+     91,
+     128
+    ],
+    "display": "pic.x.com/1900000000000000018media",
+    "original": "https://t.co/1900000000000000018media",
+    "url": "https://t.co/1900000000000000018media",
+    "expanded_url": "https://x.com/tl_beta/status/1900000000000000018/video/1"
+   }
+  ]
+ },
+ "id_str": "1900000000000000018",
+ "text": "SOLLUNA AT STARFEST\n#SolLunaStarfest\n\n\nFull english-subtitled clip of the countdown moment. https://t.co/1900000000000000018media",
+ "user": {
+  "id_str": "9002",
+  "name": "beta subs",
+  "screen_name": "tl_beta"
+ },
+ "mediaDetails": [
+  {
+   "type": "video",
+   "media_url_https": "https://pbs.twimg.com/amplify_video_thumb/1900000000000000018v/thumb.jpg",
+   "original_info": {
+    "width": 1080,
+    "height": 1920
+   },
+   "video_info": {
+    "duration_millis": 30000,
+    "variants": [
+     {
+      "content_type": "application/x-mpegURL",
+      "url": "https://video.twimg.com/amplify_video/1900000000000000018v/pl/playlist.m3u8"
+     },
+     {
+      "bitrate": 632000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/1900000000000000018v/vid/avc1/632000.mp4"
+     },
+     {
+      "bitrate": 950000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/1900000000000000018v/vid/avc1/950000.mp4"
+     },
+     {
+      "bitrate": 2176000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/1900000000000000018v/vid/avc1/2176000.mp4"
+     },
+     {
+      "bitrate": 10368000,
+      "content_type": "video/mp4",
+      "url": "https://video.twimg.com/amplify_video/1900000000000000018v/vid/avc1/10368000.mp4"
+     }
+    ]
+   }
+  }
+ ],
+ "photos": [],
+ "video": null,
+ "conversation_count": 1,
+ "news_action_type": "conversation",
+ "isEdited": false,
+ "isStaleEdit": false
+}

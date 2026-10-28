@@ -59,11 +59,12 @@ async function guardedRefresh(deps, { kind, id }) {
  * a `refresh` for the caller to run in the background. A post with no
  * window is finalized at intake, so it never schedules one.
  * @param {ItemDeps} deps @param {string} kindName @param {string} sourceId
- * @returns {Promise<{ view: ItemView & { editOpenUntil: string|null }, refresh: (() => Promise<unknown>)|null } | null>}
+ * @param {import('./session.js').SessionUser|null} [viewer]
+ * @returns {Promise<{ view: ItemView & { editOpenUntil: string|null, canEdit: boolean, canCheckFollowUps: boolean }, refresh: (() => Promise<unknown>)|null } | null>}
  */
-export async function itemPage(deps, kindName, sourceId) {
+export async function itemPage(deps, kindName, sourceId, viewer = null) {
   const target = await visibleItem(deps, kindName, sourceId);
-  const view = target ? await itemView(deps, kindName, sourceId) : null;
+  const view = target ? await itemView(deps, kindName, sourceId, viewer) : null;
   if (!target || !view) return null;
   if (!target.kind.refresh) return { view: { ...view, editOpenUntil: null }, refresh: null };
   const open = await unfinalizedSources(deps.db, target.id);

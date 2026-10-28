@@ -18,7 +18,8 @@ import { EVENT_NOT_DELETED } from './items.js';
 import { norm } from '../domain/text.js';
 
 /** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
-/** @typedef {{ name: string, search: { textClause(n: number): string, rank(n: number): string } }} SearchKind */
+/** @typedef {{ name: string, search: { textClause(n: number): string, rank(n: number): string,
+ *   typeExclusion?(): string } }} SearchKind */
 /**
  * @typedef {{ people?: number[], peopleMode?: 'any'|'all', categories?: number[], placements?: string[],
  *   eventSlug?: string, accountHandle?: string, clientId?: number, from?: string, to?: string }} SearchFilters
@@ -83,14 +84,20 @@ function textCondition(q, kinds, p) {
   const pattern = p.index(containsPattern(q));
   const tag = p.bind(containsPattern(norm(q.replace(/^#/, ''))));
   const byKind = kinds.map((kind) => `(i.kind = ${p.bind(kind.name)} and ${kind.search.textClause(pattern)})`);
-  return `(${[
+  const matches = [
     ...byKind,
     `exists (select 1 from item_tags it join tags t on t.id = it.tag_id where it.item_id = i.id and not t.ignored and t.norm like ${tag})`,
     `exists (select 1 from events en where en.id = i.event_id and en.name ilike $${pattern})`,
     `exists (select 1 from item_people ipn join people pn on pn.id = ipn.person_id
        where ipn.item_id = i.id and pn.deleted_at is null and pn.display_name ilike $${pattern})`,
     `exists (select 1 from accounts an where an.id = i.credited_account_id and an.handle ilike $${pattern})`,
-  ].join('\n or ')})`;
+  ].join('\n or ');
+  // A kind can rule some of its entries out of every typed query (translation:
+  // a subbed one), whichever clause above would have matched it.
+  const exclusions = kinds
+    .filter((kind) => typeof kind.search.typeExclusion === 'function')
+    .map((kind) => `not (i.kind = ${p.bind(kind.name)} and ${/** @type {NonNullable<SearchKind['search']['typeExclusion']>} */ (kind.search.typeExclusion)()})`);
+  return `((${matches})${exclusions.map((e) => ` and ${e}`).join('')})`;
 }
 
 /** @param {string} q @param {SearchKind[]} kinds @param {Params} p */

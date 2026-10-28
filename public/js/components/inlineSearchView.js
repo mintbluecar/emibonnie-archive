@@ -174,7 +174,7 @@ export function region(ctx, list) {
   `;
 }
 
-/** The box's text: the page's own ("search sol…") while its filter is on, else the archive-wide one. @param {Ctx} ctx @returns {string} */
+/** The box's text: the page's own ("search <wordmark accent>…") while its filter is on, else the archive-wide one. @param {Ctx} ctx @returns {string} */
 export function placeholderOf(ctx) {
   return hasScope(ctx.state, ctx.scope) ? ctx.placeholder : t('search.placeholder');
 }

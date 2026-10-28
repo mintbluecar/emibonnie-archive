@@ -1,7 +1,7 @@
 // @ts-check
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { norm, cleanDisplayName, excerptAround } from '../../src/domain/text.js';
+import { norm, cleanPersonName, excerptAround } from '../../src/domain/text.js';
 
 test('norm: lower-cases and collapses whitespace', () => {
   assert.equal(norm('  Happy   Day  '), 'happy day');
@@ -15,16 +15,16 @@ test('norm: uses NFC, not NFKC, so fullwidth letters stay distinct from ASCII', 
   assert.equal(norm('#ＳＬHappy  Day'), '#ｓｌhappy day');
 });
 
-test('cleanDisplayName: strips an RTL override and a zero-width space around a leading @', () => {
-  assert.equal(cleanDisplayName('@‮tl_alpha​'), 'tl_alpha');
+test('cleanPersonName: strips an RTL override and a zero-width space around a leading @', () => {
+  assert.equal(cleanPersonName('@‮tl_alpha​'), 'tl_alpha');
 });
 
-test('cleanDisplayName: NFKC folds fullwidth letters to their ASCII form', () => {
-  assert.equal(cleanDisplayName('ＳＬ'), 'SL');
+test('cleanPersonName: NFKC folds fullwidth letters to their ASCII form', () => {
+  assert.equal(cleanPersonName('ＳＬ'), 'SL');
 });
 
-test('cleanDisplayName: trims to 40 characters', () => {
-  assert.equal(cleanDisplayName('a'.repeat(50)).length, 40);
+test('cleanPersonName: trims to 40 characters', () => {
+  assert.equal(cleanPersonName('a'.repeat(50)).length, 40);
 });
 
 const LONG = `${'Many people at fan signs and other events like to tell us about their lives and the problems they face. '.repeat(2)}At the very least, you are your own number one girl and you are Luna's number one girl too, always and forever, okay?`;
