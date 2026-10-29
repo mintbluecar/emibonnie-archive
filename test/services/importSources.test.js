@@ -10,8 +10,8 @@ import {
 test('parseNotionCsv maps the agreed columns and ignores Name', () => {
   const csv = [
     'Name,Date,Artist(s),Type,Client / Media,Keyword,Hashtag,Translation link,Original media',
-    '"My title","2026-10-15","emi, bonnie","live","tiktok","LOVE TO THE MOON","#Moonshadow","https://x.com/tl/status/1900000000000000001","https://pbs/x.jpg"',
-    'x,2026-10-01,emi,live,tiktok,K,"#H",not-a-link,',
+    '"My title","2026-10-15","host, star guest","live","tiktok","LOVE TO THE MOON","#Moonshadow","https://x.com/tl/status/1900000000000000001","https://pbs/x.jpg"',
+    'x,2026-10-01,host,live,tiktok,K,"#H",not-a-link,',
     'x,y,z,a,b,c,d,,',
   ].join('\n');
   const { rows, skipped } = parseNotionCsv(csv);
