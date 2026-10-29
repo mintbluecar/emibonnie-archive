@@ -91,20 +91,21 @@ The schema already defines them; the mapping is:
 |---|---|
 | `queued` | Not attempted yet. |
 | `fetched` | Item created and held; every marker has a speaker → ready to publish. |
+| `attached` | The link was a follow-up of an existing item: a new part was appended to that item and held. The row is reviewed part-by-part; the parent item is never touched. |
 | `needs_speakers` | Item created and held; at least one marker unmapped. |
 | `check` | Held item that doesn't look like a translation (no markers and little text, or an event link). Non-blocking; the owner decides. |
 | `published` | Live. |
 | `skipped` | Nothing archived, with the reason in `error`: duplicate / already archived / opted out / removed at source / deliberately skipped by the owner. |
 | `failed` | The job could not finish the row, with the reason in `error`: fetch error, rate limit after retries, database error, deleted tweet with nothing to recover. |
 
-`fetched`, `needs_speakers` and `check` all mean "item exists, held". The distinction is for the owner's lists, not for visibility.
+`fetched`, `needs_speakers`, `check` and `attached` all mean "something is held". The distinction is for the owner's lists, not for visibility. `attached` is the one row whose held thing is a part of an already-existing (often published) item, not a whole item: publishing it approves the held part (`translation_parts.pending = false`), skipping it rejects the part (`rejected = true`, so the verbatim text is kept), and neither action publishes, unpublishes or deletes the parent item. Its markers join the job's marker table for that translator like any other row.
 
 ## Holding and publishing
 
 - **Held = `review_state = 'pending'`.** Existing visibility rules already hide pending items from every public surface.
 - **The owner can open and edit held entries.** Today `/t/…` and `/edit/…` resolve only visible items, so even the owner gets a 404 while an entry is held. Plan 3 changes item and edit resolution so an owner resolves any archived state (`findItemIdBySource` instead of `findVisibleItemId`); response stays `private, no-store`, and non-owners still get 404.
 - **Publishing** is the existing owner review action (`POST /api/owner/items/:kind/:sourceId/review { state: 'published' }`), or the job-level bulk publish. The entry's edit page gets **save & publish**, which saves the changes and then publishes; a failed publish leaves it held with a message.
-- **The 2b waiting list excludes import-held items** (any item with an `import_rows` row), so its 50-row window is not consumed by an import. The import job page is where those are reviewed.
+- **The 2b waiting list excludes import-held items**, so its 50-row window is not consumed by an import. "Import-held" means the item has an `import_rows` row in a held state (`fetched`, `needs_speakers`, `check`, `attached`), not merely any row: a row that ended `skipped` because the link was already archived leaves the item to whichever surface is reviewing it. A held *part* on an already-published parent (an `attached` row) is still reviewable from the 2b waiting list as well as the job page.
 
 ## The review page
 
@@ -114,7 +115,7 @@ The schema already defines them; the mapping is:
 - `GET /api/owner/imports/:id/rows?state&q&offset` — rows page (50), filterable by state, translator, event, or free text against the parsed text.
 - `POST /api/owner/imports/:id/map` — `{ translatorAccountId, marker, speaker, remember, entries? }`; applies to every held entry of that translator in this job (`entries` narrows it to specific item ids).
 - `POST /api/owner/imports/:id/publish` — `{ scope: 'ready' | 'all' }`.
-- `POST /api/owner/imports/:id/rows/:rowId/skip` and `…/archive` — the two decisions for `check` rows (and skip for a failed row).
+- `POST /api/owner/imports/:id/rows/:rowId/skip` and `…/archive` — the two decisions for `check` rows (and skip for a failed row). For an `attached` row these act on the held part: archive approves it, skip rejects it. The parent item is untouched by both.
 - `POST /api/owner/imports/:id/retry` — processes up to 10 retryable failed rows per call and returns how many remain; the page calls it until zero, showing progress.
 
 Page contents, top to bottom:
@@ -134,6 +135,8 @@ The same page in the engine's copy-key style; the mockups shown during the conve
 | Translator opted out / item removed | `skipped` | Nothing. |
 | Fetch error, rate limit after retries, DB error | `failed` | `retry` (server batch) or `skip`. |
 | Tweet deleted | `failed` ("deleted — nothing to recover") | Open on X (if still viewable), or skip. The Notion export has no text column, so the text is lost. |
+| Follow-up of an existing item | `attached` | `open` / `edit` the parent, `archive` (approve the part), `skip` (reject the part). The parent stays as it was. |
+| Link resolves to an already-held item (from `/add` or an earlier job) | `skipped` ("already archived — awaiting review") | Nothing here; the item stays with its original surface (2b waiting list or that job). |
 | No markers and little text, or an event link | `check` | `open` / `edit`, `skip`, or `archive anyway`. |
 | Everything else | `fetched` or `needs_speakers` | Map in bulk, or open and fix individually. |
 
@@ -150,7 +153,7 @@ The same page in the engine's copy-key style; the mockups shown during the conve
 ## Data model
 
 - `import_jobs` and `import_rows` already exist (001). `import_rows.error` carries the reason; `import_rows.overrides` carries the Notion row.
-- Migration 005: add `import_skipped` to `deleted_reasons`, and an index on `import_rows (job_id, state)`.
+- Migration 005: add `import_skipped` to `deleted_reasons`; add `attached` to `import_rows.state`'s check constraint (drop and recreate it); add an index on `import_rows (job_id, state)`.
 - No new tables.
 
 ## Constraints and rules
@@ -175,6 +178,8 @@ The same page in the engine's copy-key style; the mockups shown during the conve
 - **One migration** (the skip reason and an index); no new tables.
 - **No admin sidebar**; the import page is linked from the owner's me section.
 - **Skipping a `check` row's existing item** uses a new `import_skipped` deletion reason rather than pretending it was spam.
+- **Follow-up links get their own `attached` row state and part-scoped actions**: publish approves the held part, skip rejects it, the parent is never touched.
+- **A link that resolves to an item already held elsewhere is skipped**, and the waiting-list exclusion follows only *held* import rows, so nothing is stranded.
 
 ## Left to the builder
 
