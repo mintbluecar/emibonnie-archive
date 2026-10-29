@@ -14,6 +14,7 @@ import {
   PERSON_PATH_PREFIX, personHref, igFromPersonPath,
   ACCOUNT_PATH_PREFIX, accountHref, accountFromAccountPath,
   EDIT_PATH_PREFIX, editHref,
+  IMPORT_PATH_PREFIX, importHref,
 } from '../../public/js/core/routes.js';
 
 test('EVENT_PATH_PREFIX matches the /e/:slug page route in src/pages.js', () => {
@@ -64,6 +65,18 @@ test('EDIT_PATH_PREFIX matches the /edit/:kind/:sourceId page route in src/pages
 test('editHref: builds the edit page path, encoding the kind and the source id', () => {
   assert.equal(editHref('translation', '123'), '/edit/translation/123');
   assert.equal(editHref('translation', 'a b'), '/edit/translation/a%20b');
+});
+
+test('IMPORT_PATH_PREFIX matches the /admin/imports/:id page route in src/pages.js', () => {
+  const importPage = pages.find((p) => p.path === '/admin/imports/:id');
+  assert.ok(importPage, 'src/pages.js lists an /admin/imports/:id route');
+  assert.ok(importPage?.path.startsWith(IMPORT_PATH_PREFIX), `${importPage?.path} should start with ${IMPORT_PATH_PREFIX}`);
+  assert.equal(IMPORT_PATH_PREFIX, '/admin/imports/');
+});
+
+test('importHref: builds the import review page path from a job id', () => {
+  assert.equal(importHref(7), '/admin/imports/7');
+  assert.equal(importHref(0), '/admin/imports/0');
 });
 
 test('personHref/igFromPersonPath: builds and parses the person page path, encoding/decoding the handle', () => {

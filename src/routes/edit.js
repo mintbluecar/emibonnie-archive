@@ -42,7 +42,11 @@ export const editRoute = {
     if (!target || !target.role) throw new NotFound();
     const fields = await editableOf(deps.db, target.kind, target.id);
     const details = /** @type {any} */ ((await target.kind.loadDetails(deps.db, [target.id], { includePending: true })).get(target.id));
-    return { role: target.role, fields, ...editLines(details), history: target.role === 'owner' ? await editHistory(deps, target.id) : [] };
+    return {
+      role: target.role, fields, ...editLines(details),
+      reviewState: target.item.reviewState ?? null,
+      history: target.role === 'owner' ? await editHistory(deps, target.id) : [],
+    };
   },
 };
 

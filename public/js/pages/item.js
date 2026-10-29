@@ -76,6 +76,17 @@ function bodyContent(data) {
 }
 
 /**
+ * The banner a held entry shows its owner (Plan 3): it is not public, and
+ * nothing beyond the owner can see it until it is published.
+ * @param {import('../../../src/http/contracts.js').ItemView} data
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+function heldBanner(data) {
+  if (/** @type {any} */ (data).reviewState !== 'pending') return html``;
+  return html`<p class="c-item__held" role="status">${t('item.held')}</p>`;
+}
+
+/**
  * `(ItemView & { editOpenUntil })` is what `/api/item/:kind/:sourceId`
  * returns -- `itemPage()` in `src/services/itemPage.js`.
  * @param {import('../../../src/http/contracts.js').ItemView & { editOpenUntil: string|null }} data
@@ -83,6 +94,7 @@ function bodyContent(data) {
  */
 export function composeItem(data) {
   const content = html`
+    ${heldBanner(data)}
     <div class="c-item">
       ${backRow(data)}
       <div class="c-item__media">

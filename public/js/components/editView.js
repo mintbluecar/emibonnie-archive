@@ -17,10 +17,10 @@ import * as lineFixSheet from './lineFixSheet.js';
 /** @typedef {import('../state/addState.js').LineFix} LineFix */
 /** @typedef {import('../state/addState.js').Speaker} Speaker */
 /** @typedef {{ role: 'submitter'|'translator'|'owner', fields: any, parts: string[],
- *   lines: any[], unmapped: any[], history: any[] }} EditData */
+ *   lines: any[], unmapped: any[], history: any[], reviewState?: string|null }} EditData */
 /** @typedef {{ options: any, data: EditData, choices: Choices, chosen: Record<string, Speaker>,
  *   lineFixes: LineFix[], fix: any|null, open: string|null, busy: boolean,
- *   notice: string|null, saved: boolean }} EditState */
+ *   notice: string|null, saved: boolean, published?: boolean }} EditState */
 
 /** `{marker, count}` for every marker still doing work in the lines (a fixed line's answer is its own). */
 /** @param {any[]} lines @returns {{ marker: string, count: number }[]} */
@@ -75,24 +75,39 @@ function historyBlock(history) {
   `;
 }
 
+/** The buttons and the save/publish messages. @param {EditState} s @param {boolean} held */
+function actionsBlock(s, held) {
+  return html`
+    <div class="c-edit__actions">
+      <button class="c-add__save" type="button" data-action="save"${s.busy ? ' disabled' : ''}>
+        ${s.busy ? t('edit.saving') : t('edit.save')}
+      </button>
+      ${held ? html`
+        <button class="c-add__save" type="button" data-action="save-publish"${s.busy ? ' disabled' : ''}>
+          ${s.busy ? t('edit.saving') : t('edit.saveAndPublish')}
+        </button>
+      ` : ''}
+      ${s.notice ? html`<p class="c-edit__notice" role="alert">${s.notice}</p>` : ''}
+      ${s.saved ? html`<p class="c-edit__saved" role="status">${t('edit.saved')}</p>` : ''}
+      ${s.published ? html`<p class="c-edit__published" role="status">${t('edit.published')}</p>` : ''}
+    </div>
+  `;
+}
+
 /** @param {EditState} s @returns {import('../core/html.js').SafeHtml} */
 export function render(s) {
   const draft = editDraft(s);
   const isOwner = s.data.role === 'owner';
+  const held = s.data.reviewState === 'pending';
   return pageShell.render({
     active: 'me', compact: true,
     content: html`
       <h1 class="c-me__title">${t('edit.title')}</h1>
+      ${held ? html`<p class="c-item__held" role="status">${t('item.held')}</p>` : ''}
       ${addDetails.render({ draft, options: s.options, isOwner, choices: s.choices, showActions: false, allowNewEvent: false })}
       ${speakerStep.render({ draft, options: s.options, chosen: s.chosen, open: s.open, lineFixes: s.lineFixes, showSave: false })}
       ${s.fix ? lineFixSheet.render({ line: s.fix, options: s.options, fixes: s.lineFixes }) : ''}
-      <div class="c-edit__actions">
-        <button class="c-add__save" type="button" data-action="save"${s.busy ? ' disabled' : ''}>
-          ${s.busy ? t('edit.saving') : t('edit.save')}
-        </button>
-        ${s.notice ? html`<p class="c-edit__notice" role="alert">${s.notice}</p>` : ''}
-        ${s.saved ? html`<p class="c-edit__saved" role="status">${t('edit.saved')}</p>` : ''}
-      </div>
+      ${actionsBlock(s, held)}
       ${isOwner ? historyBlock(s.data.history) : ''}
     `,
   });

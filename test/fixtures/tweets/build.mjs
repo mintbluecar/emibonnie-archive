@@ -517,6 +517,21 @@ A: second translated line about the crowd.`;
   write(DIR, IDS.IMPORT_MARKERS, pair);
 }
 
+function buildImportHeld() {
+  // A text-only post with no speaker markers (long enough not to be a
+  // "check" row): the held entry the owner opens and publishes from its
+  // edit page (Plan 3 Task 11).
+  const text = 'a short note saved from the import, with no speakers in it at all.';
+  const pair = buildTweet({
+    id: IDS.IMPORT_HELD,
+    author: AUTHORS.gamma,
+    text,
+    createdAtIso: '2026-10-22T10:00:00.000Z',
+    hashtags: ['solluna'],
+  });
+  write(DIR, IDS.IMPORT_HELD, pair);
+}
+
 function buildSubbed() {
   // A clip whose English subtitles are already burned in: no speaker markers
   // in the caption, but it carries a video (its own translation needs no
@@ -582,6 +597,7 @@ export const IDS = {
   NO_MARKERS: '1900000000000000017',
   SUBBED: '1900000000000000018',
   IMPORT_MARKERS: '1900000000000000019',
+  IMPORT_HELD: '1900000000000000020',
 };
 
 export function build() {
@@ -600,6 +616,7 @@ export function build() {
   buildNoMarkers();
   buildSubbed();
   buildImportMarkers();
+  buildImportHeld();
 }
 
 // Only regenerate the committed fixtures when run directly; importing this

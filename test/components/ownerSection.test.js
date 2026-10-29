@@ -16,7 +16,7 @@ const { t } = await import('../../public/js/core/site.js');
 /** @param {Partial<any>} [overrides] */
 function owner(overrides = {}) {
   return {
-    approvalRequired: false, signInFailedAt: null, waiting: [], reports: [], users: null, query: '',
+    approvalRequired: false, signInFailedAt: null, waiting: [], reports: [], users: null, query: '', imports: [],
     ...overrides,
   };
 }
@@ -94,6 +94,18 @@ test('every icon-only control carries both a title and an accessible name', () =
     assert.match(tag, /title="[^"]+"/, tag);
     assert.match(tag, /aria-label="[^"]+"/, tag);
   }
+});
+
+test('recent import jobs list with a link and counts; none renders nothing', () => {
+  const jobs = [{ id: 9, source: 'notion', status: 'done', createdAt: '2026-10-28T00:00:00.000Z', counts: { published: 4, failed: 1 } }];
+  const markup = String(render(owner({ imports: jobs })));
+  assert.match(markup, /href="\/admin\/imports\/9"/);
+  assert.match(markup, copyRe(t('import.source.notion')));
+  assert.match(markup, copyRe(t('import.state.published')));
+  assert.match(markup, /5 rows/);
+
+  const none = String(render(owner()));
+  assert.ok(!none.includes(t('owner.imports')), 'no heading when there are no jobs');
 });
 
 test('toggling the switch posts the new state and reloads', async () => {

@@ -10,6 +10,16 @@
  * translation screens.
  */
 
+.c-item__held {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-card);
+  background: var(--color-label-on-tint);
+  color: var(--color-card);
+  font-size: var(--text-12);
+  font-weight: 700;
+}
+
 .c-item {
   display: grid;
   grid-template-columns: 1fr;

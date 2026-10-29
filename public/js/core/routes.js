@@ -84,6 +84,18 @@ export function editHref(kind, sourceId) {
   return `${EDIT_PATH_PREFIX}${encodeURIComponent(kind)}/${encodeURIComponent(sourceId)}`;
 }
 
+/**
+ * The owner's import review page prefix (`/admin/imports/:id`, Plan 3) --
+ * the one place a client builds that link; the me page's recent-imports
+ * list uses `importHref`.
+ */
+export const IMPORT_PATH_PREFIX = '/admin/imports/';
+
+/** `7` -> `'/admin/imports/7'`. @param {number} jobId @returns {string} */
+export function importHref(jobId) {
+  return `${IMPORT_PATH_PREFIX}${encodeURIComponent(String(jobId))}`;
+}
+
 /** The translator handle out of an account page's own pathname, or `null` if it isn't one. @param {string} pathname @returns {string|null} */
 export function accountFromAccountPath(pathname) {
   const match = ACCOUNT_PATH_PATTERN.exec(pathname);
