@@ -176,6 +176,7 @@ export default [
   {
     ignores: [
       'node_modules/**',
+      '.vercel/**',
       'site/',
       'public/build/**',
       'public/site/**',
