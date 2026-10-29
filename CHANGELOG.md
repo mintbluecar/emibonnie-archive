@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented here. Versions are semver tags (`vX.Y.Z`). Each release lists its **upgrade steps**; to take one, see `docs/start-your-own.md`, step 10.
 
+## 0.4.0
+
+Bulk import. The owner loads an existing archive — a Notion CSV export and a text file of post links — into the site as held entries, then reviews the job on one owner-only page: maps speakers in bulk, publishes what is ready, skips what is not, and retries what failed. Nothing imported is public until it is published.
+
+**Upgrade steps:**
+
+1. `git fetch upstream --tags && git merge v0.4.0`.
+2. **Migrate.** Migration 005 adds `import_skipped` to `deleted_reasons`, allows the `attached` row state, and indexes `import_rows (job_id, state)`. No new tables. Run `npm run migrate` on each database before the deploy that needs it.
+3. **No new environment variables.** The CLI reads `DATABASE_URL` (or `PGLITE_DIR`) like `setup` and `doctor`, and uses the `ownerXUserId` already in `site.json`.
+4. **Copy keys.** No key you may have overridden was removed. The new keys you may override are `import.*`, `item.held`, `edit.published`, `edit.publishFailed`, `edit.saveAndPublish` and `owner.imports`. Each has an English default.
+5. `npm run build`, then redeploy. `/admin/imports/:id` is a page route and `/admin/` is reserved, so a kind's URL prefix cannot claim it.
+
+- **The import CLI.** `npm run import -- --notion export.csv --links chat.txt` reads a Notion database export (case-insensitive headers; quoted commas and newlines handled) and/or a plain text file of `x.com`/`twitter.com` status links. It maps `Date`, `Type`, `Client`, `Keyword` and `Artist(s)`, keeps `Name`, `Hashtag` and `Original media` for reference only, warns about artist names that are not known people, and skips a row without a usable link with a printed reason. `--pace` (default 1000 ms), `--dry-run`, `--kind`, `--report <file.csv>` and `--retry <jobId>` are there for a long or interrupted run; a Control-C loses at most the row in flight, and re-running neither duplicates entries nor loses rows.
+- **Held, not hidden.** An imported entry stays `pending` and is invisible everywhere public — item page, meta page, search, hubs, filters, event and person pages, video — while its owner can open, edit and publish it. The item and edit pages say so with a "not published · only you can see this" banner.
+- **The review page** (`/admin/imports/:id`, linked from `/me`'s recent imports). An all-rows table with state filters, search, and only the actions each state allows (open, edit, open on X, skip, archive, retry); a card per translator with each unmapped speaker marker, its count, an example line and a select of known people then roles, a per-entry override behind "review", and an optional "remember for this translator"; and publish (ready or all) plus a retry loop that runs until nothing is left.
+- **Follow-up links.** A link that turns out to be a follow-up of an entry already archived becomes a held part of it (`attached`): publishing approves only that part, skipping rejects only it, and the parent's own review state, text and visibility never change.
+- **Rate limits:** the review page reuses the owner bucket ([limits](docs/limits.md#rate-limits)); the CLI is unthrottled and paces itself.
+- **Dev only:** `POST /api/dev/import` (with `DEV_SIGN_IN=1`) seeds a held job from links for the browser tests.
+
 ## 0.3.0
 
 Translators and the owner. A recognised translator gets a one-time welcome and their own list, and can remove, restore, opt out and opt back in. Reports have a form, and the owner gets a section on the me page: the approval switch, the waiting list, open reports, and users with blocking. Every removal now purges the CDN, so removed content stops being served.

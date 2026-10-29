@@ -151,6 +151,24 @@ DATABASE_URL='<main branch string>' npm run doctor    # every line should be ✓
 - Sign in with X and with Google on your production domain, add a test entry, then sign out. Check the sign-in buttons work before you share the link.
 - Run `npm run e2e:site` (once: `npx playwright install chromium`). It builds your own `site/`, seeds `site/seed/` into a throwaway database, and checks your real pages (home, the first event and item, every featured person, a translator, a search, about, privacy, takedown and a 404) at phone and desktop widths in light and dark mode: each must answer, log no errors, never scroll sideways and pass the accessibility check, colour contrast included. It needs a `site/seed/maps.json` with at least one post.
 
+### Bulk import (v0.4.0)
+
+If your archive already exists somewhere else, load it before you share the link instead of adding entries one at a time. `npm run import` reads a Notion database export (CSV) and/or a text file of post links, and creates **held** entries: nothing it imports is public until you publish it from the review page.
+
+```sh
+DATABASE_URL='<main branch string>' npm run import -- --notion export.csv --links chat.txt
+DATABASE_URL='<main branch string>' npm run import -- --retry 3 --pace 2000
+```
+
+- It needs `DATABASE_URL` (or `PGLITE_DIR` for a local database), the same as `setup` and `doctor`, and `ownerXUserId` in `site.json`: the run is recorded as that owner's (so lookups like new types and clients may be created, and entries show "added by" you). It needs no browser session — only the review page does.
+- `--notion <file>`: a CSV export of the notebook. It reads the `Translation link` column (required), `Date`, `Type`, `Client`, `Keyword` and `Artist(s)`; `Name`, `Hashtag` and `Original media` are kept with the row for reference only (the post's own hashtags drive matching). Quoted commas and newlines are handled, header names are case-insensitive, and a row without a usable link is skipped with a printed reason.
+- `--links <file>`: plain text. Every `x.com`/`twitter.com` status link is taken; duplicates collapse to one row.
+- `--pace <ms>` waits between fetches (default `1000`), and a 429/5xx is retried with backoff before that row is marked failed. `--kind <name>` picks the kind to create (default `translation`).
+- `--retry <jobId>` walks only that job's queued and failed rows; `--dry-run` reads the sources and prints the counts without writing anything. An interrupted run is safe to resume: every row keeps its state, and re-running the same job neither duplicates entries nor loses rows.
+- `--report <file.csv>` writes one line per row (`url,status,reason`) when you want the whole list outside the page.
+
+Then review it: `/admin/imports/<jobId>` (also linked from `/me` as "recent imports"). Map each translator's speaker markers in bulk (or per entry), publish what is ready, and skip what should not be archived — a skipped row keeps its reason, and nothing skipped or held shows anywhere public.
+
 ## 10. Pull engine updates
 
 Releases are semver tags. Your clone already has the engine as `upstream` (step 1). To take a release:
