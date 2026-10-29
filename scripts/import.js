@@ -12,11 +12,9 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { createDb, dbOptionsFromEnv } from '../src/db/client.js';
 import { loadSite } from '../src/site/loadSite.js';
-import { ingestItem } from '../src/services/ingest.js';
 import { createJob, getJob, insertRows, rowsForRun, setJobStatus, updateRow } from '../src/repo/imports.js';
-import { sourceState } from '../src/repo/items.js';
 import { parseNotionCsv, extractStatusLinks, resolveArtists, eventOverrideOf } from '../src/services/importSources.js';
-import { recomputeRow } from '../src/services/importJob.js';
+import { ensureOwnerUser, runRow } from '../src/services/importJob.js';
 
 const OPTIONS = /** @type {const} */ ({
   notion: { type: 'string' },
@@ -30,65 +28,6 @@ const OPTIONS = /** @type {const} */ ({
 
 /** @param {number} ms */
 const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
-
-/**
- * The owner's user row, so `created_by` and the audit actor are valid even
- * on a database where the owner has never signed in.
- * @param {{ db: import('../src/db/common.js').Db, site: { ownerXUserId: string } }} deps
- * @returns {Promise<string>}
- */
-export async function ensureOwnerUser(deps) {
-  const userId = `x:${deps.site.ownerXUserId}`;
-  await deps.db.transaction(
-    (tx) => tx.query("insert into users (id, role) values ($1, 'owner') on conflict (id) do nothing", [userId]),
-    { actor: 'system' },
-  );
-  return userId;
-}
-
-/**
- * The ingest request one stored row becomes.
- * @param {any} deps @param {any} row @param {{ source: string, kind: string, actor: string }} run
- * @returns {any} an IngestRequest with the import's flags
- */
-function requestOf(deps, row, { source, kind, actor }) {
-  return {
-    kind, input: `https://x.com/i/status/${row.externalId}`,
-    overrides: row.overrides ?? {},
-    addedVia: source === 'notion' ? 'notion' : 'paste',
-    actor, holdForReview: true, allowUnmapped: true, lookups: 'create',
-  };
-}
-
-/**
- * Applies one ingest result to its row: held records are classified
- * (fetched / needs_speakers / check), attached is part-scoped, refusals
- * are skipped, and failures carry a reason.
- * @param {any} deps @param {any} row @param {any} result
- */
-async function record(deps, row, result) {
-  if (result.status === 'added' || result.status === 'pending') {
-    await deps.db.transaction((/** @type {any} */ tx) => updateRow(tx, row.id, { state: 'fetched', itemId: result.itemId, error: null }), { actor: 'system' });
-    await recomputeRow(deps, row.id);
-    return;
-  }
-  if (result.status === 'attached') {
-    await deps.db.transaction((/** @type {any} */ tx) => updateRow(tx, row.id, { state: 'attached', itemId: result.itemId, error: result.pending ? 'held part' : null }), { actor: 'system' });
-    return;
-  }
-  if (result.status === 'duplicate' || result.status === 'removed' || result.status === 'opted_out') {
-    await deps.db.transaction((/** @type {any} */ tx) => updateRow(tx, row.id, { state: 'skipped', itemId: result.itemId ?? null, error: result.status }), { actor: 'system' });
-    return;
-  }
-  await deps.db.transaction((/** @type {any} */ tx) => updateRow(tx, row.id, { state: 'failed', itemId: result.itemId ?? null, error: result.status }), { actor: 'system' });
-}
-
-/** @param {string} path @param {number} jobId @param {any[]} rows */
-async function reportCsv(path, jobId, rows) {
-  const lines = ['url,status,reason', ...rows.map((row) => `https://x.com/i/status/${row.externalId},${row.state},"${String(row.error ?? '').replaceAll('"', '""')}"`)];
-  await writeFile(path, `${lines.join('\n')}\n`, 'utf8');
-  return path;
-}
 
 /**
  * The Notion rows, with their artists and event resolved.
@@ -147,18 +86,18 @@ async function createJobs(deps, { values, read, log }) {
 }
 
 /**
- * One row: skip what is already archived, otherwise ingest and record.
- * @param {any} deps @param {any} row @param {{ source: string, kind: string, actor: string }} run
+ * @param {string} path @param {number} jobId @param {any[]} rows
+ * @returns {Promise<string>}
  */
+async function reportCsv(path, jobId, rows) {
+  const lines = ['url,status,reason', ...rows.map((row) => `https://x.com/i/status/${row.externalId},${row.state},"${String(row.error ?? '').replaceAll('"', '""')}"`)];
+  await writeFile(path, `${lines.join('\n')}\n`, 'utf8');
+  return path;
+}
+
+/** @param {any} deps @param {any} row @param {{ source: string, kind: string, actor: string }} run */
 async function processRow(deps, row, { source, kind, actor }) {
-  const known = await sourceState(deps.db, kind, 'x', row.externalId);
-  if (known !== 'none') {
-    const reason = known === 'pending' ? 'already archived — awaiting review' : `already archived (${known})`;
-    await deps.db.transaction((/** @type {any} */ tx) => updateRow(tx, row.id, { state: 'skipped', error: reason }), { actor: 'system' });
-    return;
-  }
-  const result = await ingestItem(deps, requestOf(deps, row, { source, kind, actor }));
-  await record(deps, row, result);
+  await runRow(deps, { row, kind, actor, source });
 }
 
 /**

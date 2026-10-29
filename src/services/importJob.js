@@ -8,14 +8,26 @@
  */
 import { partLines, unmappedMarkers } from '../domain/lineFixes.js';
 import { findMarkers } from '../domain/lines.js';
-import { countsByState, getJob, getRow, rowsPage as repoRows, rowsWithItems, updateRow } from '../repo/imports.js';
+import { countsByState, createJob, getJob, getRow, insertRows, jobsRecent, rowsForRun, rowsPage as repoRows, rowsWithItems, updateRow } from '../repo/imports.js';
 import { kindsOf, presenterContext, previewsForAny } from './cards.js';
+import { sourceState } from '../repo/items.js';
+import { ingestItem } from './ingest.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
 /** @typedef {import('../repo/imports.js').RowState} RowState */
 
 /** One page of rows on the review page. */
 export const IMPORT_PAGE_SIZE = 50;
+
+/** The owner's user row, so the import's actor is valid on any database. @param {{ db: any, site: { ownerXUserId: string } }} deps */
+export async function ensureOwnerUser(deps) {
+  const userId = `x:${deps.site.ownerXUserId}`;
+  await deps.db.transaction(
+    (/** @type {any} */ tx) => tx.query("insert into users (id, role) values ($1, 'owner') on conflict (id) do nothing", [userId]),
+    { actor: 'system' },
+  );
+  return userId;
+}
 
 /** @param {string} platform @param {string} externalId */
 function sourceUrlOf(platform, externalId) {
@@ -173,4 +185,85 @@ export async function jobView(deps, jobId) {
     markerTable(deps, jobId),
   ]);
   return job ? { job, counts, rows: rows.rows, hasMore: rows.hasMore, markers } : null;
+}
+
+/**
+ * Ingest one import row with the import's flags and record the outcome.
+ * Shared by the CLI and the dev seed so the two cannot drift.
+ * @param {ViewDeps & { fetchImpl: typeof fetch }} deps
+ * @param {{ row: any, kind: string, actor: string, source: string }} input
+ * @returns {Promise<{ state: string, reason: string|null }>}
+ */
+export async function runRow(deps, { row, kind, actor, source }) {
+  const known = await sourceState(deps.db, kind, 'x', row.externalId);
+  if (known !== 'none') {
+    const reason = known === 'pending' ? 'already archived — awaiting review' : `already archived (${known})`;
+    await deps.db.transaction((tx) => updateRow(tx, row.id, { state: 'skipped', error: reason }), { actor: 'system' });
+    return { state: 'skipped', reason };
+  }
+  const result = await ingestItem(deps, {
+    kind, input: `https://x.com/i/status/${row.externalId}`, overrides: row.overrides ?? {},
+    addedVia: source === 'notion' ? 'notion' : 'paste',
+    actor, holdForReview: true, allowUnmapped: true, lookups: 'create',
+  });
+  return recordResult(deps, row, result);
+}
+
+/**
+ * Applies one ingest result to its row.
+ * @param {ViewDeps} deps @param {any} row @param {any} result
+ * @returns {Promise<{ state: string, reason: string|null }>}
+ */
+async function recordResult(deps, row, result) {
+  if (result.status === 'added' || result.status === 'pending') {
+    await deps.db.transaction((tx) => updateRow(tx, row.id, { state: 'fetched', itemId: result.itemId, error: null }), { actor: 'system' });
+    const state = await recomputeRow(deps, row.id);
+    return { state: state ?? 'fetched', reason: null };
+  }
+  if (result.status === 'attached') {
+    const reason = result.pending ? 'held part' : null;
+    await deps.db.transaction((tx) => updateRow(tx, row.id, { state: 'attached', itemId: result.itemId, error: reason }), { actor: 'system' });
+    return { state: 'attached', reason };
+  }
+  if (result.status === 'duplicate' || result.status === 'removed' || result.status === 'opted_out') {
+    await deps.db.transaction((tx) => updateRow(tx, row.id, { state: 'skipped', itemId: result.itemId ?? null, error: result.status }), { actor: 'system' });
+    return { state: 'skipped', reason: result.status };
+  }
+  await deps.db.transaction((tx) => updateRow(tx, row.id, { state: 'failed', itemId: result.itemId ?? null, error: result.status }), { actor: 'system' });
+  return { state: 'failed', reason: result.status };
+}
+
+/**
+ * The five most recent jobs, for the owner's me section.
+ * @param {ViewDeps} deps
+ */
+export async function recentJobs(deps) {
+  return jobsRecent(deps.db, { limit: 5 });
+}
+
+/**
+ * One job's rows page; null when the job is unknown.
+ * @param {ViewDeps} deps @param {number} jobId
+ * @param {{ state?: string, q?: string, offset: number }} page
+ */
+export async function rowsPageFor(deps, jobId, page) {
+  const job = await getJob(deps.db, jobId);
+  return job ? rowsPage(deps, jobId, page) : null;
+}
+
+/**
+ * Creates a held job from tweet ids and ingests each one (the dev seed).
+ * @param {ViewDeps & { fetchImpl: typeof fetch }} deps
+ * @param {string[]} ids
+ */
+export async function seedHeldJob(deps, ids) {
+  const jobId = await deps.db.transaction((tx) => createJob(tx, { source: 'notion', actor: 'system' }), { actor: 'system' });
+  await deps.db.transaction((tx) => insertRows(tx, jobId, ids.map((externalId) => ({ platform: 'x', externalId, overrides: {} }))), { actor: 'system' });
+  const actor = await ensureOwnerUser(deps);
+  /** @type {any[]} */
+  const rows = [];
+  for (const row of await rowsForRun(deps.db, jobId)) {
+    rows.push(await runRow(deps, { row, kind: 'translation', actor, source: 'notion' }));
+  }
+  return { jobId, rows };
 }
