@@ -95,6 +95,24 @@ export async function recomputeRow(deps, rowId) {
   return state;
 }
 
+/** @param {any} entry @returns {string} */
+function textOf(entry) {
+  if (!entry) return '';
+  return entry.preview.lines.map((/** @type {any} */ line) => ('text' in line ? line.text : '')).join(' ');
+}
+
+/** @param {any} row @param {any} entry @returns {any} */
+function rowViewOf(row, entry) {
+  return {
+    id: row.id, state: row.state, translator: entry?.card.account ?? null,
+    event: entry?.card.event ?? null, preview: entry?.preview ?? null,
+    itemId: row.itemId, error: row.error, sourceUrl: sourceUrlOf(row.platform, row.externalId),
+    externalId: row.externalId, platform: row.platform, text: textOf(entry),
+    entryUrl: entry?.preview.url ?? null,
+    editUrl: entry ? `/edit/${entry.card.kind}/${entry.card.sourceId}` : null,
+  };
+}
+
 /**
  * @param {ViewDeps} deps @param {number} jobId
  * @param {{ state?: string, q?: string, offset: number }} page
@@ -108,16 +126,7 @@ export async function rowsPage(deps, jobId, page) {
   const byId = new Map(entries.map((entry) => [entry.card.id, entry]));
   const q = typeof page.q === 'string' ? page.q.trim().toLowerCase() : '';
   const rows = pageOf.rows
-    .map((row) => {
-      const entry = row.itemId === null ? undefined : byId.get(row.itemId);
-      const text = entry ? entry.preview.lines.map((line) => ('text' in line ? line.text : '')).join(' ') : '';
-      return {
-        id: row.id, state: row.state, translator: entry?.card.account ?? null,
-        event: entry?.card.event ?? null, preview: entry?.preview ?? null,
-        itemId: row.itemId, error: row.error, sourceUrl: sourceUrlOf(row.platform, row.externalId),
-        externalId: row.externalId, platform: row.platform, text,
-      };
-    })
+    .map((row) => rowViewOf(row, row.itemId === null ? undefined : byId.get(row.itemId)))
     .filter((row) => q === '' || row.text.toLowerCase().includes(q) || row.externalId.includes(q));
   return { rows, hasMore: pageOf.hasMore };
 }
