@@ -6,7 +6,8 @@
  * kind.
  */
 import { neighbours } from '../repo/items.js';
-import { findVisibleItemId, loadCards, loadItemExtras } from '../repo/cards.js';
+import { findVisibleItemId, loadCards, loadCardsAny, loadItemExtras } from '../repo/cards.js';
+import { findItemIdBySource } from '../repo/itemState.js';
 import { kindsOf, eventRefOf, presenterContext, detailsFor } from './cards.js';
 import { editRoleFor } from './editItem.js';
 
@@ -46,14 +47,21 @@ async function linkTo(deps, itemId) {
  * The visible item a kind name and source id address, with its card and
  * the kind's details; null when any of them is missing.
  * @param {ViewDeps} deps @param {string} kindName @param {string} sourceId
+ * @param {boolean} [allowAnyState] the owner resolves held entries too
  */
-async function loadVisible(deps, kindName, sourceId) {
+async function loadVisible(deps, kindName, sourceId, allowAnyState = false) {
   const kind = Object.hasOwn(kindsOf(deps), kindName) ? kindsOf(deps)[kindName] : undefined;
   if (!kind) return null;
-  const id = await findVisibleItemId(deps.db, { kind: kind.name, platform: kind.platform, externalId: sourceId });
-  const card = id === null ? undefined : (await loadCards(deps.db, [id])).get(id);
+  const ref = { kind: kind.name, platform: kind.platform, externalId: sourceId };
+  const id = allowAnyState ? await findItemIdBySource(deps.db, ref) : await findVisibleItemId(deps.db, ref);
+  const card = id === null ? undefined : (await (allowAnyState ? loadCardsAny(deps.db, [id]) : loadCards(deps.db, [id]))).get(id);
   const details = card ? (await detailsFor(deps, [card])).get(card.id) : undefined;
   return card && details ? { kind, card, details } : null;
+}
+
+/** The owner-only fields a held entry's view carries. @param {any} card @param {boolean} isOwner */
+function ownerFieldsOf(card, isOwner) {
+  return isOwner ? { reviewState: card.reviewState } : {};
 }
 
 /**
@@ -65,7 +73,8 @@ async function loadVisible(deps, kindName, sourceId) {
  * @returns {Promise<(ItemView & { canEdit: boolean, canCheckFollowUps: boolean })|null>}
  */
 export async function itemView(deps, kindName, sourceId, viewer = null) {
-  const found = await loadVisible(deps, kindName, sourceId);
+  const isOwner = viewer !== null && viewer.isOwner === true;
+  const found = await loadVisible(deps, kindName, sourceId, isOwner);
   const extras = found ? await loadItemExtras(deps.db, found.card.id) : null;
   if (!found || !extras) return null;
   const { kind, card, details } = found;
@@ -81,6 +90,7 @@ export async function itemView(deps, kindName, sourceId, viewer = null) {
     tags: { keyword: extras.keyword, hashtags: extras.hashtags }, category: extras.category, addedBy: addedByOf(extras.submitter),
     followsOnFrom: preview.followsOnFrom, prev: await linkTo(deps, prev), next: await linkTo(deps, next),
     canEdit: role !== null,
+    ...ownerFieldsOf(card, isOwner),
     // A kind may not support follow-ups at all (the method is optional).
     canCheckFollowUps: role !== null && typeof kind.checkFollowUps === 'function',
   };
