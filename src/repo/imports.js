@@ -10,6 +10,8 @@
 
 /** Rows whose item (or held part) is still waiting on the owner. */
 export const HELD_STATES = Object.freeze(['fetched', 'needs_speakers', 'check', 'attached']);
+/** Held rows that own a whole item (an attached row owns only a part of a published one). */
+export const ITEM_HELD_STATES = Object.freeze(['fetched', 'needs_speakers', 'check']);
 /** Every state, in the order the page lists them. */
 export const ALL_STATES = Object.freeze(['queued', 'fetched', 'needs_speakers', 'check', 'attached', 'published', 'skipped', 'failed']);
 
@@ -179,7 +181,7 @@ export async function rowsWithItems(db, jobId) {
 export async function importHeldItemIdSet(db) {
   const { rows } = await db.query(
     'select distinct item_id from import_rows where state = any($1::text[]) and item_id is not null',
-    [HELD_STATES],
+    [ITEM_HELD_STATES],
   );
   return new Set(rows.map((row) => row.item_id));
 }

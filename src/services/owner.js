@@ -6,6 +6,7 @@
  */
 import { BadRequest, Conflict, NotFound } from '../domain/errors.js';
 import { pendingItemIds, findItemIdBySource, restoreItem, setReviewState, softDeleteItem } from '../repo/itemState.js';
+import { importHeldItemIdSet } from '../repo/imports.js';
 import { listVisibleItemIds } from '../repo/items.js';
 import { hideEvent } from '../repo/events.js';
 import { get as settingsGet, set as settingsSet } from '../repo/settings.js';
@@ -55,7 +56,9 @@ async function waitingIds(deps) {
     pendingItemIds(deps.db, { limit: WAITING_LIMIT }),
     ...kinds.map((kind) => /** @type {NonNullable<typeof kind.heldItemIds>} */ (kind.heldItemIds)(deps.db, { limit: WAITING_LIMIT })),
   ]);
-  return [...new Set([...items, ...held.flat()])].sort((a, b) => a - b).slice(0, WAITING_LIMIT);
+  // Items an import job is holding are reviewed on the import page, not here.
+  const imported = await importHeldItemIdSet(deps.db);
+  return [...new Set([...items, ...held.flat()])].filter((id) => !imported.has(id)).sort((a, b) => a - b).slice(0, WAITING_LIMIT);
 }
 
 /**
