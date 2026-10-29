@@ -200,3 +200,16 @@ export async function jobsRecent(db, { limit }) {
     createdAt: new Date(row.created_at).toISOString(), counts: await countsByState(db, row.id),
   })));
 }
+
+/**
+ * The rows a run processes: everything not yet terminal, oldest first.
+ * @param {Tx} db @param {number} jobId
+ * @returns {Promise<ReturnType<typeof toRow>[]>}
+ */
+export async function rowsForRun(db, jobId) {
+  const { rows } = await db.query(
+    `select ${ROW_COLUMNS} from import_rows where job_id = $1 and state = any($2::text[]) order by id`,
+    [jobId, ['queued', 'failed']],
+  );
+  return rows.map(toRow);
+}

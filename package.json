@@ -26,7 +26,8 @@
     "e2e:add": "playwright test -c playwright.add.config.js",
     "e2e:site": "node scripts/e2eSite.js",
     "new": "node scripts/new.js",
-    "test:kind": "node --test test/kinds/scaffoldedKind.test.js"
+    "test:kind": "node --test test/kinds/scaffoldedKind.test.js",
+    "import": "node scripts/import.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
