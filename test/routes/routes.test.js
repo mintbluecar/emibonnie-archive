@@ -54,7 +54,7 @@ test('every route is { method, path, cache, run }, with a unique method+path', (
     // never be cached, so they are no-store despite being GET; the add form's
     // `options` list is also per-user. Every other GET is cached, and every
     // write (POST) is no-store.
-    const authGet = r.path.startsWith('/api/auth/') || r.path === '/api/me' || r.path === '/api/me/added' || r.path === '/api/me/translations' || r.path === '/api/owner' || r.path === '/api/owner/users'
+    const authGet = r.path.startsWith('/api/auth/') || r.path === '/api/me' || r.path === '/api/me/added' || r.path === '/api/me/translations' || r.path === '/api/owner' || r.path === '/api/owner/users' || r.path === '/api/owner/imports' || r.path === '/api/owner/imports/:id' || r.path === '/api/owner/imports/:id/rows' || r.path === '/api/owner/imports/:id/map' || r.path === '/api/owner/imports/:id/publish' || r.path === '/api/owner/imports/:id/rows/:rowId/skip' || r.path === '/api/owner/imports/:id/rows/:rowId/archive' || r.path === '/api/owner/imports/:id/retry'
       || r.path === '/api/add/options' || r.path === '/api/item/:kind/:sourceId/edit';
     assert.equal(neverStored(r.cache), r.method !== 'GET' || authGet, `${r.path}: GETs are cached, writes are no-store (auth flow excepted)`);
   }

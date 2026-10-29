@@ -22,7 +22,8 @@ import * as addDetails from '../components/addDetails.js';
 import * as speakerStep from '../components/speakerStep.js';
 import * as lineFixSheet from '../components/lineFixSheet.js';
 import * as editView from '../components/editView.js';
-import { changesOf, choicesFromFields, withField, withLineFix, REVEALS_INPUT } from '../state/addState.js';
+import { choicesFromFields, withField, withLineFix, REVEALS_INPUT } from '../state/addState.js';
+import { saveEntry, publishEntry, revertEntry, reloadEntry } from './editActions.js';
 import { EDIT_PATH_PREFIX } from '../core/routes.js';
 import { mountLoadError } from './pageError.js';
 
@@ -32,7 +33,7 @@ const APP_SELECTOR = 'app';
 /** @typedef {import('../state/addState.js').LineFix} LineFix */
 /** @typedef {import('../state/addState.js').Speaker} Speaker */
 /** @typedef {import('../components/editView.js').EditState & { root: Element, api: string,
- *   data: EditData, painted: boolean }} Ctx */
+ *   reviewApi: string, data: EditData, painted: boolean }} Ctx */
 
 /** @type {Ctx|null} */
 let ctx = null;
@@ -93,63 +94,9 @@ function adopt(data, options) {
   c.busy = false;
 }
 
-/**
- * Re-fetches the edit screen after a save or revert, so the fields, the
- * lines and the history all show the new state without leaving the page.
- * @param {{ saved: boolean }} opts
- * @returns {Promise<void>}
- */
-async function reload({ saved }) {
-  const c = current();
-  try {
-    const [data, options] = await Promise.all([getJson(`${c.api}/edit`), getJson('/api/add/options')]);
-    adopt(data, options);
-    c.saved = saved;
-    c.notice = null;
-  } catch {
-    c.busy = false;
-    c.notice = t('edit.failed');
-  }
-  paint();
-}
-
-/** @returns {Promise<void>} */
-async function save() {
-  const c = current();
-  const changes = changesOf(c.data.fields, { choices: c.choices, chosen: c.chosen, lineFixes: c.lineFixes });
-  if (Object.keys(changes).length === 0) {
-    c.notice = t('edit.nothing');
-    c.saved = false;
-    paint();
-    return;
-  }
-  c.busy = true;
-  c.notice = null;
-  c.saved = false;
-  paint();
-  try {
-    await postJson(`${c.api}/edit`, { changes });
-    await reload({ saved: true });
-  } catch (err) {
-    c.busy = false;
-    c.notice = err instanceof ApiError && err.status === 403 ? t('edit.forbidden') : t('edit.failed');
-    paint();
-  }
-}
-
-/** @param {number} editId @returns {Promise<void>} */
-async function revert(editId) {
-  const c = current();
-  c.busy = true;
-  paint();
-  try {
-    await postJson(`${c.api}/edits/${editId}/revert`);
-    await reload({ saved: false });
-  } catch {
-    c.busy = false;
-    c.notice = t('edit.failed');
-    paint();
-  }
+/** Re-fetches the edit screen after a save, revert or publish. @param {{ saved: boolean, published?: boolean }} opts */
+function reload(opts) {
+  return reloadEntry(current(), { adopt, paint }, opts);
 }
 
 /** @param {string} marker @param {Speaker} speaker @returns {void} */
@@ -202,9 +149,11 @@ function bind(root) {
       onCancel: () => { c.fix = null; paint(); }, onNewPerson: addPerson,
     });
   }
-  on(el, '[data-action="save"]', 'click', async () => { await save(); });
-  on(el, '[data-action="revert"]', 'click', async (_event, target) => {
-    await revert(Number(target.getAttribute('data-edit')));
+  const ui = { paint, reload };
+  on(el, '[data-action="save"]', 'click', () => { void saveEntry(current(), ui); });
+  on(el, '[data-action="save-publish"]', 'click', () => { void publishEntry(current(), ui); });
+  on(el, '[data-action="revert"]', 'click', (_event, target) => {
+    void revertEntry(current(), Number(target.getAttribute('data-edit')), ui);
   });
 }
 
@@ -234,7 +183,11 @@ export async function start() {
     mountLoadError(root, { active: 'me' });
     return;
   }
-  ctx = { root, api, options, data, choices: choicesFromFields(data.fields), chosen: {}, lineFixes: [], fix: null, open: null, busy: false, notice: null, saved: false, painted: false };
+  ctx = {
+    root, api, options, data, choices: choicesFromFields(data.fields), chosen: {}, lineFixes: [],
+    fix: null, open: null, busy: false, notice: null, saved: false, published: false, painted: false,
+    reviewApi: `/api/owner/items/${encodeURIComponent(target.kind)}/${encodeURIComponent(target.sourceId)}/review`,
+  };
   adopt(data, options);
   paint();
 }

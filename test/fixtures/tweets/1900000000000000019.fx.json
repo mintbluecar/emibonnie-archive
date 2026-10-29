@@ -1,0 +1,47 @@
+{
+ "status": {
+  "type": "status",
+  "url": "https://x.com/tl_beta/status/1900000000000000019",
+  "id": "1900000000000000019",
+  "text": "SOLLUNA AT STARFEST\n#SolLunaStarfest\n\nA: first translated line about the night.\nA: second translated line about the crowd.",
+  "raw_text": {
+   "text": "SOLLUNA AT STARFEST\n#SolLunaStarfest\n\nA: first translated line about the night.\nA: second translated line about the crowd.",
+   "display_text_range": [
+    0,
+    122
+   ],
+   "facets": []
+  },
+  "author": {
+   "screen_name": "tl_beta",
+   "url": "https://x.com/tl_beta",
+   "id": "9002",
+   "name": "beta subs"
+  },
+  "replies": 0,
+  "reposts": 0,
+  "likes": 42,
+  "bookmarks": 0,
+  "quotes": 0,
+  "embed_card": "tweet",
+  "created_at": "Thu Oct 22 09:00:00 +0000 2026",
+  "created_timestamp": 1792659600,
+  "possibly_sensitive": false,
+  "views": 100,
+  "is_note_tweet": false,
+  "community_note": null,
+  "lang": "en",
+  "replying_to": null,
+  "media": {},
+  "provider": "twitter",
+  "reposted_by": null
+ },
+ "thread": null,
+ "code": 200,
+ "author": {
+  "screen_name": "tl_beta",
+  "url": "https://x.com/tl_beta",
+  "id": "9002",
+  "name": "beta subs"
+ }
+}

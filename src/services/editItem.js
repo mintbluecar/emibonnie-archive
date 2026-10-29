@@ -13,6 +13,7 @@ import { loadContext } from './ingestContext.js';
 import { updatePlacement, updateLookups, getItem } from '../repo/items.js';
 import { findLookup, ensureLookup } from '../repo/lookups.js';
 import { findVisibleItemId } from '../repo/cards.js';
+import { findItemIdBySource } from '../repo/itemState.js';
 import { eventExists } from '../repo/events.js';
 import { validateFixes } from '../domain/lineFixes.js';
 import { itemChangeTags, purgeForTags } from './cache.js';
@@ -143,12 +144,23 @@ async function applyKindChanges(tx, { kind, id, changes, deps }) {
   }
 }
 
+/**
+ * The item a kind + source id names: any archived state for the owner,
+ * visible only for everyone else.
+ * @param {any} db @param {{ name: string, platform: string }} kind @param {string} sourceId @param {boolean} allowAnyState
+ * @returns {Promise<number|null>}
+ */
+async function itemIdOf(db, kind, sourceId, allowAnyState) {
+  const ref = { kind: kind.name, platform: kind.platform, externalId: sourceId };
+  return allowAnyState ? findItemIdBySource(db, ref) : findVisibleItemId(db, ref);
+}
+
 /** @param {any} deps @param {string} kindName @param {{ sourceId: string, changes: Partial<EditableFields>, actor: SessionUser }} input */
 async function resolveEditInput(deps, kindName, { sourceId, changes, actor }) {
   if (Object.prototype.hasOwnProperty.call(changes, 'text')) throw new BadRequest('the translator\u2019s text cannot be edited');
   const kind = kindsOf(deps)[kindName];
   if (!kind) throw new BadRequest(`unknown kind: ${kindName}`);
-  const id = await findVisibleItemId(deps.db, { kind: kind.name, platform: kind.platform, externalId: sourceId });
+  const id = await itemIdOf(deps.db, kind, sourceId, actor.isOwner === true);
   if (id === null) throw new BadRequest(`no archived ${kindName} item for ${sourceId}`);
   const itemRow = /** @type {any} */ (await getItem(deps.db, id));
   if (!itemRow) throw new BadRequest('item not found');
@@ -220,9 +232,7 @@ export async function revertEdit(deps, { kind: kindName, sourceId, editId, actor
   // The edit id must belong to the item the URL addresses: otherwise a
   // caller could apply one item's `before` to another item.
   const kind = kindsOf(deps)[kindName];
-  const itemId = kind
-    ? await findVisibleItemId(deps.db, { kind: kind.name, platform: kind.platform, externalId: sourceId })
-    : null;
+  const itemId = kind ? await itemIdOf(deps.db, kind, sourceId, actor.isOwner === true) : null;
   if (itemId === null || itemId !== rows[0].item_id) throw new BadRequest('unknown edit');
   const already = await deps.db.query('select 1 from item_edits where reverts = $1 limit 1', [editId]);
   if (already.rows.length > 0) throw new Conflict('already reverted');
@@ -245,7 +255,7 @@ export async function revertEdit(deps, { kind: kindName, sourceId, editId, actor
 export async function resolveForEdit(deps, kindName, sourceId, user) {
   const kind = kindsOf(deps)[kindName];
   if (!kind) return null;
-  const id = await findVisibleItemId(deps.db, { kind: kind.name, platform: kind.platform, externalId: sourceId });
+  const id = await itemIdOf(deps.db, kind, sourceId, user.isOwner === true);
   if (id === null) return null;
   const item = /** @type {any} */ (await getItem(deps.db, id));
   if (!item) return null;

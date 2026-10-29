@@ -1,0 +1,312 @@
+/*
+ * public/js/pages/adminImport.js and components/importRows.js (Plan 3):
+ * the owner's import review table — header, state chips, search, rows.
+ */
+
+.c-import {
+  padding: 12px 0 24px;
+}
+
+.c-import__head {
+  margin-bottom: 10px;
+}
+
+.c-import__title {
+  margin: 0;
+  font-size: var(--text-22);
+  font-weight: 800;
+}
+
+.c-import__meta {
+  margin: 2px 0 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-12);
+}
+
+.c-import__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.c-import__chip {
+  padding: 4px 10px;
+  border: 1px solid var(--color-card-shadow);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--text-12);
+  cursor: pointer;
+}
+
+.c-import__chip--on {
+  background: var(--color-ink);
+  color: var(--color-card);
+  border-color: var(--color-ink);
+  font-weight: 800;
+}
+
+.c-import__search {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.c-import__label {
+  font-size: var(--text-12);
+  color: var(--color-ink-muted);
+}
+
+.c-import__input {
+  padding: 7px 10px;
+  border: 1px solid var(--color-card-shadow);
+  border-radius: 10px;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--text-13);
+}
+
+.c-import__rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--color-card);
+  border-radius: var(--radius-card);
+  box-shadow: 0 2px 0 var(--color-card-shadow);
+}
+
+.c-import__row {
+  display: grid;
+  grid-template-columns: 110px 110px 1fr 130px auto;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 10px;
+  border-top: 1px solid var(--color-card-shadow);
+  font-size: var(--text-12);
+}
+
+.c-import__row:first-child {
+  border-top: 0;
+}
+
+@media (max-width: 720px) {
+  .c-import__row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .c-import__text,
+  .c-import__actions {
+    grid-column: 1 / -1;
+  }
+}
+
+.c-import__state {
+  font-weight: 800;
+  color: var(--color-label-on-tint);
+}
+
+.c-import__state--failed {
+  color: #c8433a;
+}
+
+.c-import__who,
+.c-import__event {
+  color: var(--color-ink-muted);
+  overflow-wrap: anywhere;
+}
+
+.c-import__text {
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.c-import__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.c-import__link {
+  color: var(--color-label-on-tint);
+  font-weight: 700;
+  font-size: var(--text-12);
+}
+
+.c-import__icon {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-card-shadow);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.c-import__empty,
+.c-import__status {
+  margin: 8px 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-12);
+}
+
+/* Speaker mapping and the publish bar (Task 10). */
+
+.c-import-speakers {
+  margin-top: 18px;
+}
+
+.c-import-speakers__title {
+  margin: 0 0 8px;
+  font-size: var(--text-16);
+  font-weight: 800;
+}
+
+.c-import-speakers__card {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: var(--color-card);
+  border-radius: var(--radius-card);
+  box-shadow: 0 2px 0 var(--color-card-shadow);
+}
+
+.c-import-speakers__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.c-import-speakers__handle {
+  margin: 0;
+  font-size: var(--text-14);
+  font-weight: 800;
+}
+
+.c-import-speakers__count {
+  color: var(--color-ink-muted);
+  font-size: var(--text-12);
+}
+
+.c-import-speakers__markers,
+.c-import-speakers__entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.c-import-speakers__marker {
+  display: grid;
+  grid-template-columns: 28px 28px 1fr 180px auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-card-shadow);
+  font-size: var(--text-12);
+}
+
+.c-import-speakers__marker:first-child {
+  border-top: 0;
+}
+
+.c-import-speakers__glyph {
+  font-size: var(--text-16);
+  text-align: center;
+}
+
+.c-import-speakers__uses {
+  font-weight: 800;
+  text-align: right;
+}
+
+.c-import-speakers__example,
+.c-import-speakers__text {
+  overflow-wrap: anywhere;
+  color: var(--color-ink-muted);
+}
+
+.c-import-speakers__check {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--color-label-on-tint);
+  font-size: var(--text-12);
+}
+
+.c-import-speakers__select {
+  padding: 6px 8px;
+  border: 1px solid var(--color-card-shadow);
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--text-12);
+  min-width: 0;
+}
+
+.c-import-speakers__save,
+.c-import-speakers__review,
+.c-import__chip {
+  border: 1px solid var(--color-card-shadow);
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--text-12);
+  cursor: pointer;
+}
+
+.c-import-speakers__entry {
+  display: grid;
+  grid-template-columns: 180px auto 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0 6px 36px;
+  border-top: 1px dashed var(--color-card-shadow);
+}
+
+.c-import-speakers__remember {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  color: var(--color-ink-muted);
+  font-size: var(--text-12);
+}
+
+.c-import-speakers__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.c-import-speakers__empty {
+  margin: 8px 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-12);
+}
+
+@media (max-width: 720px) {
+  .c-import-speakers__marker {
+    grid-template-columns: 28px 28px 1fr;
+  }
+  .c-import-speakers__select,
+  .c-import-speakers__save,
+  .c-import-speakers__review {
+    grid-column: 1 / -1;
+  }
+  .c-import-speakers__entry {
+    grid-template-columns: 1fr;
+    padding-left: 0;
+  }
+}

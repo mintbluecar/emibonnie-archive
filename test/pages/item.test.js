@@ -20,7 +20,8 @@ import { mount } from '../../public/js/core/dom.js';
 // item B). This file's own start()-level tests route a pathname through it via item.js's import.
 // Dynamic import: see test/components/header.test.js for why.
 const { composeItem, bind, start } = await import('../../public/js/pages/item.js');
-const { site } = await import('../../public/js/core/site.js');
+const { site, t } = await import('../../public/js/core/site.js');
+const { copyRe } = await import('../helpers/copyMarkup.js');
 
 const flush = () => new Promise((resolve) => { setTimeout(resolve, 0); });
 
@@ -301,6 +302,15 @@ test('start: a non-404 failure renders the generic page.loadFailed fallback, nev
     delete (/** @type {any} */ (globalThis)).document;
     delete (/** @type {any} */ (globalThis)).window;
   }
+});
+
+test('composeItem: a held entry shows the owner banner; a public entry does not', () => {
+  const held = String(composeItem(itemVm({ reviewState: 'pending' })));
+  assert.match(held, /class="c-item__held"/);
+  assert.match(held, copyRe(t('item.held')));
+
+  const open = String(composeItem(itemVm()));
+  assert.ok(!open.includes('c-item__held'), 'no banner on a public entry');
 });
 
 test('composeItem (Task 10c r): the item page has no search row or box at any width; the bar\'s search icon goes home', () => {

@@ -146,15 +146,16 @@ export async function translatorTotals(db, accountIds) {
  * The owner's waiting list: every item held for approval, oldest first
  * (first in, first reviewed). Deleted events are left out, as everywhere.
  * @param {Tx} db
- * @param {{ limit: number }} page
+ * @param {{ limit: number, exclude?: number[] }} page
  * @returns {Promise<number[]>}
  */
-export async function pendingItemIds(db, { limit }) {
+export async function pendingItemIds(db, { limit, exclude = [] }) {
   const { rows } = await db.query(
     `select i.id from items i
      where i.review_state = 'pending' and i.deleted_at is null and ${EVENT_NOT_DELETED}
+       and not (i.id = any($2::bigint[]))
      order by i.id asc limit $1`,
-    [limit],
+    [limit, exclude],
   );
   return rows.map((row) => row.id);
 }

@@ -174,7 +174,8 @@ export function bind(root, state) {
   };
   /** Refetches the owner view, keeping the user search the owner typed. */
   const reloadOwner = async () => {
-    state.owner = { ...(await getJson('/api/owner')), users: state.owner.users, query: state.owner.query };
+    const [view, imports] = await Promise.all([getJson('/api/owner'), getJson('/api/owner/imports')]);
+    state.owner = { ...view, users: state.owner.users, query: state.owner.query, imports: imports.jobs };
     rerender();
   };
   bindTranslator(root, state, { rerender, reload });
@@ -226,7 +227,7 @@ export async function start() {
     translations: { items: [], hasMore: false, totals: { translations: 0, events: 0, sharedStories: 0 } },
     tab: me.user.isTranslator ? 'translations' : 'added', selected: new Set(),
     welcome: me.user.showTranslatorWelcome === true, optedOut: me.user.isOptedOut === true,
-    owner: { approvalRequired: false, signInFailedAt: null, waiting: [], reports: [], users: null, query: '' },
+    owner: { approvalRequired: false, signInFailedAt: null, waiting: [], reports: [], users: null, query: '', imports: [] },
   };
   if (!me.user.needsName) {
     try {
@@ -234,7 +235,10 @@ export async function start() {
       state.added = page.items;
       state.hasMore = page.hasMore;
       if (me.user.isTranslator) await loadTranslations(state);
-      if (me.user.isOwner) state.owner = { ...(await getJson('/api/owner')), users: null, query: '' };
+      if (me.user.isOwner) {
+        const [view, imports] = await Promise.all([getJson('/api/owner'), getJson('/api/owner/imports')]);
+        state.owner = { ...view, users: null, query: '', imports: imports.jobs };
+      }
     } catch {
       mountLoadError(root, { active: 'me' });
       return;

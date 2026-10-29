@@ -506,7 +506,8 @@
   color: var(--color-label-on-tint);
 }
 
-.c-edit__saved {
+.c-edit__saved,
+.c-edit__published {
   font-size: var(--text-12);
   font-weight: 700;
   color: var(--color-ink-muted);

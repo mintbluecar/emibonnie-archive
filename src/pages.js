@@ -39,6 +39,8 @@ export const pages = [
   // only ever read by public/js/pages/edit.js (the slug is the kind, the id
   // the source id), so the rewrite is unnamed and no meta renderer applies.
   { path: '/edit/:kind/:sourceId', file: 'edit.html' },
+  // Plan 3: the owner's import review page. `/admin/` is reserved this way.
+  { path: '/admin/imports/:id', file: 'adminImport.html' },
 ];
 
 /**

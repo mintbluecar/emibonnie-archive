@@ -6,6 +6,7 @@
  */
 import { BadRequest, Conflict, NotFound } from '../domain/errors.js';
 import { pendingItemIds, findItemIdBySource, restoreItem, setReviewState, softDeleteItem } from '../repo/itemState.js';
+import { importHeldItemIdSet } from '../repo/imports.js';
 import { listVisibleItemIds } from '../repo/items.js';
 import { hideEvent } from '../repo/events.js';
 import { get as settingsGet, set as settingsSet } from '../repo/settings.js';
@@ -51,11 +52,14 @@ export async function ownerView(deps) {
  */
 async function waitingIds(deps) {
   const kinds = Object.values(kindsOf(deps)).filter((kind) => typeof kind.heldItemIds === 'function');
+  // Items an import job is holding are reviewed on the import page, not here:
+  // excluded in the query, so the import never consumes the 50-row window.
+  const imported = await importHeldItemIdSet(deps.db);
   const [items, ...held] = await Promise.all([
-    pendingItemIds(deps.db, { limit: WAITING_LIMIT }),
+    pendingItemIds(deps.db, { limit: WAITING_LIMIT, exclude: [...imported] }),
     ...kinds.map((kind) => /** @type {NonNullable<typeof kind.heldItemIds>} */ (kind.heldItemIds)(deps.db, { limit: WAITING_LIMIT })),
   ]);
-  return [...new Set([...items, ...held.flat()])].sort((a, b) => a - b).slice(0, WAITING_LIMIT);
+  return [...new Set([...items, ...held.flat()])].filter((id) => !imported.has(id)).sort((a, b) => a - b).slice(0, WAITING_LIMIT);
 }
 
 /**

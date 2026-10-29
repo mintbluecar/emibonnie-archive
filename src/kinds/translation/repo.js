@@ -279,17 +279,24 @@ export async function heldItemIds(db, { limit }) {
 }
 
 /**
- * Approves or rejects every held part of one item: approving publishes them
+ * Approves or rejects held parts of one item: approving publishes them
  * (`pending = false`), rejecting keeps them hidden (`rejected = true`) so
  * they leave the waiting list and the verbatim text is never destroyed.
+ * With `sourceId`, only that follow-up's part is touched (one import row).
  * @param {Tx} tx
- * @param {{ itemId: number, approve: boolean }} input
+ * @param {{ itemId: number, approve: boolean, sourceId?: string|null }} input
  * @returns {Promise<void>}
  */
-export async function reviewHeld(tx, { itemId, approve }) {
+export async function reviewHeld(tx, { itemId, approve, sourceId = null }) {
+  // One import row is one follow-up part: scoping by its external id keeps a
+  // second held part on the same parent out of the decision.
+  const scoped = sourceId === null
+    ? ''
+    : ' and source_id in (select id from item_sources where item_id = $1 and external_id = $2)';
+  const params = sourceId === null ? [itemId] : [itemId, sourceId];
   if (approve) {
-    await tx.query('update translation_parts set pending = false where item_id = $1 and pending', [itemId]);
+    await tx.query(`update translation_parts set pending = false where item_id = $1 and pending${scoped}`, params);
     return;
   }
-  await tx.query('update translation_parts set rejected = true where item_id = $1 and pending and not rejected', [itemId]);
+  await tx.query(`update translation_parts set rejected = true where item_id = $1 and pending and not rejected${scoped}`, params);
 }

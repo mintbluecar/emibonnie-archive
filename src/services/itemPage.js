@@ -12,6 +12,7 @@
  * `touchRefresh`'s 60 s guard keeps either path from fetching X more often.
  */
 import { findVisibleItemId } from '../repo/cards.js';
+import { findItemIdBySource } from '../repo/itemState.js';
 import { touchRefresh, unfinalizedSources } from '../repo/sourceEdits.js';
 import { Conflict } from '../domain/errors.js';
 import { kindsOf } from './cards.js';
@@ -28,11 +29,13 @@ const ACTOR = { actor: 'system' };
 /**
  * The visible item a kind name and source id address, with its kind; or null.
  * @param {ItemDeps} deps @param {string} kindName @param {string} sourceId
+ * @param {{ allowAnyState?: boolean }} [options]
  * @returns {Promise<{ kind: Kind, id: number }|null>}
  */
-async function visibleItem(deps, kindName, sourceId) {
+async function visibleItem(deps, kindName, sourceId, { allowAnyState = false } = {}) {
   const kind = Object.hasOwn(kindsOf(deps), kindName) ? kindsOf(deps)[kindName] : undefined;
-  const id = kind ? await findVisibleItemId(deps.db, { kind: kind.name, platform: kind.platform, externalId: sourceId }) : null;
+  const ref = kind ? { kind: kind.name, platform: kind.platform, externalId: sourceId } : null;
+  const id = ref ? (allowAnyState ? await findItemIdBySource(deps.db, ref) : await findVisibleItemId(deps.db, ref)) : null;
   return kind && id !== null ? { kind, id } : null;
 }
 
@@ -78,7 +81,7 @@ async function guardedRefresh(deps, { kind, id }) {
  * @returns {Promise<{ view: ItemView & { editOpenUntil: string|null, canEdit: boolean, canCheckFollowUps: boolean }, refresh: (() => Promise<unknown>)|null, tags: string[] } | null>}
  */
 export async function itemPage(deps, kindName, sourceId, viewer = null) {
-  const target = await visibleItem(deps, kindName, sourceId);
+  const target = await visibleItem(deps, kindName, sourceId, { allowAnyState: viewer?.isOwner === true });
   const view = target ? await itemView(deps, kindName, sourceId, viewer) : null;
   if (!target || !view) return null;
   const tags = tagsOfView(target.id, view);

@@ -14,13 +14,14 @@ import { html } from '../core/html.js';
 import { on } from '../core/dom.js';
 import { getJson, postJson } from '../core/api.js';
 import { t } from '../core/site.js';
+import { importHref } from '../core/routes.js';
 import * as previewCard from './previewCard.js';
 
 /** @typedef {import('../../../src/http/contracts.js').OwnerView} OwnerView */
 /** @typedef {import('../../../src/http/contracts.js').ReportVM} ReportVM */
 /** @typedef {import('../../../src/http/contracts.js').OwnerUser} OwnerUser */
 /** @typedef {{ approvalRequired: boolean, signInFailedAt: string|null, waiting: any[],
- *   reports: ReportVM[], users: OwnerUser[]|null, query: string }} OwnerState */
+ *   reports: ReportVM[], users: OwnerUser[]|null, query: string, imports: any[] }} OwnerState */
 
 /**
  * @param {string} action @param {string} label @param {string} glyph
@@ -101,6 +102,27 @@ function waitingBlock(owner) {
   `;
 }
 
+/** The five most recent import jobs (Plan 3), each a link to its review page. @param {OwnerState} owner */
+function importsBlock(owner) {
+  if (owner.imports.length === 0) return html``;
+  const rows = owner.imports.map((job) => {
+    const total = Object.values(job.counts ?? {}).reduce((/** @type {number} */ sum, /** @type {any} */ n) => sum + n, 0);
+    return html`
+      <li class="c-owner__row">
+        <span class="c-owner__text">
+          <a class="c-owner__link" href="${importHref(job.id)}">${t('import.title')} ${job.id}</a>
+          · ${t(`import.source.${job.source}`)} · ${t(`import.status.${job.status}`)}
+          · ${t('import.rows', { n: total })} · ${t('import.state.published')} ${job.counts?.published ?? 0}
+        </span>
+      </li>
+    `;
+  });
+  return html`
+    <h3 class="c-owner__heading">${t('owner.imports')}</h3>
+    <ul class="c-owner__list">${rows}</ul>
+  `;
+}
+
 /** @param {OwnerState} owner @returns {import('../core/html.js').SafeHtml} */
 function reportsBlock(owner) {
   return html`
@@ -135,6 +157,7 @@ export function render(owner) {
         <span>${t('owner.approval')}</span>
       </label>
       ${waitingBlock(owner)}
+      ${importsBlock(owner)}
       ${reportsBlock(owner)}
       ${usersBlock(owner)}
       <p class="c-owner__status" role="status" data-owner-status></p>
