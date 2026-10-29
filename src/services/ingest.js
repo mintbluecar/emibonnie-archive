@@ -37,7 +37,7 @@ import { findLookup } from '../repo/lookups.js';
  *   `kinds` replaces the registry (tests inject a failing kind).
  * @typedef {{ kind: string, input: string, chosen?: SpeakerMap, overrides?: DraftOverrides, addedVia: string,
  *   actor: string, dryRun?: boolean, allowUnmapped?: boolean, lineFixes?: import('../domain/lineFixes.js').LineFix[],
- *   subbed?: boolean, lookups?: 'create'|'existing' }} IngestRequest
+ *   subbed?: boolean, lookups?: 'create'|'existing', holdForReview?: boolean }} IngestRequest
  * @typedef {{ status: 'added'|'attached'|'pending'|'duplicate'|'removed'|'opted_out'|'deleted'|'unavailable'
  *     |'needs_speakers'|'needs_date'|'ready',
  *   sourceId: string, itemId?: number, eventId?: number|null, missing?: object[], draft?: object,
@@ -94,8 +94,9 @@ async function attachIfFollowUp({ deps, request, kind, sourceId }, { input, cred
   // is exactly the approval switch (the same rule ingestWrite applies).
   const pending = await deps.db.transaction(async (tx) => {
     const review = await reviewStateOf(tx, { common: { textEnteredManually: false }, actor: request.actor, creditedUserId: null });
-    await append(tx, { itemId: owner.itemId, accountId, input, pending: review === 'pending' });
-    return review === 'pending';
+    const held = request.holdForReview === true || review === 'pending';
+    await append(tx, { itemId: owner.itemId, accountId, input, pending: held });
+    return held;
   }, { actor: request.actor });
   return { status: 'attached', sourceId, itemId: owner.itemId, ...(pending ? { pending: true } : {}) };
 }
@@ -153,7 +154,7 @@ async function write(run, { draft: drafted, occurredOn, creditedUserId }) {
   const draft = withExtraPeople(drafted, run.extraPeople);
   try {
     const written = await deps.db.transaction(
-      (tx) => writeItem(tx, { kind, draft, occurredOn, addedVia, actor, creditedUserId, lookups: request.lookups ?? 'create' }),
+      (tx) => writeItem(tx, { kind, draft, occurredOn, addedVia, actor, creditedUserId, lookups: request.lookups ?? 'create', holdForReview: request.holdForReview === true }),
       { actor },
     );
     const status = written.reviewState === 'pending' ? 'pending' : 'added';

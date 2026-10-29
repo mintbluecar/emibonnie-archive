@@ -19,7 +19,7 @@ import { BadRequest } from '../domain/errors.js';
 /** @typedef {import('../domain/constants.js').ReviewState} ReviewState */
 /**
  * @typedef {{ kind: Readonly<Kind>, draft: Draft, occurredOn: string, addedVia: string, actor: string,
- *   creditedUserId: string|null, lookups?: 'create'|'existing' }} WriteRequest
+ *   creditedUserId: string|null, lookups?: 'create'|'existing', holdForReview?: boolean }} WriteRequest
  */
 
 /**
@@ -92,14 +92,14 @@ async function lookupId(tx, name, existing, kind) {
  * @param {WriteRequest} request
  * @returns {Promise<{ itemId: number, eventId: number|null, reviewState: ReviewState }>}
  */
-export async function writeItem(tx, { kind, draft, occurredOn, addedVia, actor, creditedUserId, lookups = 'create' }) {
+export async function writeItem(tx, { kind, draft, occurredOn, addedVia, actor, creditedUserId, lookups = 'create', holdForReview = false }) {
   const { common } = draft;
   const accountId = await upsertCredited(tx, common.credited);
   const eventId = await eventIdOf(tx, common, occurredOn);
   const existing = lookups === 'existing';
   const categoryId = await lookupId(tx, common.categoryName, existing, 'category');
   const clientId = await lookupId(tx, common.clientName, existing, 'client');
-  const reviewState = await reviewStateOf(tx, { common, actor, creditedUserId });
+  const reviewState = holdForReview ? 'pending' : await reviewStateOf(tx, { common, actor, creditedUserId });
   const itemId = await insertItem(tx, {
     kind: kind.name, placement: common.placement, eventId, categoryId, clientId, creditedAccountId: accountId,
     occurredOn, postedAt: common.postedAt, addedVia, reviewState, sortKey: common.postedAt ? null : epochOf(occurredOn),
