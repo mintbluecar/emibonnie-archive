@@ -136,7 +136,7 @@ import { pages, redirects } from '../pages.js';
  *   remapSpeakers?: (tx: Db, args: { itemId: number, map: SpeakerMap, ctx: DraftContext }) => Promise<RemapResult>,
  *   setLineFixes?: (tx: Db, args: { itemId: number, fixes: import('../domain/lineFixes.js').LineFix[] }) => Promise<void>,
  *   heldItemIds?: (db: Db, args: { limit: number }) => Promise<number[]>,
- *   reviewHeld?: (tx: Db, args: { itemId: number, approve: boolean }) => Promise<void>,
+ *   reviewHeld?: (tx: Db, args: { itemId: number, approve: boolean, sourceId?: string|null }) => Promise<void>,
  *   setSubbed?: (tx: Db, args: { itemId: number, subbed: boolean }) => Promise<void>,
  * }} Kind
  *   `remapSpeakers(tx, …)` (optional, Task 10c): the owner's `npm run

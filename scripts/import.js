@@ -15,6 +15,7 @@ import { loadSite } from '../src/site/loadSite.js';
 import { createJob, getJob, insertRows, rowsForRun, setJobStatus, updateRow } from '../src/repo/imports.js';
 import { parseNotionCsv, extractStatusLinks, resolveArtists, eventOverrideOf } from '../src/services/importSources.js';
 import { ensureOwnerUser, runRow } from '../src/services/importJob.js';
+import { retryingFetch } from '../src/services/importFetch.js';
 
 const OPTIONS = /** @type {const} */ ({
   notion: { type: 'string' },
@@ -153,7 +154,9 @@ async function jobsOf(deps, { values, read, log }) {
 /**
  * @param {{ args: string[], deps: any, read?: (path: string) => Promise<string>, log?: (line: string) => void }} input
  */
-export async function runImport({ args, deps, read = (/** @type {string} */ path) => readFile(path, 'utf8'), log = console.log }) {
+export async function runImport({ args, deps: rawDeps, read = (/** @type {string} */ path) => readFile(path, 'utf8'), log = console.log }) {
+  // 429/5xx from the sources back off (1s, 2s, 4s) before a row is failed.
+  const deps = { ...rawDeps, fetchImpl: retryingFetch(rawDeps.fetchImpl) };
   const { values } = parseArgs({ args, options: OPTIONS, allowPositionals: false });
   const kind = values.kind ?? 'translation';
   const pace = values.pace === undefined ? 1000 : Number(values.pace);

@@ -107,10 +107,10 @@ export async function getRow(db, rowId) {
 
 /**
  * @param {Tx} db @param {number} jobId
- * @param {{ state?: string, q?: string, offset: number, limit: number }} page
+ * @param {{ state?: string, q?: string, itemIds?: number[], offset: number, limit: number }} page
  * @returns {Promise<{ rows: ReturnType<typeof toRow>[], hasMore: boolean }>}
  */
-export async function rowsPage(db, jobId, { state, q, offset, limit }) {
+export async function rowsPage(db, jobId, { state, q, itemIds, offset, limit }) {
   const conditions = ['job_id = $1'];
   /** @type {unknown[]} */
   const params = [jobId];
@@ -120,7 +120,12 @@ export async function rowsPage(db, jobId, { state, q, offset, limit }) {
   }
   if (q) {
     params.push(`%${q.toLowerCase()}%`);
-    conditions.push(`(lower(external_id) like $${params.length} or lower(overrides::text) like $${params.length})`);
+    const pattern = params.length;
+    const byItem = Array.isArray(itemIds) && itemIds.length > 0;
+    if (byItem) params.push(itemIds);
+    conditions.push(
+      `(lower(external_id) like $${pattern} or lower(overrides::text) like $${pattern}${byItem ? ` or item_id = any($${params.length}::bigint[])` : ''})`,
+    );
   }
   params.push(limit + 1, offset);
   const { rows } = await db.query(

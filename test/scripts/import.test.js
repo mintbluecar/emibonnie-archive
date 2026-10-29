@@ -50,6 +50,26 @@ test('--dry-run writes no items', async () => {
   assert.equal(await count(deps.db, 'select count(*)::int as n from items'), before);
 });
 
+test('a 429 from the sources is retried with backoff before the row is failed', async () => {
+  /** @type {Set<string>} */
+  const seen = new Set();
+  /** @type {typeof fetch} */
+  const flaky = async (url, init) => {
+    if (!seen.has(String(url))) {
+      seen.add(String(url));
+      return new Response('', { status: 429 });
+    }
+    return deps.fetchImpl(url, init);
+  };
+  const res = await runImport({
+    args: ['--links', 'chat.txt', '--pace', '0'],
+    deps: { ...deps, fetchImpl: flaky }, read: async () => `https://x.com/a/status/${IDS.EVENT_B}`, log: () => {},
+  });
+  const counts = await countsByState(deps.db, res.jobs[0].jobId);
+  assert.equal(counts.failed, 0, JSON.stringify(counts));
+  assert.ok(counts.fetched + counts.needs_speakers + counts.check >= 1, JSON.stringify(counts));
+});
+
 test('--retry processes only unfinished rows and duplicates do not double-archive', async () => {
   const first = await runImport({
     args: ['--links', 'chat.txt', '--pace', '0'],

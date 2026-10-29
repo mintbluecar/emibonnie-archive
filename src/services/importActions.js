@@ -32,7 +32,7 @@ async function kindOfItem(db, itemId) {
 export async function publishRows(deps, { jobId, scope, actor }) {
   const states = scope === 'ready' ? ['fetched'] : ['fetched', 'needs_speakers', 'check', 'attached'];
   const { rows } = await deps.db.query(
-    'select id, state, item_id from import_rows where job_id = $1 and state = any($2::text[]) order by id',
+    'select id, state, item_id, external_id from import_rows where job_id = $1 and state = any($2::text[]) order by id',
     [jobId, states],
   );
   let published = 0;
@@ -41,7 +41,7 @@ export async function publishRows(deps, { jobId, scope, actor }) {
     const kind = await kindOfItem(deps.db, row.item_id);
     if (row.state === 'attached') {
       if (kind && typeof kind.reviewHeld === 'function') {
-        await deps.db.transaction((tx) => kind.reviewHeld(tx, { itemId: row.item_id, approve: true }), { actor: actor.id });
+        await deps.db.transaction((tx) => kind.reviewHeld(tx, { itemId: row.item_id, approve: true, sourceId: row.external_id }), { actor: actor.id });
       }
     } else {
       await deps.db.transaction((tx) => setReviewState(tx, { itemId: row.item_id, state: 'published' }), { actor: actor.id });
@@ -69,7 +69,7 @@ export async function skipRow(deps, { jobId, rowId, actor }) {
     if (row.state === 'attached') {
       const kind = await kindOfItem(deps.db, itemId);
       if (kind && typeof kind.reviewHeld === 'function') {
-        await deps.db.transaction((tx) => kind.reviewHeld(tx, { itemId, approve: false }), { actor: actor.id });
+        await deps.db.transaction((tx) => kind.reviewHeld(tx, { itemId, approve: false, sourceId: row.externalId }), { actor: actor.id });
       }
     } else {
       await deps.db.transaction(

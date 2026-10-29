@@ -73,24 +73,71 @@ test('skipping an item row hides it with import_skipped', async () => {
   assert.equal((await getRow(deps.db, rowId)).state, 'skipped');
 });
 
-test('skipping an attached row rejects only its held part', async () => {
-  const source = await rows(deps.db, "select id from item_sources where item_id = $1 and role = 'primary'", [data.parentId]);
-  await deps.db.transaction((tx) => tx.query(
-    'insert into translation_parts (item_id, position, source_id, body, pending) values ($1, 98, $2, $3, true)',
-    [data.parentId, source[0].id, 'a held part'],
-  ), SYSTEM);
-  const rowId = await deps.db.transaction(async (tx) => {
-    await insertRows(tx, jobId, [{ platform: 'x', externalId: '990002', overrides: {} }]);
-    const { rows: all } = await rowsPage(tx, jobId, { offset: 0, limit: 50 });
-    const row = all.find((entry) => entry.externalId === '990002');
-    await updateRow(tx, row.id, { state: 'attached', itemId: data.parentId });
-    return row.id;
+/**
+ * A held follow-up part on `parentId` with its own source row, at `position`.
+ * @param {number} parentId @param {string} externalId @param {number} position
+ * @returns {Promise<{ position: number }>}
+ */
+async function heldPart(parentId, externalId, position) {
+  await deps.db.transaction(async (tx) => {
+    const { rows: source } = await tx.query(
+      "insert into item_sources (item_id, kind, platform, external_id, url, role) values ($1, 'translation', 'x', $2, $3, 'follow_up') returning id",
+      [parentId, externalId, `https://x.com/tl_beta/status/${externalId}`],
+    );
+    await tx.query(
+      'insert into translation_parts (item_id, position, source_id, body, pending) values ($1, $2, $3, $4, true)',
+      [parentId, position, source[0].id, `held follow-up ${externalId}`],
+    );
   }, SYSTEM);
-  await skipRow(deps, { jobId, rowId, actor });
-  const parts = await rows(deps.db, 'select rejected from translation_parts where item_id = $1 and position = 98', [data.parentId]);
-  assert.equal(parts[0].rejected, true, 'the held part is rejected');
+  return { position };
+}
+
+/**
+ * A job with one attached row for `externalId`, pointing at `parentId`.
+ * @param {number} parentId @param {string} externalId
+ * @returns {Promise<{ jobId: number, rowId: number }>}
+ */
+async function attachedJob(parentId, externalId) {
+  return deps.db.transaction(async (tx) => {
+    const job = await createJob(tx, { source: 'notion', actor: 'system' });
+    await insertRows(tx, job, [{ platform: 'x', externalId, overrides: {} }]);
+    const { rows: all } = await rowsPage(tx, job, { offset: 0, limit: 10 });
+    const row = all.find((entry) => entry.externalId === externalId);
+    await updateRow(tx, row.id, { state: 'attached', itemId: parentId });
+    return { jobId: job, rowId: row.id };
+  }, SYSTEM);
+}
+
+/** @param {number} parentId @param {number} position */
+function partAt(parentId, position) {
+  return rows(deps.db, 'select pending, rejected from translation_parts where item_id = $1 and position = $2', [parentId, position])
+    .then((found) => found[0]);
+}
+
+test('publishing one attached row leaves another held part on the parent held', async () => {
+  const mine = await heldPart(data.parentId, '990020', 80);
+  const sibling = await heldPart(data.parentId, '990021', 81);
+  const job = await attachedJob(data.parentId, '990020');
+  await attachedJob(data.parentId, '990021');
+
+  await publishRows(deps, { jobId: job.jobId, scope: 'all', actor });
+
+  assert.equal((await partAt(data.parentId, mine.position)).pending, false, 'its own part is approved');
+  assert.equal((await partAt(data.parentId, sibling.position)).pending, true, "the other job's part is untouched");
+});
+
+test('skipping an attached row rejects only its own held part', async () => {
+  const mine = await heldPart(data.parentId, '990022', 82);
+  const sibling = await heldPart(data.parentId, '990023', 83);
+  const job = await attachedJob(data.parentId, '990022');
+  await attachedJob(data.parentId, '990023');
+
+  await skipRow(deps, { jobId: job.jobId, rowId: job.rowId, actor });
+
+  assert.equal((await partAt(data.parentId, mine.position)).rejected, true, 'its own part is rejected');
+  assert.equal((await partAt(data.parentId, sibling.position)).rejected, false, "the other job's part is untouched");
   const parent = await rows(deps.db, 'select review_state from items where id = $1', [data.parentId]);
-  assert.equal(parent[0].review_state, 'published');
+  assert.equal(parent[0].review_state, 'published', 'the parent is untouched');
 });
 
 test('archive publishes a check row; skipping a published row is refused', async () => {

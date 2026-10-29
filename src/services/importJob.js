@@ -114,20 +114,43 @@ function rowViewOf(row, entry) {
 }
 
 /**
+ * The job's items whose own text matches `q`, through each kind's search
+ * clause: the parsed text is not in `import_rows`, so a row search must
+ * ask the items before paging (otherwise a match on page 2 never appears).
+ * @param {ViewDeps} deps @param {number} jobId @param {string} q
+ * @returns {Promise<number[]>}
+ */
+async function matchingItemIds(deps, jobId, q) {
+  const kinds = Object.values(kindsOf(deps));
+  /** @type {unknown[]} */
+  const params = [`%${q}%`, jobId];
+  const clauses = kinds.map((kind) => {
+    params.push(kind.name);
+    return `(i.kind = $${params.length} and ${kind.search.textClause(1)})`;
+  });
+  const { rows } = await deps.db.query(
+    `select distinct i.id from items i
+     where i.id in (select item_id from import_rows where job_id = $2 and item_id is not null)
+       and (${clauses.join(' or ')})`,
+    params,
+  );
+  return rows.map((row) => row.id);
+}
+
+/**
  * @param {ViewDeps} deps @param {number} jobId
  * @param {{ state?: string, q?: string, offset: number }} page
  * @returns {Promise<{ rows: any[], hasMore: boolean }>}
  */
 export async function rowsPage(deps, jobId, page) {
-  const pageOf = await repoRows(deps.db, jobId, { ...page, limit: IMPORT_PAGE_SIZE });
+  const q = typeof page.q === 'string' ? page.q.trim() : '';
+  const itemIds = q === '' ? undefined : await matchingItemIds(deps, jobId, q);
+  const pageOf = await repoRows(deps.db, jobId, { ...page, q, itemIds, limit: IMPORT_PAGE_SIZE });
   const ids = pageOf.rows.map((row) => row.itemId).filter((id) => id !== null);
   const ctx = await presenterContext(deps);
   const entries = ids.length > 0 ? await previewsForAny(deps, ids, ctx) : [];
   const byId = new Map(entries.map((entry) => [entry.card.id, entry]));
-  const q = typeof page.q === 'string' ? page.q.trim().toLowerCase() : '';
-  const rows = pageOf.rows
-    .map((row) => rowViewOf(row, row.itemId === null ? undefined : byId.get(row.itemId)))
-    .filter((row) => q === '' || row.text.toLowerCase().includes(q) || row.externalId.includes(q));
+  const rows = pageOf.rows.map((row) => rowViewOf(row, row.itemId === null ? undefined : byId.get(row.itemId)));
   return { rows, hasMore: pageOf.hasMore };
 }
 
