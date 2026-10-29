@@ -62,6 +62,20 @@ test('the owner reads a job and a filtered rows page', async () => {
   assert.ok(JSON.parse(list.text).jobs.some((job_) => job_.id === jobId));
 });
 
+test('mapping is owner-only and refuses a bad speaker', async () => {
+  const view = JSON.parse((await api.call('GET', `/api/owner/imports/${jobId}`, { cookies: owner })).text);
+  const group = view.markers[0];
+  assert.ok(group, 'a marker to map');
+  const body = { accountId: group.accountId, marker: group.markers[0].marker, speaker: { role: 'fan' }, remember: false };
+  assert.equal((await api.call('POST', `/api/owner/imports/${jobId}/map`, { cookies: member, body })).status, 403);
+  assert.equal((await api.call('POST', `/api/owner/imports/${jobId}/map`, { body })).status, 401);
+  const bad = await api.call('POST', `/api/owner/imports/${jobId}/map`, { cookies: owner, body: { ...body, speaker: {} } });
+  assert.equal(bad.status, 400, bad.text);
+  const ok = await api.call('POST', `/api/owner/imports/${jobId}/map`, { cookies: owner, body });
+  assert.equal(ok.status, 200, ok.text);
+  assert.ok(JSON.parse(ok.text).updated >= 1);
+});
+
 test('an unknown job is 404', async () => {
   assert.equal((await api.call('GET', '/api/owner/imports/999999', { cookies: owner })).status, 404);
   assert.equal((await api.call('GET', '/api/owner/imports/999999/rows', { cookies: owner })).status, 404);

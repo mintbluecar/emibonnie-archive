@@ -38,7 +38,7 @@ function sourceUrlOf(platform, externalId) {
  * The kind and kind-details of the given item ids, batched per kind.
  * @param {ViewDeps} deps @param {{ id: number, kind: string }[]} items
  */
-async function detailsOf(deps, items) {
+export async function detailsOf(deps, items) {
   /** @type {Map<number, any>} */
   const byId = new Map();
   for (const kindName of new Set(items.map((item) => item.kind))) {

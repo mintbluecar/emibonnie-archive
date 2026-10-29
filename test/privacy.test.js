@@ -104,7 +104,7 @@ async function representativeCalls() {
   // The public report form: no session, writes only a report.
   calls.push(['POST', '/api/reports']);
   // The owner section: 401 without a session.
-  calls.push(['GET', '/api/owner'], ['POST', '/api/owner/approval'], ['POST', '/api/owner/items/translation/1/review'], ['POST', '/api/owner/reports/1/hide'], ['POST', '/api/owner/reports/1/restore'], ['POST', '/api/owner/reports/1/dismiss'], ['GET', '/api/owner/users?q=ab'], ['GET', '/api/owner/imports'], ['GET', '/api/owner/imports/1'], ['GET', '/api/owner/imports/1/rows'], ['POST', '/api/dev/import'], ['POST', '/api/owner/users/block'], ['POST', '/api/owner/users/unblock'], ['POST', '/api/owner/sign-in-alert/dismiss']);
+  calls.push(['GET', '/api/owner'], ['POST', '/api/owner/approval'], ['POST', '/api/owner/items/translation/1/review'], ['POST', '/api/owner/reports/1/hide'], ['POST', '/api/owner/reports/1/restore'], ['POST', '/api/owner/reports/1/dismiss'], ['GET', '/api/owner/users?q=ab'], ['GET', '/api/owner/imports'], ['GET', '/api/owner/imports/1'], ['GET', '/api/owner/imports/1/rows'], ['POST', '/api/owner/imports/1/map'], ['POST', '/api/dev/import'], ['POST', '/api/owner/users/block'], ['POST', '/api/owner/users/unblock'], ['POST', '/api/owner/sign-in-alert/dismiss']);
   // Editing and follow-ups: all signed-in, a bare probe is 401 (no session).
   calls.push(['GET', '/api/item/translation/1/edit'], ['POST', '/api/item/translation/1/edit'], ['POST', '/api/item/translation/1/edits/1/revert'], ['POST', '/api/item/translation/1/follow-ups']);
   return calls;

@@ -28,7 +28,9 @@ import { optionsRoute, previewRoute, addRoute, addPersonRoute } from './add.js';
 import { editRoute, applyRoute, revertRoute, followUpsRoute } from './edit.js';
 import { metaRoutes } from './meta.js';
 import { route as reportsRoute } from './reports.js';
-import { importsRoute, importJobRoute, importRowsRoute, devImportRoute } from './imports.js';
+import { importsRoute, importJobRoute, importRowsRoute } from './imports.js';
+import { importMapRoute } from './importMap.js';
+import { devImportRoute } from './importDev.js';
 import { ownerRoute, approvalRoute, reviewRoute, hideReportRoute, restoreReportRoute, dismissReportRoute, usersRoute, blockUserRoute, unblockUserRoute, signInAlertRoute } from './owner.js';
 // scaffold:route-imports (`npm run new route <name>` adds its import above this line)
 
@@ -42,7 +44,7 @@ export const routes = [
   optionsRoute, previewRoute, addRoute, addPersonRoute,
   editRoute, applyRoute, revertRoute, followUpsRoute,
   reportsRoute,
-  importsRoute, importJobRoute, importRowsRoute, devImportRoute,
+  importsRoute, importJobRoute, importRowsRoute, importMapRoute, devImportRoute,
   ownerRoute, approvalRoute, reviewRoute, hideReportRoute, restoreReportRoute, dismissReportRoute,
   usersRoute, blockUserRoute, unblockUserRoute, signInAlertRoute,
   // scaffold:routes (`npm run new route <name>` adds its route above this line)
