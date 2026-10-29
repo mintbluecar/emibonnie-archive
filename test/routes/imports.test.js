@@ -76,6 +76,27 @@ test('mapping is owner-only and refuses a bad speaker', async () => {
   assert.ok(JSON.parse(ok.text).updated >= 1);
 });
 
+test('the owner publishes, skips, retries; a member may not', async () => {
+  const seeded = await api.call('POST', '/api/dev/import', {
+    cookies: owner, body: { urls: [`https://x.com/a/status/${IDS.POST}`] },
+  });
+  const secondId = JSON.parse(seeded.text).jobId;
+  const publish = { scope: 'all' };
+  assert.equal((await api.call('POST', `/api/owner/imports/${secondId}/publish`, { cookies: member, body: publish })).status, 403);
+  const ok = await api.call('POST', `/api/owner/imports/${secondId}/publish`, { cookies: owner, body: publish });
+  assert.equal(ok.status, 200, ok.text);
+  assert.equal(JSON.parse(ok.text).published, 1);
+  assert.equal((await api.call('GET', `/api/item/translation/${IDS.POST}`)).status, 200);
+
+  const rows = JSON.parse((await api.call('GET', `/api/owner/imports/${secondId}/rows`, { cookies: owner })).text).rows;
+  const rowId = rows[0].id;
+  assert.equal((await api.call('POST', `/api/owner/imports/${secondId}/rows/${rowId}/skip`, { cookies: member })).status, 403);
+  assert.equal((await api.call('POST', `/api/owner/imports/${secondId}/rows/${rowId}/skip`, { cookies: owner })).status, 409, 'already published');
+  const retry = await api.call('POST', `/api/owner/imports/${secondId}/retry`, { cookies: owner });
+  assert.equal(retry.status, 200, retry.text);
+  assert.equal(JSON.parse(retry.text).processed, 0);
+});
+
 test('an unknown job is 404', async () => {
   assert.equal((await api.call('GET', '/api/owner/imports/999999', { cookies: owner })).status, 404);
   assert.equal((await api.call('GET', '/api/owner/imports/999999/rows', { cookies: owner })).status, 404);
