@@ -497,6 +497,26 @@ function buildNoMarkers() {
   write(DIR, IDS.NO_MARKERS, pair);
 }
 
+function buildImportMarkers() {
+  // One marker used twice, and nothing else: the import review page's
+  // marker card (Plan 3 Task 10) maps it in bulk, then publishes. A label
+  // marker (`A`), not an emoji: the example site's `defaultMarkers` maps
+  // ☀️/🌙/🗣️/💬 already, so those would arrive with no marker left to map.
+  const text = `SOLLUNA AT STARFEST
+#SolLunaStarfest
+
+A: first translated line about the night.
+A: second translated line about the crowd.`;
+  const pair = buildTweet({
+    id: IDS.IMPORT_MARKERS,
+    author: AUTHORS.beta,
+    text,
+    createdAtIso: '2026-10-22T09:00:00.000Z',
+    hashtags: ['SolLunaStarfest'],
+  });
+  write(DIR, IDS.IMPORT_MARKERS, pair);
+}
+
 function buildSubbed() {
   // A clip whose English subtitles are already burned in: no speaker markers
   // in the caption, but it carries a video (its own translation needs no
@@ -561,6 +581,7 @@ export const IDS = {
   EDITED_NEW: '1900000000000000016',
   NO_MARKERS: '1900000000000000017',
   SUBBED: '1900000000000000018',
+  IMPORT_MARKERS: '1900000000000000019',
 };
 
 export function build() {
@@ -578,6 +599,7 @@ export function build() {
   buildEdited();
   buildNoMarkers();
   buildSubbed();
+  buildImportMarkers();
 }
 
 // Only regenerate the committed fixtures when run directly; importing this

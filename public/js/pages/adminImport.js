@@ -1,20 +1,31 @@
 // @ts-check
 /**
  * The import review page (Plan 3): owner only. Reads one job and its rows,
- * renders the table, and reloads after every action. Speaker mapping and
- * publish live in the next component (Task 10).
+ * renders the table, the marker cards and the publish bar, and reloads
+ * after every action.
  */
 import { html } from '../core/html.js';
 import { mountPage } from '../core/dom.js';
-import { getJson } from '../core/api.js';
+import { getJson, postJson } from '../core/api.js';
 import { getMe } from '../core/session.js';
 import { site, t } from '../core/site.js';
 import { mountLoadError } from './pageError.js';
 import * as pageShell from '../components/pageShell.js';
 import * as signIn from '../components/signIn.js';
 import * as importRows from '../components/importRows.js';
+import * as importSpeakers from '../components/importSpeakers.js';
 
 const APP_SELECTOR = 'app';
+
+/**
+ * Everything the page keeps between paints.
+ * @typedef {{ root: Element, jobId: number,
+ *   state: import('../components/importRows.js').RowsState,
+ *   markers: import('../components/importSpeakers.js').MarkerGroup[],
+ *   people: import('../components/importSpeakers.js').Person[],
+ *   roles: string[],
+ *   speakers: import('../components/importSpeakers.js').SpeakersState }} ReviewUi
+ */
 
 /** @returns {number|null} */
 function jobIdFromPath() {
@@ -39,6 +50,82 @@ function mountNotFound(root) {
   }));
 }
 
+/** @param {Element} root @param {number} jobId @returns {ReviewUi} */
+function reviewUi(root, jobId) {
+  return {
+    root,
+    jobId,
+    state: { jobId, job: { id: jobId, source: 'notion', status: 'queued', createdAt: '' }, counts: {}, rows: [], hasMore: false, state: '', q: '' },
+    markers: [],
+    people: [],
+    roles: [],
+    speakers: { jobId, expanded: new Set(), remember: true },
+  };
+}
+
+/** The rows page for the current filter and search. @param {ReviewUi} ui @param {{ more?: boolean }} options */
+async function fetchRows(ui, { more = false } = {}) {
+  const query = new URLSearchParams();
+  if (ui.state.state) query.set('state', ui.state.state);
+  if (ui.state.q) query.set('q', ui.state.q);
+  query.set('offset', more ? String(ui.state.rows.length) : '0');
+  const page = await getJson(`/api/owner/imports/${ui.jobId}/rows?${query.toString()}`);
+  ui.state.rows = more ? [...ui.state.rows, ...page.rows] : page.rows;
+  ui.state.hasMore = page.hasMore;
+}
+
+/** @param {ReviewUi} ui */
+function paint(ui) {
+  mountPage(ui.root, html`${importRows.render(ui.state)}${importSpeakers.render({
+    markers: ui.markers,
+    people: ui.people,
+    roles: ui.roles,
+    expanded: ui.speakers.expanded,
+    remember: ui.speakers.remember,
+  })}`);
+  const onReload = (/** @type {{ more?: boolean }} */ options = {}) => refresh(ui, options);
+  importRows.bind(ui.root, { state: ui.state, reload: onReload });
+  importSpeakers.bind(ui.root, {
+    state: ui.speakers,
+    map: (body) => postJson(`/api/owner/imports/${ui.jobId}/map`, body),
+    reload: () => refresh(ui),
+  });
+}
+
+/** Refresh counts, the header and the marker table too, then repaint. @param {ReviewUi} ui @param {{ more?: boolean }} [options] */
+async function refresh(ui, { more = false } = {}) {
+  if (!more) {
+    const view = await getJson(`/api/owner/imports/${ui.jobId}`);
+    ui.state.job = view.job;
+    ui.state.counts = view.counts;
+    ui.markers.length = 0;
+    ui.markers.push(...(view.markers ?? []));
+  }
+  await fetchRows(ui, { more });
+  paint(ui);
+}
+
+/** @param {Element} root @param {number} jobId */
+async function startReview(root, jobId) {
+  const ui = reviewUi(root, jobId);
+  let view;
+  try {
+    view = await getJson(`/api/owner/imports/${jobId}`);
+  } catch {
+    mountNotFound(root);
+    return;
+  }
+  ui.state.job = view.job;
+  ui.state.counts = view.counts;
+  ui.state.rows = view.rows;
+  ui.state.hasMore = view.hasMore;
+  ui.markers.push(...(view.markers ?? []));
+  const options = await getJson('/api/add/options').catch(() => ({ people: [], roles: [] }));
+  ui.people = options.people ?? [];
+  ui.roles = options.roles ?? [];
+  paint(ui);
+}
+
 /** @returns {Promise<void>} */
 export async function start() {
   const root = document.getElementById(APP_SELECTOR);
@@ -48,46 +135,7 @@ export async function start() {
   let me;
   try { me = await getMe(); } catch { mountLoadError(root, { active: 'me' }); return; }
   if (!me.user?.isOwner) { mountSignIn(root); return; }
-
-  /** @type {import('../components/importRows.js').RowsState} */
-  const state = { jobId, job: { id: jobId, source: 'notion', status: 'queued', createdAt: '' }, counts: {}, rows: [], hasMore: false, state: '', q: '' };
-
-  const paint = () => { mountPage(root, importRows.render(state)); bind(); };
-  /** @param {{ more?: boolean }} [options] */
-  const reload = async ({ more = false } = {}) => {
-    const query = new URLSearchParams();
-    if (state.state) query.set('state', state.state);
-    if (state.q) query.set('q', state.q);
-    query.set('offset', more ? String(state.rows.length) : '0');
-    const page = await getJson(`/api/owner/imports/${jobId}/rows?${query.toString()}`);
-    state.rows = more ? [...state.rows, ...page.rows] : page.rows;
-    state.hasMore = page.hasMore;
-    paint();
-  };
-  const bind = () => importRows.bind(root, { state, reload: onReload });
-
-  /** Refresh counts and the job header too (after publish/skip). */
-  const refreshAll = async () => {
-    const view = await getJson(`/api/owner/imports/${jobId}`);
-    state.job = view.job;
-    state.counts = view.counts;
-    await reload();
-  };
-
-  /** @param {{ more?: boolean }} [options] */
-  const onReload = async (options = {}) => (options.more ? reload({ more: true }) : refreshAll());
-
-  try {
-    const view = await getJson(`/api/owner/imports/${jobId}`);
-    state.job = view.job;
-    state.counts = view.counts;
-    state.rows = view.rows;
-    state.hasMore = view.hasMore;
-  } catch {
-    mountNotFound(root);
-    return;
-  }
-  paint();
+  await startReview(root, jobId);
 }
 
 if (typeof document !== 'undefined') start();

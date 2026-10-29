@@ -352,5 +352,20 @@
   "import.failed": "couldn't do that — try again",
   "import.more": "more",
   "import.created": "{date}",
-  "import.rows": "{n} rows"
+  "import.rows": "{n} rows",
+  "import.speakers.title": "speakers to map",
+  "import.speakers.empty": "no speaker markers need mapping",
+  "import.speakers.none": "translator unknown",
+  "import.speakers.entries": "{n} entries",
+  "import.marker.check": "used only once or twice — check it by hand",
+  "import.marker.review": "review {n}",
+  "import.marker.remember": "remember for this translator",
+  "import.marker.select": "map {marker}",
+  "import.marker.choose": "choose a speaker",
+  "import.marker.save": "save",
+  "import.publish.ready": "publish ready",
+  "import.publish.all": "publish all",
+  "import.publish.done": "published {n}",
+  "import.retry": "retry failed",
+  "import.retrying": "retrying… {n} done"
 }
