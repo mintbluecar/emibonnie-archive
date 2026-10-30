@@ -51,7 +51,7 @@ test('task deploy:dry runs cleanly through Task itself, with the preview env var
     encoding: 'utf8',
     env: { PATH: process.env.PATH ?? '', EMIBONNIE_DB_PREVIEW: 'postgres://preview-user:preview-secret-token@ep-preview.example.neon.tech/db' },
   });
-  assert.match(output, /step 11: would print the deployment URL/);
+  assert.match(output, /step 15: would run: curl -sI <deployment URL>\/api\/home/);
   assert.doesNotMatch(output, /preview-secret-token/);
 });
 
