@@ -63,6 +63,22 @@ test('the owner maps the marker in bulk, publishes, and the entry goes public', 
   await expect(marker).toContainText('A');
   await expect(marker.locator('.c-import-speakers__check')).toBeVisible();
 
+  // Styling system Task 3, fix round 1: the speaker select has no
+  // .c-select wrapper of its own, so it must keep a real dropdown
+  // indicator -- either base.css's own chevron (appearance: none, a
+  // background-image) or, failing that, the native arrow (appearance
+  // left alone). A `background:` shorthand on the component rule once
+  // cancelled the chevron with nothing to replace it.
+  const select = marker.locator('[data-marker-select]');
+  const indicator = await select.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { backgroundImage: s.backgroundImage, appearance: s.appearance };
+  });
+  expect(
+    indicator.backgroundImage !== 'none' || indicator.appearance !== 'none',
+    `speaker select has neither a chevron nor the native arrow: ${JSON.stringify(indicator)}`,
+  ).toBe(true);
+
   // Map it in bulk to a role: every entry using it is filled, and the row
   // becomes ready to publish.
   await marker.locator('[data-marker-select]').selectOption('role:fan');
