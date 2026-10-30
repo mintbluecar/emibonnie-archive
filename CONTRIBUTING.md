@@ -12,7 +12,8 @@
 1. Branch off `main`.
 2. Make small, reviewable commits.
 3. Before opening a PR: `npm run build && npm run check && npm test` must pass, and `npm run e2e` for any page or style change.
-4. Open a PR using the template; fill in the checklist honestly.
+4. **Definition of done for UI work:** run `npm run screens` and look at the changed screens next to their mockup before calling it done.
+5. Open a PR using the template; fill in the checklist honestly.
 
 ## Recipes
 
@@ -52,7 +53,7 @@ What review checks on every PR, on top of each recipe's own list: the layer rule
      - Wrap the initial load in try/catch: a 404 shows the page's own not-found state, anything else `mountLoadError`.
      - Guard every refetch with the `load` sequence check.
   3. Every word goes through `t()`/`tCount()`, with new keys in `copyDefaults.json`. Markup goes only through `html`.
-  4. Styles go in `src/styles/components/<name>.css`, using engine tokens only (the build fails on an undefined one).
+  4. Styles go in `src/styles/components/<name>.css`, composing tokens and primitives (`STYLING.md`) -- the build fails on an undefined token.
   5. Any client-side path goes in `public/js/core/routes.js`, pinned by `test/core/routes.test.js`.
   6. `npm run build` writes `public/<name>.html` from the template with its `{{asset:…}}` placeholders resolved, and emits the page's rewrite into `vercel.json`. Both are generated and gitignored: commit the template, never the built page.
 - **Copy from:** `public/js/pages/account.js` (a fetch, 404 and load error), `public/js/pages/static.js` (copy only).
@@ -66,7 +67,7 @@ What review checks on every PR, on top of each recipe's own list: the layer rule
   1. `render(props)` returns `SafeHtml`.
   2. Add `bind(el)` only for behaviour. A person's colour goes out as `data-c` and `bind` calls `applyColours` (`public/js/core/dom.js`), which also sets an AA-safe text shade.
   3. The component holds no copy: callers pass text already resolved through `t()`.
-  4. Styles go in `src/styles/components/<name>.css` (`c-<name>` block).
+  4. Styles go in `src/styles/components/<name>.css` (`c-<name>` block), composing tokens and primitives (`STYLING.md`).
 - **Copy from:** `public/js/components/emptyState.js` (render only), `public/js/components/chips.js` (with `bind`).
 - **Review checks:** escaping, since plain template literals containing `<` are a lint error here; every interpolation is in `html`; no `style=` attributes; keyboard and label accessibility.
 

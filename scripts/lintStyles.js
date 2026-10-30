@@ -1,16 +1,16 @@
 // @ts-check
 /**
- * `npm run check`'s stylelint step (Styling system Task 5, spec "6.
- * Enforcement"). Lints every engine CSS file plus the bundled example
- * site's theme, the two globs `.stylelintrc.json`'s rules are written
- * for: `src/styles/**\/*.css` and `examples/*\/theme.css`.
+ * `npm run check`'s stylelint step (spec "6. Enforcement"). Lints every
+ * engine CSS file plus the bundled example site's theme, the two globs
+ * `.stylelintrc.json`'s rules are written for: `src/styles/**\/*.css` and
+ * `examples/*\/theme.css`.
  *
- * `.stylelintrc.json` stays plain JSON (no logic to run), so the one
- * dynamic piece -- which component files are still pending migration,
- * `scripts/stylelintPending.json` -- is merged in here as the config's
- * `ignoreFiles`, rather than duplicated into the config file by hand.
- * `test/styles/stylelintPending.test.js` keeps that list honest (every
- * entry must still exist); Task 15 is expected to shrink it to empty.
+ * Until the styling-system migration finished, a dynamic `ignoreFiles`
+ * list (`scripts/stylelintPending.json`, merged into the config here)
+ * excused component files not yet moved onto tokens and primitives.
+ * Every component is migrated now (Task 15), so that list -- and the
+ * merge -- is retired: a component file that fails this lint is a real
+ * violation, never a pending one.
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -23,21 +23,19 @@ const FILES = ['src/styles/**/*.css', 'examples/*/theme.css'];
 /**
  * Every parameter defaults to this checkout's own files, so `npm run
  * check` (no arguments) is unaffected; `test/scripts/lintStyles.test.js`
- * points `repoRoot`/`configPath`/`pendingPath` at a temp fixture instead,
- * to prove the `ignoreFiles` merge itself without touching this tree.
- * @param {{ repoRoot?: string, configPath?: string, pendingPath?: string, files?: string[] }} [options]
+ * points `repoRoot`/`configPath` at a temp fixture instead, to prove this
+ * reads a config and lints files without touching this tree.
+ * @param {{ repoRoot?: string, configPath?: string, files?: string[] }} [options]
  * @returns {Promise<{ errored: boolean, report: string }>}
  */
 export async function lintStyles(options = {}) {
   const repoRoot = options.repoRoot ?? REPO_ROOT;
   const configPath = options.configPath ?? path.join(repoRoot, '.stylelintrc.json');
-  const pendingPath = options.pendingPath ?? path.join(repoRoot, 'scripts/stylelintPending.json');
   const config = JSON.parse(readFileSync(configPath, 'utf8'));
-  const ignoreFiles = JSON.parse(readFileSync(pendingPath, 'utf8'));
   const result = await stylelint.lint({
     cwd: repoRoot,
     files: options.files ?? FILES,
-    config: { ...config, ignoreFiles },
+    config,
     formatter: 'string',
   });
   return { errored: result.errored, report: result.report };

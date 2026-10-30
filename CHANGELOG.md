@@ -2,6 +2,32 @@
 
 All notable changes to this project are documented here. Versions are semver tags (`vX.Y.Z`). Each release lists its **upgrade steps**; to take one, see `docs/start-your-own.md`, step 10.
 
+## 0.5.0
+
+A styling system: one shared design layer, enforced. Tokens and primitives replace the per-screen CSS that was carrying 701 px literals, 29 raw hex colours and nine ways to build a primary button; an unclassed control now looks on-brand instead of broken; the page shell is no longer optional; and stylelint joins `npm run check` so a mistake fails a check instead of shipping. See `STYLING.md` for the full reference.
+
+**Upgrade steps:**
+
+1. `git fetch upstream --tags && git merge v0.5.0`.
+2. **No migrations.**
+3. **No new production environment variables.** `DEV_AS` (`scripts/dev.js`) and `DATABASE_URL`/`PGLITE_DIR` for `npm run pull-prod` are local-dev-only, same as `setup`/`doctor`'s own; neither exists when deployed.
+4. **Copy keys.** No key you may have overridden was removed. The new keys you may override are `person.viewLabel`, `owner.col.report`, `owner.col.user`, `owner.col.actions`, `import.col.state`, `import.col.translator`, `import.col.text`, `import.col.event` and `import.col.actions` (the import review and owner tables' column headings). Each has an English default.
+5. **New tokens you may override, in `site/theme.css`.** `tokens.css` gained a spacing scale (`--space-1`…`--space-8`), a radius scale (`--radius-xs/sm/md/lg/pill`, alongside the existing `--radius-card`), two shadows (`--shadow-card`, `--shadow-raised`), three font weights, a focus-ring colour/width/offset, a danger colour and tint, scrim/overlay/media colours, two sign-in brand colours, and four control-size tokens (`--tap-target`, `--control-sm`, `--control-md`, `--target-min`). Nothing existing was renamed or removed, so an untouched `theme.css` still works unchanged; see `STYLING.md`, "Tokens" for every value.
+6. **Font roles and self-hosted site fonts.** `--font-body` (everything) and `--font-heading` (`h1`-`h3`, defaulting to `--font-body`) are new; `--font-latin` stays as an alias of `--font-body`, so a `theme.css` that already overrides it keeps working unchanged. A site can now self-host its own font family -- beyond the engine's Nunito and IBM Plex Sans Thai -- by declaring it in `site/site.json`'s new `fonts` list (an `@fontsource/*` package, or its own `.woff2` files under `site/fonts/`) and pointing a role at it in `theme.css`. See `docs/site-settings.md`, "Fonts".
+7. **The `theme` layer.** `theme.css` now sits in its own cascade layer, right after `tokens`. No change needed: specificity between your overrides and the engine's dark-mode blocks resolves exactly as before (`docs/site-settings.md`, "Light and dark").
+8. **`mountPage` now requires `pageShell.render`.** If your site has its own page code calling `mountPage(root, safeHtml)` directly with a hand-built `SafeHtml`, build that page's content and pass it to `pageShell.render({ active, content, ... })` first -- `mountPage` only accepts the `ShellHtml` that returns, so every page is guaranteed the header, tab bar and footer (`STYLING.md`, "The shell is not optional").
+9. **`.c-select`/`select.css` is gone.** Dropdowns now draw their chevron from `base.css`'s `select` rule (the look is unchanged); a `theme.css` that styled `.c-select` can drop those rules. The field primitive's `field__select` is its wrapper now.
+10. **`npm run check` now runs stylelint** on `src/styles/**/*.css` and your `site/theme.css`, rejecting literal colours and spacing/radius px values outside tokens, an undocumented breakpoint, and (in `src/styles/components/`) a primitive's look rebuilt by hand. A clean `theme.css` that only overrides tokens passes unchanged.
+11. `npm run build`, then redeploy.
+
+- **Layers, tokens and primitives.** `app.css` is assembled in cascade layers (`tokens, theme, base, primitives, layout, components`), applied by the build so nobody writes `@layer` by hand. New shared primitives -- `btn`, `field`/`check`, `card`, `table`, `chip`, `badge`, `notice`, `segmented`, `meta`/`label`/`heading`/`tap-link`, `stack`/`cluster` -- replace dozens of hand-copied looks; `STYLING.md` documents every one with its markup.
+- **On-brand element defaults.** An unclassed `button`, text field, select, textarea, checkbox, radio and `table` now look styled -- on-brand padding, radius, border and a visible keyboard focus ring -- instead of falling back to the browser (or, for a button, to bare text).
+- **The import review page, fixed.** It now renders inside the shell with a real table (state, translator, text, event, actions columns), actions as buttons, "load more" as a button, and a styled speaker select.
+- **The dev-only style guide** (`/dev/styleguide`, local dev only, never deployed) shows every primitive and element default, in every variant, light and dark, rendered from the real build.
+- **`npm run screens [-- --db <dir>] [-- --out <dir>] [-- --only <substring>]`** builds a gallery of every page, for every role, at phone and desktop width, light and dark, into `.screens/` (gitignored) with an index page -- for looking at next to a mockup, never a pass/fail test.
+- **`DATABASE_URL=<production> npm run pull-prod`** copies production data into a local database (everything but login sessions and rate limits) for looking at every screen with real data; `DEV_AS=<role> npm run dev` (and `GET /api/auth/dev?as=<role>` to switch anytime) signs a local browser in as any role. Both are local-only, never available when deployed.
+- **Enforcement.** Stylelint joins `npm run check`; a class-usage test keeps every CSS class and markup class matched (and keeps `STYLING.md`'s own examples honest); a theme test keeps `site/theme.css` to tokens `tokens.css` actually defines; e2e's `checkPage` now asserts every page's shell structure, body font on every control, a ≥24×24px target on every control, every table's header row, and dark mode's `--color-bg` on a site with its own light theme. `npm run new component <name>` now also scaffolds that component's CSS file.
+
 ## 0.4.0
 
 Bulk import. The owner loads an existing archive — a Notion CSV export and a text file of post links — into the site as held entries, then reviews the job on one owner-only page: maps speakers in bulk, publishes what is ready, skips what is not, and retries what failed. Nothing imported is public until it is published.

@@ -6,19 +6,22 @@
  * in `src/styles/**\/*.css`, and every class selector in that CSS must
  * be used somewhere -- except:
  *
- *   (a) a class whose block (`c-<block>`/`k-<block>`, the text up to its
- *       first `__` or `--`) is styled by a file still on
- *       `scripts/stylelintPending.json`: today's unstyled controls
- *       (`.c-import__more`, ...) stay that way
- *       until their migration task, so they pass here too -- the same
- *       list `stylelintPending.test.js` keeps honest shrinks this
- *       exception as components migrate;
- *   (b) a short, explicit list of classes built from a dynamic prefix
+ *   (a) a short, explicit list of classes built from a dynamic prefix
  *       (e.g. `c-import__state--${state}`), which a literal scan can
  *       only ever see as the truncated prefix; and
- *   (c) a handful of classes outside the engine's own naming convention
+ *   (b) a handful of classes outside the engine's own naming convention
  *       (a third-party embed's required classname), named explicitly
  *       below rather than silently ignored.
+ *
+ * Until Task 15, a third exception excused any class whose block was
+ * still styled by a file on `scripts/stylelintPending.json` (today's
+ * unstyled controls, before their migration task). Every component is
+ * migrated now, that file is gone, and so is the exception.
+ *
+ * Task 15 (spec "7. Docs and the style guide") adds a second pair of
+ * tests below: every class and custom property named in `STYLING.md`'s
+ * fenced code blocks must be real, so the doc can't silently drift from
+ * the CSS it documents.
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -28,17 +31,19 @@ import { fileURLToPath } from 'node:url';
 import { walkFiles } from '../../scripts/buildChecks.js';
 
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
+const STYLING_MD_PATH = path.join(REPO_ROOT, 'STYLING.md');
+const TOKENS_CSS_PATH = path.join(REPO_ROOT, 'src/styles/tokens.css');
 
 /**
  * Dynamic class families a literal scan only ever sees as their
  * truncated prefix (the state/position right after it is interpolated,
- * `${...}`, with no separating space) -- exception (b).
+ * `${...}`, with no separating space) -- exception (a).
  * @type {string[]}
  */
 const DYNAMIC_PREFIXES = ['c-import__state--', 'c-header__tagline--'];
 
 /**
- * Exception (c), each named for a reason, not swept in by a looser rule.
+ * Exception (b), each named for a reason, not swept in by a looser rule.
  * @type {Record<string, string>}
  */
 const NON_ENGINE_CLASSES = {
@@ -73,22 +78,7 @@ function classTokensOf(source) {
   return tokens;
 }
 
-/** The block a class token belongs to: the text up to its first `__` or `--`. @param {string} token @returns {string} */
-function blockOf(token) {
-  const idx = token.search(/__|--/);
-  return idx === -1 ? token : token.slice(0, idx);
-}
-
-/** @param {string} selector @param {string} block @returns {boolean} */
-function sameBlock(selector, block) {
-  return selector === block || selector.startsWith(`${block}__`) || selector.startsWith(`${block}--`);
-}
-
 function loadFixtures() {
-  const pending = new Set(
-    /** @type {string[]} */ (JSON.parse(readFileSync(path.join(REPO_ROOT, 'scripts/stylelintPending.json'), 'utf8'))),
-  );
-
   /** @type {Map<string, Set<string>>} selector -> the files that define it */
   const selectorFiles = new Map();
   for (const { path: filePath, text } of walkFiles(path.join(REPO_ROOT, 'src/styles'), '.css')) {
@@ -113,34 +103,28 @@ function loadFixtures() {
     }
   }
 
-  return { pending, selectorFiles, usedTokens };
+  return { selectorFiles, usedTokens };
 }
 
-test('every static class used in markup matches a CSS selector, a pending block, or a named exception', () => {
-  const { pending, selectorFiles, usedTokens } = loadFixtures();
+test('every static class used in markup matches a CSS selector or a named exception', () => {
+  const { selectorFiles, usedTokens } = loadFixtures();
   const failures = [];
   for (const [token, files] of usedTokens) {
     if (selectorFiles.has(token)) continue;
     if (DYNAMIC_PREFIXES.includes(token)) continue;
     if (Object.hasOwn(NON_ENGINE_CLASSES, token)) continue;
-    const block = blockOf(token);
-    const ownedByPending = [...selectorFiles].some(
-      ([selector, definingFiles]) => sameBlock(selector, block) && [...definingFiles].some((f) => pending.has(f)),
-    );
-    if (ownedByPending) continue;
     failures.push(`"${token}" (used in ${[...files].join(', ')}) matches no CSS selector`);
   }
   assert.deepEqual(failures, []);
 });
 
-test('every CSS class selector is used in markup, pending, a named dynamic family, or a named exception', () => {
-  const { pending, selectorFiles, usedTokens } = loadFixtures();
+test('every CSS class selector is used in markup, a named dynamic family, or a named exception', () => {
+  const { selectorFiles, usedTokens } = loadFixtures();
   const failures = [];
   for (const [selector, files] of selectorFiles) {
     if (usedTokens.has(selector)) continue;
     if (DYNAMIC_PREFIXES.some((prefix) => selector.startsWith(prefix))) continue;
     if (Object.hasOwn(NON_ENGINE_CLASSES, selector)) continue;
-    if ([...files].some((f) => pending.has(f))) continue;
     failures.push(`".${selector}" (defined in ${[...files].join(', ')}) is never used in markup`);
   }
   assert.deepEqual(failures, []);
@@ -158,4 +142,58 @@ test('a class="..." attribute never nests a second ${ inside the first (classTok
     }
   }
   assert.deepEqual(nested, []);
+});
+
+/**
+ * Styling system Task 15 (spec "7. Docs and the style guide"): keeps
+ * `STYLING.md` honest. A fenced code block's language tag and body.
+ * @param {string} markdown @returns {{ lang: string, body: string }[]}
+ */
+function fencedBlocksOf(markdown) {
+  return [...markdown.matchAll(/```(\w*)\n([\s\S]*?)```/g)].map((m) => ({ lang: m[1], body: m[2] }));
+}
+
+/**
+ * Custom property names declared with `--name:` -- only at a declaration
+ * boundary (start of line, `{`, `;` or whitespace), never mid-selector
+ * like `.btn--sm:hover` (whose `m` before `:` would otherwise match).
+ * @param {string} css @returns {Set<string>}
+ */
+function declaredTokensOf(css) {
+  const names = new Set();
+  for (const m of css.matchAll(/(?:^|[\s{;])(--[a-zA-Z][\w-]*)\s*:/gm)) names.add(m[1]);
+  return names;
+}
+
+/** `declaredTokensOf`'s names, plus every `var(--name` reference. @param {string} css @returns {Set<string>} */
+function tokenMentionsOf(css) {
+  const names = declaredTokensOf(css);
+  for (const m of css.matchAll(/var\(\s*(--[a-zA-Z][\w-]*)/g)) names.add(m[1]);
+  return names;
+}
+
+test('STYLING.md: every class in an html code block is a real CSS selector', () => {
+  const { selectorFiles } = loadFixtures();
+  const markdown = readFileSync(STYLING_MD_PATH, 'utf8');
+  const failures = [];
+  for (const { lang, body } of fencedBlocksOf(markdown)) {
+    if (lang !== 'html') continue;
+    for (const token of classTokensOf(body)) {
+      if (!selectorFiles.has(token)) failures.push(`".${token}" (STYLING.md) matches no CSS selector`);
+    }
+  }
+  assert.deepEqual(failures, []);
+});
+
+test('STYLING.md: every custom property in a css code block is declared in tokens.css', () => {
+  const markdown = readFileSync(STYLING_MD_PATH, 'utf8');
+  const declared = declaredTokensOf(readFileSync(TOKENS_CSS_PATH, 'utf8'));
+  const failures = [];
+  for (const { lang, body } of fencedBlocksOf(markdown)) {
+    if (lang !== 'css') continue;
+    for (const token of tokenMentionsOf(body)) {
+      if (!declared.has(token)) failures.push(`"${token}" (STYLING.md) is not declared in tokens.css`);
+    }
+  }
+  assert.deepEqual(failures, []);
 });
