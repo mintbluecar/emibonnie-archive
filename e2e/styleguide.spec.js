@@ -116,3 +116,217 @@ test.describe('style guide (/dev/styleguide): #elements', () => {
     }
   });
 });
+
+/**
+ * A CSS value as the browser computes it for `property`, from a probe
+ * element given `value` (e.g. a token's `var()`) -- so a primitive's
+ * computed style can be compared with what its token resolves to in the
+ * same serialisation. CSSOM (`el.style`), not a `style` attribute, so
+ * the CSP's `style-src 'self'` is no obstacle.
+ * @param {import('@playwright/test').Page} page @param {string} property @param {string} value @returns {Promise<string>}
+ */
+function resolved(page, property, value) {
+  return page.evaluate(([prop, val]) => {
+    const probe = document.createElement('div');
+    probe.style.setProperty(prop, val);
+    document.body.append(probe);
+    const out = getComputedStyle(probe).getPropertyValue(prop);
+    probe.remove();
+    return out;
+  }, [property, value]);
+}
+
+/**
+ * The computed value of `property` on the first match of `selector`.
+ * @param {import('@playwright/test').Page} page @param {string} selector @param {string} property @param {string} [pseudo] @returns {Promise<string>}
+ */
+function computed(page, selector, property, pseudo) {
+  return page.locator(selector).first().evaluate((el, [prop, ps]) => getComputedStyle(el, ps || null).getPropertyValue(prop), [property, pseudo ?? '']);
+}
+
+/** The primitive sections (Task 4), in page order. */
+const PRIMITIVE_SECTIONS = ['#button', '#field', '#card', '#table', '#chip', '#badge', '#notice', '#text', '#spacing'];
+
+test.describe('style guide (/dev/styleguide): primitives', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/dev/styleguide');
+    await page.evaluate(() => document.fonts.ready);
+  });
+
+  test('every primitive has its section', async ({ page }) => {
+    for (const id of PRIMITIVE_SECTIONS) await expect(page.locator(`section${id}`), id).toHaveCount(1);
+  });
+
+  test('button: primary is the gradient, quiet is text-like, danger is the danger colour, sizes from tokens', async ({ page }) => {
+    expect(await computed(page, '#button .btn--primary', 'background-image')).toContain('linear-gradient');
+    expect(await computed(page, '#button .btn--primary', 'color')).toBe(await resolved(page, 'color', 'var(--color-accent-text)'));
+
+    expect(await computed(page, '#button .btn--secondary', 'background-color')).toBe(await resolved(page, 'background-color', 'var(--color-card)'));
+    expect(await computed(page, '#button .btn:not([class*="btn--"])', 'background-color')).toBe(await resolved(page, 'background-color', 'var(--color-card)'));
+
+    expect(await computed(page, '#button .btn--quiet', 'background-color')).toBe('rgba(0, 0, 0, 0)');
+    expect(await computed(page, '#button .btn--quiet', 'border-top-color')).toBe('rgba(0, 0, 0, 0)');
+    expect(await computed(page, '#button .btn--quiet', 'color')).toBe(await resolved(page, 'color', 'var(--color-label)'));
+
+    expect(await computed(page, '#button .btn--danger', 'color')).toBe(await resolved(page, 'color', 'var(--color-danger)'));
+
+    const tap = parseFloat(await resolved(page, 'height', 'var(--tap-target)'));
+    const box = async (/** @type {string} */ sel) => /** @type {{ width: number, height: number }} */ (await page.locator(sel).first().boundingBox());
+    expect((await box('#button .btn--primary')).height).toBeGreaterThanOrEqual(tap);
+    const sm = await box('#button .btn--sm:not(.btn--icon)');
+    expect(sm.height).toBeGreaterThanOrEqual(32);
+    expect(sm.height).toBeLessThan(tap);
+
+    const icon = await box('#button .btn--icon:not(.btn--sm)');
+    expect(icon.width).toBeCloseTo(icon.height, 0);
+    expect(await page.locator('#button .btn--icon:not([aria-label])')).toHaveCount(0);
+
+    const block = await box('#button .btn--block');
+    const parent = await page.locator('#button .btn--block').first().evaluate((el) => /** @type {HTMLElement} */ (el.parentElement).clientWidth);
+    expect(block.width).toBeCloseTo(parent, 0);
+  });
+
+  test('field: label, control, hint and error stack; one chevron on field__select; error in the danger colour', async ({ page }) => {
+    expect(await computed(page, '#field .field', 'display')).toBe('flex');
+    expect(await computed(page, '#field .field', 'flex-direction')).toBe('column');
+    expect(await computed(page, '#field .field__error', 'color')).toBe(await resolved(page, 'color', 'var(--color-danger)'));
+    expect(await computed(page, '#field .field__hint', 'color')).toBe(await resolved(page, 'color', 'var(--color-ink-muted)'));
+
+    const tap = parseFloat(await resolved(page, 'height', 'var(--tap-target)'));
+    for (const sel of ['#field .field input[type="text"]', '#field .field__select select', '#field .field textarea']) {
+      const { height } = /** @type {{ height: number }} */ (await page.locator(sel).first().boundingBox());
+      expect(height, sel).toBeGreaterThanOrEqual(tap);
+    }
+
+    // base.css's select chevron is the one chevron (controller ruling): the wrapper draws none.
+    expect(await computed(page, '#field .field__select select', 'background-image')).not.toBe('none');
+    expect(await computed(page, '#field .field__select', 'content', '::after')).toMatch(/^(none|normal)$/);
+    const wrapper = /** @type {{ width: number }} */ (await page.locator('#field .field__select').first().boundingBox());
+    const select = /** @type {{ width: number }} */ (await page.locator('#field .field__select select').first().boundingBox());
+    expect(select.width).toBeCloseTo(wrapper.width, 0);
+  });
+
+  test('card: the card surface, shadow and radius from tokens, padding sizes', async ({ page }) => {
+    expect(await computed(page, '#card .card', 'box-shadow')).toBe(await resolved(page, 'box-shadow', 'var(--shadow-card)'));
+    expect(await computed(page, '#card .card', 'border-top-left-radius')).toBe(await resolved(page, 'border-top-left-radius', 'var(--radius-card)'));
+    expect(await computed(page, '#card .card', 'background-color')).toBe(await resolved(page, 'background-color', 'var(--color-card)'));
+    expect(await computed(page, '#card .card--compact', 'padding-top')).toBe(await resolved(page, 'padding-top', 'var(--space-3)'));
+    expect(await computed(page, '#card .card--roomy', 'padding-top')).toBe(await resolved(page, 'padding-top', 'var(--space-5)'));
+  });
+
+  test('table: header row, numeric and actions columns right-aligned; table--stack stacks below 860px with each cell\'s column name', async ({ page }) => {
+    await expect(page.locator('#table table.table thead th').first()).toBeVisible();
+    expect(await computed(page, '#table .table__num', 'text-align')).toBe('right');
+    expect(await computed(page, '#table td.table__actions', 'text-align')).toBe('right');
+    await expect(page.locator('#table td.table__actions .cluster .btn').first()).toBeVisible();
+
+    const phone = /** @type {{ width: number }} */ (page.viewportSize()).width < 860;
+    const row = '#table .table--stack tbody tr';
+    const cell = '#table .table--stack tbody td[data-label]';
+    const label = await page.locator(cell).first().getAttribute('data-label');
+    if (phone) {
+      expect(await computed(page, row, 'display')).toBe('block');
+      expect(await computed(page, cell, 'content', '::before')).toBe(`"${label}"`);
+      // Visually hidden, still there for screen readers.
+      const head = /** @type {{ width: number, height: number }} */ (await page.locator('#table .table--stack thead').boundingBox());
+      expect(head.width * head.height).toBeLessThanOrEqual(1);
+      const noScroll = await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+      expect(noScroll, 'no horizontal scroll').toBe(true);
+    } else {
+      expect(await computed(page, row, 'display')).toBe('table-row');
+      expect(await computed(page, cell, 'content', '::before')).toMatch(/^(none|normal)$/);
+      await expect(page.locator('#table .table--stack thead th').first()).toBeVisible();
+    }
+  });
+
+  test('chip: a pill, an on state and a count', async ({ page }) => {
+    expect(await computed(page, '#chip .chip', 'border-top-left-radius')).toBe(await resolved(page, 'border-top-left-radius', 'var(--radius-pill)'));
+    expect(await computed(page, '#chip .chip--on', 'background-color')).not.toBe(await computed(page, '#chip .chip:not(.chip--on)', 'background-color'));
+    await expect(page.locator('#chip .chip .chip__count').first()).toBeVisible();
+  });
+
+  test('badge: a pill; accent and danger variants from tokens', async ({ page }) => {
+    expect(await computed(page, '#badge .badge', 'border-top-left-radius')).toBe(await resolved(page, 'border-top-left-radius', 'var(--radius-pill)'));
+    expect(await computed(page, '#badge .badge--accent', 'background-color')).toBe(await resolved(page, 'background-color', 'var(--color-label-tint)'));
+    expect(await computed(page, '#badge .badge--danger', 'color')).toBe(await resolved(page, 'color', 'var(--color-danger)'));
+  });
+
+  test('notice: info, error (the danger colour, outlined on the card) and accent', async ({ page }) => {
+    // On the card, not on --color-danger-tint: the danger colour on its own tint is under 4.5:1 (4.05:1 light).
+    expect(await computed(page, '#notice .notice--error', 'color')).toBe(await resolved(page, 'color', 'var(--color-danger)'));
+    expect(await computed(page, '#notice .notice--error', 'border-top-color')).toBe(await resolved(page, 'border-top-color', 'var(--color-danger)'));
+    expect(await computed(page, '#notice .notice--error', 'background-color')).toBe(await resolved(page, 'background-color', 'var(--color-card)'));
+    expect(await computed(page, '#notice .notice--accent', 'background-color')).toBe(await resolved(page, 'background-color', 'var(--color-label-tint)'));
+    expect(await computed(page, '#notice .notice--info', 'border-top-left-radius')).toBe(await resolved(page, 'border-top-left-radius', 'var(--radius-md)'));
+  });
+
+  test('text: meta is small and muted, label is the label colour, headings step down', async ({ page }) => {
+    expect(await computed(page, '#text .meta', 'color')).toBe(await resolved(page, 'color', 'var(--color-ink-muted)'));
+    expect(await computed(page, '#text .label', 'color')).toBe(await resolved(page, 'color', 'var(--color-label)'));
+    const size = async (/** @type {string} */ sel) => parseFloat(await computed(page, sel, 'font-size'));
+    expect(await size('#text .meta')).toBeLessThan(await size('#text p:not([class])'));
+    expect(await size('#text .heading--lg')).toBeGreaterThan(await size('#text .heading--md'));
+    expect(await size('#text .heading--md')).toBeGreaterThan(await size('#text .heading--sm'));
+    expect(await computed(page, '#text .heading--md', 'font-family')).toBe(await resolved(page, 'font-family', 'var(--font-heading)'));
+  });
+
+  test('spacing: stack--n and cluster--n gaps are --space-n; a cluster wraps', async ({ page }) => {
+    for (const n of [1, 2, 3, 4, 5, 6]) {
+      const sel = `#spacing .stack--${n}`;
+      expect(await computed(page, sel, 'flex-direction'), sel).toBe('column');
+      expect(await computed(page, sel, 'row-gap'), sel).toBe(await resolved(page, 'row-gap', `var(--space-${n})`));
+    }
+    for (const n of [1, 2, 3, 4]) {
+      const sel = `#spacing .cluster--${n}`;
+      expect(await computed(page, sel, 'flex-wrap'), sel).toBe('wrap');
+      expect(await computed(page, sel, 'column-gap'), sel).toBe(await resolved(page, 'column-gap', `var(--space-${n})`));
+    }
+  });
+
+  test('focus is visible on every interactive primitive, btn--quiet and chips included (Review Focus 4)', async ({ page }) => {
+    const ringWidth = await tokenValue(page, '--focus-ring-width');
+    const scope = PRIMITIVE_SECTIONS.join(', ');
+    // Every tab stop: enabled controls, and one radio per group (the checked one).
+    const total = await page.locator(`:is(${scope}) :is(a[href], button:enabled, input:not([type="radio"]), input[type="radio"]:checked, select, textarea)`).count();
+    /** @type {Set<string>} */
+    const seen = new Set();
+    let visited = 0;
+    for (let i = 0; i < 200 && visited < total; i += 1) {
+      await page.keyboard.press('Tab');
+      const info = await page.evaluate((sc) => {
+        const el = document.activeElement;
+        if (!el || el === document.body || !el.closest(sc)) return null;
+        const s = getComputedStyle(el);
+        return { cls: el.className, style: s.outlineStyle, width: s.outlineWidth };
+      }, scope);
+      if (!info) continue;
+      visited += 1;
+      for (const c of String(info.cls).split(/\s+/)) seen.add(c);
+      expect(info.style, info.cls).not.toBe('none');
+      expect(info.width, info.cls).toBe(ringWidth);
+    }
+    expect(visited, 'tabbed through every interactive primitive').toBe(total);
+    expect(seen.has('btn--quiet'), 'tabbed to a btn--quiet').toBe(true);
+    expect(seen.has('chip'), 'tabbed to a chip').toBe(true);
+  });
+
+  test('targets are at least 24x24 (WCAG 2.2 SC 2.5.8; a checkbox or radio measured on its label)', async ({ page }) => {
+    const scope = PRIMITIVE_SECTIONS.join(', ');
+    const targets = page.locator(`:is(${scope}) :is(a[href], button, select, textarea, input:not([type="checkbox"]):not([type="radio"]), label.check)`);
+    const n = await targets.count();
+    expect(n).toBeGreaterThan(0);
+    for (let i = 0; i < n; i += 1) {
+      const el = targets.nth(i);
+      const box = await el.boundingBox();
+      const what = await el.evaluate((e) => `${e.tagName.toLowerCase()}.${e.className}`);
+      expect(box, what).not.toBeNull();
+      expect(/** @type {{ width: number }} */ (box).width, `${what} width`).toBeGreaterThanOrEqual(24);
+      expect(/** @type {{ height: number }} */ (box).height, `${what} height`).toBeGreaterThanOrEqual(24);
+    }
+  });
+});
+
+test('layout: container--wide widens the container to 1200px', async ({ page }) => {
+  await page.goto('/dev/styleguide');
+  expect(await computed(page, '.container--wide', 'max-width')).toBe('1200px');
+});

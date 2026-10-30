@@ -63,9 +63,8 @@ test('the owner maps the marker in bulk, publishes, and the entry goes public', 
   await expect(marker).toContainText('A');
   await expect(marker.locator('.c-import-speakers__check')).toBeVisible();
 
-  // Styling system Task 3, fix round 1: the speaker select has no
-  // .c-select wrapper of its own, so it must keep a real dropdown
-  // indicator -- either base.css's own chevron (appearance: none, a
+  // Styling system Task 3, fix round 1: the speaker select must keep a
+  // real dropdown indicator -- either base.css's own chevron (appearance: none, a
   // background-image) or, failing that, the native arrow (appearance
   // left alone). A `background:` shorthand on the component rule once
   // cancelled the chevron with nothing to replace it.

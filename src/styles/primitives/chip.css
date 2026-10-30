@@ -1,0 +1,45 @@
+/*
+ * Chip (Styling system Task 4): a filter or tag pill, on or off, with an
+ * optional count. Its size is its content plus --chip-pad-y/--chip-pad-x,
+ * never a fixed height, but never under --target-min (WCAG 2.2 SC 2.5.8).
+ *
+ *   <button class="chip" type="button" aria-pressed="false">live</button>
+ *   <button class="chip chip--on" type="button" aria-pressed="true">posts</button>
+ *   <button class="chip" type="button">waiting <span class="chip__count">12</span></button>
+ *   <a class="chip" href="/tag/starfest">#starfest</a>
+ */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--target-min);
+  padding: var(--chip-pad-y) var(--chip-pad-x);
+  font-family: inherit;
+  font-size: var(--text-11-5);
+  font-weight: var(--weight-regular);
+  line-height: 1.25;
+  text-decoration: none;
+  color: var(--color-ink);
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.chip--on {
+  font-weight: var(--weight-bold);
+  color: var(--color-label-on-tint);
+  background: var(--color-label-tint);
+  border-color: var(--color-label);
+}
+
+.chip__count {
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink-muted);
+}
+
+.chip--on .chip__count {
+  color: inherit;
+}

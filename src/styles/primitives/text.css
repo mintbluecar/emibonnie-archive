@@ -1,0 +1,42 @@
+/*
+ * Text helpers (Styling system Task 4).
+ *
+ *   <p class="meta">@tl_gamma · 21 Oct 2026</p>
+ *   <h2 class="label">october 2026</h2>
+ *   <h1 class="heading heading--lg">Import review</h1>
+ *   <h2 class="heading heading--md">Speakers</h2>
+ *   <h3 class="heading heading--sm">Check the details</h3>
+ *
+ * The heading classes set the look, never the level: pick the element
+ * for the outline and the class for the size.
+ */
+
+.meta {
+  font-size: var(--text-12);
+  color: var(--color-ink-muted);
+}
+
+.label {
+  font-size: var(--text-11);
+  font-weight: var(--weight-heavy);
+  color: var(--color-label);
+}
+
+.heading {
+  font-family: var(--font-heading);
+  font-weight: var(--weight-heavy);
+  line-height: 1.25;
+  color: var(--color-ink);
+}
+
+.heading--lg {
+  font-size: var(--text-22);
+}
+
+.heading--md {
+  font-size: var(--text-16);
+}
+
+.heading--sm {
+  font-size: var(--text-14);
+}

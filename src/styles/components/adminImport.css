@@ -245,9 +245,8 @@
 .c-import-speakers__select {
   /* padding-right is left to base.css's own (calc(--space-6 + --space-2))
      -- never set here, and never through the `padding` shorthand (which
-     would set it to 0 and leave no room at all): this select has no
-     .c-select wrapper of its own, so that's the only thing keeping
-     base.css's select chevron clear of the text. */
+     would set it to 0 and leave no room at all): that's the only thing
+     keeping base.css's select chevron clear of the text. */
   padding-top: 6px;
   padding-bottom: 6px;
   padding-left: 8px;
@@ -255,9 +254,8 @@
   border-radius: 8px;
   /* background-color, never the `background` shorthand: the shorthand
      resets background-image too, which would cancel base.css's select
-     chevron -- this select has no wrapper of its own to replace it with
-     (unlike .c-select select, select.css), so it would be left with no
-     dropdown indicator at all (review round 1, Important). */
+     chevron -- the only one any select has -- leaving no dropdown
+     indicator at all (review round 1, Important). */
   background-color: var(--color-bg);
   color: var(--color-ink);
   font: inherit;

@@ -60,6 +60,13 @@
      White passes 5.97:1 here; dark mode's own value (below) is picked
      for its own --gradient-to instead. */
   --color-accent-text: #fff;
+  /* The gradient's start stop wherever --color-accent-text sits on it
+     (Styling system Task 4, btn--primary): white on the raw
+     --gradient-from is only 2.86:1 in light mode, so the stop is darkened
+     toward black (4.79:1; the same mix header.css's filter count and
+     filterSheet.css's apply button use). Dark mode's accent text is
+     black, which already passes on the raw stop, so it's left as is. */
+  --gradient-from-strong: color-mix(in srgb, var(--gradient-from) 75%, #000);
   /* Error colour (Styling system Task 2, spec "2. Tokens"): the audit
      found the de facto error colour #c8433a hand-copied 8 times (danger
      links, the failed-import state, the opt-out flow). 4.78:1 against
@@ -206,6 +213,13 @@
   /* The smallest tap/click target (44px, WCAG 2.5.5): the header bar's
      search icon and nav links, so also what sets the bar's height. */
   --tap-target: 44px;
+  /* The small button size (Styling system Task 4, btn--sm): shorter than
+     --tap-target, still above --target-min. */
+  --control-sm: 32px;
+  /* The smallest target any control may have (WCAG 2.2 SC 2.5.8, Target
+     Size (Minimum), level AA): chips and checkbox labels (Styling system
+     Task 4), which keep their compact look rather than --tap-target. */
+  --target-min: 24px;
   /* Space above and below the header bar's content: phone (the slim bar);
      desktop below. */
   --header-pad-y: 4px;
@@ -255,6 +269,8 @@
        passes 3.83:1 -- review round 2, I3) and 7.35:1 against
        --gradient-from, so it's correct for a solid accent surface. */
     --color-accent-text: #000;
+    /* See --gradient-from-strong above: black passes on the raw stop. */
+    --gradient-from-strong: var(--gradient-from);
     /* Same hue as the light-mode #c8433a, lightened for this background:
        5.06:1 against the dark --color-card (--color-danger's hue held
        constant, lightness raised, the same approach as --gradient-to
@@ -284,6 +300,8 @@
      passes 3.83:1 -- review round 2, I3) and 7.35:1 against
      --gradient-from, so it's correct for a solid accent surface. */
   --color-accent-text: #000;
+  /* See --gradient-from-strong above: black passes on the raw stop. */
+  --gradient-from-strong: var(--gradient-from);
   /* Same hue as the light-mode #c8433a, lightened for this background:
      5.06:1 against the dark --color-card (--color-danger's hue held
      constant, lightness raised, the same approach as --gradient-to

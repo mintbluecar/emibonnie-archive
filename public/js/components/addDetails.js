@@ -43,7 +43,7 @@ function eventField({ options, choices, eventId, allowNew }) {
   return html`
     <div class="c-add-details__field">
       <label class="c-add-details__label" for="c-add-event">${t('add.event')}</label>
-      <span class="c-select">
+      <span class="field__select">
         <select class="c-add-details__select" id="c-add-event" data-field="event">
           ${matchName ? labelled('match', `${matchName} · ${t('add.matches')}`, choices.eventMode === 'match') : ''}
           ${options.events.map((/** @type {any} */ e) => labelled(`event:${e.id}`, e.name, choices.eventMode === `event:${e.id}`))}
@@ -69,7 +69,7 @@ function lookupField({ label, field, values, pick, typed, isOwner }) {
   return html`
     <div class="c-add-details__field">
       <label class="c-add-details__label" for="c-add-${field}">${label}</label>
-      <span class="c-select">
+      <span class="field__select">
         <select class="c-add-details__select" id="c-add-${field}" data-field="${field}">
           ${labelled('', t('add.optional'), pick === '')}
           ${values.map((name) => option(name, pick === name))}
@@ -93,7 +93,7 @@ function placementField(choices) {
   return html`
     <div class="c-add-details__field">
       <label class="c-add-details__label" for="c-add-placement">${t('add.placement')}</label>
-      <span class="c-select">
+      <span class="field__select">
         <select class="c-add-details__select" id="c-add-placement" data-field="placement">
           ${['event', 'shared_story', 'post', 'unsorted'].map((p) => labelled(p, t(`add.placement.${p}`), choices.placement === p))}
         </select>

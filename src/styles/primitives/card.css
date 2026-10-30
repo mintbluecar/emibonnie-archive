@@ -1,0 +1,23 @@
+/*
+ * Card (Styling system Task 4): the raised surface results, forms and
+ * panels sit on.
+ *
+ *   <div class="card">Default padding</div>
+ *   <div class="card card--compact">A dense list row</div>
+ *   <section class="card card--roomy">A form or a welcome panel</section>
+ */
+
+.card {
+  padding: var(--space-4);
+  background: var(--color-card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.card--compact {
+  padding: var(--space-3);
+}
+
+.card--roomy {
+  padding: var(--space-5);
+}

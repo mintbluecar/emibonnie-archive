@@ -1,0 +1,33 @@
+/*
+ * Notice (Styling system Task 4): a banner or inline message.
+ *
+ *   <p class="notice notice--info" role="status">Saved. It shows on the archive in a minute.</p>
+ *   <p class="notice notice--error" role="alert">That link isn't a post on X.</p>
+ *   <div class="notice notice--accent">Not published yet: only you can see this.</div>
+ *
+ * notice--accent is the "not published" bar. notice--error is outlined
+ * on the card surface: the danger colour on its own tint is under 4.5:1.
+ */
+
+.notice {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-13);
+  color: var(--color-ink);
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: var(--radius-md);
+  overflow-wrap: anywhere;
+}
+
+.notice--error {
+  font-weight: var(--weight-bold);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.notice--accent {
+  font-weight: var(--weight-bold);
+  color: var(--color-label-on-tint);
+  background: var(--color-label-tint);
+  border-color: color-mix(in srgb, var(--color-label) 30%, var(--color-card));
+}

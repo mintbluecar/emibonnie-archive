@@ -67,14 +67,14 @@ function selectsSection(options, state) {
   return html`
     <label class="c-filter-sheet__field">
       ${t('search.eventLabel')}
-      <span class="c-select"><select class="c-filter-sheet__event">
+      <span class="field__select"><select class="c-filter-sheet__event">
         <option value="">${t('search.allEvents')}</option>
         ${options.events.map((e) => html`<option value="${e.slug}"${selectedAttr(e.slug, state.event)}>${e.name}</option>`)}
       </select></span>
     </label>
     <label class="c-filter-sheet__field">
       ${t('search.accountLabel')}
-      <span class="c-select"><select class="c-filter-sheet__account">
+      <span class="field__select"><select class="c-filter-sheet__account">
         <option value="">${t('search.allAccounts')}</option>
         ${options.accounts.map((a) => html`<option value="${a.handle}"${selectedAttr(a.handle, state.account)}>@${a.handle}</option>`)}
       </select></span>
@@ -82,7 +82,7 @@ function selectsSection(options, state) {
     ${options.clients.length > 0 ? html`
       <label class="c-filter-sheet__field">
         ${t('search.clientLabel')}
-        <span class="c-select"><select class="c-filter-sheet__client">
+        <span class="field__select"><select class="c-filter-sheet__client">
           <option value="">${t('search.allClients')}</option>
           ${options.clients.map((c) => html`<option value="${c.id}"${selectedAttr(c.id, state.client)}>${c.name}</option>`)}
         </select></span>
