@@ -56,7 +56,7 @@ test('composeEvent: a "more" button with the right data-kind/data-offset when a 
 
 test('composeEvent: the newest-first toggle and the report link', () => {
   const markup = String(composeEvent(EVENT));
-  assert.match(markup, /<button type="button" class="btn btn--quiet btn--sm c-event__newest-toggle" aria-pressed="false" data-action="newest-first">newest first<\/button>/);
+  assert.match(markup, /<button type="button" class="btn btn--quiet c-event__newest-toggle" aria-pressed="false" data-action="newest-first">newest first<\/button>/);
   assert.match(markup, /<button class="btn btn--quiet c-event__report" type="button" data-action="report">report<\/button>/);
   assert.match(markup, /<dialog[^>]*aria-labelledby="c-report-title"/);
 });

@@ -117,7 +117,7 @@ export function eventSearch(event, query = '') {
  */
 export function composeEvent(data, search = eventSearch(data.event)) {
   const list = html`
-    <button type="button" class="btn btn--quiet btn--sm c-event__newest-toggle" aria-pressed="false" data-action="newest-first">${t('event.newestFirst')}</button>
+    <button type="button" class="btn btn--quiet c-event__newest-toggle" aria-pressed="false" data-action="newest-first">${t('event.newestFirst')}</button>
     <div class="stack" data-event-sections>${data.sections.map(sectionBlock)}</div>
   `;
   const content = html`
