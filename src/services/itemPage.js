@@ -15,7 +15,7 @@ import { findVisibleItemId } from '../repo/cards.js';
 import { findItemIdBySource } from '../repo/itemState.js';
 import { touchRefresh, unfinalizedSources } from '../repo/sourceEdits.js';
 import { Conflict } from '../domain/errors.js';
-import { kindsOf } from './cards.js';
+import { kindNamed } from './cards.js';
 import { itemView } from './itemView.js';
 import { accountTag, eventTag, itemTag, personTag } from '../domain/cacheTags.js';
 
@@ -33,7 +33,7 @@ const ACTOR = { actor: 'system' };
  * @returns {Promise<{ kind: Kind, id: number }|null>}
  */
 async function visibleItem(deps, kindName, sourceId, { allowAnyState = false } = {}) {
-  const kind = Object.hasOwn(kindsOf(deps), kindName) ? kindsOf(deps)[kindName] : undefined;
+  const kind = kindNamed(deps, kindName);
   const ref = kind ? { kind: kind.name, platform: kind.platform, externalId: sourceId } : null;
   const id = ref ? (allowAnyState ? await findItemIdBySource(deps.db, ref) : await findVisibleItemId(deps.db, ref)) : null;
   return kind && id !== null ? { kind, id } : null;

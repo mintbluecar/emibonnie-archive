@@ -11,7 +11,7 @@ import { listVisibleItemIds } from '../repo/items.js';
 import { hideEvent } from '../repo/events.js';
 import { get as settingsGet, set as settingsSet } from '../repo/settings.js';
 import { eventTag, HOME_TAG, SEARCH_TAG } from '../domain/cacheTags.js';
-import { kindsOf, presenterContext, previewsForAny } from './cards.js';
+import { kindNamed, kindsOf, presenterContext, previewsForAny } from './cards.js';
 import { purgeItem, purgeTags } from './cache.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
@@ -85,8 +85,7 @@ export async function setApproval(deps, required, actor) {
  */
 export async function reviewItem(deps, { kind: kindName, sourceId, state, actor }) {
   if (state !== 'published' && state !== 'rejected') throw new BadRequest('state must be published or rejected');
-  const kinds = kindsOf(deps);
-  const kind = Object.hasOwn(kinds, kindName) ? kinds[kindName] : undefined;
+  const kind = kindNamed(deps, kindName);
   if (!kind) throw new BadRequest(`unknown kind: ${kindName}`);
   const id = await findItemIdBySource(deps.db, { kind: kind.name, platform: kind.platform, externalId: sourceId });
   if (id === null) throw new BadRequest(`unknown item: ${sourceId}`);

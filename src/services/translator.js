@@ -10,7 +10,7 @@ import {
   findItemIdBySource, restoreItem, softDeleteItem, translatorItemIds, translatorStates, translatorTotals,
 } from '../repo/itemState.js';
 import { getItem } from '../repo/items.js';
-import { kindsOf, presenterContext, previewsForAny } from './cards.js';
+import { kindNamed, presenterContext, previewsForAny } from './cards.js';
 import { purgeAccount, purgeItem } from './cache.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
@@ -58,7 +58,7 @@ export async function translatorList(deps, user, { offset }) {
 /**
  * Records that the one-time translator welcome has been shown, merging
  * into `users.meta` so a stored X handle survives.
- * @param {{ db: import('../db/common.js').Db }} deps
+ * @param {{ db: import('../db/common.js').Db, now: () => Date }} deps
  * @param {string} userId
  * @returns {Promise<void>}
  */
@@ -66,7 +66,7 @@ export async function markWelcomed(deps, userId) {
   await deps.db.transaction(
     (tx) => tx.query(
       "update users set meta = meta || jsonb_build_object('translatorWelcomedAt', $2::text) where id = $1 and meta->>'translatorWelcomedAt' is null",
-      [userId, new Date().toISOString()],
+      [userId, deps.now().toISOString()],
     ),
     { actor: userId },
   );
@@ -79,11 +79,11 @@ const MAX_BATCH = 50;
 
 /**
  * One batch entry as a registered kind and its source id.
- * @param {Record<string, any>} kinds @param {any} raw
+ * @param {import('./cards.js').KindsDeps} deps @param {any} raw
  * @returns {{ kind: any, sourceId: string }}
  */
-function entryOf(kinds, raw) {
-  const kind = Object.hasOwn(kinds, String(raw?.kind ?? '')) ? kinds[raw.kind] : undefined;
+function entryOf(deps, raw) {
+  const kind = kindNamed(deps, String(raw?.kind ?? ''));
   const sourceId = typeof raw?.sourceId === 'string' ? raw.sourceId : '';
   if (!kind || sourceId === '') throw new BadRequest(`unknown item: ${String(raw?.sourceId ?? '')}`);
   return { kind, sourceId };
@@ -117,10 +117,9 @@ async function resolveOwned(deps, user, entries) {
   if (!Array.isArray(entries) || entries.length < 1 || entries.length > MAX_BATCH) {
     throw new BadRequest(`items must be 1-${MAX_BATCH} entries`);
   }
-  const kinds = kindsOf(deps);
   /** @type {{ id: number, reason: string|null }[]} */
   const targets = [];
-  for (const raw of /** @type {any[]} */ (entries)) targets.push(await ownedTarget(deps.db, user, entryOf(kinds, raw)));
+  for (const raw of /** @type {any[]} */ (entries)) targets.push(await ownedTarget(deps.db, user, entryOf(deps, raw)));
   return targets;
 }
 

@@ -15,7 +15,7 @@
  */
 import { HOME_TAG, SEARCH_TAG, accountTag, eventTag, itemTag, personTag } from '../domain/cacheTags.js';
 import { findItemIdBySource } from '../repo/itemState.js';
-import { kindsOf } from './cards.js';
+import { kindNamed } from './cards.js';
 
 /** @typedef {import('../db/common.js').Db} Db */
 /** @typedef {{ db: Db, env?: Record<string, string|undefined>,
@@ -140,8 +140,7 @@ export async function purgeForTags(deps, tags, options = {}) {
  * @returns {Promise<void>}
  */
 export async function purgeSource(deps, kindName, sourceId, options = {}) {
-  const kinds = kindsOf(/** @type {any} */ (deps));
-  const kind = Object.hasOwn(kinds, kindName) ? kinds[kindName] : undefined;
+  const kind = kindNamed(deps, kindName);
   if (!kind) return;
   const id = await findItemIdBySource(deps.db, { kind: kind.name, platform: kind.platform, externalId: sourceId });
   if (id !== null) await purgeItem(deps, id, options);

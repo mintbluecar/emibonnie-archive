@@ -32,6 +32,15 @@ test('a blocked user gets 403 on edit and follow-ups and nothing changes', async
   assert.equal(await count(deps.db, 'select count(*)::int as n from item_edits'), before);
 });
 
+test('a :kind path segment named for an Object.prototype property is 404, not a prototype lookup', async () => {
+  const { sid } = await sidFor({ via: 'x', subject: '8', handle: 'member2' });
+  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const edit = await api.call('POST', `/api/item/constructor/1/edit`, { cookies: { sid }, body: { changes: { placement: 'unsorted' } } });
+  assert.equal(edit.status, 404);
+  const get = await api.call('GET', `/api/item/constructor/1/edit`, { cookies: { sid } });
+  assert.equal(get.status, 404);
+});
+
 test('check for follow-ups adds the new reply as a part, held pending when approval is on', async () => {
   const own = await ingestDeps();
   try {

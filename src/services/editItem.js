@@ -7,8 +7,8 @@
  * the subbed flag. Kind-specific rows go through the Kind contract;
  * the shared `items` row through the repo.
  */
-import { BadRequest, Conflict, Forbidden } from '../domain/errors.js';
-import { kindsOf } from './cards.js';
+import { BadRequest, Conflict, Forbidden, NotFound } from '../domain/errors.js';
+import { kindNamed } from './cards.js';
 import { loadContext } from './ingestContext.js';
 import { updatePlacement, updateLookups, getItem } from '../repo/items.js';
 import { findLookup, ensureLookup } from '../repo/lookups.js';
@@ -158,8 +158,10 @@ async function itemIdOf(db, kind, sourceId, allowAnyState) {
 /** @param {any} deps @param {string} kindName @param {{ sourceId: string, changes: Partial<EditableFields>, actor: SessionUser }} input */
 async function resolveEditInput(deps, kindName, { sourceId, changes, actor }) {
   if (Object.prototype.hasOwnProperty.call(changes, 'text')) throw new BadRequest('the translator\u2019s text cannot be edited');
-  const kind = kindsOf(deps)[kindName];
-  if (!kind) throw new BadRequest(`unknown kind: ${kindName}`);
+  const kind = kindNamed(deps, kindName);
+  // An unknown kind, like an unknown item, is a 404: the route segment
+  // itself is meaningless, not a bad request on an otherwise real one.
+  if (!kind) throw new NotFound();
   const id = await itemIdOf(deps.db, kind, sourceId, actor.isOwner === true);
   if (id === null) throw new BadRequest(`no archived ${kindName} item for ${sourceId}`);
   const itemRow = /** @type {any} */ (await getItem(deps.db, id));
@@ -231,7 +233,7 @@ export async function revertEdit(deps, { kind: kindName, sourceId, editId, actor
   if (rows.length === 0) throw new BadRequest('unknown edit');
   // The edit id must belong to the item the URL addresses: otherwise a
   // caller could apply one item's `before` to another item.
-  const kind = kindsOf(deps)[kindName];
+  const kind = kindNamed(deps, kindName);
   const itemId = kind ? await itemIdOf(deps.db, kind, sourceId, actor.isOwner === true) : null;
   if (itemId === null || itemId !== rows[0].item_id) throw new BadRequest('unknown edit');
   const already = await deps.db.query('select 1 from item_edits where reverts = $1 limit 1', [editId]);
@@ -253,7 +255,7 @@ export async function revertEdit(deps, { kind: kindName, sourceId, editId, actor
  * @returns {Promise<{ kind: any, id: number, item: any, role: 'submitter'|'translator'|'owner'|null }|null>}
  */
 export async function resolveForEdit(deps, kindName, sourceId, user) {
-  const kind = kindsOf(deps)[kindName];
+  const kind = kindNamed(deps, kindName);
   if (!kind) return null;
   const id = await itemIdOf(deps.db, kind, sourceId, user.isOwner === true);
   if (id === null) return null;

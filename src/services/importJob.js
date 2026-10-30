@@ -9,7 +9,7 @@
 import { partLines, unmappedMarkers } from '../domain/lineFixes.js';
 import { findMarkers } from '../domain/lines.js';
 import { countsByState, createJob, getJob, getRow, insertRows, jobsRecent, rowsForRun, rowsPage as repoRows, rowsWithItems, updateRow } from '../repo/imports.js';
-import { kindsOf, presenterContext, previewsForAny } from './cards.js';
+import { kindNamed, kindsOf, presenterContext, previewsForAny } from './cards.js';
 import { sourceState } from '../repo/items.js';
 import { ingestItem } from './ingest.js';
 
@@ -42,7 +42,7 @@ export async function detailsOf(deps, items) {
   /** @type {Map<number, any>} */
   const byId = new Map();
   for (const kindName of new Set(items.map((item) => item.kind))) {
-    const kind = kindsOf(deps)[kindName];
+    const kind = kindNamed(deps, kindName);
     if (!kind) continue;
     const ids = items.filter((item) => item.kind === kindName).map((item) => item.id);
     const loaded = await kind.loadDetails(deps.db, ids, { includePending: true });
@@ -71,7 +71,7 @@ export function classifyDetails(deps, details) {
  * @returns {Promise<'fetched'|'needs_speakers'|'check'|null>}
  */
 export async function readinessOf(deps, kindName, itemId) {
-  const kind = kindsOf(deps)[kindName];
+  const kind = kindNamed(deps, kindName);
   if (!kind) return null;
   const details = /** @type {any} */ ((await kind.loadDetails(deps.db, [itemId], { includePending: true })).get(itemId));
   return details ? classifyDetails(deps, details) : null;

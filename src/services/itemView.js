@@ -8,7 +8,7 @@
 import { neighbours } from '../repo/items.js';
 import { findVisibleItemId, loadCards, loadCardsAny, loadItemExtras } from '../repo/cards.js';
 import { findItemIdBySource } from '../repo/itemState.js';
-import { kindsOf, eventRefOf, presenterContext, detailsFor } from './cards.js';
+import { kindNamed, eventRefOf, presenterContext, detailsFor } from './cards.js';
 import { editRoleFor } from './editItem.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
@@ -39,7 +39,7 @@ export function addedByOf(submitter) {
 async function linkTo(deps, itemId) {
   if (itemId === null) return null;
   const card = (await loadCards(deps.db, [itemId])).get(itemId);
-  const kind = card ? kindsOf(deps)[card.kind] : undefined;
+  const kind = card ? kindNamed(deps, card.kind) : null;
   return card && kind ? { sourceId: card.sourceId, url: `${kind.urlPrefix}${card.sourceId}` } : null;
 }
 
@@ -50,7 +50,7 @@ async function linkTo(deps, itemId) {
  * @param {boolean} [allowAnyState] the owner resolves held entries too
  */
 async function loadVisible(deps, kindName, sourceId, allowAnyState = false) {
-  const kind = Object.hasOwn(kindsOf(deps), kindName) ? kindsOf(deps)[kindName] : undefined;
+  const kind = kindNamed(deps, kindName);
   if (!kind) return null;
   const ref = { kind: kind.name, platform: kind.platform, externalId: sourceId };
   const id = allowAnyState ? await findItemIdBySource(deps.db, ref) : await findVisibleItemId(deps.db, ref);

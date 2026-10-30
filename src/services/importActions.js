@@ -7,7 +7,7 @@
 import { Conflict, NotFound } from '../domain/errors.js';
 import { setReviewState, softDeleteItem } from '../repo/itemState.js';
 import { getRow, rowsForRun, updateRow } from '../repo/imports.js';
-import { kindsOf } from './cards.js';
+import { kindNamed } from './cards.js';
 import { purgeItem } from './cache.js';
 import { runRow } from './importJob.js';
 
@@ -17,10 +17,10 @@ import { runRow } from './importJob.js';
 /** How many failed rows one retry request processes. */
 export const RETRY_BATCH = 10;
 
-/** @param {any} db @param {number} itemId @returns {Promise<any|undefined>} */
+/** @param {any} db @param {number} itemId @returns {Promise<any|null>} */
 async function kindOfItem(db, itemId) {
   const { rows } = await db.query('select kind from items where id = $1', [itemId]);
-  return rows[0] ? kindsOf(/** @type {any} */ ({ db }))[rows[0].kind] : undefined;
+  return rows[0] ? kindNamed({}, rows[0].kind) : null;
 }
 
 /**
