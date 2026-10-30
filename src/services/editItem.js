@@ -16,6 +16,7 @@ import { findVisibleItemId } from '../repo/cards.js';
 import { findItemIdBySource } from '../repo/itemState.js';
 import { eventExists } from '../repo/events.js';
 import { validateFixes } from '../domain/lineFixes.js';
+import { itemTag } from '../domain/cacheTags.js';
 import { itemChangeTags } from './cache.js';
 import { write } from './write.js';
 
@@ -208,9 +209,11 @@ export async function editItem(deps, { kind: kindName, sourceId, changes, actor,
       [id, JSON.stringify(changed.before), JSON.stringify(changed.after), reverts, actor.id],
     );
     // Both the old and the new relationships: moving an entry to another
-    // event (or changing its cast) leaves the previous pages stale too.
-    w.purge.tags(tagsBefore);
-    w.purge.item(id);
+    // event (or changing its cast) leaves the previous pages stale too. The
+    // entry's own page is deleted, not invalidated (`itemEdited`), so the
+    // editor reopening it never gets the pre-edit copy from the CDN.
+    w.purge.tags(tagsBefore.filter((tag) => tag !== itemTag(id)));
+    w.purge.itemEdited(id);
     return rows[0].id;
   });
   return { editId: /** @type {number} */ (editId) };

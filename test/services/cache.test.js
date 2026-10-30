@@ -98,7 +98,9 @@ test('an edit purges the item it changed', async () => {
   await deps.db.transaction((tx) => tx.query("insert into users (id, display_name, role) values ('x:0', 'owner', 'owner')"), { actor: 'system' });
   const owner = { id: 'x:0', via: 'x', xUserId: '0', handle: 'owner', displayName: null, isOwner: true, isBlocked: false, translatorAccountIds: [], welcomedTranslator: true };
   const { rows } = await deps.db.query("select external_id from item_sources where item_id = $1 and role = 'primary'", [sample.id]);
-  await editItem(depsWith({ calls, deferred }), {
+  // The entry's own tag is hard-deleted (review Task 13, R30), so capture that call too.
+  const capture = async (/** @type {string[]} */ tags) => { calls.push(tags); };
+  await editItem({ ...depsWith({ calls, deferred }), dangerouslyDeleteByTag: capture }, {
     kind: 'translation', sourceId: rows[0].external_id, changes: { subbed: true }, actor: owner,
   });
   while (deferred.length > 0) await /** @type {any} */ (deferred.shift())();

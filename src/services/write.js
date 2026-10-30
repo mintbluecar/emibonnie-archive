@@ -6,11 +6,15 @@
  * transaction commits (a rollback drops them), through `cache.js`, which
  * computes the tags and hands the purge call to `deps.defer`.
  *
- * A change (`item`, `account`, `tags`) invalidates: the page may be served
- * stale once. A removal (`itemRemoved`, `accountRemoved`) deletes, so the
- * removed content is never served again (see cache.js `purgeTags`).
+ * A change (`item`, `account`, `tags`) invalidates: the CDN may serve the
+ * page stale once while it refreshes (browsers always revalidate with the
+ * CDN, src/http/handler.js `splitForCdn`, so the CDN's copy is what they
+ * get). A removal (`itemRemoved`, `accountRemoved`) deletes, so the removed
+ * content is never served again (see cache.js `purgeTags`). An edit
+ * (`itemEdited`) deletes the entry's own page, so the editor reopening it
+ * sees the edit, and invalidates the pages it appears on.
  */
-import { purgeAccount, purgeForTags, purgeItem } from './cache.js';
+import { purgeAccount, purgeEditedItem, purgeForTags, purgeItem } from './cache.js';
 
 /** @typedef {import('../db/common.js').Tx} Tx */
 /** @typedef {import('./cache.js').CacheDeps & import('./cards.js').KindsDeps} WriteDeps */
@@ -19,6 +23,7 @@ import { purgeAccount, purgeForTags, purgeItem } from './cache.js';
  * @typedef {object} Purges
  * @property {(itemId: number) => void} item an item changed
  * @property {(itemId: number) => void} itemRemoved an item left the public pages
+ * @property {(itemId: number) => void} itemEdited an item's own fields were edited
  * @property {(accountId: number) => void} account a translator came back
  * @property {(accountId: number) => void} accountRemoved a translator left the public pages
  * @property {(tags: string[]) => void} tags explicit tags changed
@@ -44,6 +49,7 @@ export async function write(deps, actor, fn) {
   const purge = {
     item: (itemId) => { queued.push(() => purgeItem(deps, itemId)); },
     itemRemoved: (itemId) => { queued.push(() => purgeItem(deps, itemId, { hard: true })); },
+    itemEdited: (itemId) => { queued.push(() => purgeEditedItem(deps, itemId)); },
     account: (accountId) => { queued.push(() => purgeAccount(deps, accountId)); },
     accountRemoved: (accountId) => { queued.push(() => purgeAccount(deps, accountId, { hard: true })); },
     tags: (tags) => { queued.push(() => purgeForTags(deps, tags)); },

@@ -85,3 +85,27 @@ test('a held entry\'s meta page stays generic; publishing makes it everyone\'s',
   const meta = await api.call('GET', `/t/${sample.sourceId}`);
   assert.ok(meta.text.includes(sample.eventName), 'the preview names the event once it is public');
 });
+
+test('the public answer for a held entry is byte-identical to a missing one: status, body and every header', async () => {
+  const owner = await sidFor(deps.site.ownerXUserId, 'the_owner');
+  // The test above publishes the sample; hold it again for this one.
+  const hold = (/** @type {string} */ state) => deps.db.transaction((tx) => tx.query(
+    "update items set review_state = $2 where id = (select item_id from item_sources where external_id = $1 and role = 'primary')",
+    [sample.sourceId, state],
+  ), { actor: 'system' });
+  await hold('pending');
+  try {
+    for (const cookies of [undefined, { sid: owner }]) {
+      const held = await api.call('GET', `/api/item/translation/${sample.sourceId}`, { cookies });
+      const missing = await api.call('GET', '/api/item/translation/1', { cookies });
+      assert.equal(held.status, 404);
+      assert.equal(held.status, missing.status);
+      assert.equal(held.text, missing.text);
+      // No header varies per request here (the handler adds no Date or id), so all must match.
+      assert.deepEqual([...held.headers.entries()], [...missing.headers.entries()]);
+      assert.equal(held.headers.get('vercel-cache-tag'), null, 'no tag names the held entry');
+    }
+  } finally {
+    await hold('published');
+  }
+});

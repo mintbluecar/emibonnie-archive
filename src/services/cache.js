@@ -166,6 +166,19 @@ export async function purgeItem(deps, itemId, options = {}) {
   await purgeWhenPossible(deps, await itemChangeTags(deps.db, itemId), options);
 }
 
+/**
+ * An edited entry: its own page (`item:<id>`) is deleted, so the next
+ * request -- often the editor reopening it, who before review Task 13 got a
+ * private uncached copy -- is fetched fresh; the pages it appears on are
+ * invalidated (served stale once while they refresh).
+ * @param {CacheDeps} deps @param {number} itemId @returns {Promise<void>}
+ */
+export async function purgeEditedItem(deps, itemId) {
+  const own = itemTag(itemId);
+  await purgeWhenPossible(deps, [own], { hard: true });
+  await purgeWhenPossible(deps, (await itemChangeTags(deps.db, itemId)).filter((tag) => tag !== own));
+}
+
 /** @param {CacheDeps} deps @param {number} accountId @param {{ hard?: boolean }} [options] @returns {Promise<void>} */
 export async function purgeAccount(deps, accountId, options = {}) {
   await purgeWhenPossible(deps, await accountChangeTags(deps.db, accountId), options);

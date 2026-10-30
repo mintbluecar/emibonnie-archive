@@ -166,3 +166,25 @@ test('an unknown event id is a 400, not a database error', async () => {
     );
   });
 });
+
+test('an edit deletes the entry\'s own page from the CDN and invalidates the rest (old and new relations)', async () => {
+  await withDeps(async ({ deps, owner }) => {
+    const added = await ingest(deps, IDS.EVENT_B);
+    const [{ slug }] = await rows(deps.db, 'select e.slug from items i join events e on e.id = i.event_id where i.id = $1', [added.itemId]);
+    /** @type {string[][]} */
+    const deleted = [];
+    /** @type {string[][]} */
+    const invalidated = [];
+    const purging = {
+      ...deps, env: { VERCEL: '1' },
+      dangerouslyDeleteByTag: async (/** @type {string[]} */ tags) => { deleted.push(tags); },
+      invalidateByTag: async (/** @type {string[]} */ tags) => { invalidated.push(tags); },
+    };
+    await editItem(purging, { kind: 'translation', sourceId: IDS.EVENT_B, changes: { placement: 'unsorted' }, actor: await owner() });
+    const own = `item:${added.itemId}`;
+    assert.deepEqual(deleted.flat(), [own], 'only the edited entry\'s own tag is hard-deleted');
+    const rest = invalidated.flat();
+    assert.ok(!rest.includes(own), 'the entry\'s own tag is never merely invalidated');
+    for (const tag of ['home', 'search', `event:${slug}`]) assert.ok(rest.includes(tag), `${tag} is invalidated: ${rest.join(',')}`);
+  });
+});
