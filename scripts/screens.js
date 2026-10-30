@@ -32,8 +32,8 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
 import { acquireE2eLock, releaseE2eLock, E2E_LOCK_PATH } from './e2eLock.js';
-import { stubSyntheticMedia, gotoReady } from './devServerHelpers.js';
-import { pagesFor, outPathFor } from './screensPages.js';
+import { stubSyntheticMedia, gotoReady, e2eLockToken } from './devServerHelpers.js';
+import { pagesFor, outPathFor, importJobUrls, buildIndexHtml } from './screensPages.js';
 import { findExampleDir } from './initSite.js';
 
 export { pagesFor, outPathFor };
@@ -42,50 +42,6 @@ export { pagesFor, outPathFor };
 const ROLES = /** @type {const} */ (['owner', 'translator', 'member', 'guest']);
 const VIEWPORTS = [{ width: 390, height: 900 }, { width: 1280, height: 900 }];
 const THEMES = /** @type {const} */ (['light', 'dark']);
-
-/** @param {string} text @returns {string} */
-function escapeHtml(text) {
-  return text.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
-}
-
-/**
- * `map.get(key)`, setting it to a fresh `Map`/`[]` first when missing.
- * @template V @param {Map<string, V>} map @param {string} key @param {() => V} create @returns {V}
- */
-function getOrCreate(map, key, create) {
-  const existing = map.get(key);
-  if (existing !== undefined) return existing;
-  const fresh = create();
-  map.set(key, fresh);
-  return fresh;
-}
-
-/**
- * The gallery's static index: every captured page, grouped by page name
- * then role, each role listing its viewport x theme shots. Opened straight
- * off disk -- relative links only, nothing external.
- * @param {{role: string, name: string, path: string, width: number, theme: string}[]} shots
- * @returns {string}
- */
-function buildIndexHtml(shots) {
-  /** @type {Map<string, Map<string, {width: number, theme: string, path: string}[]>>} */
-  const byPage = new Map();
-  for (const shot of shots) {
-    const byRole = getOrCreate(byPage, shot.name, () => new Map());
-    const variants = getOrCreate(byRole, shot.role, () => []);
-    variants.push(shot);
-  }
-  const sections = [...byPage.entries()].map(([name, byRole]) => {
-    const roles = [...byRole.entries()].map(([role, variants]) => {
-      const links = variants.map((v) => `<a href="${v.path}">${v.width}&times;${v.theme}</a>`).join(' ');
-      return `<div class="role"><strong>${escapeHtml(role)}</strong> ${links}</div>`;
-    }).join('\n');
-    return `<section><h2>${escapeHtml(name)}</h2>${roles}</section>`;
-  }).join('\n');
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Screen gallery</title>
-<style>body{font-family:sans-serif;margin:2rem}section{margin-bottom:1.5rem}a{margin-right:0.75rem}</style>
-</head><body><h1>Screen gallery</h1>${sections}</body></html>`;
-}
 
 /**
  * Runs `node <script>` with `env` layered over this process's own,
@@ -133,31 +89,43 @@ async function waitForServer(url, timeoutMs) {
 }
 
 /**
- * Signs `context` in as `role` through the dev-only GET route (Task 0),
- * which redirects back to `/` once the cookie is set.
- * @param {import('playwright').BrowserContext} context @param {string} role
+ * POSTs `urls` to the dev-only `POST /api/dev/import` from `page` (fix
+ * round 1, controller ruling) -- its write check (src/http/origin.js)
+ * accepts a same-origin page's own `fetch`, unlike Node's own `fetch`,
+ * which carries no `Origin` header at all and is refused like a
+ * cross-site POST would be (the e2e suite's own pattern,
+ * e2e/import.spec.js's `seedJob`).
+ * @param {import('playwright').Page} page @param {string[]} urls
  * @returns {Promise<void>}
  */
-async function signInAs(context, role) {
-  const page = await context.newPage();
-  try {
-    await stubSyntheticMedia(page);
-    await gotoReady(page, `/api/auth/dev?as=${encodeURIComponent(role)}&returnTo=%2F`);
-  } finally {
-    await page.close();
-  }
+async function seedImportJob(page, urls) {
+  const status = await page.evaluate(async (body) => {
+    const res = await fetch('/api/dev/import', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    return res.status;
+  }, { urls });
+  if (status !== 200) console.error(`screens: seeding an import job failed (${status})`);
 }
 
 /**
  * The page list for `role`, plus the signed-in storage state to reuse for
- * its screenshot contexts (guest: no sign-in, no storage state).
- * @param {{ browser: import('playwright').Browser, baseUrl: string, role: 'owner'|'translator'|'member'|'guest' }} input
+ * its screenshot contexts (guest: no sign-in, no storage state). Signs in
+ * through the dev-only GET route (Task 0), which redirects back to `/`;
+ * for owner, that same page also seeds one import job first when
+ * `importUrls` is given (not `null`: `run.seed` was true and the site had
+ * tweet ids to seed from -- `importJobUrls`, scripts/screensPages.js).
+ * @param {{ browser: import('playwright').Browser, baseUrl: string, role: 'owner'|'translator'|'member'|'guest', importUrls: string[]|null }} input
  * @returns {Promise<{ pages: {name: string, path: string}[], storageState: any }>}
  */
-async function discoverPages({ browser, baseUrl, role }) {
+async function discoverPages({ browser, baseUrl, role, importUrls }) {
   const context = await browser.newContext({ baseURL: baseUrl });
   try {
-    if (role !== 'guest') await signInAs(context, role);
+    if (role !== 'guest') {
+      const page = await context.newPage();
+      await stubSyntheticMedia(page);
+      await gotoReady(page, `/api/auth/dev?as=${encodeURIComponent(role)}&returnTo=%2F`);
+      if (role === 'owner' && importUrls) await seedImportJob(page, importUrls);
+      await page.close();
+    }
     const api = async (/** @type {string} */ p) => {
       const res = await context.request.get(p);
       return res.ok() ? res.json() : null;
@@ -199,15 +167,16 @@ async function captureRoleVariant({ browser, baseUrl, role, viewport, theme, pag
 
 /**
  * Every role x viewport x theme: one page-discovery pass per role (reused
- * across its four viewport/theme contexts), then a screenshot pass each.
- * @param {{ browser: import('playwright').Browser, baseUrl: string, outDir: string, only: string }} input
+ * across its four viewport/theme contexts, and where owner's import job
+ * is seeded), then a screenshot pass each.
+ * @param {{ browser: import('playwright').Browser, baseUrl: string, outDir: string, only: string, importUrls: string[]|null }} input
  * @returns {Promise<{role: string, name: string, path: string, width: number, theme: string}[]>}
  */
-async function captureAll({ browser, baseUrl, outDir, only }) {
+async function captureAll({ browser, baseUrl, outDir, only, importUrls }) {
   /** @type {{role: string, name: string, path: string, width: number, theme: string}[]} */
   const shots = [];
   for (const role of ROLES) {
-    const { pages, storageState } = await discoverPages({ browser, baseUrl, role });
+    const { pages, storageState } = await discoverPages({ browser, baseUrl, role, importUrls });
     const filtered = only ? pages.filter((p) => p.path.includes(only)) : pages;
     for (const viewport of VIEWPORTS) {
       for (const theme of THEMES) {
@@ -269,10 +238,34 @@ async function restoreSiteBuild({ usedDefaultSite }) {
   if (await runOnce('scripts/build.js', { SITE_DIR: 'site' })) console.log('screens: rebuilt site/ after the gallery');
 }
 
+/**
+ * Runs each of `steps` in order, catching any throw or rejection so a
+ * later step still runs even when an earlier one fails (fix round 1,
+ * review item 1: a server that won't stop must not also leave the build
+ * lock held, or every later `npm run screens`/`e2e` run is blocked).
+ * Every caught error is reported to stderr once all steps have run;
+ * none of them are thrown, so the caller's own error (its `try` block's,
+ * if any) is the one that propagates out of its `finally`.
+ * @param {(() => Promise<void>|void)[]} steps
+ * @returns {Promise<void>}
+ */
+export async function runCleanup(steps) {
+  /** @type {unknown[]} */
+  const errors = [];
+  for (const step of steps) {
+    try {
+      await step();
+    } catch (/** @type {unknown} */ err) {
+      errors.push(err);
+    }
+  }
+  for (const err of errors) console.error('screens: cleanup step failed:', err instanceof Error ? err.message : String(err));
+}
+
 async function main() {
   const run = resolveRun(parseCli(process.argv.slice(2)));
   const env = { PORT: String(run.port), PGLITE_DIR: run.dbDir, SITE_DIR: run.siteDir, DATABASE_URL: '', VERCEL: '', DEV_SIGN_IN: '1' };
-  const lockToken = `${process.pid}:${randomUUID()}`;
+  const lockToken = e2eLockToken();
   acquireE2eLock(E2E_LOCK_PATH, lockToken);
   /** @type {import('node:child_process').ChildProcess|null} */
   let server = null;
@@ -286,15 +279,18 @@ async function main() {
     await waitForServer(baseUrl, 120_000);
     const browser = await chromium.launch();
     try {
-      shots = await captureAll({ browser, baseUrl, outDir: run.outDir, only: run.only });
+      const importUrls = run.seed ? importJobUrls(run.siteDir) : null;
+      shots = await captureAll({ browser, baseUrl, outDir: run.outDir, only: run.only, importUrls });
     } finally {
       await browser.close();
     }
   } finally {
-    await stopDevServer(server);
-    await restoreSiteBuild(run);
-    releaseE2eLock(E2E_LOCK_PATH, lockToken);
-    if (run.seed) rmSync(run.dbDir, { recursive: true, force: true });
+    await runCleanup([
+      () => stopDevServer(server),
+      () => restoreSiteBuild(run),
+      () => releaseE2eLock(E2E_LOCK_PATH, lockToken),
+      () => { if (run.seed) rmSync(run.dbDir, { recursive: true, force: true }); },
+    ]);
   }
   mkdirSync(run.outDir, { recursive: true });
   const indexPath = path.join(run.outDir, 'index.html');

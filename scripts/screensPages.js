@@ -1,11 +1,14 @@
 // @ts-check
 /**
- * The pure parts of `npm run screens` (scripts/screens.js, Styling system
- * Task 7): which pages a role sees, and where a screenshot lands. Split
- * out of screens.js so the gallery's I/O (spawning the server, driving a
- * browser) stays separate from what test/scripts/screens.test.js exercises
- * with a stub `api`.
+ * The parts of `npm run screens` (scripts/screens.js, Styling system
+ * Task 7) that need no server and no browser: which pages a role sees,
+ * where a screenshot lands, seeding one import job so the owner's
+ * gallery has something at `/admin/imports/<id>`, and the static index
+ * page itself. Split out of screens.js, which spawns the server and
+ * drives the browser, so test/scripts/screens.test.js can exercise
+ * `pagesFor`/`outPathFor` with a stub `api` and no server of their own.
  */
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 /**
@@ -138,4 +141,61 @@ export async function pagesFor(role, api) {
 export function outPathFor(role, width, theme, name) {
   const safe = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'page';
   return path.join(role, `${width}-${theme}`, `${safe}.png`);
+}
+
+/**
+ * The `POST /api/dev/import` body (fix round 1, controller ruling) that
+ * seeds one held import job from the site's own seed tweet ids, so the
+ * owner gallery always includes `/admin/imports/<id>` -- or `null` when
+ * the site has no `seed/maps.json` (or no tweets in it), nothing to
+ * import from.
+ * @param {string} siteDir
+ * @returns {string[] | null}
+ */
+export function importJobUrls(siteDir) {
+  const mapsPath = path.join(siteDir, 'seed', 'maps.json');
+  if (!existsSync(mapsPath)) return null;
+  const ids = Object.keys(JSON.parse(readFileSync(mapsPath, 'utf8')).tweets ?? {});
+  return ids.length > 0 ? ids.map((id) => `https://x.com/i/status/${id}`) : null;
+}
+
+/** @param {string} text @returns {string} */
+function escapeHtml(text) {
+  return text.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
+}
+
+/**
+ * `map.get(key)`, setting it to a fresh `Map`/`[]` first when missing.
+ * @template V @param {Map<string, V>} map @param {string} key @param {() => V} create @returns {V}
+ */
+function getOrCreate(map, key, create) {
+  if (!map.has(key)) map.set(key, create());
+  return /** @type {V} */ (map.get(key));
+}
+
+/**
+ * The gallery's static index: every captured page, grouped by page name
+ * then role, each role listing its viewport x theme shots. Opened straight
+ * off disk -- relative links only, nothing external.
+ * @param {{role: string, name: string, path: string, width: number, theme: string}[]} shots
+ * @returns {string}
+ */
+export function buildIndexHtml(shots) {
+  /** @type {Map<string, Map<string, {width: number, theme: string, path: string}[]>>} */
+  const byPage = new Map();
+  for (const shot of shots) {
+    const byRole = getOrCreate(byPage, shot.name, () => new Map());
+    const variants = getOrCreate(byRole, shot.role, () => []);
+    variants.push(shot);
+  }
+  const sections = [...byPage.entries()].map(([name, byRole]) => {
+    const roles = [...byRole.entries()].map(([role, variants]) => {
+      const links = variants.map((v) => `<a href="${v.path}">${v.width}&times;${v.theme}</a>`).join(' ');
+      return `<div class="role"><strong>${escapeHtml(role)}</strong> ${links}</div>`;
+    }).join('\n');
+    return `<section><h2>${escapeHtml(name)}</h2>${roles}</section>`;
+  }).join('\n');
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Screen gallery</title>
+<style>body{font-family:sans-serif;margin:2rem}section{margin-bottom:1.5rem}a{margin-right:0.75rem}</style>
+</head><body><h1>Screen gallery</h1>${sections}</body></html>`;
 }

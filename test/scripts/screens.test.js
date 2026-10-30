@@ -1,16 +1,20 @@
 // @ts-check
 /**
- * `npm run screens` (scripts/screens.js, Styling system Task 7): the two
- * pure parts, which need no server or browser.
+ * `npm run screens` (scripts/screens.js, Styling system Task 7): the
+ * parts that need no server or browser.
  * - `pagesFor(role, api)`: the page list for a role, discovered through a
  *   stub API shaped like the real one (`/api/home`, `/api/event/:slug`,
  *   `/api/filters`, `/api/owner/imports`).
  * - `outPathFor(role, width, theme, name)`: the screenshot's path under
  *   the gallery's output dir.
+ * - `runCleanup(steps)`: the teardown sequence's own isolation (fix round
+ *   1, review item 1) -- a later step still runs when an earlier one
+ *   throws, and the caller's own error is never overridden by a cleanup
+ *   one.
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { pagesFor, outPathFor } from '../../scripts/screens.js';
+import { pagesFor, outPathFor, runCleanup } from '../../scripts/screens.js';
 
 /** A stub API with one event, one item, two people, one translator, and one import job. */
 const FIXTURE = {
@@ -94,4 +98,40 @@ test('outPathFor: role, width, theme and a safe filename from the page name', ()
 test('outPathFor: a name with punctuation still makes a plain filename', () => {
   const out = outPathFor('member', 390, 'light', 'person @weird/handle!');
   assert.equal(out, 'member/390-light/person-weird-handle.png');
+});
+
+test('runCleanup: a later step still runs when an earlier one throws, and nothing rejects', async () => {
+  /** @type {string[]} */
+  const order = [];
+  const originalError = console.error;
+  console.error = () => {}; // the thrown error is reported here -- silenced, not asserted, by this test
+  try {
+    await runCleanup([
+      () => { order.push('a'); throw new Error('boom'); },
+      () => { order.push('b'); },
+      async () => { order.push('c'); },
+    ]);
+  } finally {
+    console.error = originalError;
+  }
+  assert.deepEqual(order, ['a', 'b', 'c']);
+});
+
+test('runCleanup: an async step that rejects does not stop the rest, and its error is reported, not thrown', async () => {
+  /** @type {string[]} */
+  const logged = [];
+  const originalError = console.error;
+  console.error = (/** @type {unknown[]} */ ...args) => { logged.push(args.map(String).join(' ')); };
+  /** @type {number[]} */
+  const order = [];
+  try {
+    await runCleanup([
+      async () => { order.push(1); await Promise.reject(new Error('seeding failed')); },
+      () => { order.push(2); },
+    ]);
+  } finally {
+    console.error = originalError;
+  }
+  assert.deepEqual(order, [1, 2]);
+  assert.ok(logged.some((line) => line.includes('seeding failed')), 'the error was reported to stderr');
 });
