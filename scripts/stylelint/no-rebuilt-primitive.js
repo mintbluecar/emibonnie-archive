@@ -11,14 +11,22 @@
  * themselves (`src/styles/primitives/button.css`, `field.css`) legitimately
  * declare all three; that's their job.
  *
- * Flags a rule whose selector targets a button-like element (`button`,
- * `input[type=button]`, `input[type=submit]`, `select`, `textarea`, or a
- * class ending in `__btn`/`__button`/`__submit`/`__save`/`__next`/`__apply`/
- * `__more`) and that declares all three of a background
+ * Flags a rule whose selector targets a button- or field-like control
+ * and that declares all three of a background
  * (`background`/`background-color`/`background-image`), a
  * `border-radius`, and a `padding*` -- the three together are what a
  * hand-rebuilt button/field control looks like (`btn`/`field`,
- * `src/styles/primitives/`).
+ * `src/styles/primitives/`). A control is button- or field-like when its
+ * selector is:
+ *   - `button`, `select` or `textarea`;
+ *   - `input` with no type, or any type other than `checkbox`/`radio`
+ *     (including base.css's own
+ *     `input:not([type="checkbox"]):not([type="radio"])` form) --
+ *     `input[type="checkbox"]`/`input[type="radio"]` are excluded: the
+ *     `check` primitive, not `btn`/`field`, is their look; or
+ *   - a class ending `__btn`/`__button`/`__submit`/`__save`/`__next`/
+ *     `__apply`/`__more` (button-shaped) or `__field`/`__input`/
+ *     `__control`/`__search`/`__textarea`/`__select` (field-shaped).
  */
 import stylelint from 'stylelint';
 
@@ -32,13 +40,25 @@ const messages = ruleMessages(ruleName, {
     `"${selector}" redeclares a primitive's look (background + border-radius + padding) -- use the btn/field primitive instead of rebuilding it`,
 });
 
-const BUTTON_ELEMENT = /(^|[\s>+~,])\s*(button|select|textarea)(?=$|[\s>+~.:#[])/i;
-const BUTTON_INPUT = /input\s*\[\s*type\s*=\s*["']?(button|submit)["']?\s*]/i;
-const BUTTON_CLASS_SUFFIX = /__(btn|button|submit|save|next|apply|more)(?=$|[\s.:#[>+~])/;
+const CHECKBOX_OR_RADIO_INPUT = /input\s*\[\s*type\s*=\s*["']?(checkbox|radio)["']?\s*]/i;
+const CONTROL_ELEMENT = /(^|[\s>+~,])\s*(button|select|textarea)(?=$|[\s>+~.:#[])/i;
+const BUTTON_INPUT_TYPE = /input\s*\[\s*type\s*=\s*["']?(button|submit)["']?\s*]/i;
+const INPUT_ELEMENT = /(^|[\s>+~,])\s*input(?=$|[\s>+~.:#[])/i;
+const CONTROL_CLASS_SUFFIX = /__(btn|button|submit|save|next|apply|more|field|input|control|search|textarea|select)(?=$|[\s.:#[>+~])/;
 
-/** @param {string} selector @returns {boolean} */
-function isButtonLike(selector) {
-  return BUTTON_ELEMENT.test(selector) || BUTTON_INPUT.test(selector) || BUTTON_CLASS_SUFFIX.test(selector);
+/**
+ * A selector names a button- or field-like control (never a checkbox or
+ * radio, which keep the `check` primitive's look instead).
+ * @param {string} selector @returns {boolean}
+ */
+function isControlLike(selector) {
+  if (CHECKBOX_OR_RADIO_INPUT.test(selector)) return false;
+  return (
+    CONTROL_ELEMENT.test(selector) ||
+    BUTTON_INPUT_TYPE.test(selector) ||
+    INPUT_ELEMENT.test(selector) ||
+    CONTROL_CLASS_SUFFIX.test(selector)
+  );
 }
 
 /**
@@ -70,7 +90,7 @@ const rule = (primary) => (root, result) => {
   if (!validOptions) return;
 
   root.walkRules((ruleNode) => {
-    if (!splitSelectorList(ruleNode.selector).some(isButtonLike)) return;
+    if (!splitSelectorList(ruleNode.selector).some(isControlLike)) return;
 
     let hasBackground = false;
     let hasRadius = false;
