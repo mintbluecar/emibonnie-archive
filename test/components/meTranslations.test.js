@@ -9,6 +9,7 @@ import { test } from 'node:test';
 import { MiniElement } from '../helpers/miniDom.js';
 import { mount } from '../../public/js/core/dom.js';
 import { copyRe } from '../helpers/copyMarkup.js';
+import { withGlobals } from '../helpers/globals.js';
 const { render, bind, keyOf } = await import('../../public/js/components/meTranslations.js');
 const { t, tCount } = await import('../../public/js/core/site.js');
 
@@ -89,23 +90,24 @@ test('opted out: the box offers "opt back in" instead of the confirm', () => {
   assert.ok(!markup.includes('data-action="opt-out"'));
 });
 
-test('selecting entries counts them and enables remove', () => {
-  globalThis.fetch = /** @type {any} */ (async () => Response.json({}));
-  const st = state({ items: [item(), item({ sourceId: '1900000000000000002' })] });
-  const root = new MiniElement('div');
-  mount(root, render(st));
-  let reloads = 0;
-  bind(/** @type {any} */ (root), { state: st, reload: async () => { reloads += 1; } });
+test('selecting entries counts them and enables remove', async () => {
+  await withGlobals({ fetch: /** @type {any} */ (async () => Response.json({})) }, async () => {
+    const st = state({ items: [item(), item({ sourceId: '1900000000000000002' })] });
+    const root = new MiniElement('div');
+    mount(root, render(st));
+    let reloads = 0;
+    bind(/** @type {any} */ (root), { state: st, reload: async () => { reloads += 1; } });
 
-  const boxes = /** @type {any[]} */ ([.../** @type {any} */ (root).querySelectorAll('[data-action="select"]')]);
-  assert.equal(boxes.length, 2);
-  boxes[0].checked = true;
-  boxes[0].dispatchEvent({ type: 'change', target: boxes[0] });
-  boxes[1].checked = true;
-  boxes[1].dispatchEvent({ type: 'change', target: boxes[1] });
-  assert.equal(st.selected.size, 2);
-  assert.deepEqual([...st.selected], [keyOf(item()), keyOf(item({ sourceId: '1900000000000000002' }))]);
-  assert.match(String(root.querySelector('[data-count]')?.textContent), /2 selected/);
-  assert.equal(/** @type {any} */ (root.querySelector('[data-action="remove"]')).disabled, false);
-  void reloads;
+    const boxes = /** @type {any[]} */ ([.../** @type {any} */ (root).querySelectorAll('[data-action="select"]')]);
+    assert.equal(boxes.length, 2);
+    boxes[0].checked = true;
+    boxes[0].dispatchEvent({ type: 'change', target: boxes[0] });
+    boxes[1].checked = true;
+    boxes[1].dispatchEvent({ type: 'change', target: boxes[1] });
+    assert.equal(st.selected.size, 2);
+    assert.deepEqual([...st.selected], [keyOf(item()), keyOf(item({ sourceId: '1900000000000000002' }))]);
+    assert.match(String(root.querySelector('[data-count]')?.textContent), /2 selected/);
+    assert.equal(/** @type {any} */ (root.querySelector('[data-action="remove"]')).disabled, false);
+    void reloads;
+  });
 });

@@ -10,6 +10,7 @@ import { test } from 'node:test';
 import { MiniElement } from '../helpers/miniDom.js';
 import { mount } from '../../public/js/core/dom.js';
 import { copyRe } from '../helpers/copyMarkup.js';
+import { withGlobals } from '../helpers/globals.js';
 const { render, bind } = await import('../../public/js/components/ownerSection.js');
 const { t } = await import('../../public/js/core/site.js');
 
@@ -111,19 +112,22 @@ test('recent import jobs list with a link and counts; none renders nothing', () 
 test('toggling the switch posts the new state and reloads', async () => {
   /** @type {any[]} */
   const calls = [];
-  globalThis.fetch = /** @type {any} */ (async (url, init) => {
-    calls.push({ url, body: JSON.parse(init.body) });
-    return Response.json({ approvalRequired: true });
+  await withGlobals({
+    fetch: /** @type {any} */ (async (url, init) => {
+      calls.push({ url, body: JSON.parse(init.body) });
+      return Response.json({ approvalRequired: true });
+    }),
+  }, async () => {
+    const state = owner();
+    const root = new MiniElement('div');
+    mount(root, render(state));
+    let reloads = 0;
+    bind(/** @type {any} */ (root), { owner: state, reload: async () => { reloads += 1; }, rerender: () => {} });
+    const box = /** @type {any} */ (root.querySelector('[data-action="approval"]'));
+    box.checked = true;
+    box.dispatchEvent({ type: 'change', target: box });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.deepEqual(calls, [{ url: '/api/owner/approval', body: { required: true } }]);
+    assert.equal(reloads, 1);
   });
-  const state = owner();
-  const root = new MiniElement('div');
-  mount(root, render(state));
-  let reloads = 0;
-  bind(/** @type {any} */ (root), { owner: state, reload: async () => { reloads += 1; }, rerender: () => {} });
-  const box = /** @type {any} */ (root.querySelector('[data-action="approval"]'));
-  box.checked = true;
-  box.dispatchEvent({ type: 'change', target: box });
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  assert.deepEqual(calls, [{ url: '/api/owner/approval', body: { required: true } }]);
-  assert.equal(reloads, 1);
 });

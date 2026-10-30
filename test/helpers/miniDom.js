@@ -134,7 +134,7 @@ export class MiniElement {
     const target = event.target ?? this;
     const full = { ...event, target };
     for (let node = /** @type {MiniElement|null} */ (target); node; node = node.parentNode) {
-      for (const fn of node.listeners.get(event.type) ?? []) fn(full);
+      for (const fn of [...(node.listeners.get(event.type) ?? [])]) fn(full);
     }
   }
 

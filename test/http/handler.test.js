@@ -1,7 +1,7 @@
 // @ts-check
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createHandler, PUBLIC_CACHE, NO_STORE, NOT_FOUND_CACHE } from '../../src/http/handler.js';
+import { createHandler, PUBLIC_CACHE, NO_STORE, NOT_FOUND_CACHE, PRIVATE_NO_STORE } from '../../src/http/handler.js';
 import { BadRequest, NotFound, Conflict, RateLimited, Unauthorized, Forbidden } from '../../src/http/errors.js';
 import { originAllowed } from '../../src/http/origin.js';
 import { parseQuery } from '../../src/http/query.js';
@@ -76,7 +76,6 @@ test('errors map to 404, 400, 409, 429; unknown paths are 404; bad encodings are
   const nf = await get('/api/nf');
   assert.equal(nf.status, 404);
   assert.equal(nf.headers.get('cache-control'), 'public, s-maxage=60');
-  assert.equal(NOT_FOUND_CACHE, 'public, s-maxage=60');
   assert.deepEqual(await nf.json(), { error: 'not_found' });
   const br = await get('/api/br');
   assert.equal(br.status, 400);
@@ -116,6 +115,16 @@ test('a thrown error is a 500 whose log line has no request headers', async () =
     assert.ok(!logged.toLowerCase().includes(banned.toLowerCase()), banned);
   }
   assert.equal(state.ended, 1);
+});
+
+test("a failing route's log line never carries the caller's ip", async () => {
+  /** @type {string[]} */
+  const lines = [];
+  const boom = { method: 'GET', path: '/api/boom-ip', cache: PUBLIC_CACHE, run: async () => { throw new Error('kaboom'); } };
+  const { handle } = handlerFor([boom], { log: (line) => lines.push(line) });
+  await handle(new Request(`${BASE}/api/boom-ip`, { headers: { 'x-forwarded-for': '203.0.113.5, 10.0.0.1' } }));
+  assert.equal(lines.length, 1);
+  assert.ok(!lines[0].includes('203.0.113.5'));
 });
 
 test('deferred work runs through waitUntil, and the database closes only after it settles', async () => {
@@ -224,17 +233,21 @@ test('an unknown query param on a GET route is a no-store 400; a route may accep
   assert.equal(state.ended, 3, 'refused before any deps are built');
 });
 
-test("a GET route's own Response may shorten its cache to NOT_FOUND_CACHE, and to nothing else; a write never", async () => {
+test("a GET route's own Response may shorten its cache to NOT_FOUND_CACHE or PRIVATE_NO_STORE, and nothing else; a write never", async () => {
   const own = (/** @type {string} */ method, /** @type {string} */ cache, /** @type {string} */ asked) => ({
     method, path: `/api/own/${method.toLowerCase()}/${asked.length}`, cache,
     run: async () => new Response('x', { headers: { 'cache-control': asked } }),
   });
-  const routes = [own('GET', PUBLIC_CACHE, NOT_FOUND_CACHE), own('GET', PUBLIC_CACHE, 'no-cache'), own('POST', NO_STORE, NOT_FOUND_CACHE)];
+  const routes = [
+    own('GET', PUBLIC_CACHE, NOT_FOUND_CACHE), own('GET', PUBLIC_CACHE, PRIVATE_NO_STORE),
+    own('GET', PUBLIC_CACHE, 'no-cache'), own('POST', NO_STORE, NOT_FOUND_CACHE),
+  ];
   const { handle } = handlerFor(routes);
   const call = (/** @type {any} */ r) => handle(new Request(`${BASE}${r.path}`, { method: r.method, headers: { origin: BASE } }));
   assert.equal((await call(routes[0])).headers.get('cache-control'), NOT_FOUND_CACHE);
-  assert.equal((await call(routes[1])).headers.get('cache-control'), PUBLIC_CACHE);
-  const written = await handlerFor(routes, { env: { ALLOWED_ORIGINS: BASE } }).handle(new Request(`${BASE}${routes[2].path}`, { method: 'POST', headers: { origin: BASE } }));
+  assert.equal((await call(routes[1])).headers.get('cache-control'), PRIVATE_NO_STORE);
+  assert.equal((await call(routes[2])).headers.get('cache-control'), PUBLIC_CACHE);
+  const written = await handlerFor(routes, { env: { ALLOWED_ORIGINS: BASE } }).handle(new Request(`${BASE}${routes[3].path}`, { method: 'POST', headers: { origin: BASE } }));
   assert.equal(written.status, 200);
   assert.equal(written.headers.get('cache-control'), NO_STORE);
 });
