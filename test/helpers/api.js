@@ -13,15 +13,18 @@ export const ORIGIN = 'https://archive.example';
 export const PAGES_DIR = fileURLToPath(new URL('../fixtures/static/', import.meta.url));
 
 /**
- * @param {any} deps `{ db, site, fetchImpl, now }`
+ * @param {any} deps `{ db, site, fetchImpl, now }` -- any `env` of its own is only a fallback default
+ *   (below), never what a route actually sees: `deps.env` always ends up being the handler's own `env`.
  * @param {{ log?: (line: string) => void, env?: Record<string, string> }} [options]
  */
 export function apiFor(deps, options = {}) {
-  const env = options.env ?? {};
+  const env = options.env ?? deps.env ?? {};
   /** @type {Promise<unknown>[]} */
   const pending = [];
-  const makeDeps = () => ({
-    ...deps, env, db: { ...deps.db, end: async () => {} }, pages: { dir: PAGES_DIR, logo: '/site/logo.svg' },
+  /** `makeDeps` takes the handler's own `env` (createHandler calls it with one), so `deps.env` can never
+   * disagree with it -- even if `deps` above carried its own `env`, it's overwritten here. */
+  const makeDeps = (/** @type {Record<string, string|undefined>} */ handlerEnv) => ({
+    ...deps, db: { ...deps.db, end: async () => {} }, pages: { dir: PAGES_DIR, logo: '/site/logo.svg' }, env: handlerEnv,
   });
   const handle = createHandler({
     routes, makeDeps, log: options.log ?? ((line) => { throw new Error(`unexpected log: ${line}`); }), env,

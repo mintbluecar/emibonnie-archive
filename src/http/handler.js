@@ -43,8 +43,10 @@ export const NO_STORE = 'no-store';
  *   and, Task 10d, an in-place search's own state, e.g. `?people=1&people=2`:
  *   such a route's query is never parsed, so a repeated param can't 400 the page).
  *   `lists`: which of them hold lists.
- * @typedef {{ routes: Route[], makeDeps: () => BaseDeps, waitUntil: (promise: Promise<unknown>) => void,
+ * @typedef {{ routes: Route[], makeDeps: (env: Record<string, string|undefined>) => BaseDeps, waitUntil: (promise: Promise<unknown>) => void,
  *   log?: (line: string) => void, env?: Record<string, string|undefined> }} HandlerOptions
+ *   `makeDeps` takes the handler's own `env` (below), so `deps.env` is always that one env -- never a second
+ *   copy a caller closed over separately, which could disagree with it.
  */
 
 /** @param {number} status @param {unknown} body @param {string} cache */
@@ -125,7 +127,7 @@ function toResponse(result, route) {
  * Runs `fn` with this request's deps, closing the database in `finally` --
  * at once, or after the deferred work settles (kept alive by `waitUntil`).
  * @template T
- * @param {HandlerOptions['makeDeps']} makeDeps
+ * @param {() => BaseDeps} makeDeps already bound to this request's `env` (the handler's own, see `HandlerOptions`)
  * @param {{ waitUntil: HandlerOptions['waitUntil'], onError: (err: unknown) => void }} background
  * @param {(deps: Deps) => Promise<T>} fn
  * @returns {Promise<T>}
@@ -190,7 +192,7 @@ export function createHandler({ routes, makeDeps, waitUntil, log = console.error
       const input = { params: match.params, query, body: await readBody(request), origin: url.origin,
         cookies: parseCookies(request.headers.get('cookie')), ip: ipOf(request) };
       const onError = (/** @type {unknown} */ err) => log(`[api] ${ctx.method} ${ctx.pathname} background work failed: ${describe(err)}`);
-      const result = await withDeps(makeDeps, { waitUntil, onError }, (deps) => /** @type {Route} */ (route).run(input, deps));
+      const result = await withDeps(() => makeDeps(env), { waitUntil, onError }, (deps) => /** @type {Route} */ (route).run(input, deps));
       return toResponse(result, route);
     } catch (err) {
       return errorResponse(err, route, ctx);

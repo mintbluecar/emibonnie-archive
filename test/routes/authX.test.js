@@ -36,9 +36,9 @@ function infra({ me = { id: '12345', username: 'alice' }, failMe = false, failTo
   return fetchImpl;
 }
 
-/** Full deps for the route. @param {() => Date} [now] */
+/** Deps for the route (its `env` is only `apiFor`'s own call -- see its second argument below). @param {() => Date} [now] */
 function deps(fetchImpl, now = () => new Date()) {
-  return { db, site, env: ENV, fetchImpl: /** @type {typeof fetch} */ (fetchImpl), now };
+  return { db, site, fetchImpl: /** @type {typeof fetch} */ (fetchImpl), now };
 }
 
 /** Runs `/api/auth/x/start`, returning the state and the oauth cookie value. */

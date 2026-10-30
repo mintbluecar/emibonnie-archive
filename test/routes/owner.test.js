@@ -31,7 +31,7 @@ async function sidFor(input) {
 
 before(async () => {
   deps = await ingestDeps();
-  api = apiFor({ ...deps, env: { VERCEL: '1' }, invalidateByTag: async () => {}, log: () => {} }, { env: { VERCEL: '1' } });
+  api = apiFor({ ...deps, invalidateByTag: async () => {}, log: () => {} }, { env: { VERCEL: '1' } });
   owner = await sidFor({ via: 'x', subject: deps.site.ownerXUserId, handle: 'the_owner' });
   member = await sidFor({ via: 'x', subject: '8888001', handle: 'adding_fan' });
 });

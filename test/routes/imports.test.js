@@ -26,7 +26,7 @@ async function sidFor(subject, handle) {
 
 before(async () => {
   deps = await ingestDeps();
-  api = apiFor({ ...deps, env: { DEV_SIGN_IN: '1' } }, { env: { DEV_SIGN_IN: '1' } });
+  api = apiFor(deps, { env: { DEV_SIGN_IN: '1' } });
   owner = await sidFor(deps.site.ownerXUserId, 'the_owner');
   member = await sidFor('660001', 'a_member');
   const seeded = await api.call('POST', '/api/dev/import', {

@@ -50,4 +50,4 @@ export function makeDeps(env = process.env) {
   };
 }
 
-export default { fetch: createHandler({ routes, makeDeps: () => makeDeps(), waitUntil }) };
+export default { fetch: createHandler({ routes, makeDeps, waitUntil }) };

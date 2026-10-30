@@ -23,7 +23,7 @@ async function sidFor(input) {
 test('a blocked user gets 403 on edit and follow-ups and nothing changes', async () => {
   const { sid } = await sidFor({ via: 'x', subject: '7', handle: 'member' });
   await deps.db.transaction((tx) => tx.query("update users set blocked_at = now() where id = 'x:7'"), SYSTEM);
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
   const before = await count(deps.db, 'select count(*)::int as n from item_edits');
   const edit = await api.call('POST', `/api/item/translation/${IDS.EVENT_A}/edit`, { cookies: { sid }, body: { changes: { placement: 'unsorted' } } });
   assert.equal(edit.status, 403);
@@ -34,7 +34,7 @@ test('a blocked user gets 403 on edit and follow-ups and nothing changes', async
 
 test('a :kind path segment named for an Object.prototype property is 404, not a prototype lookup', async () => {
   const { sid } = await sidFor({ via: 'x', subject: '8', handle: 'member2' });
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
   const edit = await api.call('POST', `/api/item/constructor/1/edit`, { cookies: { sid }, body: { changes: { placement: 'unsorted' } } });
   assert.equal(edit.status, 404);
   const get = await api.call('GET', `/api/item/constructor/1/edit`, { cookies: { sid } });
@@ -58,7 +58,7 @@ test('check for follow-ups adds the new reply as a part, held pending when appro
     const { fetchImpl } = patchedFetch((kind, id, json) => (
       kind === 'thread' && id === IDS.THREAD ? { ...json, thread: [...json.thread, reply] } : json
     ));
-    const api = apiFor({ ...own, env: ENV, fetchImpl }, { env: ENV });
+    const api = apiFor({ ...own, fetchImpl }, { env: ENV });
     const res = await api.call('POST', `/api/item/translation/${IDS.THREAD}/follow-ups`, { cookies: owner });
     assert.equal(res.status, 200, res.text);
     assert.deepEqual(JSON.parse(res.text), { added: 1, pending: true });
@@ -92,7 +92,7 @@ test('a non-owner revert is 404 and an unknown edit id is 400', async () => {
     const owner = { sid: o.cookie.replace(/^sid=/, '').split(';')[0] };
     const memberSignup = await signInUser({ db: own.db, site: own.site, now: () => new Date() }, { via: 'x', subject: '9', handle: 'member' });
     const member = { sid: memberSignup.cookie.replace(/^sid=/, '').split(';')[0] };
-    const api = apiFor({ ...own, env: ENV }, { env: ENV });
+    const api = apiFor(own, { env: ENV });
 
     const applied = await api.call('POST', `/api/item/translation/${IDS.PHOTO}/edit`, { cookies: owner, body: { changes: { placement: 'unsorted' } } });
     assert.equal(applied.status, 200, applied.text);
@@ -116,7 +116,7 @@ test('history is owner-only', async () => {
   // The member is the submitter, so they can reach the edit screen, but see no history.
   await ingest(deps, IDS.PHOTO, { actor: 'x:9' });
 
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
   // Make one edit (as owner) so there's history.
   await api.call('POST', `/api/item/translation/${IDS.PHOTO}/edit`, { cookies: owner, body: { changes: { placement: 'unsorted' } } });
 

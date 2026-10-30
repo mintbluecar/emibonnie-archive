@@ -16,7 +16,7 @@ before(async () => { db = await freshDb(); });
 after(async () => { await db.end(); });
 
 test('google sign-in requests openid only and stores no name or email', async () => {
-  const api = apiFor({ db, site, env: ENV, fetchImpl: fetch, now: () => new Date() }, { env: ENV });
+  const api = apiFor({ db, site, fetchImpl: fetch, now: () => new Date() }, { env: ENV });
   const start = await api.call('GET', '/api/auth/google/start?return=/me');
   assert.equal(start.status, 302, start.text);
   const url = new URL(/** @type {string} */ (start.headers.get('location')));
@@ -27,7 +27,7 @@ test('google sign-in requests openid only and stores no name or email', async ()
 });
 
 test('google callback with a bad state is 400', async () => {
-  const api = apiFor({ db, site, env: ENV, fetchImpl: fetch, now: () => new Date() }, { env: ENV });
+  const api = apiFor({ db, site, fetchImpl: fetch, now: () => new Date() }, { env: ENV });
   const res = await api.call('GET', '/api/auth/google/callback?code=c&state=bad');
   assert.equal(res.status, 400);
   const { rows } = await db.query("select count(*)::int as n from users where id like 'google:%'");
@@ -44,7 +44,7 @@ test('google callback signs in with the validated sub and sets a session', async
     });
     return Response.json({ id_token: idToken });
   };
-  const api = apiFor({ db, site, env: ENV, fetchImpl: /** @type {any} */ (fetchImpl), now: () => new Date() }, { env: ENV });
+  const api = apiFor({ db, site, fetchImpl: /** @type {any} */ (fetchImpl), now: () => new Date() }, { env: ENV });
 
   const start = await api.call('GET', '/api/auth/google/start?return=/add');
   const raw = /** @type {string} */ (start.setCookies.find((c) => c.startsWith('oauth=')))

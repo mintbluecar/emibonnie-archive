@@ -45,6 +45,20 @@ test('a POST with a foreign Origin, or none, is 403; same-origin and ALLOWED_ORI
   assert.equal(bad.status, 400);
 });
 
+test("deps.env is the handler's env, never a second copy a makeDeps closure carried on its own", async () => {
+  const echoEnv = { method: 'GET', path: '/api/echo-env', cache: PUBLIC_CACHE, run: async (/** @type {any} */ _input, /** @type {any} */ deps) => ({ env: deps.env }) };
+  // What a caller-side `deps` object might already carry (test/helpers/api.js's `apiFor` passes a `deps`
+  // fixture through to `makeDeps`, and that fixture sometimes has its own, unrelated `env`).
+  const staleDeps = { env: { STALE: 'yes' } };
+  const handlerEnv = { CURRENT: 'yes' };
+  const makeDeps = (/** @type {Record<string, string|undefined>} */ env) => (
+    { ...staleDeps, db: { end: async () => {} }, fetchImpl: fetch, now: () => new Date(), site: {}, env }
+  );
+  const handle = createHandler({ routes: [echoEnv], makeDeps, env: handlerEnv, waitUntil: (p) => { p.catch(() => {}); } });
+  const res = await handle(new Request(`${BASE}/api/echo-env`));
+  assert.deepEqual(await res.json(), { env: handlerEnv }, "deps.env is the handler's env, not the stale one a caller's deps literal carried");
+});
+
 test('originAllowed: exact origin match only', () => {
   const req = (/** @type {string} */ origin) => new Request(`${BASE}/api/x`, { method: 'POST', headers: { origin } });
   assert.equal(originAllowed(req(BASE), {}), true);
