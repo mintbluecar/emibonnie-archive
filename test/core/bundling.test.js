@@ -371,9 +371,9 @@ test('buildAppCss: app.css declares the layer order once, first', () => {
   try {
     const fileName = buildAppCss(repoRoot, outDir, siteThemePath);
     const css = readFileSync(path.join(outDir, fileName), 'utf8');
-    assert.ok(css.startsWith('@layer tokens,theme,base,primitives,layout,components;'), css.slice(0, 80));
+    assert.ok(css.startsWith('@layer tokens,base,primitives,layout,components;'), css.slice(0, 80));
     assert.equal(
-      [...css.matchAll(/@layer tokens,theme,base,primitives,layout,components;/g)].length,
+      [...css.matchAll(/@layer tokens,base,primitives,layout,components;/g)].length,
       1,
       'the order statement appears exactly once',
     );
@@ -395,7 +395,7 @@ test('buildAppCss: each source lands in its layer', () => {
       ['primitives', ':root{--marker: primitives}'],
       ['layout', ':root{--marker: layout}'],
       ['components', ':root{--marker: components}'],
-      ['theme', ':root{--color-bg: #f6efe3}'],
+      ['tokens', ':root{--color-bg: #f6efe3}'],
     ]) {
       assert.ok(css.includes(`@layer ${layer}{${rule}}`), `expected @layer ${layer}{${rule}} in ${css}`);
     }
@@ -422,13 +422,17 @@ test('buildAppCss: a hand-written @layer in a source fails the build, naming the
   }
 });
 
-test('buildAppCss: the site theme is layered, never unlayered', () => {
+test('buildAppCss: the site theme goes in the tokens layer, right after tokens.css and before base -- never unlayered, never a layer of its own', () => {
   const { repoRoot, siteThemePath } = makeLayeredStylesRepoRoot();
   const outDir = mkdtempSync(path.join(tmpdir(), 'fan-archive-layers-out-'));
   try {
     const fileName = buildAppCss(repoRoot, outDir, siteThemePath);
     const css = readFileSync(path.join(outDir, fileName), 'utf8');
-    assert.ok(css.includes('@layer theme{:root{--color-bg: #f6efe3}}'), css);
+    const tokensAt = css.indexOf('@layer tokens{:root{--marker: tokens}}');
+    const themeAt = css.indexOf('@layer tokens{:root{--color-bg: #f6efe3}}');
+    const baseAt = css.indexOf('@layer base{');
+    assert.ok(tokensAt !== -1 && tokensAt < themeAt && themeAt < baseAt, css);
+    assert.ok(!/@layer theme\b/.test(css), 'no separate theme layer');
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
     rmSync(outDir, { recursive: true, force: true });

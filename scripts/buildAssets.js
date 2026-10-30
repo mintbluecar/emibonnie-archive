@@ -1,8 +1,9 @@
 // @ts-check
 /**
  * The non-JS half of the bundling step: the shared `app.css` (tokens,
- * base, primitives, layout, components, the site's theme -- each in its
- * own cascade layer, see `LAYER_ORDER`/`layerOf` below), the self-hosted
+ * base, primitives, layout, components -- each in its own cascade layer,
+ * with the site's theme in the tokens layer right after `tokens.css`; see
+ * `LAYER_ORDER`/`layerOf` below), the self-hosted
  * font files + their `@font-face` CSS, and the content hashing both
  * share. `scripts/buildBundle.js` adds esbuild's page JS and ties this
  * together with `manifest.json` and the HTML placeholder rewrite.
@@ -67,23 +68,28 @@ export function writeHashedAsset(outDir, name, ext, content) {
 
 /**
  * `app.css`'s cascade layers, declared once, in this order (the spec,
- * "1. Layers, applied by the build"): the site's `theme` sits right
- * after `tokens` so it can only ever beat `tokens`, never an unlayered
- * rule's absence of a layer -- an unlayered theme would otherwise win
- * over the engine's dark-mode blocks in `tokens.css`
- * (`:root:not([data-theme="light"])`/`:root[data-theme="dark"]`),
- * forcing a site's light colours into dark mode. Exported so tests can
- * assert on it without duplicating the literal list.
+ * "1. Layers, applied by the build"). The site's `theme.css` has no
+ * layer of its own: it goes in `tokens`, right after `tokens.css`.
+ * Cascade layers are compared before specificity (CSS Cascade 5,
+ * "Cascade Layers"), so a separate, later theme layer -- or no layer at
+ * all -- would let a site's light values on a plain `:root` (0,1,0)
+ * beat the engine's dark blocks (`:root:not([data-theme="light"])`/
+ * `:root[data-theme="dark"]`, 0,2,0), forcing light colours into dark
+ * mode. Inside the same layer, specificity and then source order decide,
+ * exactly as before layers: the engine's dark blocks beat a theme's
+ * plain `:root`, and a theme's own dark blocks (same specificity, later)
+ * beat the engine's. Exported so tests can assert on it without
+ * duplicating the literal list.
  * @type {string[]}
  */
-export const LAYER_ORDER = ['tokens', 'theme', 'base', 'primitives', 'layout', 'components'];
+export const LAYER_ORDER = ['tokens', 'base', 'primitives', 'layout', 'components'];
 
 /**
  * The cascade layer a build CSS source belongs to, decided from its path
  * alone (so authors never write `@layer` themselves): `tokens.css` ->
  * tokens, `base.css` -> base, `layout.css` -> layout, anything named
  * `theme.css` (the site's own, copied in by `scripts/build.js`) ->
- * theme, anything under a `primitives/` folder -> primitives, anything
+ * tokens too (see `LAYER_ORDER`), anything under a `primitives/` folder -> primitives, anything
  * under a `components/` folder -> components.
  * @param {string} filePath
  * @returns {string}
@@ -95,27 +101,30 @@ export function layerOf(filePath) {
   if (base === 'tokens.css') return 'tokens';
   if (base === 'base.css') return 'base';
   if (base === 'layout.css') return 'layout';
-  if (base === 'theme.css') return 'theme';
+  if (base === 'theme.css') return 'tokens';
   if (dir === 'primitives') return 'primitives';
   if (dir === 'components') return 'components';
   throw new Error(`build failed: ${filePath} doesn't match any known cascade layer`);
 }
 
 /**
- * The engine CSS sources that make up `app.css`, in this order: tokens,
- * base, any `src/styles/primitives/*.css` (sorted), layout, any
- * `src/styles/components/*.css` (sorted, Task 2), then the site's own
- * `theme.css` last (so it can only override, never add, per
- * `src/styles/tokens.css`'s own doc comment). The build wraps each of
- * these in its own `@layer` by folder (`buildAppCss`), so this
- * concatenation order is cosmetic -- the layer order declared once, up
- * front, is what actually decides the cascade.
+ * The CSS sources that make up `app.css`, in this order: tokens, the
+ * site's own `theme.css` (if any) right after it, base, any
+ * `src/styles/primitives/*.css` (sorted), layout, then any
+ * `src/styles/components/*.css` (sorted, Task 2). The build wraps each
+ * of these in its `@layer` by path (`buildAppCss`), so between layers
+ * the order declared once, up front, decides the cascade; within the
+ * tokens layer this order matters -- the theme comes after `tokens.css`
+ * so its overrides win on equal specificity (it can only override,
+ * never add, per `src/styles/tokens.css`'s own doc comment).
  * @param {string} repoRoot @param {string|null} siteThemePath
  * @returns {string[]}
  */
 function collectAppCssSources(repoRoot, siteThemePath) {
   const stylesDir = path.join(repoRoot, 'src/styles');
-  const files = ['tokens.css', 'base.css'].map((name) => path.join(stylesDir, name));
+  const files = [path.join(stylesDir, 'tokens.css')];
+  if (siteThemePath && existsSync(siteThemePath)) files.push(siteThemePath);
+  files.push(path.join(stylesDir, 'base.css'));
   const primitivesDir = path.join(stylesDir, 'primitives');
   if (existsSync(primitivesDir)) {
     const sorted = readdirSync(primitivesDir).filter((f) => f.endsWith('.css')).sort();
@@ -127,7 +136,6 @@ function collectAppCssSources(repoRoot, siteThemePath) {
     const sorted = readdirSync(componentsDir).filter((f) => f.endsWith('.css')).sort();
     files.push(...sorted.map((f) => path.join(componentsDir, f)));
   }
-  if (siteThemePath && existsSync(siteThemePath)) files.push(siteThemePath);
   return files.filter(existsSync);
 }
 

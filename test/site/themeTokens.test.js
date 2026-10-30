@@ -16,6 +16,9 @@ import path from 'node:path';
 import { runBuild } from '../../scripts/build.js';
 import { findDefinedCssTokens, findUndeclaredFontFamilies, findFontFamilyReferences } from '../../scripts/buildChecks.js';
 import { FONT_SPECS } from '../../scripts/buildAssets.js';
+import { chromium } from '@playwright/test';
+
+/* global document, getComputedStyle -- only inside page.evaluate, which runs in the browser */
 
 /** The declarations inside the first `{…}` after `selector`, comments dropped, whitespace normalised. @param {string} css @param {string} selector */
 function declarations(css, selector) {
@@ -41,22 +44,6 @@ for (const [file, selector] of [
   });
 }
 
-/**
- * A crude (id, class-equivalent, type) specificity count, good enough for
- * this engine's `:root`/`[data-theme=...]`/`:not(...)` selectors -- not a
- * general CSS selector parser. `:not()` itself adds nothing; only its
- * argument's specificity does (CSS Selectors Level 4 §17.1), so its
- * wrapper is stripped before counting.
- * @param {string} selector @returns {[number, number, number]}
- */
-function specificity(selector) {
-  const flattened = selector.replace(/:not\(/g, '').replace(/\)/g, '');
-  const ids = (flattened.match(/#[\w-]+/g) ?? []).length;
-  const classLike = (flattened.match(/\.[\w-]+|\[[^\]]*\]|:[\w-]+/g) ?? []).length;
-  const typeLike = (flattened.match(/(^|[\s>+~])[a-zA-Z][\w-]*/g) ?? []).length;
-  return [ids, classLike, typeLike];
-}
-
 test('Styling system Task 12: the filter count and the apply button keep no dark blocks of their own -- the darkened start stop is --gradient-from-strong, whose dark value tokens.css holds in both blocks', () => {
   const header = readFileSync('src/styles/components/header.css', 'utf8');
   assert.match(header, /\.c-header__filter-count\s*\{[^}]*linear-gradient\(90deg, var\(--gradient-from-strong\), var\(--gradient-to\)\)/);
@@ -66,39 +53,88 @@ test('Styling system Task 12: the filter count and the apply button keep no dark
   }
 });
 
-test("dark blocks still outrank a site's light :root (Task 1 build-level guard, Review Focus 1)", async () => {
-  // examples/solluna, but with a theme that -- like today's real site/theme.css -- sets a light
-  // value on a plain, unlayered-looking :root. If the theme ever ended up unlayered in app.css,
-  // this would beat the engine's two dark blocks whatever their specificity (an unlayered rule
-  // always outranks a layered one), forcing the site's light --color-bg into dark mode.
-  const repoRoot = mkdtempSync(path.join(tmpdir(), 'fan-archive-theme-layer-'));
+/**
+ * The engine's own dark value for `token`, read off `tokens.css`'s
+ * forced-dark block (kept identical to the device-dark one by the test
+ * above). @param {string} token @returns {string}
+ */
+function engineDarkValue(token) {
+  const decl = declarations(readFileSync('src/styles/tokens.css', 'utf8'), ':root[data-theme="dark"]').find((d) => d.startsWith(`${token}:`));
+  assert.ok(decl, `tokens.css's dark block sets ${token}`);
+  return decl.slice(token.length + 1).trim();
+}
+
+test("Review Focus 1, in a real browser: a site theme's light values on plain :root never leak into dark mode, and its own dark-block overrides still win", async () => {
+  // Like the real downstream site/theme.css: light values on a plain :root (0,1,0), plus a
+  // dark-block override for --color-label. The engine's dark blocks are (0,2,0); cascade layers
+  // are compared before specificity (CSS Cascade 5, "Cascade Layers"), so this only holds while
+  // the theme sits in the same layer as tokens.css, after it.
+  const repoRoot = mkdtempSync(path.join(tmpdir(), 'fan-archive-theme-cascade-'));
+  const browser = await chromium.launch();
   try {
     cpSync('src', path.join(repoRoot, 'src'), { recursive: true });
     cpSync('public/js', path.join(repoRoot, 'public/js'), { recursive: true });
     cpSync('examples/solluna', path.join(repoRoot, 'site'), { recursive: true });
     cpSync('robots.txt', path.join(repoRoot, 'robots.txt'));
     const siteDir = path.join(repoRoot, 'site');
-    writeFileSync(path.join(siteDir, 'theme.css'), ':root {\n  --color-bg: #ffffff;\n}\n');
+    writeFileSync(
+      path.join(siteDir, 'theme.css'),
+      ':root {\n  --color-bg: #ffffff;\n  --color-ink: #000000;\n  --color-label: #111111;\n}\n' +
+        '@media (prefers-color-scheme: dark) {\n  :root:not([data-theme="light"]) {\n    --color-label: #eeeeee;\n  }\n}\n' +
+        ':root[data-theme="dark"] {\n  --color-label: #eeeeee;\n}\n',
+    );
 
     await runBuild({ repoRoot, siteDir });
-    const manifest = JSON.parse(readFileSync(path.join(repoRoot, 'public/build/manifest.json'), 'utf8'));
+    const manifest = JSON.parse(readFileSync(path.join(repoRoot, 'public/build', 'manifest.json'), 'utf8'));
     const css = readFileSync(path.join(repoRoot, 'public/build', manifest.appCss), 'utf8');
 
-    const tokensStart = css.indexOf('@layer tokens{');
-    const baseStart = css.indexOf('@layer base{');
-    assert.ok(tokensStart !== -1 && baseStart !== -1 && tokensStart < baseStart, 'app.css has a tokens layer, before base');
+    /** @param {'light'|'dark'} colorScheme @param {string|null} dataTheme */
+    async function render(colorScheme, dataTheme) {
+      const context = await browser.newContext({ colorScheme });
+      try {
+        const page = await context.newPage();
+        const attr = dataTheme ? ` data-theme="${dataTheme}"` : '';
+        await page.setContent(`<!doctype html><html${attr}><head><style>${css}</style></head><body><p>x</p></body></html>`);
+        return await page.evaluate(([darkBg, darkInk]) => {
+          /** @param {string} prop @param {string} value */
+          const resolve = (prop, value) => {
+            const probe = document.createElement('div');
+            probe.style.setProperty(prop, value);
+            document.body.append(probe);
+            const out = getComputedStyle(probe).getPropertyValue(prop);
+            probe.remove();
+            return out;
+          };
+          const body = getComputedStyle(document.body);
+          return {
+            bg: body.backgroundColor,
+            ink: body.color,
+            label: getComputedStyle(document.documentElement).getPropertyValue('--color-label').trim(),
+            engineDarkBg: resolve('background-color', darkBg),
+            engineDarkInk: resolve('color', darkInk),
+          };
+        }, [engineDarkValue('--color-bg'), engineDarkValue('--color-ink')]);
+      } finally {
+        await context.close();
+      }
+    }
 
-    const deviceDarkSelector = ':root:not([data-theme=light])';
-    const forcedDarkSelector = ':root[data-theme=dark]';
-    const deviceIdx = css.indexOf(deviceDarkSelector);
-    const forcedIdx = css.indexOf(forcedDarkSelector);
-    assert.ok(deviceIdx > tokensStart && deviceIdx < baseStart, 'the device-dark selector is inside @layer tokens, not some other layer');
-    assert.ok(forcedIdx > tokensStart && forcedIdx < baseStart, 'the forced-dark selector is inside @layer tokens, not some other layer');
-    assert.deepEqual(specificity(deviceDarkSelector), [0, 2, 0]);
-    assert.deepEqual(specificity(forcedDarkSelector), [0, 2, 0]);
-
-    assert.ok(css.includes('@layer theme{:root{--color-bg: #ffffff}}'), 'the site theme\'s :root override is inside @layer theme, never unlayered');
+    for (const [colorScheme, dataTheme] of /** @type {const} */ ([['dark', null], ['light', 'dark'], ['dark', 'dark']])) {
+      const seen = await render(colorScheme, dataTheme);
+      const where = `${colorScheme} device, data-theme=${dataTheme}`;
+      assert.equal(seen.bg, seen.engineDarkBg, `${where}: body background is the engine's dark --color-bg`);
+      assert.equal(seen.ink, seen.engineDarkInk, `${where}: body ink is the engine's dark --color-ink`);
+      assert.equal(seen.label, '#eeeeee', `${where}: --color-label is the theme's own dark-block value`);
+    }
+    for (const [colorScheme, dataTheme] of /** @type {const} */ ([['light', null], ['dark', 'light'], ['light', 'light']])) {
+      const seen = await render(colorScheme, dataTheme);
+      const where = `${colorScheme} device, data-theme=${dataTheme}`;
+      assert.equal(seen.bg, 'rgb(255, 255, 255)', `${where}: the theme's light --color-bg wins`);
+      assert.equal(seen.ink, 'rgb(0, 0, 0)', `${where}: the theme's light --color-ink wins`);
+      assert.equal(seen.label, '#111111', `${where}: the theme's light --color-label wins`);
+    }
   } finally {
+    await browser.close();
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });

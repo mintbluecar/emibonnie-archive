@@ -192,9 +192,12 @@ function colorBgDeclaredOn(page, selector) {
 /**
  * Review Focus 1's browser half: in a browser emulating dark mode,
  * `body`'s rendered background must be the engine's dark `--color-bg`
- * from `tokens.css`, never the light default a site's `theme.css` sets
- * on a plain, unlayered `:root` (the bug the `theme` layer, spec "1.
- * Layers, applied by the build", fixes). No-op outside dark mode.
+ * from `tokens.css`, never the light value a site's `theme.css` sets
+ * on a plain `:root` (the bundled example's theme sets `--color-bg` there
+ * for exactly this reason). That holds because the build puts the theme
+ * in the tokens layer, right after `tokens.css` (spec "1. Layers, applied
+ * by the build"); a separate, later layer would let it win. No-op
+ * outside dark mode.
  *
  * Both the expected light *and* dark values are read statically off
  * their own source rules via the CSSOM, never off the live cascade
