@@ -64,11 +64,16 @@
 }
 
 .c-item__footer-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--control-sm);
   color: var(--color-ink-muted);
   text-decoration: underline;
+}
+
+/* The original post as X's embed (sourceEmbed.js, in itemFooter.js's
+   row): a row of its own, full width (moved here from sourceEmbed.css,
+   styling system Task 13). */
+.c-item__embed {
+  flex: 1 1 100%;
+  min-width: 0;
 }
 
 /* The signed-in editor's controls (Task 13): edit and check for

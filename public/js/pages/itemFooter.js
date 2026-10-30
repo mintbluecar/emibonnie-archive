@@ -34,12 +34,12 @@ function originalPost(data) {
       text: data.original, author: data.credits.account, source: primary, sourceLanguage: site.sourceLanguage,
     })}</div>`;
   }
-  return html`<a class="c-item__footer-link" href="${primary.url}">${t('item.originalTweet')}</a>`;
+  return html`<a class="tap-link tap-link--sm c-item__footer-link" href="${primary.url}">${t('item.originalTweet')}</a>`;
 }
 
 /** @param {import('../../../src/http/contracts.js').ItemLink|null} link @returns {import('../core/html.js').SafeHtml} */
 function followsOnLine(link) {
-  return link ? html`<a class="c-item__footer-link" href="${link.url}">${t('item.followsOn')}</a>` : html``;
+  return link ? html`<a class="tap-link tap-link--sm c-item__footer-link" href="${link.url}">${t('item.followsOn')}</a>` : html``;
 }
 
 /** @param {import('../../../src/http/contracts.js').AddedByVM|null} addedBy @returns {import('../core/html.js').SafeHtml} */

@@ -5,6 +5,7 @@
  *   <h2 class="label">october 2026</h2>
  *   <h2 class="label label--section">october 2026</h2>
  *   <a class="meta tap-link" href="/">‹ events</a>
+ *   <a class="tap-link tap-link--sm" href="https://x.com/...">original tweet</a>
  *   <h1 class="heading heading--lg">Import review</h1>
  *   <h2 class="heading heading--md">Speakers</h2>
  *   <h3 class="heading heading--sm">Check the details</h3>
@@ -13,7 +14,8 @@
  * for the outline and the class for the size. label--section is a label
  * heading a list below it: room above, a little below. tap-link is a
  * small text link whose target is still --tap-target tall (pair it with
- * meta for a muted one).
+ * meta for a muted one); tap-link--sm is one inside a row of small
+ * controls, --control-sm tall like btn--sm.
  */
 
 .meta {
@@ -35,6 +37,10 @@
   display: inline-flex;
   align-items: center;
   min-height: var(--tap-target);
+}
+
+.tap-link--sm {
+  min-height: var(--control-sm);
 }
 
 .heading {

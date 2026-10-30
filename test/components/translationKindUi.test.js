@@ -41,12 +41,11 @@ function detailVm(overrides = {}) {
 
 test('translation detail: renders credits, cast, bubbles, and a native <details> "show original"', () => {
   const markup = String(detail.render(detailVm()));
-  assert.match(markup, /<p class="k-translation-detail__credits">\s*translated by: <a class="k-translation-detail__credit-link" href="https:\/\/x\.com\/tl_alpha" target="_blank" rel="noopener noreferrer">@tl_alpha<\/a>/);
+  assert.match(markup, /<p class="meta k-translation-detail__credits">\s*translated by: <a class="k-translation-detail__credit-link" href="https:\/\/x\.com\/tl_alpha" target="_blank" rel="noopener noreferrer">@tl_alpha<\/a>/);
   assert.ok(!markup.includes('c-icon--translator'), 'the translate icon is gone (owner, 2026-10-23)');
   assert.match(markup, /c-cast__chip/);
   assert.match(markup, /c-bubbles__bub/);
-  assert.match(markup, /<details class="k-translation-detail__original">/);
-  assert.match(markup, /<summary class="k-translation-detail__original-toggle">show original text<\/summary>/);
+  assert.match(markup, /<details>\s*<summary class="meta tap-link k-translation-detail__original-toggle">show original text<\/summary>/);
   assert.match(markup, /first paragraph/);
 });
 

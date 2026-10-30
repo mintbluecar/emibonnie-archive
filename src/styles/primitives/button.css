@@ -10,14 +10,18 @@
  *   <button class="btn btn--secondary btn--sm" type="button">Edit</button>
  *   <button class="btn btn--quiet btn--icon" type="button" aria-label="Close">x</button>
  *   <button class="btn btn--secondary btn--icon btn--round" type="button" aria-label="Close">x</button>
+ *   <button class="btn btn--overlay btn--icon btn--md btn--round" type="button" aria-label="Next picture">›</button>
  *   <button class="btn btn--primary btn--block" type="submit">Continue</button>
  *   <a class="btn btn--secondary" href="/me">A link that looks like a button</a>
  *   <button class="btn btn--secondary" type="button" aria-pressed="true">Speech</button>
  *   <button class="btn btn--quiet btn--sm" type="button" aria-pressed="false">newest first</button>
  *
  * btn--icon is square and has no text of its own: it needs aria-label.
- * btn--sm combines with any variant, btn--icon included. btn--round is
- * the round close button of a sheet or dialog. A toggle button says its
+ * btn--sm and btn--md combine with any variant, btn--icon included:
+ * btn--sm is the small control, btn--md the 36px one between it and the
+ * default. btn--round is the round close button of a sheet or dialog.
+ * btn--overlay is a control placed over a picture or clip: a white glyph
+ * on a dark wash, the same in both themes. A toggle button says its
  * state with aria-pressed; pressed, it takes the label tint -- except a
  * quiet toggle, which stays text: muted when off, bold label colour when
  * on. A button
@@ -75,10 +79,23 @@
   border-color: var(--color-danger);
 }
 
+.btn--overlay {
+  font-size: var(--text-16);
+  font-weight: var(--weight-regular);
+  color: var(--color-on-overlay);
+  background: var(--color-overlay);
+  border-color: transparent;
+}
+
 .btn--sm {
   min-height: var(--control-sm);
   padding: var(--space-1) var(--space-3);
   font-size: var(--text-12);
+}
+
+.btn--md {
+  min-height: var(--control-md);
+  padding: var(--space-1) var(--space-3);
 }
 
 .btn--icon {
@@ -89,6 +106,10 @@
 
 .btn--icon.btn--sm {
   width: var(--control-sm);
+}
+
+.btn--icon.btn--md {
+  width: var(--control-md);
 }
 
 .btn--round {

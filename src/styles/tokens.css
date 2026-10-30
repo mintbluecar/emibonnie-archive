@@ -91,6 +91,16 @@
      person picker and the report dialog each hand-copied. Black reads as
      a dim in both themes, so dark mode has no value of its own. */
   --color-scrim: rgb(0 0 0 / 45%);
+  /* Pictures and clips (Styling system Task 13): the black a clip or a
+     carousel is letterboxed on and the full-screen zoom sits on, the
+     dark wash under a control or counter placed over a picture
+     (carousel arrows and count, the clip's play and full-screen buttons),
+     and the text and glyph colour on either. A picture looks the same in
+     both themes, so its frame does too: dark mode has no values of its
+     own. */
+  --color-media: #000;
+  --color-overlay: rgb(0 0 0 / 50%);
+  --color-on-overlay: #fff;
   /* Radius scale (Styling system Task 2): the audit found radii at
      8/10/12/14/999px across components; migrated screens collapse onto
      --radius-sm/--radius-md (10px and 14px both round to their nearer

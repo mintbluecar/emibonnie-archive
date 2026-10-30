@@ -28,12 +28,12 @@ test('previewCard: renders the opening lines via bubbles, and a meta row with a 
 
 test('previewCard (owner, 2026-10-23): the translator credit line links to their X profile, with target/rel', () => {
   const markup = String(render({ result: baseResult() }));
-  assert.match(markup, /<p class="c-card-credit">translated by: <a class="c-card-credit__link" href="https:\/\/x\.com\/tl_alpha" target="_blank" rel="noopener noreferrer">@tl_alpha<\/a><\/p>/);
+  assert.match(markup, /<p class="meta c-card-credit">translated by: <a class="c-card-credit__link" href="https:\/\/x\.com\/tl_alpha" target="_blank" rel="noopener noreferrer">@tl_alpha<\/a><\/p>/);
 });
 
 test('previewCard (owner, 2026-10-23): an account with no profile link shows plain "@handle" text, not a link', () => {
   const markup = String(render({ result: baseResult({ accountUrl: null }) }));
-  assert.match(markup, /<p class="c-card-credit">translated by: @tl_alpha<\/p>/);
+  assert.match(markup, /<p class="meta c-card-credit">translated by: @tl_alpha<\/p>/);
 });
 
 test('previewCard: no accountHandle means no credit line at all, no video, means no meta for it; follows-on shows as plain text, not a link', () => {

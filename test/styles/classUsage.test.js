@@ -43,6 +43,7 @@ const DYNAMIC_PREFIXES = ['c-import__state--', 'c-header__tagline--'];
  */
 const NON_ENGINE_CLASSES = {
   'twitter-tweet': "X's own required embed classname (public/js/components/sourceEmbed.js); never styled by the engine",
+  'twitter-tweet-rendered': "the container X's widgets.js puts in the blockquote's place (never in our markup); sourceEmbed.css scales it",
 };
 
 /** @param {string} rel path relative to the repo root, forward-slashed */
@@ -132,12 +133,13 @@ test('every static class used in markup matches a CSS selector, a pending block,
   assert.deepEqual(failures, []);
 });
 
-test('every CSS class selector is used in markup, pending, or a named dynamic family', () => {
+test('every CSS class selector is used in markup, pending, a named dynamic family, or a named exception', () => {
   const { pending, selectorFiles, usedTokens } = loadFixtures();
   const failures = [];
   for (const [selector, files] of selectorFiles) {
     if (usedTokens.has(selector)) continue;
     if (DYNAMIC_PREFIXES.some((prefix) => selector.startsWith(prefix))) continue;
+    if (Object.hasOwn(NON_ENGINE_CLASSES, selector)) continue;
     if ([...files].some((f) => pending.has(f))) continue;
     failures.push(`".${selector}" (defined in ${[...files].join(', ')}) is never used in markup`);
   }

@@ -80,8 +80,8 @@ test('composeItem: the footer -- original tweet, follows on, added by, copy link
   const markup = String(composeItem(itemVm({
     followsOnFrom: { sourceId: '3', url: '/t/3' },
   })));
-  assert.match(markup, /<a class="c-item__footer-link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">original tweet<\/a>/);
-  assert.match(markup, /<a class="c-item__footer-link" href="\/t\/3">follows on from<\/a>/);
+  assert.match(markup, /<a class="tap-link tap-link--sm c-item__footer-link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">original tweet<\/a>/);
+  assert.match(markup, /<a class="tap-link tap-link--sm c-item__footer-link" href="\/t\/3">follows on from<\/a>/);
   assert.match(markup, /added by @tl_alpha/);
   assert.match(markup, /<button type="button" class="btn btn--secondary btn--sm" data-action="copy-link">copy link<\/button>/);
   assert.match(markup, /<button class="btn btn--quiet btn--sm" type="button" data-action="report">report<\/button>/);
@@ -97,7 +97,7 @@ test('composeItem (Task 10b): with embedSources off, one "original tweet" link -
     ],
   })));
   assert.equal(markup.match(/c-item__footer-link" href="https:\/\/x\.com/g)?.length, 1, markup);
-  assert.match(markup, /<a class="c-item__footer-link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">original tweet<\/a>/);
+  assert.match(markup, /<a class="tap-link tap-link--sm c-item__footer-link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">original tweet<\/a>/);
   assert.ok(!markup.includes('original media') && !markup.includes('quoted tweet'));
   assert.ok(!markup.includes('twitter-tweet'), 'no embed while the setting is off');
 });
@@ -117,8 +117,8 @@ test('composeItem (Task 10b): with embedSources on, X\'s embed blockquote replac
     assert.match(markup, /<blockquote class="twitter-tweet c-embed" data-dnt="true" data-cards="hidden" data-conversation="none">/);
     assert.match(markup, /hi &lt;b&gt;there&lt;\/b&gt;/);
     assert.match(markup, /&mdash; TL &lt;alpha&gt; \(@tl_alpha\)/);
-    assert.match(markup, /<a class="c-embed__link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">/);
-    assert.ok(!markup.includes('class="c-item__footer-link" href="https://x.com'), 'the embed replaces the footer link');
+    assert.match(markup, /<a class="tap-link tap-link--sm c-embed__link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">/);
+    assert.ok(!markup.includes('c-item__footer-link" href="https://x.com'), 'the embed replaces the footer link');
     assert.match(markup, /data-action="copy-link"/);
     assert.match(markup, /data-action="report">report<\/button>/);
   });
@@ -129,8 +129,8 @@ test('composeItem (Task 10b): a deleted/unavailable post skips the embed -- the 
     for (const status of /** @type {const} */ (['deleted', 'unavailable'])) {
       const markup = String(composeItem(itemVm({ original: 'kept text', sources: [{ role: 'primary', url: 'https://x.com/tl_alpha/status/1900000000000000004', status }] })));
       assert.ok(!markup.includes('twitter-tweet'), status);
-      assert.match(markup, /c-embed--gone[\s\S]*kept text[\s\S]*Original tweet is no longer available/i);
-      assert.match(markup, /c-embed__gone">Original tweet is no longer available\. The text above is the archived copy\./, 'the sourceGoneEmbed wording -- not "kept below" (fix round 1, M6)');
+      assert.match(markup, /data-embed-gone[\s\S]*kept text[\s\S]*Original tweet is no longer available/i);
+      assert.match(markup, /meta c-embed__gone">Original tweet is no longer available\. The text above is the archived copy\./, 'the sourceGoneEmbed wording -- not "kept below" (fix round 1, M6)');
     }
   });
 });

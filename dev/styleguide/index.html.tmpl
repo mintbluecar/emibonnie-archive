@@ -94,6 +94,16 @@ component doesn't style its own.</p>
 <button class="btn btn--secondary" type="button" aria-busy="true">Busy</button>
 </div>
 <div class="cluster cluster--2">
+<button class="btn btn--primary btn--md" type="button">Primary, 36px (btn--md)</button>
+<button class="btn btn--secondary btn--icon btn--md" type="button" aria-label="Remove">&times;</button>
+</div>
+<p>btn--overlay, on a picture (carousel.css's box, letterboxed on --color-media):</p>
+<div class="c-carousel">
+<button class="btn btn--overlay btn--icon btn--md btn--round c-carousel__prev" type="button" aria-label="Previous picture">&lsaquo;</button>
+<button class="btn btn--overlay btn--icon btn--md btn--round c-carousel__next" type="button" aria-label="Next picture">&rsaquo;</button>
+<span class="c-carousel__count">1 / 2</span>
+</div>
+<div class="cluster cluster--2">
 <button class="btn btn--secondary" type="button" aria-pressed="true">Toggle, pressed</button>
 <button class="btn btn--secondary" type="button" aria-pressed="false">Toggle, not pressed</button>
 <button class="btn btn--quiet btn--sm" type="button" aria-pressed="false">Quiet toggle</button>
@@ -216,6 +226,7 @@ component doesn't style its own.</p>
 <p class="notice notice--error">notice--error: That link isn't a post on X.</p>
 <div class="notice notice--accent">notice--accent: Not published yet -- only you can see this.</div>
 <p class="notice notice--strong">notice--strong: Held -- only you can see this entry.</p>
+<p class="notice notice--quiet">notice--quiet: Original tweet is no longer available. Translation kept below.</p>
 </div>
 </section>
 
@@ -236,6 +247,7 @@ component doesn't style its own.</p>
 <p class="label">label: october 2026</p>
 <p class="label label--section">label label--section: a list's heading</p>
 <p><a class="meta tap-link" href="#text">meta tap-link: a small link with a full target</a></p>
+<p><a class="meta tap-link tap-link--sm" href="#text">meta tap-link tap-link--sm: one in a row of small controls</a></p>
 <p class="heading heading--lg">heading heading--lg</p>
 <p class="heading heading--md">heading heading--md</p>
 <p class="heading heading--sm">heading heading--sm</p>

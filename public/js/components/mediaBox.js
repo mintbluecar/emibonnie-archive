@@ -9,15 +9,9 @@
  * `kinds/translation/`.
  */
 import { html } from '../core/html.js';
-import { t } from '../core/site.js';
 import * as videoPlayer from './videoPlayer.js';
 import * as carousel from './carousel.js';
 import * as quoteCard from './quoteCard.js';
-
-/** @returns {import('../core/html.js').SafeHtml} */
-function goneMarkup() {
-  return html`<p class="c-video__gone c-media-box__gone">${t('item.sourceGone')}</p>`;
-}
 
 /**
  * @param {{ media: import('../../../src/http/contracts.js').MediaVM|null }} props
@@ -25,7 +19,7 @@ function goneMarkup() {
  */
 export function render({ media }) {
   const body = !media
-    ? goneMarkup()
+    ? videoPlayer.goneMarkup()
     : media.type === 'video' ? videoPlayer.render(media)
     : media.type === 'images' ? carousel.render(media)
     : quoteCard.render(media);

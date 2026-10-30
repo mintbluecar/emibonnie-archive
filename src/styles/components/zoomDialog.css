@@ -1,4 +1,8 @@
-/* public/js/components/zoomDialog.js: the full-screen image zoom a carousel slide opens. */
+/*
+ * public/js/components/zoomDialog.js: the full-screen image zoom a
+ * carousel slide opens, on black in both themes. The close button is a
+ * round btn--overlay; this file places it. See STYLING.md.
+ */
 
 .c-zoom {
   position: fixed;
@@ -10,11 +14,11 @@
   margin: 0;
   padding: 0;
   border: 0;
-  background: #000;
+  background: var(--color-media);
 }
 
 .c-zoom::backdrop {
-  background: #000;
+  background: var(--color-media);
 }
 
 .c-zoom__img {
@@ -23,19 +27,11 @@
   object-fit: contain;
 }
 
+/* On solid black the overlay's dark wash wouldn't show, so the button
+   is a faint light wash of the glyph colour instead. */
 .c-zoom__close {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 0;
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
-  border-radius: 999px;
-  font-size: var(--text-16);
+  top: var(--space-3);
+  right: var(--space-3);
+  background: color-mix(in srgb, var(--color-on-overlay) 15%, transparent);
 }

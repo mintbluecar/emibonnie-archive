@@ -115,7 +115,7 @@ test('add: a post with no markers saves as plain text, with nothing pinned', asy
   await page.locator('[data-action="save"]').click();
   await page.waitForURL(`**/t/${NO_MARKERS}`);
   await expect(page.locator('.c-bubbles__plain').first()).toContainText('here is a short note with no speakers at all');
-  await expect(page.locator('.c-media-box video, .c-media-box img, .c-carousel, .c-quote-card')).toHaveCount(0);
+  await expect(page.locator('.c-media-box video, .c-media-box img, .c-carousel, .c-quote')).toHaveCount(0);
 });
 
 /**

@@ -30,7 +30,7 @@ test('eventCard: a representative picture leads the card when the event has one'
     thumb: { url: 'https://pbs.twimg.com/media/x.jpg', width: 1080, height: 1920, video: true },
   };
   const markup = String(render({ event }));
-  assert.match(markup, /class="c-thumb c-thumb--video c-thumb--cover"/, 'the card\'s full-width cover picture');
+  assert.match(markup, /<span class="c-thumb" data-cover>/, 'the card\'s full-width cover picture');
   assert.match(markup, /<img class="c-thumb__img" src="https:\/\/pbs\.twimg\.com\/media\/x\.jpg"/);
   assert.ok(markup.indexOf('c-thumb') < markup.indexOf('c-event-card__name'), 'picture before the name');
 });

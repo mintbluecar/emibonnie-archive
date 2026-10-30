@@ -126,7 +126,7 @@ test('embedSources on, X blocked: the blockquote fallback shows our text, author
   if (DARK_PROJECTS.includes(testInfo.project.name)) await expect(quote).toHaveAttribute('data-theme', 'dark');
   else await expect(quote).not.toHaveAttribute('data-theme');
   await expect(quote.locator('.c-embed__text')).toContainText(item.original.split('\n')[0]);
-  await expect(quote.locator('.c-embed__by')).toContainText(`(@${item.credits.account.handle})`);
+  await expect(quote.locator('[data-embed-by]')).toContainText(`(@${item.credits.account.handle})`);
   const primary = item.sources.find((/** @type {any} */ s) => s.role === 'primary');
   expect(primary.url).toMatch(/^https:\/\/x\.com\/\w+\/status\/\d+$/);
   await expect(quote.locator('a.c-embed__link')).toHaveAttribute('href', primary.url);
@@ -187,7 +187,7 @@ test('embedSources on, X blocked (Task 10c l, q; 10d extra): the embed\'s attrib
   // A synthetic long post: more text in the fallback than the cap holds.
   await quote.locator('.c-embed__text').evaluate((el) => { el.append('\nline of a very long translated post'.repeat(40)); });
   await expect(more).toBeVisible();
-  await expect(box).toHaveClass(/c-embed-box--tall/);
+  await expect(box).toHaveAttribute('data-tall', '');
   const clip = page.locator('.c-embed-box__clip');
   expect(await clip.evaluate((el) => el.getBoundingClientRect().height)).toBeLessThanOrEqual(321);
   await expect(more).toHaveAttribute('aria-expanded', 'false');
