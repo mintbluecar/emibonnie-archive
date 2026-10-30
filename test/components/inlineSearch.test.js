@@ -487,3 +487,11 @@ test('fix round 1, M3: the sheet\'s Apply keeps what is in the box now, not the 
     cleanup();
   }
 });
+
+test('resultsBody (Task 11): the first four results\' thumbnails load eagerly, the rest lazily', () => {
+  const thumb = { url: 'https://pbs.twimg.com/media/x?format=jpg&name=360x360', width: 4, height: 3, video: false };
+  const results = Array.from({ length: 5 }, () => ({ ...RESULT, thumb }));
+  const markup = String(resultsBody(/** @type {any} */ ({ ...inlineSearch.prepare({ search: '' }), state: { ...EMPTY_STATE, q: 'hi' }, data: { count: 5, results } })));
+  assert.equal((markup.match(/loading="eager"/g) ?? []).length, 4);
+  assert.equal((markup.match(/loading="lazy"/g) ?? []).length, 1);
+});

@@ -48,11 +48,11 @@ function metaRow(preview) {
 }
 
 /**
- * @param {{ result: import('../../../src/http/contracts.js').Preview, compact?: boolean }} props
+ * @param {{ result: import('../../../src/http/contracts.js').Preview, compact?: boolean, eager?: boolean }} props `eager`: one of the first cards on screen (thumb.js)
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function render(props) {
-  const { result, compact = false } = props;
+  const { result, compact = false, eager = false } = props;
   const personIds = result.people.map((person) => person.id).join(',');
   return html`
     <article
@@ -65,7 +65,7 @@ export function render(props) {
           ${compact ? bubbles.renderCompact({ bubbles: result.lines }) : bubbles.render({ bubbles: result.lines })}
           ${metaRow(result)}
         </div>
-        ${thumb.render(result.thumb)}
+        ${thumb.render(result.thumb, { eager })}
       </a>
       ${cardCredit.render(result)}
     </article>

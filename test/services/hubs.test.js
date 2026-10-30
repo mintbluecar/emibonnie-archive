@@ -26,7 +26,7 @@ test('homeView: visible events newest first, grouped by month, counts per kind',
     slug: 'solluna-happy-day-2026-10-19', name: 'SOLLUNA HAPPY DAY', occurredOn: '2026-10-19',
     hashtag: 'SLHappyDay2026', counts: { translation: 2 },
     // The representative picture: the first of the event's items that has one.
-    thumb: { url: 'https://pbs.twimg.com/amplify_video_thumb/1900000000000000002v/thumb.jpg', width: 1280, height: 720, video: true },
+    thumb: { url: 'https://pbs.twimg.com/amplify_video_thumb/1900000000000000002v/thumb?format=jpg&name=360x360', width: 1280, height: 720, video: true },
   });
   assert.deepEqual(october[1].counts, { translation: 1 });
 });

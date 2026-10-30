@@ -7,6 +7,7 @@
  */
 import { html } from '../../core/html.js';
 import * as previewCard from '../../components/previewCard.js';
+import { EAGER_COUNT } from '../../components/thumb.js';
 
 /**
  * @param {import('../../../../src/http/contracts.js').Section} section
@@ -17,7 +18,7 @@ import * as previewCard from '../../components/previewCard.js';
 export function render(section, ctx = {}) {
   return html`
     <div class="k-translation-section${ctx.compact === true ? ' k-translation-section--grid' : ''}" data-kind="translation">
-      ${section.items.map((result) => previewCard.render({ result, compact: ctx.compact === true }))}
+      ${section.items.map((result, i) => previewCard.render({ result, compact: ctx.compact === true, eager: i < EAGER_COUNT }))}
     </div>
   `;
 }

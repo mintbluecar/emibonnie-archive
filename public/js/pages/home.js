@@ -15,6 +15,7 @@ import { site, t } from '../core/site.js';
 import { monthLabel } from '../core/format.js';
 import * as pageShell from '../components/pageShell.js';
 import * as eventCard from '../components/eventCard.js';
+import { EAGER_COUNT } from '../components/thumb.js';
 import * as emptyState from '../components/emptyState.js';
 import * as inlineSearch from '../components/inlineSearch.js';
 import { filtersSlot, headerProps, region } from '../components/inlineSearchView.js';
@@ -23,15 +24,26 @@ const APP_SELECTOR = 'app';
 
 /**
  * @param {import('../../../src/http/contracts.js').HomeView['months'][number]} group
+ * @param {number} before how many events the months above it hold (the first `EAGER_COUNT` overall load their picture eagerly)
  * @returns {import('../core/html.js').SafeHtml}
  */
-function monthGroup(group) {
+function monthGroup(group, before) {
   return html`
     <section class="c-home-month">
       <h2 class="c-home-month__label">${monthLabel(group.month)}</h2>
-      <div class="c-home-month__grid">${group.events.map((event) => eventCard.render({ event }))}</div>
+      <div class="c-home-month__grid">${group.events.map((event, i) => eventCard.render({ event, eager: before + i < EAGER_COUNT }))}</div>
     </section>
   `;
+}
+
+/** @param {import('../../../src/http/contracts.js').HomeView['months']} months @returns {import('../core/html.js').SafeHtml} */
+function monthGroups(months) {
+  let before = 0;
+  return html`${months.map((group) => {
+    const markup = monthGroup(group, before);
+    before += group.events.length;
+    return markup;
+  })}`;
 }
 
 /**
@@ -40,7 +52,7 @@ function monthGroup(group) {
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function composeHome(data, search = inlineSearch.prepare({ search: '' })) {
-  const list = data.months.length === 0 ? emptyState.render({ message: t('home.empty') }) : html`${data.months.map(monthGroup)}`;
+  const list = data.months.length === 0 ? emptyState.render({ message: t('home.empty') }) : monthGroups(data.months);
   return pageShell.render({ active: 'home', headerProps: headerProps(search), content: html`${filtersSlot(search)}${region(search, list)}` });
 }
 

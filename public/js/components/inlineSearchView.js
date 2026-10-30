@@ -19,6 +19,7 @@
 import { html } from '../core/html.js';
 import { t, tCount } from '../core/site.js';
 import * as resultCard from './resultCard.js';
+import { EAGER_COUNT } from './thumb.js';
 import * as emptyState from './emptyState.js';
 import { filterCount } from '../state/searchState.js';
 import { canClear, hasScope, viewOf } from '../state/searchScope.js';
@@ -135,7 +136,7 @@ export function hintMarkup() {
 export function resultsBody(ctx) {
   if (ctx.data.results.length === 0) return emptyState.render({ message: t('search.empty') });
   const hasMore = ctx.data.results.length < ctx.data.count;
-  const results = ctx.data.results.map((r) => resultCard.render({ result: r, q: ctx.state.q }));
+  const results = ctx.data.results.map((r, i) => resultCard.render({ result: r, q: ctx.state.q, eager: i < EAGER_COUNT }));
   return html`${countLine(ctx)}<div class="c-search__results">${results}</div>${hasMore ? html`<button type="button" class="c-search__more">${t('search.more')}</button>` : ''}`;
 }
 
