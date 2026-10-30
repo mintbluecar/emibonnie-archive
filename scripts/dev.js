@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { parseCookies } from '../src/domain/cookies.js';
+import { DEV_ROLES } from '../src/routes/authDev.js';
 
 /**
  * The dev stand-in for Vercel's request context, which `waitUntil` from
@@ -242,9 +243,6 @@ export function redirectOf(redirects, url) {
   return { location, status: match.statusCode ?? (match.permanent === false ? 307 : 308) };
 }
 
-/** The roles `DEV_AS` accepts (src/routes/authDev.js's `DEV_ROLES`). */
-const DEV_AS_ROLES = ['owner', 'translator', 'member', 'google', 'guest'];
-
 /**
  * `DEV_AS` (local only): where a browser page load goes first to be signed
  * in as that role, or `null`. Only a page navigation (GET asking for HTML,
@@ -359,8 +357,8 @@ async function main() {
   }
   const devAs = process.env.DEV_AS || undefined;
   if (devAs) {
-    if (!DEV_AS_ROLES.includes(devAs)) {
-      console.error(`dev: DEV_AS must be one of ${DEV_AS_ROLES.join(', ')}`);
+    if (!DEV_ROLES.includes(devAs)) {
+      console.error(`dev: DEV_AS must be one of ${DEV_ROLES.join(', ')}`);
       process.exitCode = 1;
       return;
     }
@@ -372,7 +370,7 @@ async function main() {
   const srv = createServer({ root: 'public', rewrites: vercel.rewrites ?? [], redirects: vercel.redirects ?? [], headers: vercel.headers ?? [], handle: (request) => api.fetch(request), devAs });
   srv.listen(port, () => {
     console.log(`dev server listening on http://localhost:${port}`);
-    if (devAs) console.log(`signed in as ${devAs} on first visit; switch with /api/auth/dev?as=<${DEV_AS_ROLES.join('|')}>`);
+    if (devAs) console.log(`signed in as ${devAs} on first visit; switch with /api/auth/dev?as=<${DEV_ROLES.join('|')}>`);
   });
 }
 
