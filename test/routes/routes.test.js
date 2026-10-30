@@ -38,27 +38,32 @@ async function bodyOf(result) {
   return result instanceof Response ? result.json() : result;
 }
 
+/** A cache value that guarantees the response is never stored. @param {string} cache */
+const neverStored = (cache) => cache === 'no-store' || cache === PRIVATE_NO_STORE;
+
 test('every route is { method, path, cache, run }, with a unique method+path', () => {
   // The original page paths of the meta routes: the event page, and each kind's item page.
   const pagePaths = ['/e/:slug', ...Object.values(kindsRegistry).map((kind) => `${kind.urlPrefix}:sourceId`)];
   assert.ok(pagePaths.includes('/t/:sourceId'));
-  /** A cache value that guarantees the response is never stored. @param {string} cache */
-  const neverStored = (cache) => cache === 'no-store' || cache === PRIVATE_NO_STORE;
   for (const r of routes) {
     assert.ok(['GET', 'POST'].includes(r.method), r.path);
     assert.ok(r.path.startsWith('/api/') || pagePaths.includes(r.path), `${r.path}: API paths, plus the original page paths of the meta routes`);
     assert.equal(typeof r.run, 'function');
     assert.ok(neverStored(r.cache) || r.cache === PUBLIC || r.cache === VIDEO, r.path);
-    // Auth GETs (OAuth start/callback) and the signed-in user's own `/api/me`
-    // (and `/api/me/added`) set cookies or depend on the session and must
-    // never be cached, so they are no-store despite being GET; the add form's
-    // `options` list is also per-user. Every other GET is cached, and every
-    // write (POST) is no-store.
-    const authGet = r.path.startsWith('/api/auth/') || r.path === '/api/me' || r.path === '/api/me/added' || r.path === '/api/me/translations' || r.path === '/api/owner' || r.path === '/api/owner/users' || r.path === '/api/owner/imports' || r.path === '/api/owner/imports/:id' || r.path === '/api/owner/imports/:id/rows' || r.path === '/api/owner/imports/:id/map' || r.path === '/api/owner/imports/:id/publish' || r.path === '/api/owner/imports/:id/rows/:rowId/skip' || r.path === '/api/owner/imports/:id/rows/:rowId/archive' || r.path === '/api/owner/imports/:id/retry'
-      || r.path === '/api/add/options' || r.path === '/api/item/:kind/:sourceId/edit';
-    assert.equal(neverStored(r.cache), r.method !== 'GET' || authGet, `${r.path}: GETs are cached, writes are no-store (auth flow excepted)`);
+    if (r.method !== 'GET') assert.ok(neverStored(r.cache), `${r.path}: a write is never stored`);
   }
   assert.equal(new Set(routes.map((r) => `${r.method} ${r.path}`)).size, routes.length);
+});
+
+test('a GET that resolves a user is never publicly cached', () => {
+  // A route not built with defineRoute has no `auth`: it reads no session.
+  const signedIn = routes.filter((r) => r.method === 'GET' && (r.auth === 'user' || r.auth === 'owner'));
+  assert.ok(signedIn.length > 0);
+  for (const r of signedIn) assert.ok(neverStored(r.cache), `${r.path}: per-user, so never shared or stored`);
+  // An optional-user GET may be public only by answering a signed-in viewer
+  // privately itself (the item page; test/routes/edit.test.js checks that response).
+  const optionalPublic = routes.filter((r) => r.method === 'GET' && r.auth === 'optional' && !neverStored(r.cache));
+  assert.deepEqual(optionalPublic.map((r) => r.path), [itemRoute.path]);
 });
 
 test('event returns sections[0].kind', async () => {
