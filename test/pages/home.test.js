@@ -54,7 +54,7 @@ test('composeHome (Task 10d): the event list sits in the in-place search region,
 });
 
 test('composeHome (Task 11): the first four event pictures, across months, load eagerly; the rest lazily', () => {
-  const thumb = { url: 'https://pbs.twimg.com/media/x?format=jpg&name=360x360', width: 4, height: 5, video: false };
+  const thumb = { url: 'https://pbs.twimg.com/media/x?format=jpg&name=small', width: 4, height: 5, video: false };
   /** @param {number} n */
   const event = (n) => ({ slug: `e${n}`, name: `E${n}`, occurredOn: '2026-10-14', hashtag: null, counts: {}, thumb });
   const markup = String(composeHome(/** @type {any} */ ({ months: [{ month: '2026-10', events: [event(1), event(2), event(3)] }, { month: '2026-09', events: [event(4), event(5), event(6)] }] })));

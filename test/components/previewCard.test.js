@@ -88,7 +88,7 @@ test('previewCard (Task 10c): a clip poster thumbnail with a â–¶ replaces the ðŸ
 });
 
 test('previewCard (Task 11): eager passes through to the thumbnail; lazy otherwise', () => {
-  const thumb = { url: 'https://pbs.twimg.com/media/a?format=jpg&name=360x360', width: 4, height: 3, video: false };
+  const thumb = { url: 'https://pbs.twimg.com/media/a?format=jpg&name=small', width: 4, height: 3, video: false };
   assert.match(String(render({ result: baseResult({ thumb }), eager: true })), /loading="eager" fetchpriority="high"/);
   assert.match(String(render({ result: baseResult({ thumb }) })), /loading="lazy"/);
 });

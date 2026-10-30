@@ -116,10 +116,13 @@ test('kindTranslation.css (Task 10b): the original-text class keeps line breaks 
   assert.match(rule, /overflow-wrap:\s*anywhere/);
 });
 
-test('translation section (Task 11): the first four cards\' thumbnails load eagerly, the rest lazily', () => {
-  const thumb = { url: 'https://pbs.twimg.com/media/x?format=jpg&name=360x360', width: 4, height: 5, video: false };
+test('translation section (Task 11, R25): the page\'s first four cards load eagerly -- counting the cards above the section; with no count (a "more" page), all lazy', () => {
+  const thumb = { url: 'https://pbs.twimg.com/media/x?format=jpg&name=small', width: 4, height: 5, video: false };
   const items = Array.from({ length: 6 }, () => ({ ...preview(), thumb }));
-  const markup = String(section.render({ kind: 'translation', total: 6, hasMore: false, items }, { compact: true }));
-  assert.equal((markup.match(/loading="eager"/g) ?? []).length, 4);
-  assert.equal((markup.match(/loading="lazy"/g) ?? []).length, 2);
+  /** @param {any} ctx */
+  const eager = (ctx) => (String(section.render({ kind: 'translation', total: 6, hasMore: false, items }, ctx)).match(/loading="eager"/g) ?? []).length;
+  assert.equal(eager({ compact: true, cardsBefore: 0 }), 4);
+  assert.equal(eager({ compact: true, cardsBefore: 3 }), 1);
+  assert.equal(eager({ compact: true, cardsBefore: 4 }), 0);
+  assert.equal(eager({ compact: true }), 0);
 });

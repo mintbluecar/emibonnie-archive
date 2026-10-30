@@ -136,3 +136,27 @@ test('composeEvent (fix round 1, I2): entries are compact previews -- opening li
   assert.ok(cards.every((c) => c.getAttribute('class')?.includes('c-preview-card--compact')));
   assert.equal(root.querySelectorAll('.c-bubbles__msg').length, 0);
 });
+
+test('bind (Task 11, R25): the first screen\'s pictures load eagerly; entries a "more" page appends load lazily', async () => {
+  const thumb = { url: 'https://pbs.twimg.com/media/x?format=jpg&name=small', width: 4, height: 5, video: false };
+  /** @param {any} view */
+  const withThumbs = (view) => ({ ...view, sections: view.sections.map((/** @type {any} */ s) => ({ ...s, items: s.items.map((/** @type {any} */ i) => ({ ...i, thumb })) })) });
+  const root = new MiniElement('div');
+  mount(root, composeEvent(withThumbs(EVENT_PAGED)));
+  globalThis.document = fakeDocument();
+  const more = withThumbs({ ...EVENT, sections: EVENT.sections.map((/** @type {any} */ s) => ({ ...s, hasMore: false })) });
+  mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify(more), { status: 200 }));
+  try {
+    bind(root, EVENT_PAGED, EVENT_PAGED.event.slug);
+    const loading = () => root.querySelectorAll('.c-thumb__img').map((img) => img.getAttribute('loading'));
+    assert.deepEqual(loading(), ['eager']);
+    /** @type {any} */ (root.querySelector('.c-event-section__more')).click();
+    await flush();
+    const after = loading();
+    assert.ok(after.length > 1, 'the "more" page appended entries');
+    assert.deepEqual(after, ['eager', ...after.slice(1).map(() => 'lazy')]);
+  } finally {
+    mock.restoreAll();
+    delete (/** @type {any} */ (globalThis)).document;
+  }
+});

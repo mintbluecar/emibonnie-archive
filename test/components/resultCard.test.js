@@ -99,7 +99,7 @@ test('resultCard: the card root is not an <a> containing another <a> -- the main
 });
 
 test('resultCard (Task 11): eager passes through to the thumbnail; lazy otherwise', () => {
-  const result = { ...baseResult(['a line']), thumb: { url: 'https://pbs.twimg.com/media/b?format=jpg&name=360x360', width: 800, height: 600, video: false } };
+  const result = { ...baseResult(['a line']), thumb: { url: 'https://pbs.twimg.com/media/b?format=jpg&name=small', width: 800, height: 600, video: false } };
   assert.match(String(render({ result, q: '', eager: true })), /loading="eager" fetchpriority="high"/);
   assert.match(String(render({ result, q: '' })), /loading="lazy"/);
 });

@@ -386,19 +386,19 @@ test('Task 11: thumbAt adds the size and keeps format (an extension becomes ?for
   const { thumbOf } = await import('../../../src/kinds/translation/media.js');
   /** @param {string} url */
   const urlOf = (url) => thumbOf(/** @type {any} */ ({ type: 'images', images: [{ url, width: 1, height: 1 }] }))?.url;
-  assert.equal(urlOf('https://pbs.twimg.com/media/HUNiDS1bwAAHxlK.jpg'), 'https://pbs.twimg.com/media/HUNiDS1bwAAHxlK?format=jpg&name=360x360');
-  assert.equal(urlOf('https://pbs.twimg.com/media/A.png'), 'https://pbs.twimg.com/media/A?format=png&name=360x360');
-  assert.equal(urlOf('https://pbs.twimg.com/media/A?format=webp&name=orig'), 'https://pbs.twimg.com/media/A?format=webp&name=360x360');
-  assert.equal(urlOf('https://pbs.twimg.com/amplify_video_thumb/1/img/a.jpg'), 'https://pbs.twimg.com/amplify_video_thumb/1/img/a?format=jpg&name=360x360');
+  assert.equal(urlOf('https://pbs.twimg.com/media/HUNiDS1bwAAHxlK.jpg'), 'https://pbs.twimg.com/media/HUNiDS1bwAAHxlK?format=jpg&name=small');
+  assert.equal(urlOf('https://pbs.twimg.com/media/A.png'), 'https://pbs.twimg.com/media/A?format=png&name=small');
+  assert.equal(urlOf('https://pbs.twimg.com/media/A?format=webp&name=orig'), 'https://pbs.twimg.com/media/A?format=webp&name=small');
+  assert.equal(urlOf('https://pbs.twimg.com/amplify_video_thumb/1/img/a.jpg'), 'https://pbs.twimg.com/amplify_video_thumb/1/img/a?format=jpg&name=small');
 });
 
 test('Task 10c (c): the preview thumbnail is the clip poster (video), else the first picture, else a quote\'s own; none for text only or a posterless clip', async () => {
   const { thumbOf } = await import('../../../src/kinds/translation/media.js');
   const video = { type: 'video', variants: [{ bitrate: 1, url: 'https://video.twimg.com/a.mp4' }], width: 720, height: 1280, poster: 'https://pbs.twimg.com/p.jpg' };
   const images = { type: 'images', images: [{ url: 'https://pbs.twimg.com/1.jpg', width: 4, height: 3 }, { url: 'https://pbs.twimg.com/2.jpg', width: 1, height: 1 }] };
-  assert.deepEqual(thumbOf(/** @type {any} */ (video)), { url: 'https://pbs.twimg.com/p?format=jpg&name=360x360', width: 720, height: 1280, video: true });
-  assert.deepEqual(thumbOf(/** @type {any} */ (images)), { url: 'https://pbs.twimg.com/1?format=jpg&name=360x360', width: 4, height: 3, video: false });
-  assert.deepEqual(thumbOf(/** @type {any} */ ({ type: 'quote', inner: images })), { url: 'https://pbs.twimg.com/1?format=jpg&name=360x360', width: 4, height: 3, video: false });
+  assert.deepEqual(thumbOf(/** @type {any} */ (video)), { url: 'https://pbs.twimg.com/p?format=jpg&name=small', width: 720, height: 1280, video: true });
+  assert.deepEqual(thumbOf(/** @type {any} */ (images)), { url: 'https://pbs.twimg.com/1?format=jpg&name=small', width: 4, height: 3, video: false });
+  assert.deepEqual(thumbOf(/** @type {any} */ ({ type: 'quote', inner: images })), { url: 'https://pbs.twimg.com/1?format=jpg&name=small', width: 4, height: 3, video: false });
   assert.equal(thumbOf(/** @type {any} */ ({ ...video, poster: null })), null);
   assert.equal(thumbOf(/** @type {any} */ ({ type: 'quote', inner: null })), null);
   assert.equal(thumbOf(null), null);

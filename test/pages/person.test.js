@@ -263,3 +263,16 @@ test('hubGroups (Task 9b): the flat "all, newest" view is compact too', async ()
   assert.match(markup, /c-preview-card--compact/);
   assert.ok(!markup.includes('c-bubbles__bub'));
 });
+
+test('hubGroups (Task 11, R25): exactly the page\'s first four pictures load eagerly, across several "by event" groups and in "all, newest"', async () => {
+  const { activeView } = await import('../../public/js/pages/hubGroups.js');
+  const thumb = { url: 'https://pbs.twimg.com/media/x?format=jpg&name=small', width: 4, height: 5, video: false };
+  const sections = PERSON_GROUPS.sections.map((/** @type {any} */ s) => ({ ...s, items: s.items.map((/** @type {any} */ i) => ({ ...i, thumb })) }));
+  for (const view of ['byEvent', 'all']) {
+    const markup = String(activeView(/** @type {any} */ (view), sections, {}));
+    if (view === 'byEvent') assert.ok((markup.match(/c-hub-group__label/g) ?? []).length > 4, 'more groups than eager slots');
+    const loads = [...markup.matchAll(/loading="(eager|lazy)"/g)].map((m) => m[1]);
+    assert.deepEqual(loads, ['eager', 'eager', 'eager', 'eager', ...loads.slice(4).map(() => 'lazy')], view);
+    assert.ok(loads.length > 4, view);
+  }
+});

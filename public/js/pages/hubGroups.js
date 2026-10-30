@@ -87,6 +87,22 @@ function moreButton(kind) {
 }
 
 /**
+ * `renderSections`, one section at a time, each told how many cards the
+ * page shows above it (`cardsBefore`), so only the page's first few
+ * pictures load eagerly (Task 11, R25). An unknown kind renders nothing.
+ * @param {import('../../../src/http/contracts.js').Section[]} sections @param {any} ctx
+ * @returns {(import('../core/html.js').SafeHtml|undefined)[]}
+ */
+function renderInOrder(sections, ctx) {
+  let cardsBefore = 0;
+  return sections.map((section) => {
+    const [rendered] = renderSections([section], { ...ctx, compact: true, cardsBefore });
+    cardsBefore += section.items.length;
+    return rendered;
+  });
+}
+
+/**
  * The "by event" segment: each group wrapped in its own labelled
  * section, with its items rendered through `renderSections` (as that
  * group's own one-kind `Section`) -- real `hasMore`/`total` on the
@@ -102,7 +118,7 @@ export function byEventView(sections, ctx) {
     const real = isLastOfKind(groups, i) ? sectionOf(sections, g.kind) : undefined;
     return { kind: g.kind, total: real?.total ?? g.items.length, hasMore: real?.hasMore ?? false, items: g.items };
   });
-  const rendered = renderSections(synthetic, { ...ctx, compact: true });
+  const rendered = renderInOrder(synthetic, ctx);
   return html`${groups.map((group, i) => html`
     <section class="c-hub-group" data-kind="${group.kind}">
       <h2 class="c-hub-group__label">${group.label}</h2>
@@ -114,7 +130,7 @@ export function byEventView(sections, ctx) {
 
 /** The "all, newest" segment: each kind's section, as-is (already newest first), through `renderSections`, with its own "more" button when `hasMore`. @param {DatedSection[]} sections @param {any} ctx @returns {import('../core/html.js').SafeHtml} */
 export function flatView(sections, ctx) {
-  const rendered = renderSections(sections, { ...ctx, compact: true });
+  const rendered = renderInOrder(sections, ctx);
   return html`${sections.map((section, i) => html`${rendered[i] ?? ''}${section.hasMore ? moreButton(section.kind) : ''}`)}`;
 }
 
