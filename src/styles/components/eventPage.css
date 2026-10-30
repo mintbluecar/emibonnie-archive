@@ -76,6 +76,19 @@
   color: var(--color-ink-muted);
 }
 
+/* The report trigger is a button (it opens reportForm.js's dialog),
+   styled as the event links beside it (moved here from report.css,
+   styling system Task 11). */
+.c-event__report[data-action="report"] {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 /* The event's hashtag/type pills sit in the head; the people filter starts
    the search region below, so the gap between the two rows lives here. */
 .c-event__pills {

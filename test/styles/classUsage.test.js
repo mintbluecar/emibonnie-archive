@@ -36,7 +36,7 @@ const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
  * `${...}`, with no separating space) -- exception (b).
  * @type {string[]}
  */
-const DYNAMIC_PREFIXES = ['c-import__state--', 'c-header__tagline--', 'c-me__state--'];
+const DYNAMIC_PREFIXES = ['c-import__state--', 'c-header__tagline--'];
 
 /**
  * Exception (c), each named for a reason, not swept in by a looser rule.

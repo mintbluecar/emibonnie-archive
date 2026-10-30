@@ -35,28 +35,32 @@ export function keyOf(item) {
  * }} TranslationsState
  */
 
-/** @param {TranslatorPreview} item @returns {string} */
-function stateLabelOf(item) {
-  if (item.removedByYou) return t('me.translations.removedByYou');
-  if (item.hidden) return t('me.translations.hidden');
-  if (item.reviewState === 'pending') return t('me.pending');
-  if (item.reviewState === 'rejected') return t('me.rejected');
-  return '';
+/**
+ * The row's state as a badge (removed and hidden plain, held the accent,
+ * refused the danger), or an empty span for a live row.
+ * @param {TranslatorPreview} item @returns {import('../core/html.js').SafeHtml}
+ */
+function stateBadgeOf(item) {
+  if (item.removedByYou) return html`<span class="badge">${t('me.translations.removedByYou')}</span>`;
+  if (item.hidden) return html`<span class="badge">${t('me.translations.hidden')}</span>`;
+  if (item.reviewState === 'pending') return html`<span class="badge badge--accent">${t('me.pending')}</span>`;
+  if (item.reviewState === 'rejected') return html`<span class="badge badge--danger">${t('me.rejected')}</span>`;
+  return html`<span></span>`;
 }
 
 /** @param {TranslationsState} state @returns {import('../core/html.js').SafeHtml} */
 function welcomeBlock(state) {
   const { handle, totals } = state;
   return html`
-    <div class="c-me__welcome">
-      <p class="c-me__welcome-hi">${t('me.welcome.hi', { handle: handle ?? '' })}</p>
-      <p class="c-me__welcome-badge">${t('me.welcome.badge')}</p>
-      <p class="c-me__welcome-totals">${t('me.welcome.totals', {
+    <div class="card c-me__welcome">
+      <p class="heading heading--md c-me__welcome-hi">${t('me.welcome.hi', { handle: handle ?? '' })}</p>
+      <p class="badge badge--accent">${t('me.welcome.badge')}</p>
+      <p class="meta c-me__welcome-totals">${t('me.welcome.totals', {
         translations: totals.translations, events: totals.events, sharedStories: totals.sharedStories,
       })}</p>
-      <div class="c-me__welcome-actions">
-        <button class="c-me__welcome-see" type="button" data-action="welcome-see">${t('me.welcome.see')}</button>
-        <a class="c-me__welcome-add" href="/add">${t('me.welcome.add')}</a>
+      <div class="cluster cluster--2 c-me__welcome-actions">
+        <button class="btn btn--primary" type="button" data-action="welcome-see">${t('me.welcome.see')}</button>
+        <a class="btn btn--secondary" href="/add">${t('me.welcome.add')}</a>
       </div>
     </div>
   `;
@@ -70,20 +74,21 @@ function welcomeBlock(state) {
 function row(item, state) {
   const key = keyOf(item);
   const selectable = !item.removedByYou && !item.hidden && item.reviewState !== 'rejected';
-  const label = stateLabelOf(item);
   return html`
-    <li class="c-me__entry${item.removedByYou || item.hidden ? ' c-me__entry--faded' : ''}">
+    <li class="c-me__entry" ${item.removedByYou || item.hidden ? 'data-faded' : ''}>
       <div class="c-me__entry-top">
         ${selectable ? html`
-          <input class="c-me__check" type="checkbox" data-action="select" data-key="${key}"
-            aria-label="${t('me.translations.select')}" ${state.selected.has(key) ? 'checked' : ''}>
+          <label class="check c-me__select">
+            <input type="checkbox" data-action="select" data-key="${key}"
+              aria-label="${t('me.translations.select')}" ${state.selected.has(key) ? 'checked' : ''}>
+          </label>
         ` : ''}
         ${previewCard.render({ result: item, compact: true })}
       </div>
       <div class="c-me__bar">
-        <span class="c-me__state">${label}</span>
+        ${stateBadgeOf(item)}
         ${item.removedByYou ? html`
-          <button class="c-me__link" type="button" data-action="restore" data-kind="${item.kind}"
+          <button class="btn btn--quiet btn--sm" type="button" data-action="restore" data-kind="${item.kind}"
             data-source="${item.sourceId}">${t('me.translations.restore')}</button>
         ` : ''}
       </div>
@@ -95,9 +100,9 @@ function row(item, state) {
 function removeBar(state) {
   const count = state.selected.size;
   return html`
-    <div class="c-me__bar c-me__selection">
-      <span class="c-me__selected" data-count>${t('me.translations.selected', { count })}</span>
-      <button class="c-me__link c-me__danger-link" type="button" data-action="remove" ${count === 0 ? 'disabled' : ''}>
+    <div class="c-me__bar">
+      <span class="meta" data-count>${t('me.translations.selected', { count })}</span>
+      <button class="btn btn--danger btn--sm" type="button" data-action="remove" ${count === 0 ? 'disabled' : ''}>
         ${t('me.translations.remove')}
       </button>
     </div>
@@ -108,17 +113,17 @@ function removeBar(state) {
 function optOutBox(state) {
   if (state.optedOut) {
     return html`
-      <section class="c-me__optout c-me__optout--done">
+      <section class="notice stack stack--2 c-me__optout">
         <p class="c-me__optout-done">${t('me.optOut.done')}</p>
-        <button class="c-me__optout-back" type="button" data-action="opt-in">${t('me.optOut.back')}</button>
+        <button class="btn btn--secondary btn--block" type="button" data-action="opt-in">${t('me.optOut.back')}</button>
       </section>
     `;
   }
   return html`
-    <section class="c-me__optout">
-      <h3 class="c-me__optout-title">${t('me.optOut.title')}</h3>
+    <section class="notice notice--error stack stack--2 c-me__optout">
+      <h3 class="heading heading--sm">${t('me.optOut.title')}</h3>
       <p class="c-me__optout-body">${tCount('me.optOut.body', state.totals.translations)}</p>
-      <button class="c-me__optout-confirm" type="button" data-action="opt-out">${t('me.optOut.confirm')}</button>
+      <button class="btn btn--danger btn--block" type="button" data-action="opt-out">${t('me.optOut.confirm')}</button>
     </section>
   `;
 }
@@ -127,15 +132,15 @@ function optOutBox(state) {
 export function render(state) {
   const list = state.items.length > 0
     ? html`<ul class="c-me__list">${state.items.map((item) => row(item, state))}</ul>`
-    : html`<p class="c-me__empty">${t('me.translations.empty')}</p>`;
+    : html`<p class="meta c-me__empty">${t('me.translations.empty')}</p>`;
   return html`
-    <section class="c-me__translations">
+    <section data-translations>
       ${state.welcome ? welcomeBlock(state) : ''}
       ${state.items.length > 0 ? removeBar(state) : ''}
       ${list}
-      ${state.hasMore ? html`<button class="c-me__more" type="button" data-action="more-translations">${t('me.translations.more')}</button>` : ''}
+      ${state.hasMore ? html`<button class="btn btn--secondary btn--block c-me__more" type="button" data-action="more-translations">${t('me.translations.more')}</button>` : ''}
       ${optOutBox(state)}
-      <p class="c-me__status" role="status" data-status>${state.error}</p>
+      <p class="notice notice--error c-me__status" role="status" data-status>${state.error}</p>
     </section>
   `;
 }

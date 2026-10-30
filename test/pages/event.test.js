@@ -58,7 +58,7 @@ test('composeEvent: the newest-first toggle and the report link', () => {
   const markup = String(composeEvent(EVENT));
   assert.match(markup, /<button type="button" class="c-event__newest-toggle" aria-pressed="false">newest first<\/button>/);
   assert.match(markup, /<button class="c-event__report" type="button" data-action="report">report<\/button>/);
-  assert.match(markup, /class="c-report"/);
+  assert.match(markup, /<dialog[^>]*aria-labelledby="c-report-title"/);
 });
 
 test('composeEvent (Task 10d): searches within the event -- its box says so, its entries are the in-place list, and there is no separate search icon', async () => {

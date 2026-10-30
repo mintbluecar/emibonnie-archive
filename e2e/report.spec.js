@@ -23,8 +23,8 @@ test('reporting an item shows the thank-you and keeps the dialog usable', async 
   test.skip(testInfo.project.name !== 'phone', 'one submission: the per-IP report limit is shared');
   await gotoReady(page, `/t/${TARGET}`);
   await page.locator('[data-action="report"]').click();
-  await page.locator('.c-report__reason').fill('wrong credit');
-  await page.locator('.c-report__submit').click();
+  await page.locator('[data-report-reason]').fill('wrong credit');
+  await page.locator('[data-report-submit]').click();
   await expect(page.locator('[data-report-status]')).toHaveText('thanks — the owner will look at it');
-  await expect(page.locator('.c-report__submit')).toBeDisabled();
+  await expect(page.locator('[data-report-submit]')).toBeDisabled();
 });

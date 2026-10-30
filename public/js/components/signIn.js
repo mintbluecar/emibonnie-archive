@@ -26,7 +26,7 @@ export function startHref(provider, returnTo) {
 function mark(provider) {
   return provider === 'x'
     ? html`<span class="c-signin__mark" aria-hidden="true">𝕏</span>`
-    : html`<span class="c-signin__mark c-signin__mark--google" aria-hidden="true">G</span>`;
+    : html`<span class="c-signin__mark" aria-hidden="true">G</span>`;
 }
 
 /**
@@ -37,21 +37,21 @@ function mark(provider) {
  */
 export function render({ returnTo = '/me', failed = false } = {}) {
   return html`
-    <section class="c-signin">
+    <section class="card card--roomy c-signin">
       <div class="c-signin__brand">
         ${site.logo ? html`<img class="c-signin__logo" src="${site.logo}" alt="" width="64" height="64">` : ''}
         <p class="c-signin__wordmark"><span class="c-signin__accent">${site.wordmark.accent}</span>${site.wordmark.rest}</p>
-        <p class="c-signin__badge">${t('badge.fanMade')}</p>
+        <p class="badge c-signin__badge">${t('badge.fanMade')}</p>
       </div>
-      ${failed ? html`<p class="c-signin__failed" role="alert">${t('signIn.failed')}</p>` : ''}
-      <p class="c-signin__pitch">${t('signIn.pitch')}<br>${t('signIn.pitchTranslators')}</p>
-      <a class="c-signin__provider c-signin__provider--x" href="${startHref('x', returnTo)}">
+      ${failed ? html`<p class="notice notice--error c-signin__failed" role="alert">${t('signIn.failed')}</p>` : ''}
+      <p class="meta c-signin__pitch">${t('signIn.pitch')}<br>${t('signIn.pitchTranslators')}</p>
+      <a class="btn btn--block c-signin__provider c-signin__provider--x" href="${startHref('x', returnTo)}">
         ${mark('x')}<span>${t('signIn.withX')}</span>
       </a>
-      <a class="c-signin__provider c-signin__provider--google" href="${startHref('google', returnTo)}">
+      <a class="btn btn--secondary btn--block c-signin__provider" href="${startHref('google', returnTo)}">
         ${mark('google')}<span>${t('signIn.withGoogle')}</span>
       </a>
-      <p class="c-signin__keep"><b>${t('signIn.keepLabel')}</b> ${t('signIn.keep')}</p>
+      <p class="meta c-signin__keep"><b>${t('signIn.keepLabel')}</b> ${t('signIn.keep')}</p>
     </section>
   `;
 }

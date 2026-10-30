@@ -85,7 +85,7 @@ test('composeItem: the footer -- original tweet, follows on, added by, copy link
   assert.match(markup, /added by @tl_alpha/);
   assert.match(markup, /<button type="button" class="c-item__copy-link">copy link<\/button>/);
   assert.match(markup, /<button class="c-item__footer-link" type="button" data-action="report">report<\/button>/);
-  assert.match(markup, /class="c-report"/);
+  assert.match(markup, /<dialog[^>]*aria-labelledby="c-report-title"/);
 });
 
 test('composeItem (Task 10b): with embedSources off, one "original tweet" link -- no "original media" or "quoted tweet"', () => {

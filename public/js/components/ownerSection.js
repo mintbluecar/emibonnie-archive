@@ -29,7 +29,7 @@ import * as previewCard from './previewCard.js';
  * @returns {import('../core/html.js').SafeHtml}
  */
 function iconButton(action, label, glyph, data = {}) {
-  return html`<button class="c-owner__icon" type="button" data-action="${action}"
+  return html`<button class="btn btn--secondary btn--sm btn--icon" type="button" data-action="${action}"
     data-kind="${data['data-kind'] ?? ''}" data-source="${data['data-source'] ?? ''}"
     data-id="${data['data-id'] ?? ''}" data-user="${data['data-user'] ?? ''}"
     title="${label}" aria-label="${label}">${glyph}</button>`;
@@ -42,22 +42,24 @@ function reportRow(report) {
     : report.reporter.kind === 'handle' ? `@${report.reporter.handle}`
       : report.reporter.kind === 'name' ? report.reporter.name : t('owner.fan');
   return html`
-    <li class="c-owner__row">
-      <div class="c-owner__text">
+    <tr>
+      <td>
         <p class="c-owner__reason">${report.reason}</p>
-        <p class="c-owner__meta">
+        <p class="meta">
           ${t('owner.reportBy', { who })}
           ${report.target.url ? html` · <a class="c-owner__link" href="${report.target.url}">${report.target.label}</a>` : ''}
-          ${report.target.hidden ? html` · <span class="c-owner__hidden">${t('owner.hidden')}</span>` : ''}
+          ${report.target.hidden ? html` <span class="badge badge--danger">${t('owner.hidden')}</span>` : ''}
         </p>
-      </div>
-      <div class="c-owner__actions">
-        ${report.target.hidden
-          ? (report.target.restorable ? iconButton('restore-report', t('owner.restore'), '↺', { 'data-id': String(report.id) }) : '')
-          : iconButton('hide-report', t('owner.hide'), '⤫', { 'data-id': String(report.id) })}
-        ${iconButton('dismiss-report', t('owner.dismiss'), '✕', { 'data-id': String(report.id) })}
-      </div>
-    </li>
+      </td>
+      <td class="table__actions">
+        <div class="cluster cluster--1 c-owner__actions">
+          ${report.target.hidden
+            ? (report.target.restorable ? iconButton('restore-report', t('owner.restore'), '↺', { 'data-id': String(report.id) }) : '')
+            : iconButton('hide-report', t('owner.hide'), '⤫', { 'data-id': String(report.id) })}
+          ${iconButton('dismiss-report', t('owner.dismiss'), '✕', { 'data-id': String(report.id) })}
+        </div>
+      </td>
+    </tr>
   `;
 }
 
@@ -65,12 +67,33 @@ function reportRow(report) {
 function userRow(user) {
   const name = user.handle ? `@${user.handle}` : user.displayName ?? t('owner.fan');
   return html`
-    <li class="c-owner__row">
-      <span class="c-owner__text">${name}${user.blocked ? html` · <span class="c-owner__hidden">${t('owner.blocked')}</span>` : ''}</span>
-      ${user.blocked
-        ? iconButton('unblock', t('owner.unblock'), '↺', { 'data-user': user.id })
-        : iconButton('block', t('owner.block'), '⤫', { 'data-user': user.id })}
-    </li>
+    <tr>
+      <td>${name}${user.blocked ? html` <span class="badge badge--danger">${t('owner.blocked')}</span>` : ''}</td>
+      <td class="table__actions">
+        <div class="cluster cluster--1 c-owner__actions">
+          ${user.blocked
+            ? iconButton('unblock', t('owner.unblock'), '↺', { 'data-user': user.id })
+            : iconButton('block', t('owner.block'), '⤫', { 'data-user': user.id })}
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+/**
+ * A two-column owner table: what (reports or users) and the actions.
+ * @param {string} what the first column's heading
+ * @param {import('../core/html.js').SafeHtml[]} rows
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+function ownerTable(what, rows) {
+  return html`
+    <table class="table c-owner__table">
+      <thead>
+        <tr><th scope="col">${what}</th><th class="table__actions" scope="col">${t('owner.col.actions')}</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
   `;
 }
 
@@ -80,7 +103,7 @@ function alertBlock(owner) {
   const at = new Date(owner.signInFailedAt);
   const time = Number.isNaN(at.getTime()) ? owner.signInFailedAt : at.toISOString().slice(0, 16).replace('T', ' ');
   return html`
-    <p class="c-owner__alert">${t('owner.alert', { time })}
+    <p class="notice notice--error c-owner__alert">${t('owner.alert', { time })}
       ${iconButton('dismiss-alert', t('owner.alertDismiss'), '✕')}</p>
   `;
 }
@@ -90,15 +113,15 @@ function waitingBlock(owner) {
   const rows = owner.waiting.map((item) => html`
     <li class="c-owner__row">
       ${previewCard.render({ result: item, compact: true })}
-      <div class="c-owner__actions">
+      <div class="cluster cluster--1 c-owner__actions">
         ${iconButton('approve', t('owner.approve'), '✓', { 'data-kind': item.kind, 'data-source': item.sourceId })}
         ${iconButton('reject', t('owner.reject'), '✕', { 'data-kind': item.kind, 'data-source': item.sourceId })}
       </div>
     </li>
   `);
   return html`
-    <h3 class="c-owner__heading">${t('owner.waiting')}</h3>
-    ${rows.length > 0 ? html`<ul class="c-owner__list">${rows}</ul>` : html`<p class="c-owner__empty">${t('owner.waitingEmpty')}</p>`}
+    <h3 class="label c-owner__heading">${t('owner.waiting')}</h3>
+    ${rows.length > 0 ? html`<ul class="c-owner__list">${rows}</ul>` : html`<p class="meta">${t('owner.waitingEmpty')}</p>`}
   `;
 }
 
@@ -118,7 +141,7 @@ function importsBlock(owner) {
     `;
   });
   return html`
-    <h3 class="c-owner__heading">${t('owner.imports')}</h3>
+    <h3 class="label c-owner__heading">${t('owner.imports')}</h3>
     <ul class="c-owner__list">${rows}</ul>
   `;
 }
@@ -126,9 +149,9 @@ function importsBlock(owner) {
 /** @param {OwnerState} owner @returns {import('../core/html.js').SafeHtml} */
 function reportsBlock(owner) {
   return html`
-    <h3 class="c-owner__heading">${t('owner.reports')}</h3>
-    ${owner.reports.length > 0 ? html`<ul class="c-owner__list">${owner.reports.map(reportRow)}</ul>`
-      : html`<p class="c-owner__empty">${t('owner.reportsEmpty')}</p>`}
+    <h3 class="label c-owner__heading">${t('owner.reports')}</h3>
+    ${owner.reports.length > 0 ? ownerTable(t('owner.col.report'), owner.reports.map(reportRow))
+      : html`<p class="meta">${t('owner.reportsEmpty')}</p>`}
   `;
 }
 
@@ -136,31 +159,31 @@ function reportsBlock(owner) {
 function usersBlock(owner) {
   const results = owner.users ?? [];
   return html`
-    <h3 class="c-owner__heading">${t('owner.users')}</h3>
-    <form class="c-owner__search">
-      <label class="c-owner__label" for="c-owner-users">${t('owner.usersSearch')}</label>
-      <input class="c-owner__input" id="c-owner-users" type="search" value="${owner.query}" autocomplete="off">
+    <h3 class="label c-owner__heading">${t('owner.users')}</h3>
+    <form class="field" data-owner-search>
+      <label class="field__label" for="c-owner-users">${t('owner.usersSearch')}</label>
+      <input id="c-owner-users" type="search" value="${owner.query}" autocomplete="off" data-owner-query>
     </form>
-    ${owner.users !== null && results.length === 0 ? html`<p class="c-owner__empty">${t('owner.noUsers')}</p>` : ''}
-    ${results.length > 0 ? html`<ul class="c-owner__list">${results.map(userRow)}</ul>` : ''}
+    ${owner.users !== null && results.length === 0 ? html`<p class="meta c-owner__after-search">${t('owner.noUsers')}</p>` : ''}
+    ${results.length > 0 ? html`<div class="c-owner__after-search">${ownerTable(t('owner.col.user'), results.map(userRow))}</div>` : ''}
   `;
 }
 
 /** @param {OwnerState} owner @returns {import('../core/html.js').SafeHtml} */
 export function render(owner) {
   return html`
-    <section class="c-owner">
-      <h2 class="c-owner__title">${t('owner.title')}</h2>
+    <section class="card c-owner">
+      <h2 class="heading heading--md c-owner__title">${t('owner.title')}</h2>
       ${alertBlock(owner)}
-      <label class="c-owner__switch">
-        <input class="c-owner__checkbox" type="checkbox" data-action="approval" ${owner.approvalRequired ? 'checked' : ''}>
+      <label class="check c-owner__switch">
+        <input type="checkbox" data-action="approval" ${owner.approvalRequired ? 'checked' : ''}>
         <span>${t('owner.approval')}</span>
       </label>
       ${waitingBlock(owner)}
       ${importsBlock(owner)}
       ${reportsBlock(owner)}
       ${usersBlock(owner)}
-      <p class="c-owner__status" role="status" data-owner-status></p>
+      <p class="notice notice--error c-owner__status" role="status" data-owner-status></p>
     </section>
   `;
 }
@@ -210,9 +233,9 @@ export function bind(root, { owner, reload, rerender }) {
   on(root, '[data-action="dismiss-alert"]', 'click', () => {
     void act(() => postJson('/api/owner/sign-in-alert/dismiss'));
   });
-  on(root, '.c-owner__search', 'submit', async (event, form) => {
+  on(root, '[data-owner-search]', 'submit', async (event, form) => {
     event.preventDefault();
-    const input = /** @type {HTMLInputElement|null} */ (form.querySelector('.c-owner__input'));
+    const input = /** @type {HTMLInputElement|null} */ (form.querySelector('[data-owner-query]'));
     owner.query = input?.value ?? '';
     try {
       owner.users = (await getJson('/api/owner/users', { q: owner.query })).users;

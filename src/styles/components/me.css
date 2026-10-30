@@ -1,63 +1,39 @@
 /*
- * public/js/pages/me.js and public/js/components/nameForm.js (Task 12):
- * the page title, who is signed in with the two icon controls, the
- * "added by me" list (compact preview cards with a small bar for the
- * review state and the edit icon), the name form, and delete my account
- * with its typed-confirmation dialog.
+ * public/js/pages/me.js, components/meSections.js, meTranslations.js and
+ * nameForm.js (Task 12, Plan 2b; on primitives since the styling
+ * system's Task 11): the me page. The title, the who-is-signed-in card,
+ * its icon buttons, the tabs, the state badges, the welcome card, the
+ * opt-out notice, the name form, the delete button and its dialog are
+ * all primitives; this file keeps the page's own layout -- the head
+ * row, the entry list and the bar under each entry, the checkbox beside
+ * a translation, a removed row's fade and the dialog's width. See
+ * STYLING.md.
  */
 
 .c-me__title {
-  font-size: var(--text-22);
-  font-weight: 800;
-  margin: 12px 4px 8px;
+  margin: var(--space-3) var(--space-1) var(--space-2);
 }
 
 .c-me__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  margin-bottom: 12px;
-  background: var(--color-card);
-  border-radius: var(--radius-card);
-  box-shadow: 0 2px 0 var(--color-card-shadow);
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
 .c-me__who {
-  margin: 0;
   font-size: var(--text-14);
-  font-weight: 800;
+  font-weight: var(--weight-heavy);
   overflow-wrap: anywhere;
 }
 
 .c-me__controls {
-  display: flex;
-  gap: 6px;
   flex: none;
 }
 
-/* Every icon-only control (sign out, sign out everywhere, edit): a square
-   tap target with a tooltip and an aria-label, per the owner's rule. */
-.c-me__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--tap-target);
-  height: var(--tap-target);
-  padding: 0;
-  color: var(--color-ink);
-  background: var(--color-card);
-  border: 1.5px solid var(--color-card-shadow);
-  border-radius: 12px;
-  text-decoration: none;
-}
-
 .c-me__heading {
-  font-size: var(--text-12);
-  font-weight: 800;
-  color: var(--color-label);
-  margin: 14px 4px 8px;
+  margin: var(--space-3) var(--space-1) var(--space-2);
 }
 
 .c-me__list {
@@ -67,418 +43,123 @@
 }
 
 .c-me__entry {
-  margin-bottom: 10px;
+  margin-bottom: var(--space-3);
 }
 
+/* Under each entry: its state on the left, its one action on the right. */
 .c-me__bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   min-height: var(--tap-target);
-  padding: 2px 2px 0 4px;
-}
-
-.c-me__state {
-  font-size: var(--text-11);
-  font-weight: 800;
-  padding: 2px 8px;
-  border-radius: 999px;
-}
-
-.c-me__state--pending {
-  color: var(--color-ink);
-  background: var(--color-highlight);
-}
-
-.c-me__state--rejected {
-  color: var(--color-label-on-tint);
-  background: var(--color-label-tint);
-}
-
-.c-me__empty {
-  font-size: var(--text-12);
-  color: var(--color-ink-muted);
-  margin: 4px 4px 12px;
-}
-
-.c-me__more,
-.c-me__delete,
-.c-me__cancel,
-.c-me__confirm {
-  min-height: var(--tap-target);
-  padding: 8px 14px;
-  font-size: var(--text-12);
-  font-weight: 800;
-  border-radius: 14px;
-}
-
-.c-me__more {
-  display: block;
-  width: 100%;
-  margin: 4px 0 12px;
-  color: var(--color-ink);
-  background: var(--color-card);
-  border: 1.5px solid var(--color-card-shadow);
-}
-
-.c-me__more:disabled {
-  color: var(--color-ink-muted);
-}
-
-.c-me__danger {
-  margin: 20px 0 8px;
-  padding-top: 14px;
-  border-top: 1.5px solid var(--color-card-shadow);
-}
-
-.c-me__delete {
-  width: 100%;
-  color: var(--color-label);
-  background: var(--color-card);
-  border: 1.5px solid var(--color-label);
-}
-
-.c-me__dialog {
-  width: min(100% - 24px, 380px);
-  padding: 18px;
-  color: var(--color-ink);
-  background: var(--color-card);
-  border: 1.5px solid var(--color-card-shadow);
-  border-radius: var(--radius-card);
-}
-
-.c-me__dialog::backdrop {
-  background: rgba(0, 0, 0, 0.55);
-}
-
-.c-me__dialog-title {
-  font-size: var(--text-16);
-  margin: 0 0 8px;
-}
-
-.c-me__dialog-body {
-  font-size: var(--text-12);
-  color: var(--color-ink-muted);
-  line-height: 1.5;
-  margin: 0 0 12px;
-}
-
-.c-me__dialog-label {
-  display: block;
-  font-size: var(--text-11);
-  font-weight: 800;
-  margin-bottom: 4px;
-}
-
-.c-me__delete-input {
-  width: 100%;
-  min-height: var(--tap-target);
-  padding: 8px 10px;
-  font: inherit;
-  color: var(--color-ink);
-  background: var(--color-bg);
-  border: 1.5px solid var(--color-card-shadow);
-  border-radius: 10px;
-}
-
-.c-me__dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.c-me__cancel {
-  color: var(--color-ink);
-  background: var(--color-card);
-  border: 1.5px solid var(--color-card-shadow);
-}
-
-.c-me__confirm {
-  color: var(--color-accent-text);
-  background: var(--color-label);
-  border: 1.5px solid var(--color-label);
-}
-
-.c-me__confirm:disabled {
-  color: var(--color-ink-muted);
-  background: var(--color-bg);
-  border-color: var(--color-card-shadow);
-}
-
-/* public/js/components/nameForm.js: the Google user's one-time name step. */
-.c-name-form {
-  padding: 14px;
-  margin: 8px 0 12px;
-  background: var(--color-card);
-  border-radius: var(--radius-card);
-  box-shadow: 0 2px 0 var(--color-card-shadow);
-}
-
-.c-name-form__title {
-  font-size: var(--text-16);
-  margin: 0 0 10px;
-}
-
-.c-name-form__label {
-  display: block;
-  font-size: var(--text-11);
-  font-weight: 800;
-  margin-bottom: 4px;
-}
-
-.c-name-form__input {
-  width: 100%;
-  min-height: var(--tap-target);
-  padding: 8px 10px;
-  font: inherit;
-  color: var(--color-ink);
-  background: var(--color-bg);
-  border: 1.5px solid var(--color-card-shadow);
-  border-radius: 10px;
-}
-
-.c-name-form__hint {
-  font-size: var(--text-11);
-  color: var(--color-ink-muted);
-  line-height: 1.45;
-  margin: 6px 0 10px;
-}
-
-.c-name-form__error {
-  font-size: var(--text-12);
-  font-weight: 700;
-  color: var(--color-ink);
-  background: var(--color-label-tint);
-  border-radius: 10px;
-  padding: 8px 10px;
-  margin: 0 0 10px;
-}
-
-.c-name-form__save {
-  min-height: var(--tap-target);
-  padding: 8px 18px;
-  font-size: var(--text-12);
-  font-weight: 800;
-  color: var(--color-accent-text);
-  background: var(--color-label);
-  border: 1.5px solid var(--color-label);
-  border-radius: 14px;
-}
-
-/* Plan 2b: the translator's section — badge, tabs, welcome, selection bar,
- * removed rows and the opt-out box. Same card/token language as the page. */
-
-.c-me__badge {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--color-label-tint);
-  color: var(--color-ink);
-  font-size: var(--text-11);
-  font-weight: 800;
-  vertical-align: 1px;
-}
-
-.c-me__tabs {
-  display: flex;
-  gap: 4px;
-  padding: 3px;
-  margin-bottom: 10px;
-  background: var(--color-card);
-  border: 1px solid var(--color-card-shadow);
-  border-radius: 999px;
-}
-
-.c-me__tab {
-  flex: 1;
-  padding: 6px 8px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--color-ink-muted);
-  font: inherit;
-  font-size: var(--text-12);
-  cursor: pointer;
-}
-
-.c-me__tab--on {
-  background: var(--color-label-tint);
-  color: var(--color-label-on-tint);
-  font-weight: 800;
-}
-
-.c-me__welcome {
-  padding: 14px;
-  margin-bottom: 12px;
-  background: var(--color-card);
-  border-radius: var(--radius-card);
-  box-shadow: 0 2px 0 var(--color-card-shadow);
-  text-align: center;
-}
-
-.c-me__welcome-badge {
-  margin: 0;
-  padding: 1px 8px;
-  border-radius: 999px;
-  display: inline-block;
-  background: var(--color-label-tint);
-  color: var(--color-ink);
-  font-size: var(--text-12);
-  font-weight: 800;
-}
-
-.c-me__welcome-hi {
-  margin: 0 0 4px;
-  font-size: var(--text-18);
-  font-weight: 800;
-  overflow-wrap: anywhere;
-}
-
-.c-me__welcome-totals {
-  margin: 8px 0 10px;
-  color: var(--color-ink-muted);
-  font-size: var(--text-12);
-}
-
-.c-me__welcome-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.c-me__welcome-see,
-.c-me__welcome-add {
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: var(--text-12);
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.c-me__welcome-see {
-  border: 0;
-  background: var(--color-label);
-  color: var(--color-accent-text);
-  font: inherit;
-  cursor: pointer;
-}
-
-.c-me__welcome-add {
-  border: 1px solid var(--color-card-shadow);
-  color: var(--color-ink);
-}
-
-.c-me__selection {
-  justify-content: space-between;
-}
-
-.c-me__selected {
-  font-size: var(--text-12);
-  color: var(--color-ink-muted);
-}
-
-.c-me__link {
-  border: 0;
-  background: none;
-  padding: 4px 0;
-  font: inherit;
-  font-size: var(--text-12);
-  font-weight: 800;
-  color: var(--color-label-on-tint);
-  cursor: pointer;
-}
-
-.c-me__danger-link {
-  color: #c8433a;
-}
-
-.c-me__link:disabled {
-  color: var(--color-ink-muted);
-  cursor: default;
-}
-
-.c-me__check {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  margin: 2px 8px 0 0;
-  accent-color: #c8433a;
+  padding-left: var(--space-1);
 }
 
 .c-me__entry-top {
   display: flex;
   align-items: flex-start;
+  gap: var(--space-2);
 }
 
-.c-me__entry--faded {
+/* The checkbox beside a translation has no visible text of its own (its
+   aria-label names it), so its label is the 24px target by itself. */
+.c-me__select {
+  min-width: var(--target-min);
+  justify-content: center;
+}
+
+/* A removed or hidden translation. */
+.c-me__entry[data-faded] {
   opacity: 0.55;
 }
 
+.c-me__empty {
+  margin: var(--space-1) var(--space-1) var(--space-3);
+}
+
+.c-me__more {
+  margin: var(--space-1) 0 var(--space-3);
+}
+
+/* The translator's tabs: two equal halves. */
+.c-me__tabs {
+  flex-wrap: nowrap;
+  margin-bottom: var(--space-3);
+}
+
+.c-me__tab {
+  flex: 1;
+  justify-content: center;
+}
+
+.c-me__welcome {
+  margin-bottom: var(--space-3);
+  text-align: center;
+}
+
+.c-me__welcome-hi {
+  margin-bottom: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
+.c-me__welcome-totals {
+  margin: var(--space-2) 0;
+}
+
+.c-me__welcome-actions {
+  justify-content: center;
+}
+
 .c-me__optout {
-  margin-top: 14px;
-  padding: 12px;
-  border-radius: var(--radius-card);
-  background: #c8433a;
-  color: #fff;
+  margin-top: var(--space-3);
 }
 
-.c-me__optout-title {
-  margin: 0 0 4px;
-  font-size: var(--text-14);
-  font-weight: 800;
-  color: #fff;
-}
-
+/* The warning itself reads as body text; the notice's danger colour
+   stays on its border and the confirm button. */
 .c-me__optout-body {
-  margin: 0 0 8px;
   font-size: var(--text-12);
+  font-weight: var(--weight-regular);
   line-height: 1.45;
-  color: #fff;
-}
-
-.c-me__optout-confirm,
-.c-me__optout-back {
-  display: block;
-  width: 100%;
-  padding: 8px 10px;
-  border: 0;
-  border-radius: 10px;
-  background: #fff;
-  color: #c8433a;
-  font: inherit;
-  font-size: var(--text-12);
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.c-me__optout--done {
-  background: var(--color-card);
   color: var(--color-ink);
-  box-shadow: 0 2px 0 var(--color-card-shadow);
 }
 
 .c-me__optout-done {
-  margin: 0 0 8px;
-  font-size: var(--text-12);
-  font-weight: 800;
-}
-
-.c-me__optout-back {
-  border: 1px solid #c8433a;
-  background: transparent;
-  color: #c8433a;
+  font-weight: var(--weight-heavy);
 }
 
 .c-me__status {
-  margin: 8px 2px 0;
-  font-size: var(--text-12);
-  color: #c8433a;
+  margin-top: var(--space-2);
 }
 
 .c-me__status:empty {
   display: none;
+}
+
+.c-name-form {
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+.c-name-form__save {
+  align-self: flex-start;
+}
+
+.c-me__danger {
+  margin: var(--space-5) 0 var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1.5px solid var(--color-card-shadow);
+}
+
+.c-me__dialog {
+  width: min(100% - var(--space-6), 380px);
+  color: var(--color-ink);
+  border: 1.5px solid var(--color-card-shadow);
+}
+
+.c-me__dialog-body {
+  line-height: 1.5;
+}
+
+.c-me__dialog-actions {
+  justify-content: flex-end;
 }

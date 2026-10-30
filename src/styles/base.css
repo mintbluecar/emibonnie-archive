@@ -141,6 +141,12 @@ input[type="radio"] {
   accent-color: var(--color-label);
 }
 
+/* A modal dialog dims the page behind it (Styling system Task 11): one
+   scrim for every dialog that doesn't draw its own. */
+dialog::backdrop {
+  background: var(--color-scrim);
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

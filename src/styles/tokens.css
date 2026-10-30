@@ -78,6 +78,11 @@
      notice/error backgrounds, same derivation as --color-label-tint. */
   --color-danger: #c8433a;
   --color-danger-tint: color-mix(in srgb, var(--color-danger) 12%, var(--color-card));
+  /* The dim layer behind a modal dialog (Styling system Task 11,
+     base.css's dialog::backdrop): the 45% black the filter sheet, the
+     person picker and the report dialog each hand-copied. Black reads as
+     a dim in both themes, so dark mode has no value of its own. */
+  --color-scrim: rgb(0 0 0 / 45%);
   /* Radius scale (Styling system Task 2): the audit found radii at
      8/10/12/14/999px across components; migrated screens collapse onto
      --radius-sm/--radius-md (10px and 14px both round to their nearer
