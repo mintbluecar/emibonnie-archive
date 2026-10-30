@@ -411,6 +411,30 @@ test('start: a 404 public view plus viewer.held renders the held entry', async (
   }
 });
 
+test('start: a held page reloads its body from …/viewer (its held view), never the public URL that 404s for it', async () => {
+  const held = itemVm({ reviewState: 'pending' });
+  const { root, asked } = await startPage({
+    cookie: 'signed_in=1',
+    answer: (url) => {
+      if (url.endsWith('/viewer')) return json({ canEdit: true, canCheckFollowUps: true, editOpenUntil: null, held });
+      if (url.endsWith('/follow-ups')) return json({ added: 1, pending: false });
+      return json({ error: 'not_found' }, 404);
+    },
+  });
+  try {
+    await start();
+    assert.ok(root.querySelector('.c-item__held'));
+    /** @type {any} */ (root.querySelector('[data-action="follow-ups"]')).click();
+    for (let i = 0; i < 6; i += 1) await flush();
+    assert.deepEqual(asked, [`${PUBLIC_URL}/viewer`, PUBLIC_URL, `${PUBLIC_URL}/follow-ups`, `${PUBLIC_URL}/viewer`],
+      'the reload asks viewer again, not the public URL');
+    assert.ok(root.querySelector('.c-item__body'), 'the body is still there');
+    assert.notEqual(root.querySelector('[data-follow-ups-status]')?.textContent, t('item.followUpsFailed'));
+  } finally {
+    endPage();
+  }
+});
+
 test('start: a 404 public view with no held entry is "not found"', async () => {
   const { root } = await startPage({
     cookie: 'signed_in=1',

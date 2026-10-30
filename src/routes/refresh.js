@@ -2,7 +2,7 @@
 import { NO_STORE } from '../http/handler.js';
 import { NotFound } from '../http/errors.js';
 import { refreshItem } from '../services/itemPage.js';
-import { purgeItem } from '../services/cache.js';
+import { purgeReloadedItem } from '../services/cache.js';
 
 /**
  * `POST /api/item/:kind/:sourceId/refresh`: the "check for update"
@@ -20,7 +20,9 @@ export const route = {
     if (!result) throw new NotFound();
     // `itemId` is for the purge, never for the response.
     const { itemId, ...body } = result;
-    if (result.updated > 0) await purgeItem(deps, itemId);
+    // The button reloads the public page next: its own CDN copy is deleted
+    // before this response, so the reload never gets the stale one.
+    if (result.updated > 0) await purgeReloadedItem(deps, itemId);
     return body;
   },
 };

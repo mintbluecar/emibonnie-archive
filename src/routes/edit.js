@@ -7,7 +7,7 @@
 import { NO_STORE } from '../http/handler.js';
 import { NotFound } from '../http/errors.js';
 import { defineRoute, fieldsOf } from '../http/defineRoute.js';
-import { purgeSource } from '../services/cache.js';
+import { purgeReloadedItem } from '../services/cache.js';
 import { editableOf, editItem, revertEdit, resolveForEdit } from '../services/editItem.js';
 import { isApprovalRequired } from '../services/settings.js';
 import { partLines, unmappedMarkers } from '../domain/lineFixes.js';
@@ -90,7 +90,9 @@ export const followUpsRoute = defineRoute({
     const pending = await isApprovalRequired(deps.db);
     const added = await target.kind.checkFollowUps(deps, target.id, { actor: user.id, pending });
     // A new public part changes the entry, its event and its translator pages.
-    if (added.added > 0 && !pending) await purgeSource(deps, params.kind, params.sourceId);
+    // The page reloads the entry next, so its own CDN copy is deleted before
+    // this response (the rest is invalidated after it).
+    if (added.added > 0 && !pending) await purgeReloadedItem(deps, target.id);
     return { ...added, pending };
   },
 });

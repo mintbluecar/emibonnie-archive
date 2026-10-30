@@ -128,15 +128,31 @@ function bindBody(root, bodyEl, data) {
 }
 
 /**
+ * Where a page's body reloads from: the public view, or, for a page shown
+ * from the owner's `viewer.held` (a non-public entry, which the public URL
+ * answers 404), that held view again.
+ * @param {{ kind: string, sourceId: string, held?: boolean }} target
+ * @returns {Promise<PageData>}
+ */
+async function reloadData(target) {
+  const url = `/api/item/${encodeURIComponent(target.kind)}/${encodeURIComponent(target.sourceId)}`;
+  if (!target.held) return getJson(url);
+  /** @type {ItemViewerVM} */
+  const mine = await getJson(`${url}/viewer`);
+  if (!mine.held) return getJson(url);
+  return { ...mine.held, canEdit: mine.canEdit, canCheckFollowUps: mine.canCheckFollowUps };
+}
+
+/**
  * Re-fetches and replaces only `.c-item__body` -- satisfies "re-renders
  * the bubbles if `updated > 0`" (task-4 brief) without re-rendering the
  * pinned media (which must not restart) or re-registering any listener
  * bound once on `root` (review round 1, IMPORTANT #2).
- * @param {Element} root @param {{ kind: string, sourceId: string }} target
+ * @param {Element} root @param {{ kind: string, sourceId: string, held?: boolean }} target
  * @returns {Promise<void>}
  */
 async function reloadBody(root, target) {
-  const data = await getJson(`/api/item/${encodeURIComponent(target.kind)}/${encodeURIComponent(target.sourceId)}`);
+  const data = await reloadData(target);
   const bodyEl = root.querySelector('.c-item__body');
   if (!bodyEl) return;
   mount(bodyEl, bodyContent(data));
@@ -149,17 +165,20 @@ async function reloadBody(root, target) {
  * re-registers its click listener), the copy-link button, the
  * follow-ups check, and the body's own content, and X's embed when the
  * footer has one (Task 10b).
+ * `held`: the page shows the owner's held view (`viewer.held`), so its
+ * reloads ask `…/viewer`, not the public URL.
  * @param {Element} root
  * @param {import('../../../src/http/contracts.js').ItemView & { editOpenUntil: string|null }} data
+ * @param {{ held?: boolean }} [options]
  * @returns {void}
  */
-export function bind(root, data) {
+export function bind(root, data, { held = false } = {}) {
   const bodyEl = root.querySelector('.c-item__body') ?? root;
   bindBody(root, bodyEl, data);
   const mediaEl = root.querySelector('.c-item__media') ?? root;
   mediaBox.bind(mediaEl, { media: data.media, kind: data.kind, sourceId: data.sourceId });
-  const target = { kind: data.kind, sourceId: data.sourceId };
-  refreshButton.bind(root, target, () => reloadBody(root, target));
+  const target = { kind: data.kind, sourceId: data.sourceId, held };
+  refreshButton.bind(root, { kind: data.kind, sourceId: data.sourceId }, () => reloadBody(root, target));
   bindCopyLink(root, data.url);
   bindFollowUps(root, target);
   sourceEmbed.bind(root);
@@ -172,7 +191,7 @@ export function bind(root, data) {
  * `role="status"` line -- none, how many landed, or that review is
  * holding them. A body reload follows only when new parts really landed
  * and are visible, so the bubbles pick them up.
- * @param {Element} root @param {{ kind: string, sourceId: string }} target
+ * @param {Element} root @param {{ kind: string, sourceId: string, held?: boolean }} target
  * @returns {void}
  */
 function bindFollowUps(root, target) {
@@ -227,11 +246,11 @@ function mountNotFound(root) {
 /** @typedef {import('../../../src/http/contracts.js').ItemView & { editOpenUntil: string|null, canEdit?: boolean, canCheckFollowUps?: boolean }} PageData */
 /** @typedef {import('../../../src/http/contracts.js').ItemViewerVM} ItemViewerVM */
 
-/** @param {Element} root @param {PageData} data @returns {void} */
-function show(root, data) {
+/** @param {Element} root @param {PageData} data @param {{ held?: boolean }} [options] @returns {void} */
+function show(root, data, options = {}) {
   document.title = `${site.name}`;
   mountPage(root, composeItem(data));
-  bind(root, data);
+  bind(root, data, options);
 }
 
 /**
@@ -267,7 +286,7 @@ async function showMissing(root, err, viewer) {
     mountNotFound(root);
     return;
   }
-  show(root, { ...mine.held, canEdit: mine.canEdit, canCheckFollowUps: mine.canCheckFollowUps });
+  show(root, { ...mine.held, canEdit: mine.canEdit, canCheckFollowUps: mine.canCheckFollowUps }, { held: true });
 }
 
 /**

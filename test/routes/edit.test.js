@@ -145,3 +145,38 @@ test('item detail is the public answer with a session; the editor flags come fro
   assert.equal(json.canEdit, true);
   assert.equal(json.canCheckFollowUps, true);
 });
+
+test('a public follow-up hard-deletes the entry\'s own CDN page before the response; the rest is invalidated after', async () => {
+  const own = await ingestDeps();
+  try {
+    const signup = await signInUser({ db: own.db, site: own.site, now: () => new Date() }, { via: 'x', subject: '0', handle: 'owner' });
+    const owner = { sid: signup.cookie.replace(/^sid=/, '').split(';')[0] };
+    const id = /** @type {number} */ ((await ingest(own, IDS.THREAD)).itemId);
+    const reply = {
+      id: IDS.THREAD_REPLY, text: 'NEW FOLLOW-UP TEXT', author: { screen_name: 'tl_beta', id: '9002' },
+      created_at: 'Tue Oct 20 12:00:00 +0000 2026', replying_to: { screen_name: 'tl_beta', status: IDS.THREAD_FOLLOWUP },
+    };
+    const { fetchImpl } = patchedFetch((kind, sid, json) => (
+      kind === 'thread' && sid === IDS.THREAD ? { ...json, thread: [...json.thread, reply] } : json
+    ));
+    /** @type {string[]} */
+    const events = [];
+    const api = apiFor({
+      ...own, fetchImpl,
+      // Slow on purpose: a deferred delete would not have finished by the response.
+      dangerouslyDeleteByTag: async (/** @type {string[]} */ tags) => { await new Promise((r) => setTimeout(r, 20)); events.push(`delete ${tags.join(',')}`); },
+      invalidateByTag: async (/** @type {string[]} */ tags) => { events.push(`invalidate ${tags.join(',')}`); },
+    }, { env: { ...ENV, VERCEL: '1' } });
+    const res = await api.call('POST', `/api/item/translation/${IDS.THREAD}/follow-ups`, { cookies: owner });
+    assert.equal(res.status, 200, res.text);
+    assert.deepEqual(JSON.parse(res.text), { added: 1, pending: false });
+    assert.equal(events[0], `delete item:${id}`, 'the own page is gone before the page reloads it');
+    await api.settle();
+    assert.equal(events.length, 2);
+    assert.match(events[1], /^invalidate /);
+    const rest = events[1].split(' ')[1].split(',');
+    assert.ok(!rest.includes(`item:${id}`) && rest.includes('home'));
+  } finally {
+    await own.db.end();
+  }
+});

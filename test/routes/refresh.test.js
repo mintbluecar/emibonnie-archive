@@ -99,3 +99,36 @@ test('a kind without refresh: the item page never schedules one, and the refresh
   assert.equal((await api.call('POST', PATH)).status, 404);
   assert.equal(calls[IDS.EDITED_NEW], fetched, 'nothing fetched');
 });
+
+test('an updated refresh hard-deletes the entry\'s own CDN page before it responds; the rest is invalidated after', async () => {
+  const EDITED_TEXT = "☀️: can't wait to see everyone at the fanmeet next weekend!! (venue changed)";
+  const own = await ingestDeps();
+  try {
+    const id = /** @type {number} */ ((await ingest(own, IDS.EDITED_NEW)).itemId);
+    const { fetchImpl } = patchedFetch((kind, sid, json) => {
+      if (sid !== IDS.EDITED_NEW) return json;
+      if (kind === 'syn') return { ...json, text: EDITED_TEXT };
+      if (kind === 'fx') return { ...json, status: { ...json.status, text: EDITED_TEXT } };
+      return json;
+    });
+    /** @type {string[]} */
+    const events = [];
+    const api = apiFor({
+      ...own, fetchImpl, now: () => DURING,
+      // Slow on purpose: a deferred delete would not have finished by the response.
+      dangerouslyDeleteByTag: async (/** @type {string[]} */ tags) => { await new Promise((r) => setTimeout(r, 20)); events.push(`delete ${tags.join(',')}`); },
+      invalidateByTag: async (/** @type {string[]} */ tags) => { events.push(`invalidate ${tags.join(',')}`); },
+    }, { env: { VERCEL: '1' } });
+    const res = await api.call('POST', `/api/item/translation/${IDS.EDITED_NEW}/refresh`);
+    assert.equal(res.status, 200, res.text);
+    assert.equal(JSON.parse(res.text).updated, 1);
+    assert.equal(events[0], `delete item:${id}`, 'the own page is gone before the button reloads it');
+    await api.settle();
+    assert.equal(events.length, 2);
+    assert.match(events[1], /^invalidate /);
+    assert.ok(!events[1].split(' ')[1].split(',').includes(`item:${id}`), 'the own tag is not invalidated again');
+    assert.ok(events[1].split(' ')[1].split(',').includes('home'));
+  } finally {
+    await own.db.end();
+  }
+});
