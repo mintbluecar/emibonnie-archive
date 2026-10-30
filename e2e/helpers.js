@@ -73,6 +73,179 @@ export async function assertNoSeriousA11yViolations(page) {
 }
 
 /**
+ * `el`'s own box, or -- for a checkbox/radio, which WCAG 2.2 SC 2.5.8
+ * measures on its label (styling system spec, "6. Enforcement") -- its
+ * associated `<label>`'s box: an ancestor `<label>`, falling back to
+ * `label[for="<id>"]` when the control sits outside one. Returns `null`
+ * when a checkbox/radio has neither (the control's own tiny box is then
+ * the real target, and callers measure that directly).
+ * @param {import('@playwright/test').Locator} el @returns {Promise<import('@playwright/test').Locator|null>}
+ */
+async function labelFor(el) {
+  const ancestor = el.locator('xpath=ancestor::label[1]');
+  if (await ancestor.count() > 0) return ancestor.first();
+  const id = await el.getAttribute('id');
+  if (id) {
+    const byFor = el.page().locator(`label[for="${id}"]`);
+    if (await byFor.count() > 0) return byFor.first();
+  }
+  return null;
+}
+
+/**
+ * Every visible `button, input, select, textarea` is at least 24x24 CSS
+ * px (WCAG 2.2 SC 2.5.8, Target Size (Minimum)) -- a checkbox or radio
+ * measured on its label when it has one, since that's the real clickable
+ * target; its own box otherwise. Playwright's `isVisible()` already
+ * excludes zero-size, `display:none` and `visibility:hidden` controls.
+ * @param {import('@playwright/test').Page} page @returns {Promise<void>}
+ */
+async function assertTargetSizes(page) {
+  const controls = page.locator('button, input, select, textarea');
+  const n = await controls.count();
+  for (let i = 0; i < n; i += 1) {
+    const control = controls.nth(i);
+    if (!(await control.isVisible())) continue;
+    const type = await control.getAttribute('type');
+    const isBoxy = type === 'checkbox' || type === 'radio';
+    const target = isBoxy ? (await labelFor(control)) ?? control : control;
+    const box = await target.boundingBox();
+    const what = await control.evaluate((el) => `${el.tagName.toLowerCase()}${el.getAttribute('class') ? `.${el.getAttribute('class')}` : ''}`);
+    expect(box, what).not.toBeNull();
+    const { width, height } = /** @type {{ width: number, height: number }} */ (box);
+    expect(width, `${what} target width`).toBeGreaterThanOrEqual(24);
+    expect(height, `${what} target height`).toBeGreaterThanOrEqual(24);
+  }
+}
+
+/**
+ * Every visible `button, input, select, textarea` uses the body's font
+ * family (spec "6. Enforcement"; Review Focus 2's build-level half is
+ * Task 2, this is the browser half for every real page).
+ * @param {import('@playwright/test').Page} page @returns {Promise<void>}
+ */
+async function assertControlsUseBodyFont(page) {
+  const bodyFont = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
+  const controls = page.locator('button, input, select, textarea');
+  const n = await controls.count();
+  for (let i = 0; i < n; i += 1) {
+    const control = controls.nth(i);
+    if (!(await control.isVisible())) continue;
+    const font = await control.evaluate((el) => getComputedStyle(el).fontFamily);
+    const what = await control.evaluate((el) => `${el.tagName.toLowerCase()}${el.getAttribute('class') ? `.${el.getAttribute('class')}` : ''}`);
+    expect(font, what).toBe(bodyFont);
+  }
+}
+
+/**
+ * Every `<table>` has a `<thead><th>` (spec "6. Enforcement").
+ * @param {import('@playwright/test').Page} page @returns {Promise<void>}
+ */
+async function assertTablesHaveHeadings(page) {
+  const tables = page.locator('table');
+  const n = await tables.count();
+  for (let i = 0; i < n; i += 1) {
+    const table = tables.nth(i);
+    const classAttr = await table.getAttribute('class');
+    await expect(table.locator('thead th').first(), `table${classAttr ? `.${classAttr}` : ''} has a thead th`).toBeAttached();
+  }
+}
+
+/**
+ * Review Focus 1's browser half: in a browser emulating dark mode,
+ * `body`'s rendered background must be the engine's dark `--color-bg`
+ * from `tokens.css`, never the light default a site's `theme.css` sets
+ * on a plain, unlayered `:root` (the bug the `theme` layer, spec "1.
+ * Layers, applied by the build", fixes). Both the expected dark value and
+ * the light value asserted against are read from the page's own built
+ * CSS via the CSSOM -- never hard-coded -- so a site that changes either
+ * still gets a meaningful check. No-op outside dark mode.
+ * @param {import('@playwright/test').Page} page @returns {Promise<void>}
+ */
+async function assertDarkBodyBackground(page) {
+  const isDark = await page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches);
+  if (!isDark) return;
+
+  // The light default is the one declared on the plain, unconditional
+  // `:root` rule -- never inside a media query or an attribute selector
+  // -- which is what's in effect for a browser that prefers light. It
+  // sits inside `tokens.css`'s own `@layer tokens { ... }` block (the
+  // build wraps every source file in its layer, spec "1. Layers, applied
+  // by the build"), so the search must recurse into grouping rules
+  // (`@layer`, `@media`, ...), not just the stylesheet's top level.
+  const lightValue = await page.evaluate(() => {
+    /** @param {CSSRuleList} rules @returns {string|null} */
+    function search(rules) {
+      for (const rule of Array.from(rules)) {
+        if (rule instanceof CSSStyleRule && rule.selectorText === ':root') {
+          const v = rule.style.getPropertyValue('--color-bg').trim();
+          if (v) return v;
+        }
+        if ('cssRules' in rule && rule.cssRules) {
+          const nested = search(rule.cssRules);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    }
+    for (const sheet of Array.from(document.styleSheets)) {
+      let rules;
+      try { rules = sheet.cssRules; } catch { continue; }
+      const found = search(rules);
+      if (found) return found;
+    }
+    return null;
+  });
+  expect(lightValue, 'found the engine light --color-bg declaration').not.toBeNull();
+
+  // The dark value actually in effect right now, in this dark browser.
+  const darkValue = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim());
+
+  // Resolve both token values the way the browser would, via a probe
+  // element (CSSOM, never a `style=` attribute -- the CSP allows this),
+  // so colours compare as the same serialisation `body`'s own computed
+  // style uses.
+  const resolve = (/** @type {string} */ value) => page.evaluate((v) => {
+    const probe = document.createElement('div');
+    probe.style.setProperty('background-color', v);
+    document.body.append(probe);
+    const out = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return out;
+  }, value);
+  const resolvedDark = await resolve(darkValue);
+  const resolvedLight = await resolve(/** @type {string} */ (lightValue));
+
+  const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  expect(bodyBg, 'body background is the dark --color-bg').toBe(resolvedDark);
+  if (resolvedLight !== resolvedDark) {
+    expect(bodyBg, 'body background is not the light --color-bg leaking into dark mode').not.toBe(resolvedLight);
+  }
+}
+
+/**
+ * The structure every page must have (spec "6. Enforcement"): a
+ * `<header>` and `main.container` from the shell (Task 6, "the shell is
+ * not optional"); every visible button/input/select/textarea in the
+ * body font, at least a 24x24 target (checkbox/radio by label); every
+ * table with a header row; and, in dark mode, the engine's dark
+ * `--color-bg`, never a site's light value (Review Focus 1).
+ * @param {import('@playwright/test').Page} page @returns {Promise<void>}
+ */
+export async function assertPageStructure(page) {
+  // The shell's `<header>` only -- a page section (the import review's
+  // job/card headings) can have its own `<header>` too, but nested
+  // inside sectioning content it carries no `banner` landmark role, so
+  // this stays a single match (HTML spec, "The header element").
+  await expect(page.getByRole('banner')).toBeVisible();
+  await expect(page.locator('main.container')).toBeVisible();
+  await assertControlsUseBodyFont(page);
+  await assertTargetSizes(page);
+  await assertTablesHaveHeadings(page);
+  await assertDarkBodyBackground(page);
+}
+
+/**
  * A console error Chromium logs for the top-level navigation itself
  * returning a non-2xx status -- unavoidable on the 404 page, which by
  * definition really does answer 404 (ruling 3: an allowlist kept to an
@@ -82,9 +255,9 @@ export async function assertNoSeriousA11yViolations(page) {
 const EXPECTED_404_NAVIGATION_ERROR = 'Failed to load resource: the server responded with a status of 404 (Not Found)';
 
 /**
- * The four checks every page gets: a 200 (or `status`), no
- * console/page/CSP errors, no horizontal scroll, no serious/critical axe
- * violations.
+ * The checks every page gets: a 200 (or `status`), no console/page/CSP
+ * errors, no horizontal scroll, no serious/critical axe violations, and
+ * -- Styling system Task 8 -- the page's structure (`assertPageStructure`).
  * @param {import('@playwright/test').Page} page @param {string} path @param {{ status?: number }} [options]
  * @returns {Promise<void>}
  */
@@ -95,6 +268,7 @@ export async function checkPage(page, path, { status = 200 } = {}) {
   expect(response?.status(), path).toBe(status);
   await assertNoHorizontalScroll(page);
   await assertNoSeriousA11yViolations(page);
+  await assertPageStructure(page);
   expect(errors.filter((e) => !(status === 404 && e === EXPECTED_404_NAVIGATION_ERROR)), path).toEqual([]);
 }
 
