@@ -10,7 +10,7 @@
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { readFileSync, mkdtempSync, rmSync, writeFileSync, cpSync } from 'node:fs';
+import { readFileSync, mkdtempSync, rmSync, writeFileSync, cpSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { runBuild } from '../../scripts/build.js';
@@ -204,10 +204,35 @@ test('findFontFamilyReferences (Task 14, fix round 1): a declaration with no tra
   assert.deepEqual([...bothStyles].sort(), ['First', 'Last']);
 });
 
-test('the bundled example site and this repo\'s own site only name font families the engine ships (neither declares its own fonts yet)', () => {
-  const engineFamilies = FONT_SPECS.map((spec) => spec.family);
-  for (const themeFile of ['examples/solluna/theme.css', 'site/theme.css']) {
-    const undeclared = findUndeclaredFontFamilies([readFileSync(themeFile, 'utf8')], engineFamilies);
-    assert.deepEqual(undeclared, [], themeFile);
+/**
+ * The font families `siteDir`'s `theme.css` names that are neither the
+ * engine's own (`FONT_SPECS`) nor declared in its `site.json` `fonts`
+ * (spec "2b. Fonts a site can choose").
+ * @param {string} siteDir @returns {string[]}
+ */
+function undeclaredThemeFamilies(siteDir) {
+  const siteJsonPath = path.join(siteDir, 'site.json');
+  const siteFonts = existsSync(siteJsonPath) ? (JSON.parse(readFileSync(siteJsonPath, 'utf8')).fonts ?? []) : [];
+  const allowed = [...FONT_SPECS.map((spec) => spec.family), ...siteFonts.map((/** @type {{ family: string }} */ font) => font.family)];
+  return findUndeclaredFontFamilies([readFileSync(path.join(siteDir, 'theme.css'), 'utf8')], allowed);
+}
+
+test('the bundled example site and this repo\'s own site only name font families the engine ships or their own site.json declares', () => {
+  for (const siteDir of ['examples/solluna', 'site']) {
+    assert.deepEqual(undeclaredThemeFamilies(siteDir), [], `${siteDir}/theme.css`);
+  }
+});
+
+test('a site whose theme points a token at a family its site.json fonts declares passes the theme font check; an undeclared one still fails', () => {
+  const siteDir = mkdtempSync(path.join(tmpdir(), 'fan-archive-theme-fonts-'));
+  try {
+    writeFileSync(path.join(siteDir, 'site.json'), JSON.stringify({ fonts: [{ family: 'Site Display', files: [{ path: 'site-display.woff2', weight: 700 }] }] }));
+    writeFileSync(path.join(siteDir, 'theme.css'), ":root {\n  --font-heading: 'Site Display', var(--font-body);\n}\n");
+    assert.deepEqual(undeclaredThemeFamilies(siteDir), []);
+
+    writeFileSync(path.join(siteDir, 'theme.css'), ":root {\n  --font-heading: 'Not Declared', var(--font-body);\n}\n");
+    assert.deepEqual(undeclaredThemeFamilies(siteDir), ['Not Declared']);
+  } finally {
+    rmSync(siteDir, { recursive: true, force: true });
   }
 });

@@ -285,3 +285,33 @@ test('validateSite (Task 14, fix round 1): a valid scoped or unscoped package na
     if (result.ok) assert.equal(result.site.fonts[0].package, good);
   }
 });
+
+test('validateSite (final review M5): a font family with a quote, semicolon, brace, backslash or newline is an error -- it goes into fonts.css raw', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  for (const bad of ["Evil'; } body { x: y", 'Evil"Font', 'Semi;colon', 'Brace{', 'Brace}', 'Back\\slash', 'New\nline']) {
+    raw.fonts = [{ family: bad, files: [{ path: 'x.woff2', weight: 400 }] }];
+    const result = validateSite(raw);
+    assert.equal(result.ok, false, JSON.stringify(bad));
+    if (result.ok) continue;
+    assert.ok(result.errors.some((e) => e.startsWith('fonts[0].family:')), `${JSON.stringify(bad)}: ${result.errors.join('\n')}`);
+  }
+  raw.fonts = [{ family: 'IBM Plex Sans-Thai 2', files: [{ path: 'x.woff2', weight: 400 }] }];
+  const ok = validateSite(raw);
+  assert.ok(ok.ok, !ok.ok && ok.errors.join('\n'));
+});
+
+test('validateSite (final review M5): a files entry unicodeRange must be U+ ranges only', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  for (const bad of ['U+0000-00FF; } body { x: y', 'latin', 'U+0000-00FF,', 'U+GGGG', '', 42]) {
+    raw.fonts = [{ family: 'Ranged', files: [{ path: 'x.woff2', weight: 400, unicodeRange: bad }] }];
+    const result = validateSite(raw);
+    assert.equal(result.ok, false, JSON.stringify(bad));
+    if (result.ok) continue;
+    assert.ok(result.errors.some((e) => e.startsWith('fonts[0].files[0].unicodeRange:')), `${JSON.stringify(bad)}: ${result.errors.join('\n')}`);
+  }
+  for (const good of ['U+0000-00FF', 'U+0E01-0E5B, U+200C-200D,U+25CC', 'u+4??']) {
+    raw.fonts = [{ family: 'Ranged', files: [{ path: 'x.woff2', weight: 400, unicodeRange: good }] }];
+    const result = validateSite(raw);
+    assert.ok(result.ok, `${good}: ${!result.ok && result.errors.join('\n')}`);
+  }
+});

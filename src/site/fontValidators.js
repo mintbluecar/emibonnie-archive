@@ -19,6 +19,22 @@ const FONT_WEIGHT_MAX = 900;
 const PACKAGE_NAME_RE = /^(@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/;
 
 /**
+ * Characters a font `family` may not hold: it goes into `fonts.css`
+ * raw, inside single quotes (`scripts/buildAssets.js`'s `fontFaceRule`),
+ * so a quote, `;`, brace, backslash or control character (newlines
+ * included) could end the string or the rule.
+ */
+// eslint-disable-next-line no-control-regex -- rejecting control characters is the point
+const FAMILY_FORBIDDEN_RE = /['";{}\\\u0000-\u001f\u007f]/;
+
+/**
+ * A CSS `unicode-range` written as `U+` ranges only -- `U+0000-00FF`,
+ * `U+4??`, `U+25CC` -- comma-separated, since it too goes into
+ * `fonts.css` raw.
+ */
+const UNICODE_RANGE_RE = /^\s*[Uu]\+[0-9A-Fa-f?]{1,6}(-[0-9A-Fa-f]{1,6})?(\s*,\s*[Uu]\+[0-9A-Fa-f?]{1,6}(-[0-9A-Fa-f]{1,6})?)*\s*$/;
+
+/**
  * @param {string[]} errors
  * @param {string} path
  * @param {unknown} value
@@ -112,7 +128,12 @@ function checkOneFontFile(errors, base, raw, index) {
     weight: checkFontWeight(errors, `${fileBase}.weight`, raw?.weight),
     style: checkFontStyle(errors, `${fileBase}.style`, raw?.style),
   };
-  return typeof raw?.unicodeRange === 'string' ? { ...file, unicodeRange: raw.unicodeRange } : file;
+  if (raw?.unicodeRange === undefined) return file;
+  if (typeof raw.unicodeRange !== 'string' || !UNICODE_RANGE_RE.test(raw.unicodeRange)) {
+    errors.push(`${fileBase}.unicodeRange: must be comma-separated U+ ranges (e.g. 'U+0000-00FF,U+0131')`);
+    return file;
+  }
+  return { ...file, unicodeRange: raw.unicodeRange };
 }
 
 /**
@@ -182,6 +203,23 @@ function checkFontSource(errors, base, raw) {
 }
 
 /**
+ * A font's `family`: required, and free of anything that could break out
+ * of its quoted string in `fonts.css` (`FAMILY_FORBIDDEN_RE`).
+ * @param {string[]} errors
+ * @param {string} path
+ * @param {unknown} value
+ * @returns {string}
+ */
+function checkFontFamily(errors, path, value) {
+  if (!requireString(errors, path, value)) return '';
+  if (FAMILY_FORBIDDEN_RE.test(/** @type {string} */ (value))) {
+    errors.push(`${path}: must not contain quotes, semicolons, braces, backslashes or newlines`);
+    return '';
+  }
+  return /** @type {string} */ (value);
+}
+
+/**
  * One `site.json` `fonts[]` entry (spec "2b. Fonts a site can choose"):
  * a family and either an `@fontsource/*` package (with its subsets and
  * the weights to request) or the site's own `site/fonts/*.woff2` files
@@ -193,7 +231,7 @@ function checkFontSource(errors, base, raw) {
  */
 export function checkOneFont(errors, raw, index) {
   const base = `fonts[${index}]`;
-  const family = requireString(errors, `${base}.family`, raw?.family) ? raw.family : '';
+  const family = checkFontFamily(errors, `${base}.family`, raw?.family);
   const style = checkFontStyle(errors, `${base}.style`, raw?.style);
   return { family, style, ...checkFontSource(errors, base, raw) };
 }
