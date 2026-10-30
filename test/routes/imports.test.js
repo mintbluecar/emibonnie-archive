@@ -76,6 +76,18 @@ test('mapping is owner-only and refuses a bad speaker', async () => {
   assert.ok(JSON.parse(ok.text).updated >= 1);
 });
 
+test('a mapping is audited as the signed-in owner', async () => {
+  const view = JSON.parse((await api.call('GET', `/api/owner/imports/${jobId}`, { cookies: owner })).text);
+  const group = view.markers[0];
+  assert.ok(group, 'a marker to map');
+  const { rows: [{ last }] } = await deps.db.query('select coalesce(max(id), 0) as last from audit_log');
+  const body = { accountId: group.accountId, marker: group.markers[0].marker, speaker: { role: 'fan' } };
+  const res = await api.call('POST', `/api/owner/imports/${jobId}/map`, { cookies: owner, body });
+  assert.equal(res.status, 200, res.text);
+  const { rows } = await deps.db.query("select distinct actor from audit_log where id > $1 and table_name = 'translation_speakers'", [last]);
+  assert.deepEqual(rows.map((row) => row.actor), [`x:${deps.site.ownerXUserId}`]);
+});
+
 test('the owner publishes, skips, retries; a member may not', async () => {
   const seeded = await api.call('POST', '/api/dev/import', {
     cookies: owner, body: { urls: [`https://x.com/a/status/${IDS.POST}`] },

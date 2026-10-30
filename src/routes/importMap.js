@@ -6,13 +6,15 @@
 import { BadRequest } from '../http/errors.js';
 import { defineRoute, fieldsOf } from '../http/defineRoute.js';
 import { applyMapping } from '../services/importMapping.js';
+import { ROLES } from '../domain/constants.js';
 
-/** @param {unknown} raw @returns {{ person: number }|{ role: string }|null} */
+/** @param {unknown} raw @returns {import('../domain/speakers.js').Speaker|null} */
 function speakerOf(raw) {
   if (raw === null || typeof raw !== 'object') return null;
   const speaker = fieldsOf(raw);
   if (typeof speaker.person === 'number') return { person: speaker.person };
-  if (typeof speaker.role === 'string') return { role: speaker.role };
+  const role = ROLES.find((known) => known === speaker.role);
+  if (role) return { role };
   return null;
 }
 
@@ -41,5 +43,5 @@ export const importMapRoute = defineRoute({
   auth: 'owner',
   limit: 'owner',
   body: mappingBody,
-  run: async ({ params, body }, deps) => applyMapping(deps, { jobId: Number(params.id), ...body }),
+  run: async ({ params, body, user }, deps) => applyMapping(deps, { jobId: Number(params.id), ...body, actor: user.id }),
 });
