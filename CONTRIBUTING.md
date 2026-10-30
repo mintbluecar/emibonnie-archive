@@ -220,6 +220,18 @@ npm run build && npm run check && npm test
 - `npm run e2e:site` runs the same per-page checks on the repo's **own** `site/` (`e2e/site.spec.js`, `playwright.site.config.js`): it builds it, seeds `site/seed/` into a fresh `.e2e-site-db`, and finds every URL through the site's API (home, the first event and its first item, every listed person, the first translator, a search, about, privacy, takedown, a 404). Without a `site/` it skips with a message.
 - Both share their checks through `e2e/helpers.js` (200, no console or CSP errors, no horizontal scroll, axe finds nothing serious or critical) and run four projects: phone and desktop, light and dark. Each builds into this checkout, so each takes `.e2e-build.lock` first: a second run while one is going stops with a clear message (`scripts/e2eLock.js`).
 
+## Real data and roles locally
+
+To look at every screen with production's data, signed in as any role:
+
+```sh
+DATABASE_URL='<production string>' npm run pull-prod   # the app role is enough: it only reads
+DEV_AS=owner PGLITE_DIR=.devdb npm run dev             # owner | translator | member | google | guest
+```
+
+- `pull-prod` (`scripts/pullProd.js`) rebuilds `.devdb` from this checkout's migrations and copies every table except login sessions and rate limits. It stops if production applied different migrations. Re-run it for fresh data; it replaces `.devdb`.
+- `DEV_AS` signs a browser in on its first page load. Switch roles any time with `/api/auth/dev?as=<role>`; `as=translator&handle=<x handle>` picks a particular translator, otherwise it's the first with a published entry. Signing out stays signed out, as in production. Both only work when `VERCEL` is unset.
+
 ## Engine vs. site
 
 Everything outside `site/` and `examples/` is the engine: fandom-neutral, reusable by any archive built from this template. A site repo also keeps its own planning docs in `.superpowers/` and `docs/superpowers/`; the engine's checks skip those, along with `site/` (`test/helpers/siteRepo.js`). `site/` is gitignored here and holds one real archive's configuration (`site.json`, `theme.css`, `copy.json`, `logo.png`, optional `seed/` and `migrations/`). `examples/solluna/` is the template's fictional example, copied into `site/` by `npm run init-site`. See `docs/architecture.md` for the full layer rules, and `docs/start-your-own.md` to run your own archive.

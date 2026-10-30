@@ -177,3 +177,23 @@ test('redirectOf (Task 10d): 307 when not permanent, an explicit statusCode wins
   assert.deepEqual(redirectOf([{ source: '/old', destination: '/new?a=b', statusCode: 301 }], url), { location: '/new?a=b&q=1', status: 301 });
   assert.equal(redirectOf([{ source: '/other', destination: '/' }], url), null);
 });
+
+test('dev server (DEV_AS): a page load with no session goes to the dev sign-in first; API calls, assets and marked browsers do not', async () => {
+  const handle = async () => new Response('ok');
+  const srv = createServer({ root: 'test/fixtures/static', rewrites: REWRITES, handle, devAs: 'owner' });
+  const base = await listen(srv);
+  const html = { accept: 'text/html,application/xhtml+xml' };
+  const page = await fetch(base + '/p/x?y=1', { headers: html, redirect: 'manual' });
+  assert.equal(page.status, 302);
+  assert.equal(page.headers.get('location'), `/api/auth/dev?as=owner&returnTo=${encodeURIComponent('/p/x?y=1')}`);
+  assert.equal((await fetch(base + '/api/home', { headers: html, redirect: 'manual' })).status, 200, 'never the API itself');
+  assert.equal((await fetch(base + '/p/x', { redirect: 'manual' })).status, 200, 'a fetch() that does not ask for HTML');
+  for (const cookie of ['sid=abc', 'dev_as=guest']) {
+    assert.equal((await fetch(base + '/p/x', { headers: { ...html, cookie }, redirect: 'manual' })).status, 200, cookie);
+  }
+  const off = createServer({ root: 'test/fixtures/static', rewrites: REWRITES, handle });
+  const base2 = await listen(off);
+  assert.equal((await fetch(base2 + '/p/x', { headers: html, redirect: 'manual' })).status, 200, 'without DEV_AS nothing changes');
+  srv.close();
+  off.close();
+});
