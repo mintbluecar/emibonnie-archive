@@ -30,7 +30,7 @@ const PORT = Number(process.env.E2E_PORT ?? 4310);
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: ['smoke.spec.js', 'embed.spec.js', 'polish.spec.js', 'search.spec.js', 'me.spec.js'],
+  testMatch: ['smoke.spec.js', 'embed.spec.js', 'polish.spec.js', 'search.spec.js', 'me.spec.js', 'firstScreen.spec.js'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0,

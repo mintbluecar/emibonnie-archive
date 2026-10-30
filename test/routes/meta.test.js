@@ -124,3 +124,22 @@ test('metaRoutes derives the meta routes from src/pages.js and the kinds: page p
   assert.deepEqual(metaRoutes(pageList, [{ urlPrefix: '/t/' }, { urlPrefix: '/zz/' }]).map((r) => r.path), ['/e/:slug', '/t/:sourceId', '/zz/:sourceId']);
   assert.throws(() => metaRoutes([{ path: '/x/:id', file: 'x.html', meta: /** @type {any} */ ('nope') }], []), /unknown meta renderer 'nope'/);
 });
+
+/** @param {string} html @returns {string[]} every `<link rel="preload">` tag in `html` */
+const preloads = (html) => html.match(/<link rel="preload"[^>]*>/g) ?? [];
+
+test('Task 11: the item and event meta pages preload their own API request (as="fetch" with crossorigin), the same URL the page JS asks for', async () => {
+  const item = (await apiFor(deps).call('GET', `/t/${IDS.LONG}`)).text;
+  assert.deepEqual(preloads(item), [`<link rel="preload" as="fetch" href="/api/item/translation/${IDS.LONG}" crossorigin>`]);
+  const event = (await apiFor(deps).call('GET', `/e/${SLUG}`)).text;
+  assert.deepEqual(preloads(event), [`<link rel="preload" as="fetch" href="/api/event/${SLUG}" crossorigin>`]);
+  // A hidden or missing target's generic page has none: it must carry nothing of the URL (test/privacy.test.js).
+  assert.deepEqual(preloads((await apiFor(deps).call('GET', '/e/no-such-event')).text), []);
+  assert.deepEqual(preloads((await apiFor(deps).call('GET', '/t/1')).text), []);
+});
+
+test('Task 11: a " in the source id is escaped in the item page\'s preload link', () => {
+  const html = injectMeta(null, { title: 't', description: 'd', image: null }, '/api/item/translation/a"b<c');
+  assert.deepEqual(preloads(html), ['<link rel="preload" as="fetch" href="/api/item/translation/a&quot;b&lt;c" crossorigin>']);
+  assert.ok(!html.includes('a"b'), 'no raw quote');
+});
