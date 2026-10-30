@@ -9,6 +9,7 @@
  */
 import { defineConfig } from '@playwright/test';
 import { PROJECTS, devServer } from './e2e/helpers.js';
+import { siteDirOf } from './scripts/cli.js';
 
 const PORT = Number(process.env.E2E_SITE_PORT ?? 4311);
 
@@ -24,6 +25,6 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: 'retain-on-failure',
   },
-  webServer: devServer({ port: PORT, dbDir: '.e2e-site-db', siteDir: process.env.SITE_DIR ?? 'site' }),
+  webServer: devServer({ port: PORT, dbDir: '.e2e-site-db', siteDir: siteDirOf(process.env) }),
   projects: PROJECTS,
 });

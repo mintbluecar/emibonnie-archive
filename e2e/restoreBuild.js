@@ -10,10 +10,11 @@
 import { existsSync } from 'node:fs';
 import { runBuild } from '../scripts/build.js';
 import { E2E_LOCK_PATH, releaseE2eLock } from '../scripts/e2eLock.js';
+import { siteDirOf } from '../scripts/cli.js';
 
 export default async function restoreBuild() {
   try {
-    const siteDir = process.env.SITE_DIR ?? 'site';
+    const siteDir = siteDirOf(process.env);
     if (!existsSync(siteDir) || siteDir === 'examples/solluna') return;
     await runBuild({ siteDir }); // still under this run's build lock
     console.log(`e2e: rebuilt ${siteDir}/ after the engine smoke`);

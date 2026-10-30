@@ -13,6 +13,7 @@ import {
 } from './buildOutputs.js';
 import { runBundling } from './buildBundle.js';
 import { unnamedSource } from '../src/http/router.js';
+import { siteDirOf } from './cli.js';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -179,7 +180,7 @@ async function readRouteRewrites() {
  */
 export async function runBuild(options = {}) {
   const repoRoot = options.repoRoot ?? REPO_ROOT;
-  const siteDir = options.siteDir ?? process.env.SITE_DIR ?? 'site';
+  const siteDir = options.siteDir ?? siteDirOf(process.env);
 
   const site = loadSite(siteDir); // throws SiteConfigError on invalid site.json
   const copy = loadCopy(siteDir);

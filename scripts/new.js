@@ -19,6 +19,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NOTES, PLANS, varsOf } from './newPlans.js';
 import { RESERVED_WORDS } from './newChecks.js';
+import { siteDirOf } from './cli.js';
 
 const TEMPLATES = fileURLToPath(new URL('./templates/', import.meta.url));
 const NAME = /^[a-z][a-z0-9_]*$/;
@@ -35,7 +36,7 @@ function render(text, vars) {
  * @param {{ kind: string, name: string, root?: string, site?: boolean, siteDir?: string }} request
  * @returns {string[]} every created or edited path, relative to `root`, in order
  */
-export function scaffold({ kind, name, root = '.', site = false, siteDir = process.env.SITE_DIR ?? 'site' }) {
+export function scaffold({ kind, name, root = '.', site = false, siteDir = siteDirOf(process.env) }) {
   if (!Object.hasOwn(PLANS, kind)) throw new Error(`unknown scaffold "${kind}": use one of ${Object.keys(PLANS).join(', ')}`);
   if (!NAME.test(name)) throw new Error(`name must match ^[a-z][a-z0-9_]*$: "${name}"`);
   const vars = varsOf(name);
