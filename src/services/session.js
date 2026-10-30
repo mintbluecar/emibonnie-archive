@@ -196,9 +196,9 @@ export async function signOutEverywhere(deps, userId) {
   await deps.db.transaction((tx) => deleteUserSessions(tx, userId), { actor: userId });
 }
 
-/** Record that an X sign-in failed (for the owner's attention). @param {{ db: import('../db/common.js').Db }} deps */
+/** Record that an X sign-in failed (for the owner's attention). @param {{ db: import('../db/common.js').Db, now: () => Date }} deps */
 export async function recordXSignInFailure(deps) {
-  await deps.db.transaction((tx) => settingsSet(tx, 'xSignInFailedAt', new Date().toISOString()), { actor: 'system' });
+  await deps.db.transaction((tx) => settingsSet(tx, 'xSignInFailedAt', deps.now().toISOString()), { actor: 'system' });
 }
 
 /**

@@ -36,9 +36,9 @@ function infra({ me = { id: '12345', username: 'alice' }, failMe = false, failTo
   return fetchImpl;
 }
 
-/** Full deps for the route. */
-function deps(fetchImpl) {
-  return { db, site, env: ENV, fetchImpl: /** @type {typeof fetch} */ (fetchImpl), now: () => new Date() };
+/** Full deps for the route. @param {() => Date} [now] */
+function deps(fetchImpl, now = () => new Date()) {
+  return { db, site, env: ENV, fetchImpl: /** @type {typeof fetch} */ (fetchImpl), now };
 }
 
 /** Runs `/api/auth/x/start`, returning the state and the oauth cookie value. */
@@ -130,6 +130,15 @@ test('users/me failure records xSignInFailedAt and redirects to /me?signin=faile
   const { rows } = await db.query("select value from settings where key = 'xSignInFailedAt'");
   assert.equal(rows.length, 1);
   assert.equal(typeof rows[0].value, 'string');
+});
+
+test('xSignInFailedAt is stamped from deps.now(), not the real clock', async () => {
+  const fixed = new Date('2026-05-01T12:00:00.000Z');
+  const api = apiFor(deps(infra({ failMe: true }), () => fixed), { env: ENV });
+  const { state, oauth } = await start(api);
+  await api.call('GET', `/api/auth/x/callback?code=c&state=${state}`, { cookies: { oauth } });
+  const { rows } = await db.query("select value from settings where key = 'xSignInFailedAt'");
+  assert.equal(rows[0].value, fixed.toISOString());
 });
 
 test('no email or image is requested or stored', async () => {
