@@ -36,6 +36,11 @@ test('extractStatusLinks dedupes and accepts the URL shapes', () => {
   assert.deepEqual(extractStatusLinks(text), ['111111', '222222', '333333']);
 });
 
+test('status links on another host are ignored', () => {
+  assert.deepEqual(extractStatusLinks('fox.com/a/status/12345'), []);
+  assert.deepEqual(extractStatusLinks('https://notx.com/a/status/123456 https://evil.example/x.com/a/status/654321'), []);
+});
+
 /** @type {Awaited<ReturnType<typeof seededDeps>>} */
 let deps;
 before(async () => { deps = await seededDeps(); });

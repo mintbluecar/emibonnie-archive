@@ -5,7 +5,7 @@
  * link extractor); the two DB helpers resolve Artist names and the event
  * a Keyword names.
  */
-import { parseTweetId } from '../sources/url.js';
+import { extractTweetIds, parseTweetId, statusUrl } from '../sources/url.js';
 import { listPeople } from '../repo/people.js';
 import { listVisibleEvents } from '../repo/events.js';
 
@@ -110,7 +110,7 @@ export function parseNotionCsv(text) {
     const warnings = [];
     if (!occurredOn && cell('date')) warnings.push(`unreadable date: ${cell('date')}`);
     rows.push({
-      url: `https://x.com/i/status/${id}`,
+      url: statusUrl(id),
       overrides,
       warnings,
       extra: {
@@ -122,18 +122,17 @@ export function parseNotionCsv(text) {
   return { rows, skipped };
 }
 
+/** A bare `x.com/…` or `twitter.com/…` (no scheme, not inside another host or path). */
+const BARE_TWEET_HOST = /(?<![\w./:@-])((?:www\.|mobile\.)?(?:x|twitter)\.com\/)/giu;
+
 /**
- * Every tweet id in a block of text, in first-seen order, deduped.
+ * Every tweet id in a block of text, in first-seen order, deduped. Links
+ * pasted without a scheme get one, then `extractTweetIds` reads them
+ * (so only x.com/twitter.com hosts count).
  * @param {string} text @returns {string[]}
  */
 export function extractStatusLinks(text) {
-  const found = [];
-  const seen = new Set();
-  for (const match of text.matchAll(/(?:x|twitter)\.com\/(?:[^/\s"'<>]+?\/)?status(?:es)?\/(\d{5,25})/gi)) {
-    const id = match[1];
-    if (!seen.has(id)) { seen.add(id); found.push(id); }
-  }
-  return found;
+  return extractTweetIds(text.replace(BARE_TWEET_HOST, 'https://$1'));
 }
 
 /**

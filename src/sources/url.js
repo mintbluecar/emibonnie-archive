@@ -47,3 +47,13 @@ export function extractTweetIds(text) {
   }
   return ids;
 }
+
+/**
+ * The canonical x.com link to a status, by id (no handle needed: x.com
+ * redirects `/i/status/<id>` to the author's own path).
+ * @param {string} id
+ * @returns {string}
+ */
+export function statusUrl(id) {
+  return `https://x.com/i/status/${id}`;
+}

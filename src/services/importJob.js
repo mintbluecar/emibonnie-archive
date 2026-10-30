@@ -13,6 +13,7 @@ import { kindNamed, kindsOf, presenterContext, previewsForAny } from './cards.js
 import { sourceState } from '../repo/items.js';
 import { ingestItem } from './ingest.js';
 import { write } from './write.js';
+import { statusUrl } from '../sources/url.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
 /** @typedef {import('../repo/imports.js').RowState} RowState */
@@ -32,7 +33,7 @@ export async function ensureOwnerUser(deps) {
 
 /** @param {string} platform @param {string} externalId */
 function sourceUrlOf(platform, externalId) {
-  return platform === 'x' ? `https://x.com/i/status/${externalId}` : '';
+  return platform === 'x' ? statusUrl(externalId) : '';
 }
 
 /**
@@ -53,10 +54,10 @@ export async function detailsOf(deps, items) {
 }
 
 /**
- * @param {ViewDeps} deps @param {any} details
+ * @param {any} details
  * @returns {'fetched'|'needs_speakers'|'check'}
  */
-export function classifyDetails(deps, details) {
+export function classifyDetails(details) {
   const lines = partLines(details.parts, details.fixes ?? []);
   const markers = findMarkers(lines);
   const text = String(details.body ?? details.parts.join('\n')).trim();
@@ -75,7 +76,7 @@ export async function readinessOf(deps, kindName, itemId) {
   const kind = kindNamed(deps, kindName);
   if (!kind) return null;
   const details = /** @type {any} */ ((await kind.loadDetails(deps.db, [itemId], { includePending: true })).get(itemId));
-  return details ? classifyDetails(deps, details) : null;
+  return details ? classifyDetails(details) : null;
 }
 
 /**
@@ -235,7 +236,7 @@ export async function runRow(deps, { row, kind, actor, source }) {
     return { state: 'skipped', reason };
   }
   const result = await ingestItem(deps, {
-    kind, input: `https://x.com/i/status/${row.externalId}`, overrides: row.overrides ?? {},
+    kind, input: statusUrl(row.externalId), overrides: row.overrides ?? {},
     addedVia: source === 'notion' ? 'notion' : 'paste',
     actor, holdForReview: true, allowUnmapped: true, lookups: 'create',
   });

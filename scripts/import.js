@@ -16,6 +16,7 @@ import { createJob, getJob, insertRows, rowsForRun, setJobStatus, updateRow } fr
 import { parseNotionCsv, extractStatusLinks, resolveArtists, eventOverrideOf } from '../src/services/importSources.js';
 import { ensureOwnerUser, runRow } from '../src/services/importJob.js';
 import { retryingFetch } from '../src/services/importFetch.js';
+import { statusUrl } from '../src/sources/url.js';
 
 const OPTIONS = /** @type {const} */ ({
   notion: { type: 'string' },
@@ -91,7 +92,7 @@ async function createJobs(deps, { values, read, log }) {
  * @returns {Promise<string>}
  */
 async function reportCsv(path, jobId, rows) {
-  const lines = ['url,status,reason', ...rows.map((row) => `https://x.com/i/status/${row.externalId},${row.state},"${String(row.error ?? '').replaceAll('"', '""')}"`)];
+  const lines = ['url,status,reason', ...rows.map((row) => `${statusUrl(row.externalId)},${row.state},"${String(row.error ?? '').replaceAll('"', '""')}"`)];
   await writeFile(path, `${lines.join('\n')}\n`, 'utf8');
   return path;
 }
