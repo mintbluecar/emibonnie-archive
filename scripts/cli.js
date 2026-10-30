@@ -56,10 +56,26 @@ export function errorText(err) {
  */
 
 /**
+ * `process.argv.slice(2)`, parsed against `optionsConfig` (strict: an
+ * unknown or mistyped flag throws, same as every script's own `parseArgs`
+ * call did before it moved here), or -- with no `optionsConfig` -- left
+ * unparsed, as positionals, for the script's own `parseArgs` call (inside
+ * its testable core, e.g. `runAdd`) to validate instead. One parse per
+ * script, never two.
+ * @param {import('node:util').ParseArgsOptionsConfig | undefined} optionsConfig
+ * @returns {{ values: CliContext['values'], positionals: CliContext['positionals'] }}
+ */
+function parseOwnArgs(optionsConfig) {
+  if (!optionsConfig) return { values: {}, positionals: process.argv.slice(2) };
+  return parseArgs({ args: process.argv.slice(2), options: optionsConfig, allowPositionals: true });
+}
+
+/**
  * Runs one CLI entry point: resolves its database (`'required'` refuses
  * a throwaway in-memory one; `'none'` never opens one) and its site
- * directory, parses `process.argv`, calls `main(ctx)`, always ends the
- * db, and -- on a throw -- prints `errorText(err)` and sets
+ * directory, parses `process.argv` (only when `options.args` is given --
+ * see `parseOwnArgs`), calls `main(ctx)`, always ends the db, and -- on a
+ * throw, including an unknown flag -- prints `errorText(err)` and sets
  * `process.exitCode = 1` rather than the raw error.
  * @param {(ctx: CliContext) => Promise<unknown>} main
  * @param {{ db?: 'required' | 'none', args?: import('node:util').ParseArgsOptionsConfig }} [options]
@@ -70,7 +86,7 @@ export async function runCli(main, options = {}) {
   /** @type {Db | undefined} */
   let db;
   try {
-    const { values, positionals } = parseArgs({ args: process.argv.slice(2), options: options.args ?? {}, allowPositionals: true, strict: false });
+    const { values, positionals } = parseOwnArgs(options.args);
     if ((options.db ?? 'required') === 'required') db = createDb(dbTargetOf(env));
     await main({ db, siteDir: siteDirOf(env), values, positionals, log: console.log, env });
   } catch (/** @type {any} */ err) {

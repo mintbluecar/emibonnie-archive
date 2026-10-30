@@ -75,6 +75,36 @@ test('import with an empty env fails before reading its input', async () => {
   assert.doesNotMatch(res.stderr, /ENOENT|no such file/, 'never tried to read the (nonexistent) input file');
 });
 
+test('seed-dev rejects an unknown flag', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { mkdtempSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { fileURLToPath } = await import('node:url');
+  const path = await import('node:path');
+  const script = fileURLToPath(new URL('../../scripts/seedDev.js', import.meta.url));
+  const pgliteDir = mkdtempSync(path.join(tmpdir(), 'fan-archive-cli-seeddev-'));
+  const env = { ...process.env, DATABASE_URL: '', PGLITE_DIR: pgliteDir, VERCEL: '' };
+  delete env.NODE_TEST_CONTEXT;
+  const res = spawnSync(process.execPath, [script, '--totally-bogus-flag', 'x'], { env, encoding: 'utf8' });
+  assert.notEqual(res.status, 0);
+  assert.match(res.stderr, /Unknown option/);
+});
+
+test('import (which parses its own flags) still rejects an unknown flag', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { mkdtempSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { fileURLToPath } = await import('node:url');
+  const path = await import('node:path');
+  const script = fileURLToPath(new URL('../../scripts/import.js', import.meta.url));
+  const pgliteDir = mkdtempSync(path.join(tmpdir(), 'fan-archive-cli-import-'));
+  const env = { ...process.env, DATABASE_URL: '', PGLITE_DIR: pgliteDir, VERCEL: '' };
+  delete env.NODE_TEST_CONTEXT;
+  const res = spawnSync(process.execPath, [script, '--totally-bogus-flag', 'x'], { env, encoding: 'utf8' });
+  assert.notEqual(res.status, 0);
+  assert.match(res.stderr, /Unknown option/);
+});
+
 test('siteDirOf: SITE_DIR, or "site"', () => {
   assert.equal(siteDirOf({}), 'site');
   assert.equal(siteDirOf({ SITE_DIR: 'examples/solluna' }), 'examples/solluna');
