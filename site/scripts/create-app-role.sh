@@ -138,12 +138,15 @@
 #      command to run straight away.
 #
 # Reads EMIBONNIE_DB / EMIBONNIE_DB_PREVIEW the same way site/scripts/deploy.sh
-# does (or, with --target-env-var, the variable named there), and unsets
-# all of them (plus DATABASE_URL) from its own environment the
-# moment it has copied the one it needs. Never echoes, logs or writes the
+# does (lib.sh's read_db_url; or, with --target-env-var, the variable named
+# there), and unsets all of them (plus DATABASE_URL) from its own
+# environment the moment it has copied the one it needs. Never echoes, logs or writes the
 # owner connection string, the generated password, or the app-role
 # connection string, except into the one `chmod 600` fallback file in step
 # 6 above.
+#
+# The shared preamble (arguments, target, the URL read and unset, `step`,
+# the pinned `vercel`) is site/scripts/lib.sh.
 #
 # --dry-run prints the steps this run would take, with every secret
 # redacted, and makes no database connection, runs no `node` (for the
@@ -151,31 +154,27 @@
 # site/test/createAppRoleScript.test.js, run with `node --test site/test/`.
 
 set -euo pipefail
+# shellcheck source=site/scripts/lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-PROD=0
-DRY_RUN=0
 ROTATE=0
 TARGET_ENV_VAR=""
-while [ "$#" -gt 0 ]; do
+USAGE_FLAGS="--prod, --rotate, --target-env-var NAME and/or --dry-run"
+# shellcheck disable=SC2034 # EXTRA_ARGS_USED is read by lib.sh's select_target
+extra_arg() {
   case "$1" in
-    --prod) PROD=1 ;;
-    --dry-run) DRY_RUN=1 ;;
-    --rotate) ROTATE=1 ;;
+    --rotate) ROTATE=1; EXTRA_ARGS_USED=1 ;;
     --target-env-var)
       if [ "$#" -lt 2 ] || [[ $2 == --* ]]; then
         echo "create-app-role.sh: --target-env-var needs a variable name, e.g. --target-env-var RESTORE_TARGET_URL" >&2
         exit 1
       fi
       TARGET_ENV_VAR="$2"
-      shift
-      ;;
-    *)
-      echo "create-app-role.sh: unknown argument '$1' (expected --prod, --rotate, --target-env-var NAME and/or --dry-run)" >&2
-      exit 1
+      EXTRA_ARGS_USED=2
       ;;
   esac
-  shift
-done
+}
+select_target "$@"
 
 if [ -n "$TARGET_ENV_VAR" ]; then
   if ! [[ $TARGET_ENV_VAR =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
@@ -194,7 +193,6 @@ if [ -n "$TARGET_ENV_VAR" ]; then
   fi
 fi
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 # SET_VERCEL=1: add/update the Vercel Secret. 0 (--target-env-var): file only.
@@ -203,29 +201,8 @@ if [ -n "$TARGET_ENV_VAR" ]; then
   TARGET="$TARGET_ENV_VAR"
   DB_VAR_NAME="$TARGET_ENV_VAR"
   SET_VERCEL=0
-elif [ "$PROD" -eq 1 ]; then
-  TARGET="production"
-  DB_VAR_NAME="EMIBONNIE_DB"
-else
-  TARGET="preview"
-  DB_VAR_NAME="EMIBONNIE_DB_PREVIEW"
 fi
-
-OWNER_URL="${!DB_VAR_NAME:-}"
-if [ -z "$OWNER_URL" ]; then
-  echo "create-app-role.sh: \$$DB_VAR_NAME is not set (it must hold the owner-role connection string for the $TARGET database) -- stopping before any step runs" >&2
-  exit 1
-fi
-unset EMIBONNIE_DB EMIBONNIE_DB_PREVIEW DATABASE_URL "$DB_VAR_NAME"
-
-log() {
-  echo "[create-app-role:$TARGET] $*"
-}
-
-VERCEL_CLI_VERSION="65.1.0"
-vercel() {
-  npx --yes "vercel@${VERCEL_CLI_VERSION}" "$@"
-}
+read_db_url
 
 # The flags to repeat this run with, for the hints printed below.
 FLAG_TEXT=""
@@ -252,68 +229,46 @@ rotation_outage_warning() {
 # Fix round 4, R1: --rotate updates the existing variable in one step.
 if [ "$ROTATE" -eq 1 ]; then
   VERCEL_ENV_CMD=(env update DATABASE_URL --environment "$TARGET" --sensitive --yes)
+  ROLE_STMT="alter role app password %L"
 else
   VERCEL_ENV_CMD=(env add DATABASE_URL --environment "$TARGET" --sensitive --yes)
+  ROLE_STMT="create role app login password %L"
 fi
 
 FALLBACK_NAME=".emibonnie/app-$(printf '%s' "$TARGET" | tr '[:upper:]' '[:lower:]').url"
 
-if [ "$DRY_RUN" -eq 1 ]; then
-  if [ "$ROTATE" -eq 1 ]; then
-    log "would check that role 'app' already exists on the $TARGET database (select 1 from pg_roles where rolname = 'app'); would refuse if it doesn't"
-  else
-    log "would check whether role 'app' already exists on the $TARGET database (select 1 from pg_roles where rolname = 'app'); would refuse if it does, and say to use --rotate instead"
-  fi
-  log "would generate a strong password locally (site/scripts/password.mjs's randomPassword, node's own crypto) -- never printed, never in argv"
-  log "would send that plaintext password to Neon over TLS as a bind parameter (Neon requires plaintext and stores it encrypted: https://neon.com/docs/manage/roles); it can appear in the server's error log if the statement fails"
-  if [ "$ROTATE" -eq 1 ]; then
-    log "would run, in one transaction: select set_config('app.pw', '<redacted>', true); do \$\$ ... execute format('alter role app password %L', current_setting('app.pw')); end \$\$;"
-  else
-    log "would run, in one transaction: select set_config('app.pw', '<redacted>', true); do \$\$ ... execute format('create role app login password %L', current_setting('app.pw')); end \$\$;"
-  fi
-  log "would print only an error code and a redacted message if that fails (never the statement, which holds the password)"
-  log "would build the app-role URL from the owner URL: same host/database/parameters, user 'app', the new password"
-  if [ "$SET_VERCEL" -eq 1 ]; then
-    log "would run: vercel ${VERCEL_ENV_CMD[*]} (value piped through stdin, never in argv or output)"
-    log "would fall back to a chmod 600 file, ~/$FALLBACK_NAME, if that command fails, and print only its path"
-  else
-    log "would skip Vercel (--target-env-var): would write the URL to a chmod 600 file, ~/$FALLBACK_NAME, and print only its path"
-  fi
-  if [ "$ROTATE" -eq 1 ] && [ "$SET_VERCEL" -eq 1 ]; then
-    log "would warn that the live $TARGET site can't reach the database until a redeploy finishes, and say to run: $REDEPLOY_TASK"
-  fi
-  exit 0
-fi
+# Steps 1-4 of the header, all inside site/scripts/app-role.mjs.
+run_app_role() {
+  set +e
+  APP_URL="$(with_db env ROTATE="$ROTATE" node site/scripts/app-role.mjs)"
+  NODE_STATUS=$?
+  set -e
+  DB_URL=""
 
-set +e
-APP_URL="$(DATABASE_URL="$OWNER_URL" ROTATE="$ROTATE" node site/scripts/app-role.mjs)"
-NODE_STATUS=$?
-set -e
-OWNER_URL=""
-
-if [ "$NODE_STATUS" -eq 2 ]; then
-  echo "create-app-role.sh: role 'app' already exists on the $TARGET database -- refusing to recreate it." >&2
-  if [ -n "$TARGET_ENV_VAR" ]; then
-    echo "If this database was branched or restored from one that already had 'app', that's expected. To give it a new password: site/scripts/create-app-role.sh --rotate$FLAG_TEXT. Never reset it from the Neon console -- that would put 'app' back into neon_superuser (see the header comment above)." >&2
-  else
-    echo "To rotate its password instead: site/scripts/create-app-role.sh --rotate$FLAG_TEXT (or 'task role:rotate:preview' / 'task role:rotate:prod'). Never reset it from the Neon console -- that would put 'app' back into neon_superuser (see the header comment above)." >&2
+  if [ "$NODE_STATUS" -eq 2 ]; then
+    echo "create-app-role.sh: role 'app' already exists on the $TARGET database -- refusing to recreate it." >&2
+    if [ -n "$TARGET_ENV_VAR" ]; then
+      echo "If this database was branched or restored from one that already had 'app', that's expected. To give it a new password: site/scripts/create-app-role.sh --rotate$FLAG_TEXT. Never reset it from the Neon console -- that would put 'app' back into neon_superuser (see the header comment above)." >&2
+    else
+      echo "To rotate its password instead: site/scripts/create-app-role.sh --rotate$FLAG_TEXT (or 'task role:rotate:preview' / 'task role:rotate:prod'). Never reset it from the Neon console -- that would put 'app' back into neon_superuser (see the header comment above)." >&2
+    fi
+    exit 1
   fi
-  exit 1
-fi
-if [ "$NODE_STATUS" -eq 3 ]; then
-  echo "create-app-role.sh: --rotate was given but role 'app' does not exist yet on the $TARGET database." >&2
-  echo "Run this once without --rotate first: site/scripts/create-app-role.sh$FLAG_TEXT" >&2
-  exit 1
-fi
-if [ "$NODE_STATUS" -ne 0 ]; then
-  echo "create-app-role.sh: could not create or rotate role 'app' on the $TARGET database (the error code is on the line above)." >&2
-  exit "$NODE_STATUS"
-fi
-if [ "$ROTATE" -eq 1 ]; then
-  log "rotated role 'app''s password on the $TARGET database"
-else
-  log "created role 'app' on the $TARGET database"
-fi
+  if [ "$NODE_STATUS" -eq 3 ]; then
+    echo "create-app-role.sh: --rotate was given but role 'app' does not exist yet on the $TARGET database." >&2
+    echo "Run this once without --rotate first: site/scripts/create-app-role.sh$FLAG_TEXT" >&2
+    exit 1
+  fi
+  if [ "$NODE_STATUS" -ne 0 ]; then
+    echo "create-app-role.sh: could not create or rotate role 'app' on the $TARGET database (the error code is on the line above)." >&2
+    exit "$NODE_STATUS"
+  fi
+  if [ "$ROTATE" -eq 1 ]; then
+    log "rotated role 'app''s password on the $TARGET database"
+  else
+    log "created role 'app' on the $TARGET database"
+  fi
+}
 
 write_fallback_file() {
   FALLBACK_FILE="$HOME/$FALLBACK_NAME"
@@ -323,30 +278,50 @@ write_fallback_file() {
   chmod 600 "$FALLBACK_FILE"
 }
 
-if [ "$SET_VERCEL" -eq 0 ]; then
+# Step 5 of the header, or step 6 if it fails.
+set_vercel_secret() {
+  if printf '%s' "$APP_URL" | vercel "${VERCEL_ENV_CMD[@]}"; then
+    if [ "$ROTATE" -eq 1 ]; then
+      log "updated the DATABASE_URL Secret in Vercel's $TARGET scope"
+    else
+      log "set DATABASE_URL as a Secret in Vercel's $TARGET scope"
+    fi
+  else
+    write_fallback_file
+    log "vercel ${VERCEL_ENV_CMD[0]} ${VERCEL_ENV_CMD[1]} could not set the Secret directly. Wrote the connection string to:"
+    log "  $FALLBACK_FILE"
+    if [ "$ROTATE" -eq 1 ]; then
+      log "Paste it into Vercel by hand: Settings -> Environment Variables -> edit the existing DATABASE_URL in the $TARGET scope (type Secret) and replace its value. Don't add a second one."
+    else
+      log "Paste it into Vercel by hand: Settings -> Environment Variables -> add DATABASE_URL, type Secret, scope $TARGET."
+    fi
+    log "Then delete that file."
+  fi
+  APP_URL=""
+}
+
+# --target-env-var: step 6 only.
+write_target_file() {
   write_fallback_file
+  APP_URL=""
   log "--target-env-var: Vercel was not touched. The app-role connection string for this database is in:"
   log "  $FALLBACK_FILE"
   log "Use it only if this database is going to serve the site (Vercel: Settings -> Environment Variables -> edit the existing DATABASE_URL, type Secret, in the right scope; then redeploy). Delete that file once it's no longer needed."
-elif printf '%s' "$APP_URL" | vercel "${VERCEL_ENV_CMD[@]}"; then
-  if [ "$ROTATE" -eq 1 ]; then
-    log "updated the DATABASE_URL Secret in Vercel's $TARGET scope"
-  else
-    log "set DATABASE_URL as a Secret in Vercel's $TARGET scope"
-  fi
+}
+
+if [ "$ROTATE" -eq 1 ]; then
+  EXISTS_TEXT="check that role 'app' already exists on the $TARGET database (select 1 from pg_roles where rolname = 'app'); refuse if it doesn't"
 else
-  write_fallback_file
-  log "vercel ${VERCEL_ENV_CMD[0]} ${VERCEL_ENV_CMD[1]} could not set the Secret directly. Wrote the connection string to:"
-  log "  $FALLBACK_FILE"
-  if [ "$ROTATE" -eq 1 ]; then
-    log "Paste it into Vercel by hand: Settings -> Environment Variables -> edit the existing DATABASE_URL in the $TARGET scope (type Secret) and replace its value. Don't add a second one."
-  else
-    log "Paste it into Vercel by hand: Settings -> Environment Variables -> add DATABASE_URL, type Secret, scope $TARGET."
-  fi
-  log "Then delete that file."
+  EXISTS_TEXT="check whether role 'app' already exists on the $TARGET database (select 1 from pg_roles where rolname = 'app'); refuse if it does, and say to use --rotate instead"
 fi
-APP_URL=""
+step 1 "DATABASE_URL=<redacted> node site/scripts/app-role.mjs, which will: $EXISTS_TEXT; generate a strong password locally (site/scripts/password.mjs's randomPassword, node's own crypto) -- never printed, never in argv; send that plaintext password to Neon over TLS as a bind parameter (Neon requires plaintext and stores it encrypted: https://neon.com/docs/manage/roles), where it can appear in the server's error log if the statement fails; in one transaction: select set_config('app.pw', '<redacted>', true); do \$\$ ... execute format('$ROLE_STMT', current_setting('app.pw')); end \$\$; print only an error code and a redacted message if that fails (never the statement, which holds the password); build the app-role URL from the owner URL: same host/database/parameters, user 'app', the new password" -- run_app_role
+
+if [ "$SET_VERCEL" -eq 1 ]; then
+  step 2 "vercel ${VERCEL_ENV_CMD[*]} (value piped through stdin, never in argv or output); if that fails, a chmod 600 file, ~/$FALLBACK_NAME, printing only its path" -- set_vercel_secret
+else
+  step 2 "skip Vercel (--target-env-var): write the URL to a chmod 600 file, ~/$FALLBACK_NAME, and print only its path" -- write_target_file
+fi
 
 if [ "$ROTATE" -eq 1 ] && [ "$SET_VERCEL" -eq 1 ]; then
-  rotation_outage_warning
+  step 3 "warn that the live $TARGET site can't reach the database until a redeploy finishes, and say to run: $REDEPLOY_TASK" -- rotation_outage_warning
 fi

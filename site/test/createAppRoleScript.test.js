@@ -92,7 +92,7 @@ test('--prod dry run targets the production scope', () => {
 test('--rotate dry run requires the role to already exist, uses alter role, and updates the Vercel Secret in one step (fix round 4, R1)', () => {
   const { status, output } = runDryRun(['--rotate'], { EMIBONNIE_DB_PREVIEW: PREVIEW_URL });
   assert.equal(status, 0);
-  assert.match(output, /would refuse if it doesn't/);
+  assert.match(output, /refuse if it doesn't/);
   assert.match(output, /alter role app password %L/);
   assert.doesNotMatch(output, /create role app login password/);
   assert.doesNotMatch(output, /vercel env (rm|add)/);
@@ -143,6 +143,7 @@ function makeScratch() {
   const dir = mkdtempSync(path.join(tmpdir(), 'fan-archive-approle-'));
   mkdirSync(path.join(dir, 'site/scripts'), { recursive: true });
   copyFileSync(SCRIPT, path.join(dir, 'site/scripts/create-app-role.sh'));
+  copyFileSync(path.join(REPO_ROOT, 'site/scripts/lib.sh'), path.join(dir, 'site/scripts/lib.sh'));
   writeFileSync(path.join(dir, 'site/scripts/app-role.mjs'),
     'process.stderr.write(process.env.ROTATE === "1" ? "ROLE_ROTATED\\n" : "ROLE_CREATED\\n");\n' +
     'process.stdout.write("postgres://app:STUB-APP-PASSWORD@ep.example.neon.tech/db");\n');

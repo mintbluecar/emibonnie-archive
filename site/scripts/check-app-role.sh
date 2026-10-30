@@ -41,35 +41,21 @@
 # unsets all three names from its own environment once it has what it
 # needs, the same as the other two scripts.
 #
+# The query and the pass/fail rule live in site/scripts/check-app-role.mjs
+# (its `violations` is unit-tested in site/test/checkAppRole.test.js); the
+# shared preamble (arguments, target, the URL read and unset, `step`) is
+# site/scripts/lib.sh.
+#
 # --dry-run prints the one step this run would take and performs no
 # database connection. Covered by site/test/checkAppRoleScript.test.js, run
 # with `node --test site/test/`.
 
 set -euo pipefail
+# shellcheck source=site/scripts/lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-PROD=0
-DRY_RUN=0
-for arg in "$@"; do
-  case "$arg" in
-    --prod) PROD=1 ;;
-    --dry-run) DRY_RUN=1 ;;
-    *)
-      echo "check-app-role.sh: unknown argument '$arg' (expected --prod and/or --dry-run)" >&2
-      exit 1
-      ;;
-  esac
-done
-
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+select_target "$@"
 cd "$REPO_ROOT"
-
-if [ "$PROD" -eq 1 ]; then
-  TARGET="production"
-  DB_VAR_NAME="EMIBONNIE_DB"
-else
-  TARGET="preview"
-  DB_VAR_NAME="EMIBONNIE_DB_PREVIEW"
-fi
 
 # Fix round 3, minor: prefer the named var (EMIBONNIE_DB/EMIBONNIE_DB_PREVIEW)
 # over any DATABASE_URL already sitting in the environment, rather than the
@@ -81,44 +67,18 @@ fi
 # already unset (its own fix round 1, I1), so this still picks up
 # DATABASE_URL correctly in that case -- there's nothing for the named var
 # to outrank there.
-OWNER_URL="${!DB_VAR_NAME:-${DATABASE_URL:-}}"
-if [ -z "$OWNER_URL" ]; then
-  echo "check-app-role.sh: neither \$$DB_VAR_NAME nor \$DATABASE_URL is set (one must hold the owner-role connection string for the $TARGET database) -- stopping before any step runs" >&2
-  exit 1
+if [ -z "${!DB_VAR_NAME:-}" ]; then
+  if [ -z "${DATABASE_URL:-}" ]; then
+    echo "check-app-role.sh: neither \$$DB_VAR_NAME nor \$DATABASE_URL is set (one must hold the owner-role connection string for the $TARGET database) -- stopping before any step runs" >&2
+    exit 1
+  fi
+  DB_VAR_NAME="DATABASE_URL"
 fi
-unset EMIBONNIE_DB EMIBONNIE_DB_PREVIEW DATABASE_URL
+read_db_url
 
-log() {
-  echo "[check-app-role:$TARGET] $*"
+check_role() {
+  with_db node site/scripts/check-app-role.mjs
+  log "least-privilege check passed: app is not a neon_superuser member and cannot update or delete audit_log rows"
 }
 
-if [ "$DRY_RUN" -eq 1 ]; then
-  log "would run: select pg_has_role('app','neon_superuser','member'), has_table_privilege('app','audit_log','update'), has_table_privilege('app','audit_log','delete') -- and fail unless all three are f"
-  exit 0
-fi
-
-CODE='
-import { createDb, dbOptionsFromEnv } from "./src/db/client.js";
-const db = createDb(dbOptionsFromEnv(process.env));
-try {
-  const { rows } = await db.query(
-    "select pg_has_role($1, $2, $3) as superuser_member, has_table_privilege($1, $4, $5) as can_update_audit, has_table_privilege($1, $4, $6) as can_delete_audit",
-    ["app", "neon_superuser", "member", "audit_log", "update", "delete"],
-  );
-  const row = rows[0];
-  console.log(JSON.stringify(row));
-  const bad = [];
-  if (row.superuser_member) bad.push("app is a member of neon_superuser");
-  if (row.can_update_audit) bad.push("app can UPDATE audit_log");
-  if (row.can_delete_audit) bad.push("app can DELETE from audit_log");
-  if (bad.length > 0) {
-    console.error("NOT_LEAST_PRIVILEGE: " + bad.join("; "));
-    process.exitCode = 1;
-  }
-} finally {
-  await db.end();
-}
-'
-
-DATABASE_URL="$OWNER_URL" node --input-type=module -e "$CODE"
-log "least-privilege check passed: app is not a neon_superuser member and cannot update or delete audit_log rows"
+step 1 "select pg_has_role('app','neon_superuser','member'), has_table_privilege('app','audit_log','update'), has_table_privilege('app','audit_log','delete') -- and fail unless all three are f" -- check_role
