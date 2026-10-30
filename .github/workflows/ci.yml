@@ -43,7 +43,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run init-site
+      - run: '[ -d site ] || npm run init-site'
       - run: npm run build
       - run: npm run check
       - name: npm test (PGlite)
@@ -53,6 +53,8 @@ jobs:
         env:
           TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
           TEST_WS_PROXY: localhost:5433
+      - name: site tests
+        run: if [ -d site/test ]; then node --test "site/test/**/*.test.js"; fi
 
   e2e:
     # Plan 1b Task 7: Playwright smoke + axe checks. PGlite only -- the
@@ -69,7 +71,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run init-site
+      - run: '[ -d site ] || npm run init-site'
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
       # Task 9a item 1: the site checks on the init-site copy, so e2e/site.spec.js keeps working.

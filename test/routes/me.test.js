@@ -77,7 +77,7 @@ test('a google user needs a name until they set one', async () => {
 test('POST /api/me/name rejects a handle-like or invalid name', async () => {
   const token = await sidFor({ via: 'google', subject: 'g-2', handle: null });
   const api = apiFor(deps());
-  for (const name of ['@vacantvolcanic', '', 'x'.repeat(31)]) {
+  for (const name of ['@sample_translator', '', 'x'.repeat(31)]) {
     const res = await api.call('POST', '/api/me/name', { cookies: { sid: token }, body: { name } });
     assert.equal(res.status, 400, `${name}: ${res.text}`);
   }
