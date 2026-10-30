@@ -181,13 +181,13 @@ test('publish ready and all post their scope and reload', async () => {
   });
 });
 
-test('the retry loop keeps posting until remaining is 0 and reports the processed count', async () => {
-  const replies = [{ processed: 4, remaining: 3 }, { processed: 3, remaining: 0 }];
-  /** @type {string[]} */
+test('retryJob sends the cursor back and stops at remaining 0', async () => {
+  const replies = [{ processed: 4, remaining: 3, lastId: 44 }, { processed: 3, remaining: 0, lastId: 77 }];
+  /** @type {{ url: string, body: any }[]} */
   const calls = [];
   await withGlobals({
-    fetch: /** @type {any} */ (async (url) => {
-      calls.push(String(url));
+    fetch: /** @type {any} */ (async (url, init) => {
+      calls.push({ url: String(url), body: JSON.parse(String(init?.body ?? '{}')) });
       return Response.json(replies.shift());
     }),
   }, async () => {
@@ -200,9 +200,10 @@ test('the retry loop keeps posting until remaining is 0 and reports the processe
     /** @type {any} */ (root.querySelector('[data-action="retry-import"]')).click();
     await new Promise((resolve) => setTimeout(resolve, 20));
 
-    assert.deepEqual(calls, ['/api/owner/imports/7/retry', '/api/owner/imports/7/retry']);
+    assert.deepEqual(calls.map((c) => c.url), ['/api/owner/imports/7/retry', '/api/owner/imports/7/retry']);
+    assert.deepEqual(calls.map((c) => c.body), [{ afterId: 0 }, { afterId: 44 }], 'the second call carries the first reply\'s cursor');
     const status = /** @type {any} */ (root.querySelector('[data-import-speakers-status]'));
     assert.match(String(status?.textContent), /7/, 'the total processed count');
-    assert.equal(reloads, 1);
+    assert.equal(reloads, 1, 'stops once remaining is 0, instead of looping to the 200-attempt cap');
   });
 });

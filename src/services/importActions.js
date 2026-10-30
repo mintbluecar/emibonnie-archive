@@ -95,13 +95,16 @@ export async function archiveRow(deps, { jobId, rowId, actor }) {
 }
 
 /**
- * Retries up to `RETRY_BATCH` unfinished rows of a job.
+ * Retries up to `RETRY_BATCH` unfinished rows of a job, starting after
+ * `afterId`. A cursor, not a state filter: a row that fails again still
+ * has a higher id than `afterId`, so the next call walks past it instead
+ * of re-picking it forever.
  * @param {ViewDeps & { fetchImpl: typeof fetch }} deps
- * @param {{ jobId: number, actor: SessionUser }} input
- * @returns {Promise<{ processed: number, remaining: number }>}
+ * @param {{ jobId: number, actor: SessionUser, afterId?: number }} input
+ * @returns {Promise<{ processed: number, remaining: number, lastId: number }>}
  */
-export async function retryRows(deps, { jobId, actor }) {
-  const pending = await rowsForRun(deps.db, jobId);
+export async function retryRows(deps, { jobId, actor, afterId = 0 }) {
+  const pending = await rowsForRun(deps.db, jobId, { afterId });
   const batch = pending.slice(0, RETRY_BATCH);
   for (const row of batch) {
     try {
@@ -110,5 +113,6 @@ export async function retryRows(deps, { jobId, actor }) {
       await deps.db.transaction((tx) => updateRow(tx, row.id, { state: 'failed', error: String(err?.message ?? err).slice(0, 500) }), { actor: actor.id });
     }
   }
-  return { processed: batch.length, remaining: pending.length - batch.length };
+  const lastId = batch.length > 0 ? batch[batch.length - 1].id : afterId;
+  return { processed: batch.length, remaining: pending.length - batch.length, lastId };
 }

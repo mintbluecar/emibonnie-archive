@@ -95,6 +95,10 @@ test('the owner publishes, skips, retries; a member may not', async () => {
   const retry = await api.call('POST', `/api/owner/imports/${secondId}/retry`, { cookies: owner });
   assert.equal(retry.status, 200, retry.text);
   assert.equal(JSON.parse(retry.text).processed, 0);
+  const retriedAgain = await api.call('POST', `/api/owner/imports/${secondId}/retry`, { cookies: owner, body: { afterId: JSON.parse(retry.text).lastId } });
+  assert.equal(retriedAgain.status, 200, retriedAgain.text);
+  const badCursor = await api.call('POST', `/api/owner/imports/${secondId}/retry`, { cookies: owner, body: { afterId: -1 } });
+  assert.equal(badCursor.status, 400, badCursor.text);
 });
 
 test('an unknown job is 404', async () => {

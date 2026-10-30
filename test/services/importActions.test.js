@@ -185,10 +185,24 @@ test('an import publish updates the row and the item together', async () => {
   assert.equal((await getRow(deps.db, rowId)).state, 'check');
 });
 
-test('retry processes at most ten rows and reports the remainder', async () => {
+test('retry makes progress past rows that keep failing', async () => {
   const retryJob = await deps.db.transaction((tx) => createJob(tx, { source: 'paste', actor: 'system' }), SYSTEM);
-  await deps.db.transaction((tx) => insertRows(tx, retryJob, Array.from({ length: 12 }, (_, i) => ({ platform: 'x', externalId: `7000${i}`, overrides: {} }))), SYSTEM);
-  const res = await retryRows(deps, { jobId: retryJob, actor });
-  assert.equal(res.processed, 10);
-  assert.equal(res.remaining, 2);
+  // None of these ids has a fixture file, so every row 404s (offlineFetch's notFound()) and stays failed.
+  await deps.db.transaction((tx) => insertRows(tx, retryJob, Array.from({ length: 12 }, (_, i) => ({ platform: 'x', externalId: `7100${i}`, overrides: {} }))), SYSTEM);
+  let fetches = 0;
+  const countingFetch = /** @type {typeof fetch} */ (async (/** @type {any} */ input, /** @type {any} */ init) => {
+    fetches += 1;
+    return deps.fetchImpl(input, init);
+  });
+  const countingDeps = { ...deps, fetchImpl: countingFetch };
+
+  const first = await retryRows(countingDeps, { jobId: retryJob, actor });
+  assert.equal(first.processed, 10, 'first pass takes the batch cap');
+  assert.equal(first.remaining, 2, 'two rows are left after the first ten');
+
+  const second = await retryRows(countingDeps, { jobId: retryJob, actor, afterId: first.lastId });
+  assert.equal(second.processed, 2, 'the cursor reaches the rows the first call never got to');
+  assert.equal(second.remaining, 0, 'nothing is left once every row has been walked once');
+
+  assert.equal(fetches, 24, 'every one of the 12 rows was fetched exactly once, from each of the two sources');
 });

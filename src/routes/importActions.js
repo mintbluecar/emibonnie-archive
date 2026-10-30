@@ -6,9 +6,17 @@
  */
 import { defineRoute, fieldsOf } from '../http/defineRoute.js';
 import { archiveRow, publishRows, retryRows, skipRow } from '../services/importActions.js';
+import { integer } from '../services/params.js';
 
 /** `{ scope }`: `'all'`, else the ready rows only. @param {unknown} raw @returns {{ scope: 'ready'|'all' }} */
 const publishBody = (raw) => ({ scope: fieldsOf(raw).scope === 'all' ? 'all' : 'ready' });
+
+/**
+ * `{ afterId }`: the cursor from the previous retry call's `lastId`, or
+ * absent for the first call of a pass.
+ * @param {unknown} raw @returns {{ afterId: number }}
+ */
+const retryBody = (raw) => ({ afterId: integer('afterId', fieldsOf(raw).afterId, Number.MAX_SAFE_INTEGER, 0) });
 
 export const importPublishRoute = defineRoute({
   method: 'POST',
@@ -40,5 +48,6 @@ export const importRetryRoute = defineRoute({
   path: '/api/owner/imports/:id/retry',
   auth: 'owner',
   limit: 'owner',
-  run: async ({ params, user }, deps) => retryRows(deps, { jobId: Number(params.id), actor: user }),
+  body: retryBody,
+  run: async ({ params, body, user }, deps) => retryRows(deps, { jobId: Number(params.id), actor: user, afterId: body.afterId }),
 });
