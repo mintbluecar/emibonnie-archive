@@ -12,6 +12,7 @@ import { countsByState, createJob, getJob, getRow, insertRows, jobsRecent, rowsF
 import { kindNamed, kindsOf, presenterContext, previewsForAny } from './cards.js';
 import { sourceState } from '../repo/items.js';
 import { ingestItem } from './ingest.js';
+import { write } from './write.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
 /** @typedef {import('../repo/imports.js').RowState} RowState */
@@ -242,27 +243,38 @@ export async function runRow(deps, { row, kind, actor, source }) {
 }
 
 /**
- * Applies one ingest result to its row.
+ * The row state, item and error one ingest result records.
+ * @param {any} result
+ * @returns {{ state: RowState, itemId: number|null, error: string|null }}
+ */
+function rowResultOf(result) {
+  if (result.status === 'added' || result.status === 'pending') return { state: 'fetched', itemId: result.itemId, error: null };
+  if (result.status === 'attached') return { state: 'attached', itemId: result.itemId, error: result.pending ? 'held part' : null };
+  const skipped = result.status === 'duplicate' || result.status === 'removed' || result.status === 'opted_out';
+  return { state: skipped ? 'skipped' : 'failed', itemId: result.itemId ?? null, error: result.status };
+}
+
+/**
+ * Records one ingest result on its row.
+ * @param {import('./write.js').Write} w @param {any} row @param {any} result
+ * @returns {Promise<{ state: RowState, reason: string|null }>}
+ */
+async function setRowResult(w, row, result) {
+  const { state, itemId, error } = rowResultOf(result);
+  await updateRow(w.tx, row.id, { state, itemId, error });
+  return { state, reason: error };
+}
+
+/**
+ * Applies one ingest result to its row; a fetched row is then classified
+ * by its item's readiness.
  * @param {ViewDeps} deps @param {any} row @param {any} result
  * @returns {Promise<{ state: string, reason: string|null }>}
  */
 async function recordResult(deps, row, result) {
-  if (result.status === 'added' || result.status === 'pending') {
-    await deps.db.transaction((tx) => updateRow(tx, row.id, { state: 'fetched', itemId: result.itemId, error: null }), { actor: 'system' });
-    const state = await recomputeRow(deps, row.id);
-    return { state: state ?? 'fetched', reason: null };
-  }
-  if (result.status === 'attached') {
-    const reason = result.pending ? 'held part' : null;
-    await deps.db.transaction((tx) => updateRow(tx, row.id, { state: 'attached', itemId: result.itemId, error: reason }), { actor: 'system' });
-    return { state: 'attached', reason };
-  }
-  if (result.status === 'duplicate' || result.status === 'removed' || result.status === 'opted_out') {
-    await deps.db.transaction((tx) => updateRow(tx, row.id, { state: 'skipped', itemId: result.itemId ?? null, error: result.status }), { actor: 'system' });
-    return { state: 'skipped', reason: result.status };
-  }
-  await deps.db.transaction((tx) => updateRow(tx, row.id, { state: 'failed', itemId: result.itemId ?? null, error: result.status }), { actor: 'system' });
-  return { state: 'failed', reason: result.status };
+  const recorded = await write(deps, 'system', (w) => setRowResult(w, row, result));
+  if (recorded.state !== 'fetched') return recorded;
+  return { state: (await recomputeRow(deps, row.id)) ?? 'fetched', reason: null };
 }
 
 /**

@@ -1,7 +1,10 @@
 // @ts-check
 /**
- * Cache purging (Plan 2b). Every write that changes a public page calls
- * `purgeItem`/`purgeAccount` after its transaction: the tags name the
+ * Cache purging (Plan 2b). A service that changes a public page queues
+ * its purge on `write()`'s `w.purge` (src/services/write.js), which calls
+ * `purgeItem`/`purgeAccount`/`purgeForTags` once the transaction has
+ * committed. (The add flow, the refresh route and the follow-ups route
+ * still call them after a kind's own transaction.) The tags name the
  * same strings the pages carry (src/domain/cacheTags.js), and Vercel's
  * `invalidateByTag` marks them stale (served stale once, refreshed in the
  * background). Purging runs through the request's `defer` so the write's

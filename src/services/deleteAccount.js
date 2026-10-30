@@ -7,7 +7,7 @@
  */
 import { deleteUserSessions } from '../repo/sessions.js';
 import { serializeCookie } from '../domain/cookies.js';
-import { purgeItem } from './cache.js';
+import { write } from './write.js';
 
 const COOKIE_NAME = 'sid';
 
@@ -19,16 +19,16 @@ const COOKIE_NAME = 'sid';
  * @returns {Promise<string>} the cleared session cookie
  */
 export async function deleteAccount(deps, userId) {
-  await deps.db.transaction(async (tx) => {
-    await deleteUserSessions(tx, userId);
-    await tx.query(`update users set deleted_at = now(), display_name = null, meta = '{}'::jsonb where id = $1`, [userId]);
-    await tx.query('update accounts set user_id = null where user_id = $1', [userId]);
-  }, { actor: userId });
-  // Their items stay, but "added by" now reads "a fan": purge each page.
-  const { rows } = await deps.db.query(
-    `select id from items where created_by = $1 and (deleted_reason is null or deleted_reason <> 'erased') order by id`,
-    [userId],
-  );
-  for (const row of rows) await purgeItem(deps, row.id);
+  await write(deps, userId, async (w) => {
+    await deleteUserSessions(w.tx, userId);
+    await w.tx.query(`update users set deleted_at = now(), display_name = null, meta = '{}'::jsonb where id = $1`, [userId]);
+    await w.tx.query('update accounts set user_id = null where user_id = $1', [userId]);
+    // Their items stay, but "added by" now reads "a fan": purge each page.
+    const { rows } = await w.tx.query(
+      `select id from items where created_by = $1 and (deleted_reason is null or deleted_reason <> 'erased') order by id`,
+      [userId],
+    );
+    for (const row of rows) w.purge.item(row.id);
+  });
   return serializeCookie(COOKIE_NAME, '', { maxAge: 0 });
 }

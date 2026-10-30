@@ -16,7 +16,8 @@ import { findVisibleItemId } from '../repo/cards.js';
 import { findItemIdBySource } from '../repo/itemState.js';
 import { eventExists } from '../repo/events.js';
 import { validateFixes } from '../domain/lineFixes.js';
-import { itemChangeTags, purgeForTags } from './cache.js';
+import { itemChangeTags } from './cache.js';
+import { write } from './write.js';
 
 /** @typedef {import('../db/common.js').Db} Db */
 /** @typedef {import('./session.js').SessionUser} SessionUser */
@@ -194,7 +195,8 @@ export async function editItem(deps, { kind: kindName, sourceId, changes, actor,
     validateFixes(parts, changes.lineFixes);
   }
 
-  const editId = await deps.db.transaction(async (/** @type {any} */ tx) => {
+  const editId = await write(deps, actor.id, async (w) => {
+    const tx = /** @type {any} */ (w.tx);
     await applyPlacement(tx, id, changes, before);
     await applyLookups(tx, { id, changes, role, itemRow });
     await applyKindChanges(tx, { kind, id, changes, deps });
@@ -205,13 +207,12 @@ export async function editItem(deps, { kind: kindName, sourceId, changes, actor,
       'insert into item_edits (item_id, before, after, reverts, created_by) values ($1, $2, $3, $4, $5) returning id',
       [id, JSON.stringify(changed.before), JSON.stringify(changed.after), reverts, actor.id],
     );
+    // Both the old and the new relationships: moving an entry to another
+    // event (or changing its cast) leaves the previous pages stale too.
+    w.purge.tags(tagsBefore);
+    w.purge.item(id);
     return rows[0].id;
-  }, { actor: actor.id });
-
-  // Both the old and the new relationships: moving an entry to another
-  // event (or changing its cast) leaves the previous pages stale too.
-  const tagsAfter = await itemChangeTags(deps.db, id);
-  await purgeForTags(/** @type {any} */ (deps), [...tagsBefore, ...tagsAfter]);
+  });
   return { editId: /** @type {number} */ (editId) };
 }
 

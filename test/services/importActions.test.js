@@ -52,8 +52,14 @@ test('publish ready leaves needs_speakers and check held; all clears them', asyn
   assert.equal(all.published, 3);
   const items = await rows(deps.db, "select i.review_state from items i join import_rows r on r.item_id = i.id where r.job_id = $1", [jobId]);
   assert.ok(items.every((item) => item.review_state === 'published'));
-  const parts = await rows(deps.db, 'select pending from translation_parts where item_id = $1 order by position', [data.parentId]);
-  assert.ok(parts.some((part) => part.pending === false), 'the attached part is approved');
+  const own = await rows(
+    deps.db,
+    `select p.pending from translation_parts p join item_sources s on s.id = p.source_id
+     where p.item_id = $1 and s.external_id = $2`,
+    [data.parentId, data.replyId],
+  );
+  assert.equal(own.length, 1);
+  assert.equal(own[0].pending, false, "the attached row's own part is approved");
 });
 
 test('skipping an item row hides it with import_skipped', async () => {
@@ -154,6 +160,29 @@ test('archive publishes a check row; skipping a published row is refused', async
   await archiveRow(deps, { jobId, rowId, actor });
   assert.equal((await getRow(deps.db, rowId)).state, 'published');
   await assert.rejects(skipRow(deps, { jobId, rowId, actor }), { name: 'Conflict' });
+});
+
+test('an import publish updates the row and the item together', async () => {
+  const itemId = await deps.db.transaction((tx) => tx.query(
+    "insert into items (kind, placement, occurred_on, added_via, review_state, sort_key) values ('translation','unsorted','2026-10-01','notion','pending',11) returning id",
+  ), SYSTEM).then((result) => result.rows[0].id);
+  const rowId = await deps.db.transaction(async (tx) => {
+    await insertRows(tx, jobId, [{ platform: 'x', externalId: '990004', overrides: {} }]);
+    const { rows: all } = await rowsPage(tx, jobId, { offset: 0, limit: 50 });
+    const row = all.find((entry) => entry.externalId === '990004');
+    await updateRow(tx, row.id, { state: 'check', itemId });
+    // The row update to 'published' now fails, after the item has been published.
+    await tx.query(`alter table import_rows add constraint row_update_fails check (id <> ${Number(row.id)} or state <> 'published')`);
+    return row.id;
+  }, SYSTEM);
+  try {
+    await assert.rejects(archiveRow(deps, { jobId, rowId, actor }));
+  } finally {
+    await deps.db.transaction((tx) => tx.query('alter table import_rows drop constraint row_update_fails'), SYSTEM);
+  }
+  const item = await rows(deps.db, 'select review_state from items where id = $1', [itemId]);
+  assert.equal(item[0].review_state, 'pending', 'the item is still pending');
+  assert.equal((await getRow(deps.db, rowId)).state, 'check');
 });
 
 test('retry processes at most ten rows and reports the remainder', async () => {

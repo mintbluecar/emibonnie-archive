@@ -7,11 +7,12 @@
  */
 import { BadRequest, Conflict, Forbidden } from '../domain/errors.js';
 import {
-  findItemIdBySource, restoreItem, softDeleteItem, translatorItemIds, translatorStates, translatorTotals,
+  findItemIdBySource, restoreItem, translatorItemIds, translatorStates, translatorTotals,
 } from '../repo/itemState.js';
 import { getItem } from '../repo/items.js';
 import { kindNamed, presenterContext, previewsForAny } from './cards.js';
-import { purgeAccount, purgeItem } from './cache.js';
+import { write } from './write.js';
+import { remove } from './itemLifecycle.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
 /** @typedef {import('./session.js').SessionUser} SessionUser */
@@ -134,16 +135,14 @@ async function resolveOwned(deps, user, entries) {
  */
 export async function removeEntries(deps, user, entries) {
   const targets = await resolveOwned(deps, user, entries);
-  const changed = await deps.db.transaction(async (tx) => {
-    /** @type {number[]} */
-    const ids = [];
+  const removed = await write(deps, user.id, async (w) => {
+    let n = 0;
     for (const target of targets) {
-      if (await softDeleteItem(tx, { itemId: target.id, reason: REMOVED_BY_ACCOUNT, actor: user.id })) ids.push(target.id);
+      if (await remove(w, { itemId: target.id, reason: REMOVED_BY_ACCOUNT })) n += 1;
     }
-    return ids;
-  }, { actor: user.id });
-  for (const id of changed) await purgeItem(deps, id, { hard: true });
-  return { removed: changed.length };
+    return n;
+  });
+  return { removed };
 }
 
 /**
@@ -158,16 +157,16 @@ export async function removeEntries(deps, user, entries) {
 export async function restoreEntries(deps, user, entries) {
   const targets = await resolveOwned(deps, user, entries);
   if (targets.some((target) => target.reason !== REMOVED_BY_ACCOUNT)) throw new Conflict('not_removed_by_you');
-  const changed = await deps.db.transaction(async (tx) => {
-    /** @type {number[]} */
-    const ids = [];
+  const restored = await write(deps, user.id, async (w) => {
+    let n = 0;
     for (const target of targets) {
-      if (await restoreItem(tx, { itemId: target.id, reason: REMOVED_BY_ACCOUNT })) ids.push(target.id);
+      if (!(await restoreItem(w.tx, { itemId: target.id, reason: REMOVED_BY_ACCOUNT }))) continue;
+      w.purge.item(target.id);
+      n += 1;
     }
-    return ids;
-  }, { actor: user.id });
-  for (const id of changed) await purgeItem(deps, id);
-  return { restored: changed.length };
+    return n;
+  });
+  return { restored };
 }
 
 /**
@@ -183,18 +182,18 @@ export async function restoreEntries(deps, user, entries) {
 export async function setOptOut(deps, user, optedOut) {
   const accounts = user.translatorAccountIds;
   if (accounts.length === 0) throw new Forbidden('not_a_translator');
-  const { rows } = await deps.db.transaction(async (tx) => {
-    await tx.query(
+  const { rows } = await write(deps, user.id, async (w) => {
+    await w.tx.query(
       'update accounts set opted_out_at = case when $2 then now() else null end where id = any($1::bigint[])',
       [accounts, optedOut],
     );
-    return tx.query(
+    for (const accountId of accounts) (optedOut ? w.purge.accountRemoved : w.purge.account)(accountId);
+    return w.tx.query(
       `select count(*)::int as n from items
        where credited_account_id = any($1::bigint[])
          and (deleted_reason is null or deleted_reason <> 'erased')`,
       [accounts],
     );
-  }, { actor: user.id });
-  for (const accountId of accounts) await purgeAccount(deps, accountId, { hard: optedOut });
+  });
   return { optedOut, entries: rows[0].n };
 }
