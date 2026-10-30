@@ -10,7 +10,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { NO_STORE } from '../http/handler.js';
 import { BadRequest } from '../http/errors.js';
 import { redirectWithCookies, jsonWithCookies } from '../http/cookies.js';
-import { limit } from '../services/limits.js';
+import { defineRoute } from '../http/defineRoute.js';
 import { signInUser } from '../services/session.js';
 import { issueState, takeState, clearStateCookie } from '../services/oauthState.js';
 import { authorizeUrl, exchangeCode } from '../services/googleSignIn.js';
@@ -18,14 +18,14 @@ import { authorizeUrl, exchangeCode } from '../services/googleSignIn.js';
 /** @param {import('../http/handler.js').RouteInput} input */
 const redirectUriFor = (input) => `${input.origin}/api/auth/google/callback`;
 
-export const route = {
+export const route = defineRoute({
   method: 'GET',
   path: '/api/auth/google/start',
+  auth: 'none',
+  limit: 'signIn',
   cache: NO_STORE,
   query: ['return'],
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
   run: async (input, deps) => {
-    await limit(deps, 'signIn', input.ip);
     const verifier = randomBytes(32).toString('base64url');
     const nonce = randomBytes(24).toString('base64url');
     const challenge = createHash('sha256').update(verifier).digest('base64url');
@@ -35,7 +35,7 @@ export const route = {
     });
     return redirectWithCookies(url, [cookie]);
   },
-};
+});
 
 export const callbackRoute = {
   method: 'GET',

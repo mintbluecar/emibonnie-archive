@@ -13,7 +13,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { NO_STORE } from '../http/handler.js';
 import { BadRequest } from '../http/errors.js';
 import { redirectWithCookies, jsonWithCookies } from '../http/cookies.js';
-import { limit } from '../services/limits.js';
+import { defineRoute } from '../http/defineRoute.js';
 import { signInUser, recordXSignInFailure } from '../services/session.js';
 import { issueState, takeState, clearStateCookie } from '../services/oauthState.js';
 import { authorizeUrl, exchangeCode, fetchMe } from '../services/xSignIn.js';
@@ -27,14 +27,14 @@ async function signInFailed(deps) {
   return redirectWithCookies('/me?signin=failed', [clearStateCookie()]);
 }
 
-export const route = {
+export const route = defineRoute({
   method: 'GET',
   path: '/api/auth/x/start',
+  auth: 'none',
+  limit: 'signIn',
   cache: NO_STORE,
   query: ['return'],
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
   run: async (input, deps) => {
-    await limit(deps, 'signIn', input.ip);
     const verifier = randomBytes(32).toString('base64url');
     const challenge = createHash('sha256').update(verifier).digest('base64url');
     const { state, cookie } = issueState(deps.env, { verifier, returnTo: String(input.query.return ?? '/me') });
@@ -43,7 +43,7 @@ export const route = {
     });
     return redirectWithCookies(url, [cookie]);
   },
-};
+});
 
 export const callbackRoute = {
   method: 'GET',
