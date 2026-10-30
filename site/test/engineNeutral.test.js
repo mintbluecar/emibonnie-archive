@@ -15,7 +15,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -66,18 +67,38 @@ function engineFiles() {
 /** @param {string} value */
 const escapeForRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+/** Terms this long are distinctive enough to match anywhere, even inside an identifier. */
+const SUBSTRING_MIN_LENGTH = 5;
+
+/**
+ * `EMIBONNIE_DB` and `emibonnieArchive` hide a name from `\b...\b` (`_`
+ * and letters are word characters), so a term of 5+ characters matches as a
+ * case-insensitive substring. A shorter one (`emi`, `leo`) would match
+ * inside ordinary words, so it must stand alone: no letter, digit or `_`
+ * on either side. Unicode-aware, so a Thai term is bounded the same way.
+ * @param {string} term
+ */
+function termPattern(term) {
+  const escaped = escapeForRegExp(term);
+  if ([...term].length >= SUBSTRING_MIN_LENGTH) return new RegExp(escaped, 'iu');
+  return new RegExp(`(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`, 'iu');
+}
+
 /**
  * @param {string[]} files @param {string[]} terms
+ * @param {string} [root] what `files` are relative to
  * @returns {string[]} `file: 'term'` for each hit
  */
-function offenders(files, terms) {
-  const patterns = terms.map((term) => ({ term, re: new RegExp(`\\b${escapeForRegExp(term)}\\b`, 'iu') }));
+function offenders(files, terms, root = REPO_ROOT) {
+  const patterns = terms.map((term) => ({ term, re: termPattern(term) }));
   return files.flatMap((file) => {
     // Every file is scanned, binary ones included: a NUL byte must not hide a
     // name (review of Task 9). latin1 maps each byte to one character, so the
-    // ASCII names and handles match the same in text and in media metadata.
-    const text = readFileSync(path.join(REPO_ROOT, file)).toString('latin1');
-    return patterns.filter(({ re }) => re.test(text)).map(({ term }) => `${file}: '${term}'`);
+    // ASCII names and handles match the same in text and in media metadata;
+    // UTF-8 is read too, or a Thai name could never match.
+    const bytes = readFileSync(path.join(root, file));
+    const texts = [bytes.toString('utf8'), bytes.toString('latin1')];
+    return patterns.filter(({ re }) => texts.some((text) => re.test(text))).map(({ term }) => `${file}: '${term}'`);
   });
 }
 
@@ -98,4 +119,26 @@ test('the guard scans the engine and skips only the site-owned folders', () => {
 
 test('the guard catches a planted name', () => {
   assert.deepEqual(offenders(['package.json'], ['fan-archive']), ["package.json: 'fan-archive'"]);
+});
+
+test('the name guard finds names inside identifiers and in UTF-8', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'name-guard-'));
+  try {
+    const thai = 'เอมี่บอนนี่';
+    writeFileSync(path.join(dir, 'env.js'), 'const url = process.env.EMIBONNIE_DB;\n');
+    writeFileSync(path.join(dir, 'ident.js'), 'export const emibonnieArchive = 1;\n');
+    writeFileSync(path.join(dir, 'thai.md'), `# ${thai}\n`, 'utf8');
+    writeFileSync(path.join(dir, 'short.md'), 'premium leopard, and Leo.\n');
+    const files = ['env.js', 'ident.js', 'thai.md', 'short.md'];
+    assert.deepEqual(offenders(files, ['emibonnie', thai, 'leo'], dir), [
+      "env.js: 'emibonnie'",
+      "ident.js: 'emibonnie'",
+      `thai.md: '${thai}'`,
+      "short.md: 'leo'",
+    ]);
+    // A short term still needs to stand alone: 'emi' is not in 'premium'.
+    assert.deepEqual(offenders(['short.md'], ['emi'], dir), []);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
