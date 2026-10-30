@@ -130,7 +130,12 @@ export default [
     // only an `exports` map and no `main`/`module` field (stylelint ships
     // ESM-only, that way) -- Node itself resolves it fine (confirmed with
     // `import.meta.resolve('stylelint')`); only this resolver can't.
-    files: ['scripts/lintStyles.js'],
+    files: [
+      'scripts/lintStyles.js',
+      'scripts/stylelint/*.js',
+      'test/styles/noRebuiltPrimitive.test.js',
+      'test/styles/stylelintRules.test.js',
+    ],
     rules: {
       'import/no-unresolved': ['error', { ignore: ['^stylelint$'] }],
     },

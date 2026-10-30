@@ -13,18 +13,30 @@
  * entry must still exist); Task 15 is expected to shrink it to empty.
  */
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import stylelint from 'stylelint';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
+const FILES = ['src/styles/**/*.css', 'examples/*/theme.css'];
 
-/** @returns {Promise<{ errored: boolean, report: string }>} */
-export async function lintStyles() {
-  const config = JSON.parse(readFileSync(new URL('../.stylelintrc.json', import.meta.url), 'utf8'));
-  const ignoreFiles = JSON.parse(readFileSync(new URL('./stylelintPending.json', import.meta.url), 'utf8'));
+/**
+ * Every parameter defaults to this checkout's own files, so `npm run
+ * check` (no arguments) is unaffected; `test/scripts/lintStyles.test.js`
+ * points `repoRoot`/`configPath`/`pendingPath` at a temp fixture instead,
+ * to prove the `ignoreFiles` merge itself without touching this tree.
+ * @param {{ repoRoot?: string, configPath?: string, pendingPath?: string, files?: string[] }} [options]
+ * @returns {Promise<{ errored: boolean, report: string }>}
+ */
+export async function lintStyles(options = {}) {
+  const repoRoot = options.repoRoot ?? REPO_ROOT;
+  const configPath = options.configPath ?? path.join(repoRoot, '.stylelintrc.json');
+  const pendingPath = options.pendingPath ?? path.join(repoRoot, 'scripts/stylelintPending.json');
+  const config = JSON.parse(readFileSync(configPath, 'utf8'));
+  const ignoreFiles = JSON.parse(readFileSync(pendingPath, 'utf8'));
   const result = await stylelint.lint({
-    cwd: REPO_ROOT,
-    files: ['src/styles/**/*.css', 'examples/*/theme.css'],
+    cwd: repoRoot,
+    files: options.files ?? FILES,
     config: { ...config, ignoreFiles },
     formatter: 'string',
   });

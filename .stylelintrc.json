@@ -9,6 +9,11 @@
       "border-radius": ["px"],
       "min-height": ["px"]
     },
+    "declaration-property-value-disallowed-list": {
+      "/^border(-(top|right|bottom|left))?(-width)?$/": [
+        "/(?<![\\d.])(?!1px\\b)(?!1\\.5px\\b)(?!2px\\b)\\d+(?:\\.\\d+)?px\\b/"
+      ]
+    },
     "media-feature-name-value-allowed-list": {
       "min-width": ["860px"],
       "max-width": ["859.98px"]
@@ -26,10 +31,12 @@
     },
     {
       "files": ["src/styles/components/*.css"],
+      "plugins": ["./scripts/stylelint/no-rebuilt-primitive.js"],
       "rules": {
         "selector-disallowed-list": [
-          "/\\.(btn|field|check|card|table|chip|badge|notice|meta|label|heading|stack|cluster)\\b/"
-        ]
+          "/\\.(btn|field|check|card|table|chip|badge|notice|meta|label|heading|stack|cluster)(?=$|__|--|[^\\w-])/"
+        ],
+        "local/no-rebuilt-primitive": true
       }
     }
   ]
