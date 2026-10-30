@@ -17,21 +17,21 @@ const htmlResponse = ({ html, found, tags }) => withCacheTags(new Response(html,
  * One link-preview meta route on a page path. Shared links carry
  * tracking params (`?s=20`), so any query is accepted and ignored.
  * @param {string} path
- * @param {(input: import('../http/handler.js').RouteInput, deps: any) => Promise<{ html: string, found: boolean, tags: string[] }>} render
+ * @param {(input: import('../http/handler.js').RouteInput, deps: import('../http/deps.js').Deps) => Promise<{ html: string, found: boolean, tags: string[] }>} render
  */
 const metaRoute = (path, render) => ({
   method: 'GET',
   path,
   cache: PUBLIC_CACHE,
   query: null,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  /** @param {import('../http/handler.js').RouteInput} input @param {import('../http/deps.js').Deps} deps */
   run: async (input, deps) => htmlResponse(await render(input, deps)),
 });
 
 /**
  * The renderer each `src/pages.js` `meta` name stands for. `event` reads
  * the page path's `:slug`.
- * @type {Record<string, (input: import('../http/handler.js').RouteInput, deps: any) => Promise<{ html: string, found: boolean, tags: string[] }>>}
+ * @type {Record<string, (input: import('../http/handler.js').RouteInput, deps: import('../http/deps.js').Deps) => Promise<{ html: string, found: boolean, tags: string[] }>>}
  */
 const PAGE_META = {
   event: ({ params, origin }, deps) => eventMetaPage(deps, { slug: params.slug, origin }),

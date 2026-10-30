@@ -14,7 +14,7 @@ export const route = {
   method: 'POST',
   path: '/api/item/:kind/:sourceId/refresh',
   cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  /** @param {import('../http/handler.js').RouteInput} input @param {import('../http/deps.js').Deps} deps */
   run: async ({ params }, deps) => {
     const result = await refreshItem(deps, params.kind, params.sourceId);
     if (!result) throw new NotFound();

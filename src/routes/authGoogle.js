@@ -29,7 +29,7 @@ export const route = defineRoute({
     const verifier = randomBytes(32).toString('base64url');
     const nonce = randomBytes(24).toString('base64url');
     const challenge = createHash('sha256').update(verifier).digest('base64url');
-    const { state, cookie } = issueState(deps.env, { verifier, returnTo: String(input.query.return ?? '/me'), nonce });
+    const { state, cookie } = issueState(deps, { verifier, returnTo: String(input.query.return ?? '/me'), nonce });
     const url = authorizeUrl({
       clientId: deps.env.GOOGLE_CLIENT_ID ?? '', redirectUri: redirectUriFor(input), state, nonce, challenge,
     });
@@ -42,11 +42,11 @@ export const callbackRoute = {
   path: '/api/auth/google/callback',
   cache: NO_STORE,
   query: ['code', 'state', 'error'],
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  /** @param {import('../http/handler.js').RouteInput} input @param {import('../http/deps.js').Deps} deps */
   run: async (input, deps) => {
     let taken;
     try {
-      taken = takeState(deps.env, input, String(input.query.state ?? ''));
+      taken = takeState(deps, input, String(input.query.state ?? ''));
     } catch (err) {
       if (err instanceof BadRequest) return jsonWithCookies({ error: 'bad_request', message: 'bad oauth state' }, [clearStateCookie()], 400);
       throw err;

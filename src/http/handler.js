@@ -18,6 +18,9 @@ import { originAllowed } from './origin.js';
 import { assertKnownParams, parseQuery, readBody } from './query.js';
 import { parseCookies } from './cookies.js';
 
+/** @typedef {import('./deps.js').BaseDeps} BaseDeps */
+/** @typedef {import('./deps.js').Deps} Deps */
+
 /** Every public GET (Global Constraints: Caching). */
 export const PUBLIC_CACHE = 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400';
 /** Video: the stored variants change rarely. */
@@ -30,12 +33,10 @@ export const PRIVATE_NO_STORE = 'private, no-store';
 export const NO_STORE = 'no-store';
 
 /**
- * @typedef {{ db: { end(): Promise<void> }, fetchImpl: typeof fetch, now: () => Date, site: any, [key: string]: unknown }} BaseDeps
- * @typedef {BaseDeps & { defer: (task: () => Promise<unknown>) => void }} Deps
  * @typedef {{ params: Record<string, string>, query: Record<string, string|string[]>, body: unknown, origin: string,
  *   cookies: Record<string, string>, ip: string|null }} RouteInput
  * @typedef {{ method: string, path: string, cache: string, query?: readonly string[]|null, lists?: readonly string[],
- *   readonly auth?: 'none'|'optional'|'user'|'owner', run: (input: RouteInput, deps: any) => Promise<unknown> }} Route
+ *   readonly auth?: 'none'|'optional'|'user'|'owner', run: (input: RouteInput, deps: Deps) => Promise<unknown> }} Route
  *   `auth`: set by `defineRoute` (src/http/defineRoute.js); a route without it counts as `'none'`.
  *   `query`: the query params a GET accepts (default none; null accepts any,
  *   for pages reached through shared links that carry tracking params --

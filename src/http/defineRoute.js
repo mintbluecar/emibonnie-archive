@@ -25,6 +25,7 @@ import { LIMITS, limit } from '../services/limits.js';
 
 /** @typedef {import('./handler.js').Route} Route */
 /** @typedef {import('./handler.js').RouteInput} RouteInput */
+/** @typedef {import('./deps.js').Deps} Deps */
 /** @typedef {import('../services/session.js').SessionUser} SessionUser */
 /** @typedef {'none'|'optional'|'user'|'owner'} Auth */
 
@@ -45,7 +46,7 @@ import { LIMITS, limit } from '../services/limits.js';
  * @template {Auth} A
  * @template T
  * @typedef {{ method: 'GET'|'POST', path: string, auth: A, limit?: keyof typeof LIMITS, body?: (raw: unknown) => T,
- *   cache?: string, query?: readonly string[]|null, run: (ctx: RouteContext<A, T>, deps: any) => Promise<unknown> }} RouteSpec
+ *   cache?: string, query?: readonly string[]|null, run: (ctx: RouteContext<A, T>, deps: Deps) => Promise<unknown> }} RouteSpec
  */
 
 const SIGNED_IN = new Set(['user', 'owner']);
@@ -82,7 +83,7 @@ function cacheOf(spec) {
 }
 
 /**
- * @param {any} deps @param {RouteInput} input @param {Auth} auth
+ * @param {Deps} deps @param {RouteInput} input @param {Auth} auth
  * @returns {Promise<SessionUser|null>}
  */
 function userFor(deps, input, auth) {
@@ -104,7 +105,7 @@ export function defineRoute(spec) {
   if (limitName && !ipKeyed(limitName) && !SIGNED_IN.has(spec.auth)) {
     throw new Error(`${spec.path}: the ${limitName} limit is keyed by user, so the route needs auth 'user' or 'owner'`);
   }
-  /** @param {RouteInput} input @param {any} deps */
+  /** @param {RouteInput} input @param {Deps} deps */
   const run = async (input, deps) => {
     const user = await userFor(deps, input, spec.auth);
     if (limitName) await limit(deps, limitName, ipKeyed(limitName) ? input.ip : (user?.id ?? null));

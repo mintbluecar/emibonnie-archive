@@ -35,6 +35,7 @@ function fetchFor(env) {
  * A fresh set of deps for one request: never shared, never cached between
  * requests. Throws (a logged 500) when production has no `DATABASE_URL`.
  * @param {Record<string, string|undefined>} [env]
+ * @returns {import('../src/http/deps.js').BaseDeps}
  */
 export function makeDeps(env = process.env) {
   return {

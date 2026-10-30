@@ -10,7 +10,7 @@ export const route = {
   method: 'GET',
   path: '/api/video/:kind/:sourceId',
   cache: VIDEO_CACHE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  /** @param {import('../http/handler.js').RouteInput} input @param {import('../http/deps.js').Deps} deps */
   run: async ({ params }, deps) => {
     const video = await videoVariants(deps, params.kind, params.sourceId);
     if (!video) throw new NotFound();

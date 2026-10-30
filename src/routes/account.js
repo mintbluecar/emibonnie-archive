@@ -16,7 +16,7 @@ export const route = {
   path: '/api/account/:handle',
   cache: PUBLIC_CACHE,
   query: ['limit', 'offset'],
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  /** @param {import('../http/handler.js').RouteInput} input @param {import('../http/deps.js').Deps} deps */
   run: async ({ params, query }, deps) => {
     const view = await accountView(deps, params.handle, query);
     if (!view) throw new NotFound();

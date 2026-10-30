@@ -155,7 +155,7 @@ export const signOutRoute = {
   method: 'POST',
   path: '/api/auth/signout',
   cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  /** @param {import('../http/handler.js').RouteInput} input @param {import('../http/deps.js').Deps} deps */
   run: async (input, deps) => jsonWithCookies({ ok: true }, [await signOut(deps, input)]),
 };
 

@@ -20,7 +20,7 @@ function editLines(details) {
   return { parts, lines: partLines(parts, fixes), unmapped: unmappedMarkers(parts, fixes, speakers) };
 }
 
-/** @param {any} deps @param {number} itemId @returns {Promise<any[]>} the owner's edit history, newest first */
+/** @param {import('../http/deps.js').Deps} deps @param {number} itemId @returns {Promise<any[]>} the owner's edit history, newest first */
 async function editHistory(deps, itemId) {
   const { rows } = await deps.db.query('select id, created_at, created_by, before, reverts from item_edits where item_id = $1 order by id desc', [itemId]);
   return Promise.all(rows.map(async (/** @type {any} */ r) => {

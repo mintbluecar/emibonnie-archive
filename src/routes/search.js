@@ -11,6 +11,6 @@ export const route = {
   cache: PUBLIC_CACHE,
   query: ['q', 'people', 'peopleMode', 'categories', 'placements', 'kinds', 'eventSlug', 'accountHandle', 'clientId', 'from', 'to', 'limit', 'offset'],
   lists: ['people', 'categories', 'placements', 'kinds'],
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  /** @param {import('../http/handler.js').RouteInput} input @param {import('../http/deps.js').Deps} deps */
   run: async ({ query }, deps) => withCacheTags(jsonWithCache(await search(deps, query), PUBLIC_CACHE), [SEARCH_TAG]),
 };
