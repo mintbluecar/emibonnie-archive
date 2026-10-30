@@ -20,7 +20,8 @@ import * as mediaBox from '../components/mediaBox.js';
 import * as refreshButton from '../components/refreshButton.js';
 import * as sourceEmbed from '../components/sourceEmbed.js';
 import { KIND_UI } from '../kinds/_registry.js';
-import { footerBlock } from './itemFooter.js';
+import { footerBlock, mountOwnerControls } from './itemFooter.js';
+import { fetchViewer } from './itemViewer.js';
 import * as reportForm from '../components/reportForm.js';
 import { mountLoadError } from './pageError.js';
 
@@ -223,26 +224,74 @@ function mountNotFound(root) {
   mountPage(root, pageShell.render({ compact: true, content: emptyState.render({ message: t('item.notFound') }) }));
 }
 
-/** @returns {Promise<void>} */
+/** @typedef {import('../../../src/http/contracts.js').ItemView & { editOpenUntil: string|null, canEdit?: boolean, canCheckFollowUps?: boolean }} PageData */
+/** @typedef {import('../../../src/http/contracts.js').ItemViewerVM} ItemViewerVM */
+
+/** @param {Element} root @param {PageData} data @returns {void} */
+function show(root, data) {
+  document.title = `${site.name}`;
+  mountPage(root, composeItem(data));
+  bind(root, data);
+}
+
+/**
+ * Adds the caller's own fields to the page already showing the public
+ * view: their editor controls, and the body again when the fresh
+ * `editOpenUntil` differs from the cached one. The media is never touched.
+ * @param {Element} root @param {PageData} data @param {ItemViewerVM} viewer
+ * @returns {void}
+ */
+function applyViewer(root, data, viewer) {
+  const mine = { ...data, canEdit: viewer.canEdit, canCheckFollowUps: viewer.canCheckFollowUps, editOpenUntil: viewer.editOpenUntil };
+  const bodyEl = root.querySelector('.c-item__body');
+  if (bodyEl && mine.editOpenUntil !== data.editOpenUntil) {
+    mount(bodyEl, bodyContent(mine));
+    bindBody(root, bodyEl, mine);
+  }
+  if (mountOwnerControls(root, mine)) bindFollowUps(root, { kind: data.kind, sourceId: data.sourceId });
+}
+
+/**
+ * A public view that failed: a 404 is the owner's held entry when
+ * `…/viewer` says so, else "not found"; anything else is the load error.
+ * @param {Element} root @param {unknown} err @param {Promise<ItemViewerVM|null>} viewer
+ * @returns {Promise<void>}
+ */
+async function showMissing(root, err, viewer) {
+  if (!(err instanceof ApiError && err.status === 404)) {
+    mountLoadError(root);
+    return;
+  }
+  const mine = await viewer;
+  if (!mine?.held) {
+    mountNotFound(root);
+    return;
+  }
+  show(root, { ...mine.held, canEdit: mine.canEdit, canCheckFollowUps: mine.canCheckFollowUps });
+}
+
+/**
+ * Loads the public view (the same cached answer for everyone, preloaded
+ * by the meta page under exactly this URL) and, alongside it when the
+ * sign-in hint is present, the caller's own fields.
+ * @returns {Promise<void>}
+ */
 export async function start() {
   const root = document.getElementById(APP_SELECTOR);
   const target = root && kindFromPath(window.location.pathname);
   if (!root || !target) return;
-  /** @type {import('../../../src/http/contracts.js').ItemView & { editOpenUntil: string|null }} */
+  const viewer = fetchViewer(target);
+  /** @type {PageData} */
   let data;
   try {
     data = await getJson(`/api/item/${encodeURIComponent(target.kind)}/${encodeURIComponent(target.sourceId)}`);
   } catch (err) {
-    if (err instanceof ApiError && err.status === 404) {
-      mountNotFound(root);
-      return;
-    }
-    mountLoadError(root);
+    await showMissing(root, err, viewer);
     return;
   }
-  document.title = `${site.name}`;
-  mountPage(root, composeItem(data));
-  bind(root, data);
+  show(root, data);
+  const mine = await viewer;
+  if (mine) applyViewer(root, data, mine);
 }
 
 if (typeof document !== 'undefined') start();

@@ -114,6 +114,10 @@
   margin-left: auto;
 }
 
+.c-item__owner[hidden] {
+  display: none;
+}
+
 .c-item__icon {
   display: inline-flex;
   align-items: center;

@@ -6,11 +6,13 @@
  * under the lint line limits (ruling 6's splits are pre-approved).
  *
  * Plan 2a Task 13 adds the signed-in editor's controls: an edit link and
- * "check for follow-ups", shown only when `itemView` says the caller has
- * that role (`canEdit`/`canCheckFollowUps`). Both are icon-only, so each
- * carries a `title` *and* an `aria-label` with the same words.
+ * "check for follow-ups", shown only when the caller's own fields
+ * (`…/viewer`, review Task 13) say they have that role
+ * (`canEdit`/`canCheckFollowUps`). Both are icon-only, so each carries a
+ * `title` *and* an `aria-label` with the same words.
  */
 import { html } from '../core/html.js';
+import { mount } from '../core/dom.js';
 import { site, t } from '../core/site.js';
 import * as sourceEmbed from '../components/sourceEmbed.js';
 import * as reportForm from '../components/reportForm.js';
@@ -50,25 +52,46 @@ function addedByLine(addedBy) {
 }
 
 /**
- * The editor's own controls, for a signed-in caller `itemView` gave the
+ * The editor's own icons, for a signed-in caller `…/viewer` gave the
  * role to: a pencil that opens the entry's edit page, and a button that
- * asks the kind to check for new same-author follow-ups. A stranger gets
- * neither -- `footerBlock` then renders no `.c-item__icon` at all.
+ * asks the kind to check for new same-author follow-ups.
+ * @param {FooterView} data
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+function ownerIcons(data) {
+  return html`${data.canEdit
+    ? html`<a class="c-item__icon" href="${editHref(data.kind, data.sourceId)}" title="${t('item.edit')}" aria-label="${t('item.edit')}">✎</a>`
+    : ''}${data.canCheckFollowUps
+    ? html`<button type="button" class="c-item__icon" data-action="follow-ups" title="${t('item.followUps')}" aria-label="${t('item.followUps')}">⟳</button>`
+    : ''}`;
+}
+
+/**
+ * The editor's controls' place in the footer: hidden and empty until the
+ * caller's own fields say they have a role (a stranger never gets a
+ * `.c-item__icon`). The cached public view carries no such fields, so the
+ * page fills it later, through `mountOwnerControls`.
  * @param {FooterView} data
  * @returns {import('../core/html.js').SafeHtml}
  */
 function ownerControls(data) {
-  if (!data.canEdit && !data.canCheckFollowUps) return html``;
-  return html`
-    <div class="c-item__owner">
-      ${data.canEdit
-        ? html`<a class="c-item__icon" href="${editHref(data.kind, data.sourceId)}" title="${t('item.edit')}" aria-label="${t('item.edit')}">✎</a>`
-        : ''}
-      ${data.canCheckFollowUps
-        ? html`<button type="button" class="c-item__icon" data-action="follow-ups" title="${t('item.followUps')}" aria-label="${t('item.followUps')}">⟳</button>`
-        : ''}
-    </div>
-  `;
+  const shown = data.canEdit === true || data.canCheckFollowUps === true;
+  return html`<div class="c-item__owner" ${shown ? '' : 'hidden'}>${ownerIcons(data)}</div>`;
+}
+
+/**
+ * Fills the footer's controls from the caller's own fields (`ItemViewerVM`)
+ * once they arrive. Returns whether any control is shown.
+ * @param {Element} root @param {FooterView} data
+ * @returns {boolean}
+ */
+export function mountOwnerControls(root, data) {
+  const slot = root.querySelector('.c-item__owner');
+  const shown = data.canEdit === true || data.canCheckFollowUps === true;
+  if (!slot || !shown) return false;
+  mount(slot, ownerIcons(data));
+  slot.removeAttribute('hidden');
+  return true;
 }
 
 /**
