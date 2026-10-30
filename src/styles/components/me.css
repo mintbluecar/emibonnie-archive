@@ -82,15 +82,9 @@
   margin: var(--space-1) 0 var(--space-3);
 }
 
-/* The translator's tabs: two equal halves. */
+/* The translator's tabs (two equal halves: cluster--fill). */
 .c-me__tabs {
-  flex-wrap: nowrap;
   margin-bottom: var(--space-3);
-}
-
-.c-me__tab {
-  flex: 1;
-  justify-content: center;
 }
 
 .c-me__welcome {

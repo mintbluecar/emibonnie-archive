@@ -88,9 +88,9 @@ export function filtersRow(ctx) {
   const clearable = canClear(ctx.state, ctx.scope);
   if (chips.length === 0 && !clearable) return html``;
   return html`
-    <div class="c-search__active-filters">
-      ${chips.map((c) => html`<button type="button" class="c-search__active-chip" data-field="${c.field}" data-value="${c.value}" title="${t('search.removeFilter', { label: c.label })}" aria-label="${t('search.removeFilter', { label: c.label })}">${c.label} <span aria-hidden="true">✕</span></button>`)}
-      ${clearable ? html`<button type="button" class="c-search__clear-all">${t('search.clearAll')}</button>` : ''}
+    <div class="cluster c-search__active-filters">
+      ${chips.map((c) => html`<button type="button" class="chip chip--on" data-action="remove-filter" data-field="${c.field}" data-value="${c.value}" title="${t('search.removeFilter', { label: c.label })}" aria-label="${t('search.removeFilter', { label: c.label })}">${c.label} <span aria-hidden="true">✕</span></button>`)}
+      ${clearable ? html`<button type="button" class="btn btn--quiet btn--sm" data-action="clear-filters">${t('search.clearAll')}</button>` : ''}
     </div>
   `;
 }
@@ -103,7 +103,7 @@ export function filtersRow(ctx) {
  * @param {Ctx} ctx
  */
 function countLine(ctx) {
-  return html`<p class="c-search__count">${countText(ctx)}</p>`;
+  return html`<p class="meta c-search__count">${countText(ctx)}</p>`;
 }
 
 /** @param {Ctx} ctx @returns {string} */
@@ -128,7 +128,7 @@ export function statusText(ctx) {
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function hintMarkup() {
-  return html`<p class="c-search__hint">${t('search.typeToSearchAll')}</p>`;
+  return html`<p class="meta c-search__hint">${t('search.typeToSearchAll')}</p>`;
 }
 
 /** The results, the count line and "more" -- or "no results". @param {Ctx} ctx @returns {import('../core/html.js').SafeHtml} */
@@ -136,7 +136,7 @@ export function resultsBody(ctx) {
   if (ctx.data.results.length === 0) return emptyState.render({ message: t('search.empty') });
   const hasMore = ctx.data.results.length < ctx.data.count;
   const results = ctx.data.results.map((r) => resultCard.render({ result: r, q: ctx.state.q }));
-  return html`${countLine(ctx)}<div class="c-search__results">${results}</div>${hasMore ? html`<button type="button" class="c-search__more">${t('search.more')}</button>` : ''}`;
+  return html`${countLine(ctx)}<div class="stack" data-search-results>${results}</div>${hasMore ? html`<button type="button" class="btn btn--quiet btn--block c-search__more">${t('search.more')}</button>` : ''}`;
 }
 
 /**
@@ -150,7 +150,7 @@ export function errorMarkup() {
 
 /** Where the chips go: right under the box, at the top of the content column. @param {Ctx} ctx @returns {import('../core/html.js').SafeHtml} */
 export function filtersSlot(ctx) {
-  return html`<div class="c-search__filters">${filtersRow(ctx)}</div>`;
+  return html`<div data-search-filters>${filtersRow(ctx)}</div>`;
 }
 
 /**
@@ -169,8 +169,8 @@ export function region(ctx, list) {
   return html`
     <p class="c-search__status" role="status" aria-live="polite"></p>
     <div class="c-search"${listShown ? html` hidden` : ''}></div>
-    <div class="c-search__list"${listShown ? '' : html` hidden`}>${list}</div>
-    <div class="c-search__sheet"></div>
+    <div data-search-list${listShown ? '' : html` hidden`}>${list}</div>
+    <div data-search-sheet></div>
   `;
 }
 

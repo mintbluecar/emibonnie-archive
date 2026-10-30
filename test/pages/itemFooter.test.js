@@ -22,7 +22,7 @@ function view(overrides = {}) {
 
 /** @param {string} markup @returns {string[]} */
 function iconTags(markup) {
-  return [...markup.matchAll(/<[^>]*class="[^"]*c-item__icon[^"]*"[^>]*>/g)].map((m) => m[0]);
+  return [...markup.matchAll(/<[^>]*class="[^"]*btn--icon[^"]*"[^>]*>/g)].map((m) => m[0]);
 }
 
 test('itemFooter: a signed-out viewer gets no edit or follow-up controls', () => {

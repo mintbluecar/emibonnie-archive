@@ -42,7 +42,7 @@ const APP_SELECTOR = 'app';
 /** @typedef {{ order: 'asc'|'desc' }} EventPageState */
 
 /** @param {string} slug @returns {import('../core/html.js').SafeHtml} */
-const backLink = (slug) => html`<a class="c-event__back" href="${HOME_PATH}" data-slug="${slug}">${t('event.back')}</a>`;
+const backLink = (slug) => html`<a class="meta c-event__back" href="${HOME_PATH}" data-slug="${slug}">${t('event.back')}</a>`;
 
 /**
  * @param {import('../../../src/http/contracts.js').EventView['event']} event
@@ -51,7 +51,7 @@ const backLink = (slug) => html`<a class="c-event__back" href="${HOME_PATH}" dat
 function headRow(event) {
   return html`
     <div class="c-event__head">
-      <h1 class="c-event__name">${event.name}</h1>
+      <h1 class="heading heading--md">${event.name}</h1>
     </div>
   `;
 }
@@ -66,7 +66,7 @@ function headRow(event) {
 function metaLine(data) {
   const total = Object.values(data.counts).reduce((sum, n) => sum + n, 0);
   return html`
-    <p class="c-event__meta">
+    <p class="meta c-event__meta">
       ${dayLabel(data.event.occurredOn)} · ${tCount('event.translations', total)} · ${tCount('event.translators', data.accountCount)}
     </p>
   `;
@@ -93,9 +93,9 @@ function sectionBlock(section) {
   const [rendered] = renderSections([section], SECTION_CTX);
   if (!rendered) return html``;
   return html`
-    <div class="c-event-section" data-kind="${section.kind}" data-offset="${section.items.length}">
+    <div class="stack stack--2" data-event-section data-kind="${section.kind}" data-offset="${section.items.length}">
       ${rendered}
-      ${section.hasMore ? html`<button type="button" class="c-event-section__more" data-kind="${section.kind}">${t('event.more')}</button>` : ''}
+      ${section.hasMore ? html`<button type="button" class="btn btn--quiet btn--block" data-action="more" data-kind="${section.kind}">${t('event.more')}</button>` : ''}
     </div>
   `;
 }
@@ -117,8 +117,8 @@ export function eventSearch(event, query = '') {
  */
 export function composeEvent(data, search = eventSearch(data.event)) {
   const list = html`
-    <button type="button" class="c-event__newest-toggle" aria-pressed="false">${t('event.newestFirst')}</button>
-    <div class="c-event-sections">${data.sections.map(sectionBlock)}</div>
+    <button type="button" class="btn btn--secondary c-event__newest-toggle" aria-pressed="false" data-action="newest-first">${t('event.newestFirst')}</button>
+    <div class="stack" data-event-sections>${data.sections.map(sectionBlock)}</div>
   `;
   const content = html`
     ${filtersSlot(search)}
@@ -128,14 +128,14 @@ export function composeEvent(data, search = eventSearch(data.event)) {
     ${eventTags.render(data.event)}
     ${pillsRow(data.event)}
     ${region(search, list)}
-    <button class="c-event__report" type="button" data-action="report">${t('event.report')}</button>
+    <button class="btn btn--quiet" type="button" data-action="report">${t('event.report')}</button>
     ${reportForm.render()}
   `;
   return pageShell.render({ active: 'home', compact: true, headerProps: headerProps(search), content });
 }
 
 /**
- * Replaces `.c-event-sections`' content with freshly fetched `sections`,
+ * Replaces `[data-event-sections]`' content with freshly fetched `sections`,
  * and re-binds every kind's UI there -- the newest-first toggle's whole
  * job (never a CSS flip).
  * @param {Element} container @param {import('../../../src/http/contracts.js').Section[]} sections
@@ -174,7 +174,7 @@ function appendMoreItems(container, kind, sectionUi, section) {
  * @returns {Promise<void>}
  */
 async function loadMore(root, slug, state, button) {
-  const container = button.closest('.c-event-section');
+  const container = button.closest('[data-event-section]');
   const kind = button.getAttribute('data-kind');
   const kindUi = kind && KIND_UI[kind];
   if (!container || !kindUi) return;
@@ -200,7 +200,7 @@ async function toggleOrder(root, slug, state, toggle) {
   state.order = pressed ? 'asc' : 'desc';
   toggle.disabled = true;
   const page = await getJson(`/api/event/${encodeURIComponent(slug)}`, { order: state.order });
-  const container = root.querySelector('.c-event-sections');
+  const container = root.querySelector('[data-event-sections]');
   if (container) renderAndBindSections(container, page.sections);
   toggle.setAttribute('aria-pressed', String(!pressed));
   toggle.disabled = false;
@@ -218,12 +218,12 @@ export function bind(root, data, slug) {
   chips.bind(root);
   reportForm.bind(root, { type: 'event', slug });
   for (const section of data.sections) KIND_UI[section.kind]?.section.bind?.(root);
-  const sectionsEl = root.querySelector('.c-event-sections');
+  const sectionsEl = root.querySelector('[data-event-sections]');
   /** @type {EventPageState} */
   const state = { order: 'asc' };
 
-  on(root, '.c-event__newest-toggle', 'click', (_e, target) => { toggleOrder(root, slug, state, target); });
-  if (sectionsEl) on(sectionsEl, '.c-event-section__more', 'click', (_e, target) => { loadMore(root, slug, state, target); });
+  on(root, '[data-action="newest-first"]', 'click', (_e, target) => { toggleOrder(root, slug, state, target); });
+  if (sectionsEl) on(sectionsEl, '[data-action="more"]', 'click', (_e, target) => { loadMore(root, slug, state, target); });
 }
 
 /** @param {Element} root @returns {void} */

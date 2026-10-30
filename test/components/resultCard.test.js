@@ -69,9 +69,9 @@ test('resultCard (Task 9b): with q, only the matching lines show -- not the open
 test('resultCard (Task 10c): a thumbnail sits beside the text, the card still has one main link', () => {
   const result = { ...baseResult(['a line']), thumb: { url: 'https://pbs.twimg.com/media/b.jpg', width: 800, height: 600, video: false } };
   const markup = String(render({ result, q: '' }));
-  assert.match(markup, /class="c-result-card c-result-card--thumb"/);
+  assert.match(markup, /<article class="card card--flush" data-result-card>/);
   assert.match(markup, /<img class="c-thumb__img" src="https:\/\/pbs\.twimg\.com\/media\/b\.jpg" alt="photo" width="800" height="600" loading="lazy" decoding="async">/);
-  assert.match(markup, /<a class="c-result-card__link" href="\/t\/1">/, 'the main link is still present');
+  assert.match(markup, /<a class="card__link c-result-card__link" href="\/t\/1" data-thumb>/, 'the main link is still present');
   assert.equal((markup.match(/<a[\s>]/g) ?? []).length, 1, 'no account here, so no credit line and no second link');
 });
 

@@ -99,6 +99,12 @@
   --radius-md: 12px;
   --radius-card: 16px;
   --radius-pill: 999px;
+  /* The two steps outside that scale (Styling system Task 12): the
+     speech bubble's pointed corner and the search match highlight
+     (--radius-xs), and the bottom sheets' top corners and the person
+     and translator head cards (--radius-lg). */
+  --radius-xs: 4px;
+  --radius-lg: 20px;
   /* A chip's padding (Task 10c, chips.css and cast.css): its size is its
      content plus this, never a fixed height. */
   --chip-pad-x: 10px;

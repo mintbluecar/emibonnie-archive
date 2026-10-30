@@ -1,5 +1,12 @@
 /* public/js/kinds/translation/{section,detail}.js */
 
+/* The item page's pills row (the afterCredits slot), then the cast
+   legend: the two pill groups never touch (moved here from chips.css,
+   styling system Task 12: this detail is what puts them side by side). */
+.k-translation-detail > .c-chips + .c-cast {
+  margin-top: var(--space-3);
+}
+
 .k-translation-section {
   display: flex;
   flex-direction: column;

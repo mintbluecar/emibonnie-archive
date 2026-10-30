@@ -32,19 +32,19 @@ function chipTag(markup, value) {
   return match[0];
 }
 
-test('render: selected people and type chips are marked .on, unselected ones are not', () => {
+test('render: selected people and type chips are pressed (chip--on), unselected ones are not', () => {
   const state = { ...EMPTY_STATE, people: [2], types: ['live'] };
   const markup = String(render({ state, options: OPTIONS, count: 3 }));
-  assert.ok(chipTag(markup, '2').includes('c-chips__chip--on'), 'luna is selected');
+  assert.ok(chipTag(markup, '2').includes('aria-pressed="true"'), 'luna is selected');
   assert.ok(chipTag(markup, '2').includes('🌙</span><span>luna'));
-  assert.ok(!chipTag(markup, '1').includes('c-chips__chip--on'), 'sol is not selected');
-  assert.ok(chipTag(markup, 'live').includes('c-chips__chip--on'), 'live is selected');
-  assert.ok(!chipTag(markup, 'shared story').includes('c-chips__chip--on'), 'shared story is not selected');
+  assert.ok(!chipTag(markup, '1').includes('aria-pressed="true"'), 'sol is not selected');
+  assert.ok(chipTag(markup, 'live').includes('aria-pressed="true"'), 'live is selected');
+  assert.ok(!chipTag(markup, 'shared story').includes('aria-pressed="true"'), 'shared story is not selected');
 });
 
 test('render: the any/all toggle reflects peopleMode', () => {
   const markup = String(render({ state: { ...EMPTY_STATE, peopleMode: 'all' }, options: OPTIONS, count: 0 }));
-  assert.ok(chipTag(markup, 'all').includes('c-chips__chip--on'));
+  assert.ok(chipTag(markup, 'all').includes('aria-pressed="true"'));
 });
 
 test('render: the translator select lists every account from /api/filters (ruling 7)', () => {
@@ -58,7 +58,7 @@ test('render: the client select lists every client from /api/filters, and is lef
   assert.match(markup, /<option value="9">Big Media Co<\/option>/);
 
   const withoutClients = String(render({ state: EMPTY_STATE, options: { ...OPTIONS, clients: [] }, count: 0 }));
-  assert.ok(!withoutClients.includes('c-filter-sheet__client'), 'no client select when there is nothing to pick from');
+  assert.ok(!withoutClients.includes('data-filter="client"'), 'no client select when there is nothing to pick from');
 });
 
 /** Mounts the sheet, binds it, and returns its dialog + the elements the tests poke at. */
@@ -73,15 +73,13 @@ function mounted(state = EMPTY_STATE) {
   return { root, dialog, opener, isClosed: () => closed };
 }
 
-test('bind: a person chip click toggles its own .on state and aria-pressed', () => {
+test('bind: a person chip click toggles its own pressed state (chips.setOn)', () => {
   const { root } = mounted();
   bind(root, { state: EMPTY_STATE, onChange: () => {}, opener: { focus: () => {} } });
   const chip = /** @type {any} */ (root.querySelector('[data-value="2"]'));
   chip.click();
-  assert.ok(chip.classList.contains('c-chips__chip--on'));
   assert.equal(chip.getAttribute('aria-pressed'), 'true');
   chip.click();
-  assert.ok(!chip.classList.contains('c-chips__chip--on'));
   assert.equal(chip.getAttribute('aria-pressed'), 'false');
 });
 
@@ -110,7 +108,7 @@ test('bind: Escape closes the sheet and returns focus to the opener, without cal
 test('bind: the close button closes the sheet and returns focus, same as Escape', () => {
   const { root, isClosed, opener } = mounted();
   bind(root, { state: EMPTY_STATE, onChange: () => {}, opener });
-  /** @type {any} */ (root.querySelector('.c-filter-sheet__close')).click();
+  /** @type {any} */ (root.querySelector('[data-action="close-filters"]')).click();
   assert.ok(isClosed());
   assert.ok(opener.focused);
 });

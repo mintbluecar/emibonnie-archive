@@ -1,80 +1,26 @@
 /*
- * public/js/components/chips.js: generic filter/tag pills. Task 10c (g):
- * a chip is its content plus fixed padding (--chip-pad-y/--chip-pad-x,
- * tokens.css) -- no fixed or minimum height -- so it scales with the text
- * and wraps. A clickable chip's tap target stays at least 24x24 (WCAG 2.2
- * SC 2.5.8, target size minimum) through an invisible hit area
- * (`::before`), never by forcing the visible height. The emoji sits in
- * its own element, 0.3em from the label (the flex gap).
+ * public/js/components/chips.js: a row of filter/tag pills. Each pill is
+ * the chip primitive (its size, its on state, its 24px minimum target);
+ * this file keeps the row's spacing and the one look of its own: a
+ * person's chip, when on, takes that person's colour (--c) rather than
+ * the label tint.
  */
 
 .c-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 4px;
+  gap: var(--space-2) var(--space-1);
 }
 
-/* Task 10c (d): two chip groups in a row (hashtags, then people) never touch. */
-.c-chips + .c-chips,
-.c-chips + .c-cast,
-.c-cast + .c-chips {
-  margin-top: 12px;
-}
-
-.c-chips__chip {
-  position: relative;
-  font-size: var(--text-11-5);
-  line-height: 1.25;
-  border-radius: 999px;
-  padding: var(--chip-pad-y) var(--chip-pad-x);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3em;
-  border: 1.5px solid var(--color-card-shadow);
-  background: var(--color-bg);
-  color: var(--color-ink);
-}
-
-/* The hit area: the chip's full width, and at least 24px tall, centred. */
-button.c-chips__chip::before,
-a.c-chips__chip::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 100%;
-  min-height: 24px;
-  transform: translateY(-50%);
-}
-
-.c-chips__emoji {
-  line-height: 1;
-}
-
-.c-chips__chip--on {
+/*
+ * Review round 1, I5: a person's colour is often under AA (4.5:1) as
+ * text, so the text is `--c-text` (applyColours(), public/js/core/dom.js),
+ * shaded by the least this colour needs on this chip's own tint; the
+ * flat 60% mix is only the fallback (not every featured colour passes
+ * AA at 60%). See bubbles.css's `.c-bubbles__name`.
+ */
+.c-chips__chip[data-c][aria-pressed="true"] {
   border-color: var(--c);
   background: color-mix(in srgb, var(--c) 14%, var(--color-bg));
-  color: var(--c);
-  font-weight: 700;
-}
-
-/*
- * Review round 1, I5: a selected chip's text at the raw --c often fails
- * AA (4.5:1). A neutral chip (no person colour: the any/all toggle, type
- * chips) uses full-strength ink instead of the muted default --c.
- */
-.c-chips__chip--on:not([data-c]) {
-  --c: var(--color-ink);
-}
-
-/*
- * A person-coloured chip keeps --c for its border/background tint.
- * `--c-text` (review round 2, fix round 2 item 1: see bubbles.css's
- * `.c-bubbles__name`) is this chip's own on-tint background's text,
- * shaded by the least this person's colour needs; the flat 60% mix is
- * only the fallback (not every featured colour passes AA at 60%).
- */
-.c-chips__chip--on[data-c] {
   color: var(--c-text, color-mix(in srgb, var(--c) 60%, var(--color-ink)));
 }

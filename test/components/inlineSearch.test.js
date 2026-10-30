@@ -91,7 +91,7 @@ function cleanup() {
 }
 
 /** @param {any} root */
-const listShown = (root) => !root.querySelector('.c-search__list').hidden && root.querySelector('.c-search').hidden;
+const listShown = (root) => !root.querySelector('[data-search-list]').hidden && root.querySelector('.c-search').hidden;
 
 /**
  * Types into the box and fires the debounce (mocked timers, so this is instant), then lets the fetch settle.
@@ -115,7 +115,7 @@ test('home: typing shows results in place of the list, with no navigation; clear
     await typeAndSettle(root, 'hi');
     assert.equal(urls.at(-1), '/?q=hi', 'the URL is a shareable search on home');
     assert.ok(!listShown(root), 'results replace the list');
-    assert.equal(root.querySelectorAll('.c-result-card').length, 1);
+    assert.equal(root.querySelectorAll('[data-result-card]').length, 1);
     assert.equal(calls.length, 1);
     await typeAndSettle(root, '');
     assert.equal(urls.at(-1), '/');
@@ -136,7 +136,7 @@ test('a URL with ?q= opens straight into its results', async () => {
     assert.match(calls[0], /q=hug/);
     assert.match(calls[0], /people=2/);
     assert.equal(root.querySelector('.c-header__search-box').value, 'hug');
-    assert.ok(root.querySelector('.c-search__active-chip[data-field="people"]'), 'its filter shows as a chip');
+    assert.ok(root.querySelector('[data-action="remove-filter"][data-field="people"]'), 'its filter shows as a chip');
   } finally {
     cleanup();
   }
@@ -167,10 +167,10 @@ test('scoped page: its own filter is a removable chip; removing it widens the se
   try {
     const { root, urls } = await mountedPage({ query: 'q=hug', scope: EVENT_SCOPE, path: '/e/starfest' });
     assert.match(calls[0], /eventSlug=starfest/, 'searches within the event');
-    const chip = /** @type {any} */ (root.querySelector('.c-search__active-chip[data-field="event"]'));
+    const chip = /** @type {any} */ (root.querySelector('[data-action="remove-filter"][data-field="event"]'));
     assert.ok(chip, 'the event is a chip');
     assert.match(chip.getAttribute('aria-label'), /remove starfest 2026/);
-    assert.ok(!root.querySelector('.c-search__clear-all'), 'nothing beyond the page filter to clear');
+    assert.ok(!root.querySelector('[data-action="clear-filters"]'), 'nothing beyond the page filter to clear');
     assert.equal(root.querySelector('.c-header__search-box').getAttribute('placeholder'), 'search this event…');
     chip.click();
     await flush();
@@ -178,7 +178,7 @@ test('scoped page: its own filter is a removable chip; removing it widens the se
     assert.doesNotMatch(calls.at(-1), /eventSlug/, 'the whole archive');
     assert.ok(!listShown(root), 'still results, on this page');
     assert.equal(root.querySelector('.c-header__search-box').getAttribute('placeholder'), 'search what they said…', 'the placeholder says what is searched now');
-    /** @type {any} */ (root.querySelector('.c-search__clear-all')).click();
+    /** @type {any} */ (root.querySelector('[data-action="clear-filters"]')).click();
     await flush();
     assert.equal(urls.at(-1), '/e/starfest?q=hug', '"clear all" brings the page filter back');
   } finally {
@@ -192,7 +192,7 @@ test('scoped page: the list shows with the page filter alone; an added filter sh
     const { root } = await mountedPage({ scope: EVENT_SCOPE, path: '/e/starfest' });
     assert.ok(listShown(root));
     assert.equal(calls.length, 0);
-    assert.ok(root.querySelector('.c-search__active-chip[data-field="event"]'), 'the preset chip shows from the start');
+    assert.ok(root.querySelector('[data-action="remove-filter"][data-field="event"]'), 'the preset chip shows from the start');
     const { root: root2 } = await mountedPage({ query: 'types=live', scope: EVENT_SCOPE, path: '/e/starfest' });
     assert.ok(!listShown(root2));
     assert.match(calls.at(-1), /categories=5/);
@@ -206,7 +206,7 @@ test('removing a type chip refetches without it and updates the URL', async () =
   stubFetch();
   try {
     const { root, urls } = await mountedPage({ query: 'people=2&types=live' });
-    /** @type {any} */ (root.querySelector('.c-search__active-chip[data-field="types"]')).click();
+    /** @type {any} */ (root.querySelector('[data-action="remove-filter"][data-field="types"]')).click();
     await flush();
     assert.equal(urls.at(-1), '/?people=2', 'types=live is gone, people=2 remains');
   } finally {
@@ -219,7 +219,7 @@ test('repeated commits never pile up duplicate listeners (review round 1, self-r
   try {
     const { root, urls } = await mountedPage({ query: 'people=1&people=2&types=live' });
     for (let i = 0; i < 3; i++) {
-      const chip = /** @type {any} */ (root.querySelector('.c-search__active-chip'));
+      const chip = /** @type {any} */ (root.querySelector('[data-action="remove-filter"]'));
       assert.ok(chip, `a chip is still present before click ${i + 1}`);
       chip.click();
       await flush();
@@ -264,7 +264,7 @@ test('the filter sheet opened from the list view shows the real match count (rev
     await flush();
     const applyBtn = /** @type {any} */ (root.querySelector('.c-filter-sheet__apply'));
     assert.equal(applyBtn.children.map((/** @type {any} */ c) => c.textContent).join(''), 'show 42');
-    const selected = root.querySelectorAll('.c-filter-sheet__event option').find((/** @type {any} */ o) => o.getAttribute('value') === 'starfest');
+    const selected = root.querySelectorAll('[data-filter="event"] option').find((/** @type {any} */ o) => o.getAttribute('value') === 'starfest');
     assert.ok(selected && selected.getAttribute('selected') !== null, 'the event is already chosen');
   } finally {
     cleanup();
@@ -282,10 +282,10 @@ test('a refetch failure shows the error state but keeps the chips, so there is a
   try {
     const { root } = await mountedPage({ query: 'people=2&types=live' });
     fail = true;
-    /** @type {any} */ (root.querySelector('.c-search__active-chip[data-field="types"]')).click();
+    /** @type {any} */ (root.querySelector('[data-action="remove-filter"][data-field="types"]')).click();
     await flush();
     assert.match(errorText(root), /something went wrong/);
-    assert.ok(root.querySelector('.c-search__clear-all'), 'the active-filters row is still there');
+    assert.ok(root.querySelector('[data-action="clear-filters"]'), 'the active-filters row is still there');
   } finally {
     cleanup();
   }
@@ -295,7 +295,7 @@ test('a /api/filters failure still leaves a working search', async () => {
   mock.method(globalThis, 'fetch', async (/** @type {any} */ url) => (String(url).startsWith('/api/filters') ? new Response('x', { status: 500 }) : ok({ count: 1, results: [RESULT] })));
   try {
     const { root } = await mountedPage({ query: 'q=hug' });
-    assert.equal(root.querySelectorAll('.c-result-card').length, 1);
+    assert.equal(root.querySelectorAll('[data-result-card]').length, 1);
   } finally {
     cleanup();
   }
@@ -311,8 +311,8 @@ test('a stale refetch response never overwrites a newer one, however the two res
   });
   try {
     const { root } = await mountedPage({ query: 'people=2&types=live&account=tl_beta' });
-    /** @type {any} */ (root.querySelector('.c-search__active-chip[data-field="types"]')).click();
-    /** @type {any} */ (root.querySelector('.c-search__active-chip[data-field="account"]')).click();
+    /** @type {any} */ (root.querySelector('[data-action="remove-filter"][data-field="types"]')).click();
+    /** @type {any} */ (root.querySelector('[data-action="remove-filter"][data-field="account"]')).click();
     await flush();
     assert.equal(resolvers.length, 2, 'two refetches are in flight');
     resolvers[1]({ count: 1, results: [{ ...RESULT, url: '/t/new', sourceId: 'new' }] });
@@ -338,7 +338,7 @@ test('clearing back to the list drops a search still in flight', async () => {
     resolvers[0]({ count: 1, results: [RESULT] });
     for (let i = 0; i < 20; i++) await Promise.resolve();
     assert.ok(listShown(root));
-    assert.equal(root.querySelectorAll('.c-result-card').length, 0, 'the late response never rendered');
+    assert.equal(root.querySelectorAll('[data-result-card]').length, 0, 'the late response never rendered');
   } finally {
     cleanup();
   }
@@ -355,7 +355,7 @@ test('a loadMore failure just re-enables the button, leaving the existing result
     more.click();
     await flush();
     assert.equal(more.disabled, false, 'the button is re-enabled so the user can retry');
-    assert.equal(root.querySelectorAll('.c-result-card').length, 1, 'the existing result is untouched');
+    assert.equal(root.querySelectorAll('[data-result-card]').length, 1, 'the existing result is untouched');
   } finally {
     cleanup();
   }
@@ -366,9 +366,9 @@ const body = (state, count) => String(resultsBody({ ...inlineSearch.prepare({ se
 
 test('resultsBody (Task 9b): a results line above the results counts every match and names the order', () => {
   const withQ = body({ ...EMPTY_STATE, q: 'hug' }, 3);
-  assert.match(withQ, /<p class="c-search__count">3 translations · best match first<\/p>/);
-  assert.ok(withQ.indexOf('c-search__count') < withQ.indexOf('c-search__results'));
-  assert.match(body({ ...EMPTY_STATE, people: [1] }, 1), /<p class="c-search__count">1 translation · newest first<\/p>/);
+  assert.match(withQ, /<p class="meta c-search__count">3 translations · best match first<\/p>/);
+  assert.ok(withQ.indexOf('c-search__count') < withQ.indexOf('data-search-results'));
+  assert.match(body({ ...EMPTY_STATE, people: [1] }, 1), /<p class="meta c-search__count">1 translation · newest first<\/p>/);
   assert.ok(!body({ ...EMPTY_STATE, q: 'zzz' }, 0).includes('c-search__count'), 'no results: no count line');
   assert.match(body({ ...EMPTY_STATE, q: 'zzz' }, 0), /no results/);
 });
@@ -419,7 +419,7 @@ test('fix round 1, I1: back to the list empties the results and forgets them; a 
   try {
     const { root, ctx } = await mountedPage({ query: 'q=old' });
     const searchEl = root.querySelector('.c-search');
-    assert.equal(root.querySelectorAll('.c-result-card').length, 1);
+    assert.equal(root.querySelectorAll('[data-result-card]').length, 1);
     await typeAndSettle(root, '');
     assert.equal(searchEl.children.length, 0, 'emptied, not just hidden');
     assert.deepEqual(ctx.data, { count: 0, results: [] });
@@ -430,7 +430,7 @@ test('fix round 1, I1: back to the list empties the results and forgets them; a 
     resolvers[0]({ count: 1, results: [RESULT] });
     for (let i = 0; i < 20; i++) await Promise.resolve();
     assert.equal(searchEl.getAttribute('aria-busy'), 'false');
-    assert.equal(root.querySelectorAll('.c-result-card').length, 1);
+    assert.equal(root.querySelectorAll('[data-result-card]').length, 1);
   } finally {
     cleanup();
   }
@@ -454,18 +454,18 @@ test('fix round 1, M6: a scoped page with its own chip removed and an empty box 
   const calls = stubFetch();
   try {
     const { root, urls } = await mountedPage({ scope: EVENT_SCOPE, path: '/e/starfest' });
-    /** @type {any} */ (root.querySelector('.c-search__active-chip[data-field="event"]')).click();
+    /** @type {any} */ (root.querySelector('[data-action="remove-filter"][data-field="event"]')).click();
     await flush();
     assert.equal(urls.at(-1), '/e/starfest?scope=all');
-    assert.ok(root.querySelector('.c-search__list').hidden, 'the event\'s own list is not what is searched now');
+    assert.ok(root.querySelector('[data-search-list]').hidden, 'the event\'s own list is not what is searched now');
     assert.ok(!root.querySelector('.c-search').hidden);
     assert.match(root.querySelector('.c-search__hint').children[0].textContent, /type to search everything/);
     assert.equal(calls.length, 0, 'no search for the hint');
-    /** @type {any} */ (root.querySelector('.c-search__clear-all')).click();
+    /** @type {any} */ (root.querySelector('[data-action="clear-filters"]')).click();
     await flush();
     assert.equal(urls.at(-1), '/e/starfest');
     assert.ok(listShown(root));
-    assert.ok(root.querySelector('.c-search__active-chip[data-field="event"]'));
+    assert.ok(root.querySelector('[data-action="remove-filter"][data-field="event"]'));
   } finally {
     cleanup();
   }
@@ -479,7 +479,7 @@ test('fix round 1, M3: the sheet\'s Apply keeps what is in the box now, not the 
     /** @type {any} */ (root.querySelector('.c-header__filter-btn')).click();
     for (let i = 0; i < 20; i++) await Promise.resolve();
     await typeAndSettle(root, 'hi');
-    /** @type {any} */ (root.querySelector('.c-filter-sheet__people .c-chips__chip[data-value="2"]')).click();
+    /** @type {any} */ (root.querySelector('[data-filter-group="people"] [data-value="2"]')).click();
     /** @type {any} */ (root.querySelector('.c-filter-sheet__apply')).click();
     for (let i = 0; i < 20; i++) await Promise.resolve();
     assert.equal(urls.at(-1), '/?q=hi&people=2');

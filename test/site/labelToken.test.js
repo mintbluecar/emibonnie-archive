@@ -13,6 +13,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const STYLES = fileURLToPath(new URL('../../src/styles/', import.meta.url));
+const JS = fileURLToPath(new URL('../../public/js/', import.meta.url));
 
 /** @param {string} dir @returns {string[]} */
 const cssFiles = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (
@@ -32,9 +33,15 @@ test('--color-label is defined for light and dark mode, defaulting to --gradient
   assert.match(dark, /--color-label:\s*var\(--gradient-to\);/);
   const uses = cssFiles(path.join(STYLES, 'components')).flatMap((file) => [...readFileSync(file, 'utf8').matchAll(/([^{}]+)\{[^}]*color:\s*var\(--color-label\)/g)]
     .flatMap((m) => m[1].replace(/\/\*[\s\S]*?\*\//g, '').split(',').map((s) => s.trim())));
-  for (const selector of ['.c-home-month__label', '.c-hub-group__label', '.c-tabbar__item--on', '.c-result-card__event',
-    '.c-account__open-profile', '.c-static__contact a']) {
+  for (const selector of ['.c-tabbar__item[aria-current="page"]', '.c-account__open-profile', '.c-static__contact a']) {
     assert.ok(uses.includes(selector), `${selector} uses --color-label (got ${uses.join(', ')})`);
+  }
+  // Styling system Task 12: the month and group headings and the result
+  // card's event line are the label primitive, which uses --color-label.
+  assert.match(readFileSync(path.join(STYLES, 'primitives/text.css'), 'utf8'), /\.label\s*\{[^}]*color:\s*var\(--color-label\)/);
+  for (const [file, pattern] of [['pages/home.js', /class="label c-home-month__label"/], ['pages/hubGroups.js', /class="label c-hub-group__label"/],
+    ['components/resultCard.js', /class="label c-result-card__event"/]]) {
+    assert.match(readFileSync(path.join(JS, file), 'utf8'), pattern, `${file} renders its heading as the label primitive`);
   }
 });
 
@@ -59,14 +66,20 @@ test('Task 9b: the label tint tokens derive from --color-label (so a site that s
   assert.match(tokens, /--color-label-tint:\s*color-mix\(in srgb, var\(--color-label\) \d+%, var\(--color-card\)\);/);
   assert.match(tokens, /--color-label-on-tint:\s*color-mix\(in srgb, var\(--color-label\) \d+%, var\(--color-ink\)\);/);
   const uses = (/** @type {string} */ file, /** @type {string} */ selector) => {
-    const css = readFileSync(path.join(STYLES, 'components', file), 'utf8');
+    const css = readFileSync(path.join(STYLES, 'primitives', file), 'utf8');
     const block = css.slice(css.indexOf(`${selector} {`));
     return block.slice(0, block.indexOf('}'));
   };
-  for (const [file, selector] of [['eventCard.css', '.c-event-card__count'], ['hub.css', '.c-hub__seg .c-chips .c-chips__chip--on'],
-    ['inlineSearch.css', '.c-search__active-chip']]) {
+  // Styling system Task 12: the count badge is badge--accent; the
+  // segmented control's chosen view and the active filter chips are chip--on.
+  for (const [file, selector] of [['badge.css', '.badge--accent'], ['chip.css', '.chip--on']]) {
     const block = uses(file, selector);
     assert.match(block, /background:\s*var\(--color-label-tint\)/, `${selector} background`);
     assert.match(block, /color:\s*var\(--color-label-on-tint\)/, `${selector} text`);
+  }
+  for (const [file, pattern] of [['components/eventCard.js', /class="badge badge--accent c-event-card__count"/],
+    ['pages/hubGroups.js', /class="chip chip--lg\$\{value === active \? ' chip--on' : ''\}"/],
+    ['components/inlineSearchView.js', /class="chip chip--on" data-action="remove-filter"/]]) {
+    assert.match(readFileSync(path.join(JS, file), 'utf8'), pattern, `${file} uses the primitive`);
   }
 });

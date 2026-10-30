@@ -46,26 +46,26 @@ function followsOnLine(link) {
 function addedByLine(addedBy) {
   if (!addedBy) return html``;
   const who = addedBy.kind === 'handle' ? `@${addedBy.handle}` : addedBy.kind === 'name' ? addedBy.name : t('item.addedByFan');
-  return html`<p class="c-item__added-by">${t('item.addedBy')} ${who}</p>`;
+  return html`<p class="meta" data-added-by>${t('item.addedBy')} ${who}</p>`;
 }
 
 /**
  * The editor's own controls, for a signed-in caller `itemView` gave the
  * role to: a pencil that opens the entry's edit page, and a button that
  * asks the kind to check for new same-author follow-ups. A stranger gets
- * neither -- `footerBlock` then renders no `.c-item__icon` at all.
+ * neither -- `footerBlock` then renders no `.c-item__owner` at all.
  * @param {FooterView} data
  * @returns {import('../core/html.js').SafeHtml}
  */
 function ownerControls(data) {
   if (!data.canEdit && !data.canCheckFollowUps) return html``;
   return html`
-    <div class="c-item__owner">
+    <div class="cluster c-item__owner">
       ${data.canEdit
-        ? html`<a class="c-item__icon" href="${editHref(data.kind, data.sourceId)}" title="${t('item.edit')}" aria-label="${t('item.edit')}">✎</a>`
+        ? html`<a class="btn btn--secondary btn--icon" href="${editHref(data.kind, data.sourceId)}" title="${t('item.edit')}" aria-label="${t('item.edit')}">✎</a>`
         : ''}
       ${data.canCheckFollowUps
-        ? html`<button type="button" class="c-item__icon" data-action="follow-ups" title="${t('item.followUps')}" aria-label="${t('item.followUps')}">⟳</button>`
+        ? html`<button type="button" class="btn btn--secondary btn--icon" data-action="follow-ups" title="${t('item.followUps')}" aria-label="${t('item.followUps')}">⟳</button>`
         : ''}
     </div>
   `;
@@ -77,12 +77,12 @@ function ownerControls(data) {
  */
 export function footerBlock(data) {
   return html`
-    <div class="c-item__footer">
+    <div class="cluster c-item__footer">
       ${originalPost(data)}
       ${followsOnLine(data.followsOnFrom)}
       ${addedByLine(data.addedBy)}
-      <button type="button" class="c-item__copy-link">${t('item.copyLink')}</button>
-      <button class="c-item__footer-link" type="button" data-action="report">${t('item.report')}</button>
+      <button type="button" class="btn btn--secondary btn--sm" data-action="copy-link">${t('item.copyLink')}</button>
+      <button class="btn btn--quiet btn--sm" type="button" data-action="report">${t('item.report')}</button>
       ${ownerControls(data)}
       <p class="c-item__follow-status" role="status" data-follow-ups-status hidden></p>
       ${reportForm.render()}

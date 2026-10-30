@@ -53,10 +53,10 @@ function pencil() {
  */
 export function tabs(state) {
   return html`
-    <div class="cluster cluster--2 c-me__tabs" role="tablist">
-      <button class="chip chip--lg c-me__tab${state.tab === 'translations' ? ' chip--on' : ''}" type="button" role="tab"
+    <div class="cluster cluster--2 cluster--fill c-me__tabs" role="tablist">
+      <button class="chip chip--lg${state.tab === 'translations' ? ' chip--on' : ''}" type="button" role="tab"
         aria-selected="${state.tab === 'translations'}" data-action="tab" data-tab="translations">${t('me.translations.title')}</button>
-      <button class="chip chip--lg c-me__tab${state.tab === 'added' ? ' chip--on' : ''}" type="button" role="tab"
+      <button class="chip chip--lg${state.tab === 'added' ? ' chip--on' : ''}" type="button" role="tab"
         aria-selected="${state.tab === 'added'}" data-action="tab" data-tab="added">${t('me.translations.tabAdded')}</button>
     </div>
   `;

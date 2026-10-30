@@ -9,13 +9,17 @@
  *   <button class="btn btn--danger" type="button">Delete</button>
  *   <button class="btn btn--secondary btn--sm" type="button">Edit</button>
  *   <button class="btn btn--quiet btn--icon" type="button" aria-label="Close">x</button>
+ *   <button class="btn btn--secondary btn--icon btn--round" type="button" aria-label="Close">x</button>
  *   <button class="btn btn--primary btn--block" type="submit">Continue</button>
  *   <a class="btn btn--secondary" href="/me">A link that looks like a button</a>
  *   <button class="btn btn--secondary" type="button" aria-pressed="true">Speech</button>
  *
  * btn--icon is square and has no text of its own: it needs aria-label.
- * btn--sm combines with any variant, btn--icon included. A toggle button
- * says its state with aria-pressed; pressed, it takes the label tint.
+ * btn--sm combines with any variant, btn--icon included. btn--round is
+ * the round close button of a sheet or dialog. A toggle button says its
+ * state with aria-pressed; pressed, it takes the label tint. A button
+ * waiting on its own request says so with aria-busy="true" and dims like
+ * a disabled one.
  */
 
 .btn {
@@ -84,6 +88,10 @@
   width: var(--control-sm);
 }
 
+.btn--round {
+  border-radius: var(--radius-pill);
+}
+
 .btn--block {
   display: flex;
   width: 100%;
@@ -96,7 +104,8 @@
 }
 
 .btn:disabled,
-.btn[aria-disabled="true"] {
+.btn[aria-disabled="true"],
+.btn[aria-busy="true"] {
   opacity: 0.6;
   cursor: default;
 }

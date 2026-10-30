@@ -52,7 +52,7 @@ test('composeItem: the back row, media box, credits, pills, cast and bubbles, in
 
 test('composeItem: the back row links to the event page via the shared eventUrl helper, with the event name as its text', () => {
   const markup = String(composeItem(itemVm()));
-  assert.match(markup, /<a class="c-item__back" href="\/e\/solluna-happy-day-2026-10-19">‹ SOLLUNA HAPPY DAY<\/a>/);
+  assert.match(markup, /<a class="meta c-item__back" href="\/e\/solluna-happy-day-2026-10-19">‹ SOLLUNA HAPPY DAY<\/a>/);
 });
 
 test('composeItem: no back row when the item has no event', () => {
@@ -62,13 +62,13 @@ test('composeItem: no back row when the item has no event', () => {
 
 test('composeItem: a <select>-free active "home" tab, per pageShell (review round 1, MINOR)', () => {
   const markup = String(composeItem(itemVm()));
-  assert.match(markup, /<a\s+class="c-tabbar__item c-tabbar__item--on"\s+href="\/"\s+aria-current="page"\s*>/);
+  assert.match(markup, /<a\s+class="c-tabbar__item"\s+href="\/"\s+aria-current="page"\s*>/);
 });
 
 test('composeItem: prev/next links when ItemView carries neighbours', () => {
   const markup = String(composeItem(itemVm()));
-  assert.match(markup, /<a class="c-item__prev" href="\/t\/1">/);
-  assert.match(markup, /<a class="c-item__next" href="\/t\/2">/);
+  assert.match(markup, /<a class="meta c-item__prev" href="\/t\/1">/);
+  assert.match(markup, /<a class="meta c-item__next" href="\/t\/2">/);
 });
 
 test('composeItem: no prev/next nav when there are no neighbours', () => {
@@ -83,8 +83,8 @@ test('composeItem: the footer -- original tweet, follows on, added by, copy link
   assert.match(markup, /<a class="c-item__footer-link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">original tweet<\/a>/);
   assert.match(markup, /<a class="c-item__footer-link" href="\/t\/3">follows on from<\/a>/);
   assert.match(markup, /added by @tl_alpha/);
-  assert.match(markup, /<button type="button" class="c-item__copy-link">copy link<\/button>/);
-  assert.match(markup, /<button class="c-item__footer-link" type="button" data-action="report">report<\/button>/);
+  assert.match(markup, /<button type="button" class="btn btn--secondary btn--sm" data-action="copy-link">copy link<\/button>/);
+  assert.match(markup, /<button class="btn btn--quiet btn--sm" type="button" data-action="report">report<\/button>/);
   assert.match(markup, /<dialog[^>]*aria-labelledby="c-report-title"/);
 });
 
@@ -119,7 +119,7 @@ test('composeItem (Task 10b): with embedSources on, X\'s embed blockquote replac
     assert.match(markup, /&mdash; TL &lt;alpha&gt; \(@tl_alpha\)/);
     assert.match(markup, /<a class="c-embed__link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">/);
     assert.ok(!markup.includes('class="c-item__footer-link" href="https://x.com'), 'the embed replaces the footer link');
-    assert.match(markup, /class="c-item__copy-link"/);
+    assert.match(markup, /data-action="copy-link"/);
     assert.match(markup, /data-action="report">report<\/button>/);
   });
 });
@@ -146,18 +146,18 @@ test('composeItem (Task 10b): a source URL that isn\'t a canonical x.com post is
 test('composeItem: "added by" shows a fan, a chosen name, or nothing for the engine\'s own writes', () => {
   assert.match(String(composeItem(itemVm({ addedBy: { kind: 'fan' } }))), /added by a fan/);
   assert.match(String(composeItem(itemVm({ addedBy: { kind: 'name', name: 'a reader' } }))), /added by a reader/);
-  assert.ok(!String(composeItem(itemVm({ addedBy: null }))).includes('c-item__added-by'));
+  assert.ok(!String(composeItem(itemVm({ addedBy: null }))).includes('data-added-by'));
 });
 
 test('composeItem: the check-for-update button shows only while editOpenUntil is in the future', () => {
   const future = new Date(Date.now() + 60_000).toISOString();
-  assert.match(String(composeItem(itemVm({ editOpenUntil: future }))), /c-refresh__btn/);
-  assert.ok(!String(composeItem(itemVm({ editOpenUntil: null }))).includes('c-refresh__btn'));
+  assert.match(String(composeItem(itemVm({ editOpenUntil: future }))), /data-action="check-update"/);
+  assert.ok(!String(composeItem(itemVm({ editOpenUntil: null }))).includes('data-action="check-update"'));
 });
 
 test('composeItem: includes the compact page shell (header + tabs + footer)', () => {
   const markup = String(composeItem(itemVm()));
-  assert.match(markup, /c-header--compact/);
+  assert.match(markup, /<header class="c-header" data-compact>/);
   assert.match(markup, /c-tabbar/);
   assert.match(markup, /c-footer__links/);
 });
@@ -198,7 +198,7 @@ test('bind: a successful check reloads only .c-item__body -- the video is the sa
     assert.ok(videoBefore, 'the video rendered on first mount');
 
     // 1st press -> reload #1.
-    /** @type {any} */ (root.querySelector('.c-refresh__btn')).click();
+    /** @type {any} */ (root.querySelector('[data-action="check-update"]')).click();
     await flush(); await flush(); await flush();
     assert.equal(postCount, 1);
     assert.equal(getCount, 1, 'the body reload fetched fresh item data');
@@ -209,10 +209,10 @@ test('bind: a successful check reloads only .c-item__body -- the video is the sa
     // tick() would re-enable, so that's reset by hand too (this test is about listener
     // pileup, not backoff timing).
     store.clear();
-    /** @type {any} */ (root.querySelector('.c-refresh__btn')).disabled = false;
+    /** @type {any} */ (root.querySelector('[data-action="check-update"]')).disabled = false;
 
     // 2nd press -> reload #2.
-    /** @type {any} */ (root.querySelector('.c-refresh__btn')).click();
+    /** @type {any} */ (root.querySelector('[data-action="check-update"]')).click();
     await flush(); await flush(); await flush();
     assert.equal(postCount, 2);
     assert.equal(getCount, 2);
@@ -221,8 +221,8 @@ test('bind: a successful check reloads only .c-item__body -- the video is the sa
     // A 3rd press, after two reloads: exactly one more POST, not 2 or 3 -- proves the
     // click listener (bound once on root) never piled up across the two body re-renders.
     store.clear();
-    /** @type {any} */ (root.querySelector('.c-refresh__btn')).disabled = false;
-    /** @type {any} */ (root.querySelector('.c-refresh__btn')).click();
+    /** @type {any} */ (root.querySelector('[data-action="check-update"]')).disabled = false;
+    /** @type {any} */ (root.querySelector('[data-action="check-update"]')).click();
     await flush(); await flush(); await flush();
     assert.equal(postCount, 3, 'exactly one more POST per click, even after two reloads');
   } finally {
@@ -243,7 +243,7 @@ test('bind: a 409 on a real page bind (not an isolated refreshButton.bind() call
   mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ error: 'edit_window_closed' }), { status: 409 }));
   try {
     bind(root, data);
-    /** @type {any} */ (root.querySelector('.c-refresh__btn')).click();
+    /** @type {any} */ (root.querySelector('[data-action="check-update"]')).click();
     await flush();
     assert.equal(root.querySelector('.c-refresh'), null);
   } finally {
@@ -272,7 +272,7 @@ test('bind: the copy-link button copies the absolute item URL and shows "copied"
   mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ variants: [] }), { status: 200 }));
   try {
     bind(root, itemVm());
-    const button = /** @type {any} */ (root.querySelector('.c-item__copy-link'));
+    const button = /** @type {any} */ (root.querySelector('[data-action="copy-link"]'));
     assert.ok(button);
     button.click();
     await flush();
@@ -306,7 +306,7 @@ test('start: a non-404 failure renders the generic page.loadFailed fallback, nev
 
 test('composeItem: a held entry shows the owner banner; a public entry does not', () => {
   const held = String(composeItem(itemVm({ reviewState: 'pending' })));
-  assert.match(held, /class="c-item__held"/);
+  assert.match(held, /class="notice notice--accent c-item__held"/);
   assert.match(held, copyRe(t('item.held')));
 
   const open = String(composeItem(itemVm()));
@@ -317,5 +317,5 @@ test('composeItem (Task 10c r): the item page has no search row or box at any wi
   const markup = String(composeItem(itemVm()));
   assert.ok(!markup.includes('c-header__search'), 'no search row');
   assert.ok(!markup.includes('c-header__below'), 'nothing under the bar');
-  assert.match(markup, /<a class="c-header__find" href="\/"/);
+  assert.match(markup, /<a class="btn btn--quiet btn--icon c-header__icon c-header__find" href="\/"/);
 });

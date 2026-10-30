@@ -33,9 +33,9 @@ function peopleSection(people, state) {
   const peopleItems = people.map((p) => ({ emoji: p.emoji, label: p.name, colour: p.colour, value: p.id, active: state.people.includes(p.id) }));
   return html`
     <fieldset class="c-filter-sheet__section">
-      <legend>${t('search.whoLabel')}</legend>
+      <legend class="field__label c-filter-sheet__legend">${t('search.whoLabel')}</legend>
       <div class="c-filter-sheet__mode">${chips.render({ items: modeItems })}</div>
-      <div class="c-filter-sheet__people">${chips.render({ items: peopleItems })}</div>
+      <div data-filter-group="people">${chips.render({ items: peopleItems })}</div>
     </fieldset>
   `;
 }
@@ -48,8 +48,8 @@ function typesSection(categories, state) {
   ];
   return html`
     <fieldset class="c-filter-sheet__section">
-      <legend>${t('search.typesLabel')}</legend>
-      <div class="c-filter-sheet__types">${chips.render({ items })}</div>
+      <legend class="field__label c-filter-sheet__legend">${t('search.typesLabel')}</legend>
+      <div data-filter-group="types">${chips.render({ items })}</div>
     </fieldset>
   `;
 }
@@ -65,24 +65,24 @@ function selectedAttr(optionValue, current) {
  */
 function selectsSection(options, state) {
   return html`
-    <label class="c-filter-sheet__field">
-      ${t('search.eventLabel')}
-      <span class="field__select"><select class="c-filter-sheet__event">
+    <label class="field">
+      <span class="field__label">${t('search.eventLabel')}</span>
+      <span class="field__select"><select data-filter="event">
         <option value="">${t('search.allEvents')}</option>
         ${options.events.map((e) => html`<option value="${e.slug}"${selectedAttr(e.slug, state.event)}>${e.name}</option>`)}
       </select></span>
     </label>
-    <label class="c-filter-sheet__field">
-      ${t('search.accountLabel')}
-      <span class="field__select"><select class="c-filter-sheet__account">
+    <label class="field">
+      <span class="field__label">${t('search.accountLabel')}</span>
+      <span class="field__select"><select data-filter="account">
         <option value="">${t('search.allAccounts')}</option>
         ${options.accounts.map((a) => html`<option value="${a.handle}"${selectedAttr(a.handle, state.account)}>@${a.handle}</option>`)}
       </select></span>
     </label>
     ${options.clients.length > 0 ? html`
-      <label class="c-filter-sheet__field">
-        ${t('search.clientLabel')}
-        <span class="field__select"><select class="c-filter-sheet__client">
+      <label class="field">
+        <span class="field__label">${t('search.clientLabel')}</span>
+        <span class="field__select"><select data-filter="client">
           <option value="">${t('search.allClients')}</option>
           ${options.clients.map((c) => html`<option value="${c.id}"${selectedAttr(c.id, state.client)}>${c.name}</option>`)}
         </select></span>
@@ -94,11 +94,13 @@ function selectsSection(options, state) {
 /** @param {import('../state/searchState.js').State} state */
 function datesSection(state) {
   return html`
-    <label class="c-filter-sheet__field">${t('search.fromLabel')}
-      <input class="c-filter-sheet__from" type="date" value="${state.from ?? ''}">
+    <label class="field">
+      <span class="field__label">${t('search.fromLabel')}</span>
+      <input type="date" value="${state.from ?? ''}" data-filter="from">
     </label>
-    <label class="c-filter-sheet__field">${t('search.toLabel')}
-      <input class="c-filter-sheet__to" type="date" value="${state.to ?? ''}">
+    <label class="field">
+      <span class="field__label">${t('search.toLabel')}</span>
+      <input type="date" value="${state.to ?? ''}" data-filter="to">
     </label>
   `;
 }
@@ -109,21 +111,15 @@ function datesSection(state) {
  */
 export function render({ state, options, count }) {
   return html`
-    <dialog class="c-filter-sheet" aria-label="${t('search.filters')}">
-      <button type="button" class="c-filter-sheet__close" title="${t('search.closeFilters')}" aria-label="${t('search.closeFilters')}">✕</button>
-      <h2 class="c-filter-sheet__title">${t('search.filters')}</h2>
+    <dialog class="c-sheet c-filter-sheet" aria-label="${t('search.filters')}">
+      <button type="button" class="btn btn--secondary btn--icon btn--round c-sheet__close" data-action="close-filters" title="${t('search.closeFilters')}" aria-label="${t('search.closeFilters')}">✕</button>
+      <h2 class="heading heading--sm c-sheet__title">${t('search.filters')}</h2>
       ${peopleSection(options.people, state)}
       ${typesSection(options.categories, state)}
-      <div class="c-filter-sheet__selects">${selectsSection(options, state)}${datesSection(state)}</div>
-      <button type="button" class="c-filter-sheet__apply">${t('search.showN', { n: count })}</button>
+      <div class="stack c-filter-sheet__selects">${selectsSection(options, state)}${datesSection(state)}</div>
+      <button type="button" class="btn btn--primary btn--block c-filter-sheet__apply">${t('search.showN', { n: count })}</button>
     </dialog>
   `;
-}
-
-/** @param {{ classList: { toggle: Function }, setAttribute: Function }} chip @param {boolean} on_ */
-function setChipOn(chip, on_) {
-  chip.classList.toggle('c-chips__chip--on', on_);
-  chip.setAttribute('aria-pressed', String(on_));
 }
 
 /** @typedef {{ get: () => import('../state/searchState.js').State, set: (s: import('../state/searchState.js').State) => void }} Store */
@@ -143,7 +139,7 @@ function bindToggleGroup(groupEl, spec, store, onEdit) {
     const state = store.get();
     const already = /** @type {unknown[]} */ (state[spec.field]).includes(value);
     store.set(already ? withoutFilter(state, spec.field, value) : withFilter(state, spec.field, value));
-    setChipOn(chip, !already);
+    chips.setOn(chip, !already);
     onEdit();
   });
 }
@@ -158,14 +154,14 @@ function bindModeToggle(modeEl, store, onEdit) {
   on(modeEl, '.c-chips__chip', 'click', (_e, chip) => {
     const value = chip.getAttribute('data-value');
     store.set({ ...store.get(), peopleMode: value === 'all' ? 'all' : 'any' });
-    for (const c of modeEl.querySelectorAll('.c-chips__chip')) setChipOn(c, c.getAttribute('data-value') === value);
+    for (const c of modeEl.querySelectorAll('.c-chips__chip')) chips.setOn(c, c.getAttribute('data-value') === value);
     onEdit();
   });
 }
 
 const FIELD_CONTROLS = [
-  ['.c-filter-sheet__event', 'event'], ['.c-filter-sheet__account', 'account'], ['.c-filter-sheet__client', 'client'],
-  ['.c-filter-sheet__from', 'from'], ['.c-filter-sheet__to', 'to'],
+  ['[data-filter="event"]', 'event'], ['[data-filter="account"]', 'account'], ['[data-filter="client"]', 'client'],
+  ['[data-filter="from"]', 'from'], ['[data-filter="to"]', 'to'],
 ];
 
 /** @param {Element} el @param {Store} store @param {() => void} onEdit */
@@ -228,12 +224,12 @@ export function bind(el, { state, options = { people: [], categories: [], client
   };
   const onEdit = () => { onTentativeChange?.(tentative); refreshCount(); };
 
-  bindToggleGroup(dialog.querySelector('.c-filter-sheet__people'), { field: 'people', parse: Number }, store, onEdit);
-  bindToggleGroup(dialog.querySelector('.c-filter-sheet__types'), { field: 'types', parse: (v) => v }, store, onEdit);
+  bindToggleGroup(dialog.querySelector('[data-filter-group="people"]'), { field: 'people', parse: Number }, store, onEdit);
+  bindToggleGroup(dialog.querySelector('[data-filter-group="types"]'), { field: 'types', parse: (v) => v }, store, onEdit);
   bindModeToggle(dialog.querySelector('.c-filter-sheet__mode'), store, onEdit);
   bindFieldControls(dialog, store, onEdit);
 
   on(el, '.c-filter-sheet__apply', 'click', () => { onChange(tentative); closeDialog(); });
-  on(el, '.c-filter-sheet__close', 'click', cancel);
+  on(el, '[data-action="close-filters"]', 'click', cancel);
   on(el, 'dialog', 'keydown', (e) => { if (e.key === 'Escape') cancel(); });
 }

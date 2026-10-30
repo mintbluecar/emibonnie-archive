@@ -83,7 +83,7 @@ const sectionOf = (sections, kind) => sections.find((s) => s.kind === kind);
 
 /** @param {string} kind @returns {import('../core/html.js').SafeHtml} */
 function moreButton(kind) {
-  return html`<button type="button" class="c-hub__more" data-kind="${kind}">${t('event.more')}</button>`;
+  return html`<button type="button" class="btn btn--quiet btn--block c-hub__more" data-kind="${kind}">${t('event.more')}</button>`;
 }
 
 /**
@@ -104,8 +104,8 @@ export function byEventView(sections, ctx) {
   });
   const rendered = renderSections(synthetic, { ...ctx, compact: true });
   return html`${groups.map((group, i) => html`
-    <section class="c-hub-group" data-kind="${group.kind}">
-      <h2 class="c-hub-group__label">${group.label}</h2>
+    <section data-hub-group data-kind="${group.kind}">
+      <h2 class="label c-hub-group__label">${group.label}</h2>
       ${rendered[i] ?? ''}
     </section>
     ${isLastOfKind(groups, i) && synthetic[i].hasMore ? moreButton(group.kind) : ''}
@@ -133,12 +133,21 @@ export function bindSections(root, sections) {
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function segmentedControl(active, withPicker) {
-  const items = [
-    { label: t('person.byEvent'), value: 'byEvent', active: active === 'byEvent' },
-    { label: t('person.allNewest'), value: 'all', active: active === 'all' },
-    ...(withPicker ? [{ label: t('person.with'), value: 'with' }] : []),
-  ];
-  return html`<div class="c-hub__seg">${chips.render({ items })}</div>`;
+  /** @param {SegKey} value @param {string} label */
+  const option = (value, label) => html`<button type="button" class="chip chip--lg${value === active ? ' chip--on' : ''}"
+    aria-pressed="${value === active ? 'true' : 'false'}" data-value="${value}">${label}</button>`;
+  return html`<div class="cluster cluster--2 cluster--fill c-hub__seg">
+    ${option('byEvent', t('person.byEvent'))}${option('all', t('person.allNewest'))}${withPicker ? option('with', t('person.with')) : ''}
+  </div>`;
+}
+
+/**
+ * Shows `value` as the segmented control's chosen view: that option on,
+ * every other off.
+ * @param {Element} segEl @param {SegKey} value @returns {void}
+ */
+export function selectSegment(segEl, value) {
+  for (const option of segEl.querySelectorAll('[data-value]')) chips.setOn(option, option.getAttribute('data-value') === value);
 }
 
 /**
@@ -157,11 +166,11 @@ export function mergedWithMore(sections, kind, page) {
 
 /** @typedef {{ root: Element, apiPath: string, data: { sections: DatedSection[] }, ctx: HubCtx }} MoreOpts */
 
-/** Applies a freshly fetched `kind` page: merges it in, updates the kind's own offset, and re-renders `.c-hub__content` for whichever segment is active. @param {MoreOpts} opts @param {string} kind @param {{ sections: DatedSection[] }} page @returns {void} */
+/** Applies a freshly fetched `kind` page: merges it in, updates the kind's own offset, and re-renders `[data-hub-content]` for whichever segment is active. @param {MoreOpts} opts @param {string} kind @param {{ sections: DatedSection[] }} page @returns {void} */
 function applyMorePage(opts, kind, page) {
   opts.data.sections = mergedWithMore(opts.data.sections, kind, page);
   opts.ctx.offset[kind] = sectionOf(opts.data.sections, kind)?.items.length ?? opts.ctx.offset[kind];
-  const contentEl = opts.root.querySelector('.c-hub__content');
+  const contentEl = opts.root.querySelector('[data-hub-content]');
   if (!contentEl) return;
   mount(contentEl, activeView(opts.ctx.seg, opts.data.sections, {}));
   bindSections(contentEl, opts.data.sections);
@@ -195,7 +204,7 @@ async function loadMore(opts, button) {
 
 /**
  * Wires every `.c-hub__more` button inside `root` once, delegated (so a
- * re-render of `.c-hub__content` never stacks a duplicate listener --
+ * re-render of `[data-hub-content]` never stacks a duplicate listener --
  * the same discipline `components/inlineSearch.js`'s own `.c-search__more` already
  * follows, and the exact bug review round 1, I2 found in this page's
  * own "with…" picker).

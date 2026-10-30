@@ -106,7 +106,7 @@ test('embedSources off (the example site, as served): one "original tweet" link,
   await expect(page.locator('.c-item__footer a[href^="https://x.com/"]')).toHaveCount(1);
   await expect(page.locator('.c-item__footer a[href^="https://x.com/"]')).toHaveText('original tweet');
   await expect(page.locator('blockquote.twitter-tweet')).toHaveCount(0);
-  await expect(page.locator('.c-item__copy-link')).toBeVisible();
+  await expect(page.locator('[data-action="copy-link"]')).toBeVisible();
   expect(asked).toEqual([]);
   expect(errors).toEqual([]);
 });
@@ -131,7 +131,7 @@ test('embedSources on, X blocked: the blockquote fallback shows our text, author
   expect(primary.url).toMatch(/^https:\/\/x\.com\/\w+\/status\/\d+$/);
   await expect(quote.locator('a.c-embed__link')).toHaveAttribute('href', primary.url);
   await expect(page.locator('.c-item__footer > a.c-item__footer-link[href^="https://x.com/"]')).toHaveCount(0);
-  await expect(page.locator('.c-item__copy-link')).toBeVisible();
+  await expect(page.locator('[data-action="copy-link"]')).toBeVisible();
   await expect(page.locator('.c-item__footer [data-action="report"]')).toBeVisible();
 
   await expect.poll(() => asked.length).toBe(1);
@@ -144,11 +144,11 @@ test('embedSources on, X blocked: the blockquote fallback shows our text, author
 
 test('embedSources on: the privacy page shows the X embed notice, linking X\'s privacy policy; off, it doesn\'t', async ({ page }) => {
   await gotoReady(page, '/privacy');
-  await expect(page.locator('.c-static__embed-notice')).toHaveCount(0);
+  await expect(page.locator('[data-embed-notice]')).toHaveCount(0);
   const on = await turnEmbedSourcesOn(page, '/privacy');
   await gotoReady(page, '/privacy');
   expect(on.flipped).toBeGreaterThan(0);
-  const notice = page.locator('.c-static__embed-notice');
+  const notice = page.locator('[data-embed-notice]');
   await expect(notice).toBeVisible();
   await expect(notice.locator('a')).toHaveAttribute('href', 'https://x.com/en/privacy');
   await assertNoSeriousA11yViolations(page);

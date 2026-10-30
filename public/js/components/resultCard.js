@@ -54,7 +54,7 @@ const FALLBACK_LINES = 2;
  */
 function metaLine(result) {
   return html`
-    <div class="c-result-card__meta">
+    <div class="meta c-result-card__meta">
       ${result.people.map((person) => html`<span aria-hidden="true">${person.emoji}</span>`)}
     </div>
   `;
@@ -70,10 +70,10 @@ export function render(props) {
     ? html`<div class="c-result-card__text">${result.matchLines.map((line) => html`<div class="c-result-card__line">${highlighted(line, q)}</div>`)}</div>`
     : bubbles.renderCompact({ bubbles: result.lines.filter((b) => b.kind !== 'note').slice(0, FALLBACK_LINES) });
   return html`
-    <article class="c-result-card${result.thumb ? ' c-result-card--thumb' : ''}">
-      <a class="c-result-card__link" href="${result.url}">
+    <article class="card card--flush" data-result-card>
+      <a class="card__link c-result-card__link" href="${result.url}"${result.thumb ? html` data-thumb` : ''}>
         <div class="c-result-card__body">
-          ${result.event ? html`<div class="c-result-card__event">${result.event.name} · ${dayLabel(result.occurredOn)}</div>` : ''}
+          ${result.event ? html`<div class="label c-result-card__event">${result.event.name} · ${dayLabel(result.occurredOn)}</div>` : ''}
           ${text}
           ${metaLine(result)}
         </div>

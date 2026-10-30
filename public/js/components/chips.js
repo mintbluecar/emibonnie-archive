@@ -1,9 +1,12 @@
 // @ts-check
 /**
  * A generic row of pills (filter options, active-filter tags, category
- * labels, …). Every chip's text comes from the caller already resolved
- * (the one copy key here is `hashtagChip`'s tooltip); an `active` chip gets the
- * `--on` state class, and an optional `colour` sets `data-c` for `bind()`.
+ * labels, …), each the `chip` primitive. Every chip's text comes from the
+ * caller already resolved (the one copy key here is `hashtagChip`'s
+ * tooltip); an `active` chip gets `chip--on` (`setOn` switches it later),
+ * and an optional `colour` sets `data-c` for `bind()`: a person's chip,
+ * when on, takes that person's colour instead of the label tint
+ * (chips.css).
  * A chip with `value` set is a real `<button type="button">` -- keyboard
  * operable for free (Enter/Space fire `click` on a button natively, no
  * extra JS needed) -- with `aria-pressed` reflecting `active`. A
@@ -33,14 +36,13 @@ import { hashtagHref } from '../core/links.js';
  * @returns {import('../core/html.js').SafeHtml}
  */
 function oneChip(item) {
-  const classes = `c-chips__chip${item.active ? ' c-chips__chip--on' : ''}`;
   const colourAttr = item.colour ? html` data-c="${item.colour}"` : '';
-  const content = item.emoji ? html`<span class="c-chips__emoji c-emoji" aria-hidden="true">${item.emoji}</span><span>${item.label}</span>` : item.label;
+  const content = item.emoji ? html`<span class="c-emoji" aria-hidden="true">${item.emoji}</span><span>${item.label}</span>` : item.label;
   if (item.href) {
-    return html`<a class="${classes}" href="${item.href}" target="_blank" rel="noopener noreferrer"${item.title ? html` title="${item.title}"` : ''}${colourAttr}>${content}</a>`;
+    return html`<a class="chip c-chips__chip${item.active ? ' chip--on' : ''}" href="${item.href}" target="_blank" rel="noopener noreferrer"${item.title ? html` title="${item.title}"` : ''}${colourAttr}>${content}</a>`;
   }
-  if (item.value === undefined) return html`<span class="${classes}"${colourAttr}>${content}</span>`;
-  return html`<button type="button" class="${classes}" aria-pressed="${item.active ? 'true' : 'false'}" data-value="${item.value}"${colourAttr}>${content}</button>`;
+  if (item.value === undefined) return html`<span class="chip c-chips__chip${item.active ? ' chip--on' : ''}"${colourAttr}>${content}</span>`;
+  return html`<button type="button" class="chip c-chips__chip${item.active ? ' chip--on' : ''}" aria-pressed="${item.active ? 'true' : 'false'}" data-value="${item.value}"${colourAttr}>${content}</button>`;
 }
 
 /**
@@ -60,6 +62,17 @@ export function hashtagChip(tag) {
  */
 export function render(props) {
   return html`<div class="c-chips">${props.items.map(oneChip)}</div>`;
+}
+
+/**
+ * Turns a clickable chip on or off: its look and its `aria-pressed`
+ * together, so the two never disagree.
+ * @param {{ classList: { toggle: Function }, setAttribute: Function }} chip @param {boolean} on
+ * @returns {void}
+ */
+export function setOn(chip, on) {
+  chip.classList.toggle('chip--on', on);
+  chip.setAttribute('aria-pressed', String(on));
 }
 
 /** @param {Element} el @returns {void} */

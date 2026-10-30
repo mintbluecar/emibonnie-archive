@@ -28,8 +28,6 @@ function declarations(css, selector) {
 for (const [file, selector] of [
   ['src/styles/tokens.css', ':root'],
   ['examples/solluna/theme.css', ':root'],
-  ['src/styles/components/header.css', ':root .c-header__filter-count'],
-  ['src/styles/components/filterSheet.css', ':root .c-filter-sheet__apply'],
 ]) {
   test(`${file}: the device-dark block (unless forced light) and the forced-dark block hold the same declarations`, () => {
     const css = readFileSync(file, 'utf8');
@@ -57,6 +55,15 @@ function specificity(selector) {
   const typeLike = (flattened.match(/(^|[\s>+~])[a-zA-Z][\w-]*/g) ?? []).length;
   return [ids, classLike, typeLike];
 }
+
+test('Styling system Task 12: the filter count and the apply button keep no dark blocks of their own -- the darkened start stop is --gradient-from-strong, whose dark value tokens.css holds in both blocks', () => {
+  const header = readFileSync('src/styles/components/header.css', 'utf8');
+  assert.match(header, /\.c-header__filter-count\s*\{[^}]*linear-gradient\(90deg, var\(--gradient-from-strong\), var\(--gradient-to\)\)/);
+  assert.match(readFileSync('src/styles/primitives/button.css', 'utf8'), /\.btn--primary\s*\{[^}]*var\(--gradient-from-strong\)/);
+  for (const file of ['src/styles/components/header.css', 'src/styles/components/filterSheet.css']) {
+    assert.ok(!readFileSync(file, 'utf8').includes('prefers-color-scheme'), `${file} has no dark block`);
+  }
+});
 
 test("dark blocks still outrank a site's light :root (Task 1 build-level guard, Review Focus 1)", async () => {
   // examples/solluna, but with a theme that -- like today's real site/theme.css -- sets a light

@@ -7,8 +7,8 @@ const { render } = await import('../../public/js/components/footer.js');
 
 test('footer: has links for about, privacy and takedown, plus the unofficial note', () => {
   const markup = String(render());
-  assert.match(markup, /<a class="c-footer__link" href="\/about">about<\/a>/);
-  assert.match(markup, /<a class="c-footer__link" href="\/privacy">privacy<\/a>/);
-  assert.match(markup, /<a class="c-footer__link" href="\/takedown">takedown<\/a>/);
+  assert.match(markup, /<a class="meta c-footer__link" href="\/about">about<\/a>/);
+  assert.match(markup, /<a class="meta c-footer__link" href="\/privacy">privacy<\/a>/);
+  assert.match(markup, /<a class="meta c-footer__link" href="\/takedown">takedown<\/a>/);
   assert.match(markup, /unofficial, not affiliated with the artists or their agency/);
 });

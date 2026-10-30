@@ -16,7 +16,7 @@
   justify-content: space-around;
   background: var(--color-card);
   border-top: 1px solid var(--color-card-shadow);
-  padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+  padding: var(--space-2) 0 calc(var(--space-2) + env(safe-area-inset-bottom, 0));
   z-index: 10;
 }
 
@@ -26,14 +26,14 @@
   justify-content: center;
   min-width: var(--tap-target);
   min-height: var(--tap-target);
-  padding: 4px 10px;
+  padding: var(--space-1) var(--space-2);
   font-size: var(--text-11);
   color: var(--color-ink-muted);
 }
 
-.c-tabbar__item--on {
+.c-tabbar__item[aria-current="page"] {
   color: var(--color-label);
-  font-weight: 800;
+  font-weight: var(--weight-heavy);
 }
 
 @media (min-width: 860px) {
@@ -48,7 +48,7 @@
 
   .c-tabbar__item {
     font-size: var(--text-12);
-    padding: 4px 6px;
+    padding: var(--space-1) var(--space-2);
   }
 
   /* The separator is decoration: the empty alt text after "/" keeps it
@@ -58,7 +58,7 @@
     content: '·';
     content: '·' / '';
     color: var(--color-ink-muted);
-    font-weight: 400;
-    margin-right: 12px;
+    font-weight: var(--weight-regular);
+    margin-right: var(--space-3);
   }
 }

@@ -90,8 +90,8 @@ test('translation detail bind: wires cast/bubbles colours and adds no listener o
 
 test('translation section (Task 9b): ctx.compact renders compact preview cards (the person and translator pages ask for it)', () => {
   const sectionVm = { kind: 'translation', total: 1, hasMore: false, items: [preview()] };
-  assert.match(String(section.render(sectionVm, { compact: true })), /c-preview-card--compact/);
-  assert.ok(!String(section.render(sectionVm, {})).includes('c-preview-card--compact'));
+  assert.match(String(section.render(sectionVm, { compact: true })), /data-compact/);
+  assert.ok(!String(section.render(sectionVm, {})).includes('data-compact'));
 });
 
 test('translation detail (Task 10b): "show original" is one escaped element, with the class that keeps line breaks (pre-wrap), the stored newlines and blank lines intact, no <br>', async () => {

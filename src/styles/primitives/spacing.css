@@ -8,7 +8,14 @@
  *     <button class="btn btn--danger btn--sm" type="button">Remove</button>
  *   </div>
  *
- * Without a size, stack is --space-3 and cluster --space-2.
+ *   <div class="cluster cluster--fill" role="tablist">
+ *     <button class="chip chip--lg chip--on" type="button" role="tab" aria-selected="true">By event</button>
+ *     <button class="chip chip--lg" type="button" role="tab" aria-selected="false">All</button>
+ *   </div>
+ *
+ * Without a size, stack is --space-3 and cluster --space-2. cluster--fill
+ * keeps one row and shares its width evenly between the children, their
+ * content centred: a view switch.
  */
 
 .stack {
@@ -22,6 +29,15 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+}
+
+.cluster--fill {
+  flex-wrap: nowrap;
+}
+
+.cluster--fill > * {
+  flex: 1;
+  justify-content: center;
 }
 
 .stack--1, .cluster--1 { gap: var(--space-1); }

@@ -17,9 +17,8 @@
  *       (e.g. `c-import__state--${state}`), which a literal scan can
  *       only ever see as the truncated prefix; and
  *   (c) a handful of classes outside the engine's own naming convention
- *       (a third-party embed's required classname; two dead markers in
- *       bubbles.js with no CSS rule, left for that file's own migration
- *       task), named explicitly below rather than silently ignored.
+ *       (a third-party embed's required classname), named explicitly
+ *       below rather than silently ignored.
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -44,8 +43,6 @@ const DYNAMIC_PREFIXES = ['c-import__state--', 'c-header__tagline--'];
  */
 const NON_ENGINE_CLASSES = {
   'twitter-tweet': "X's own required embed classname (public/js/components/sourceEmbed.js); never styled by the engine",
-  msg: 'bubbles.js: a dead marker on the continuation bubble with no CSS rule, left for bubbles.css\'s own migration task',
-  cont: 'bubbles.js: a dead marker on the continuation bubble with no CSS rule, left for bubbles.css\'s own migration task',
 };
 
 /** @param {string} rel path relative to the repo root, forward-slashed */
