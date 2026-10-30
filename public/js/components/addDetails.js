@@ -44,7 +44,7 @@ function eventField({ options, choices, eventId, allowNew }) {
     <div class="field">
       <label class="label" for="c-add-event">${t('add.event')}</label>
       <span class="field__select">
-        <select class="c-add-details__select" id="c-add-event" data-field="event">
+        <select id="c-add-event" data-field="event">
           ${matchName ? labelled('match', `${matchName} · ${t('add.matches')}`, choices.eventMode === 'match') : ''}
           ${options.events.map((/** @type {any} */ e) => labelled(`event:${e.id}`, e.name, choices.eventMode === `event:${e.id}`))}
           ${allowNew ? labelled('new', t('add.newEvent'), isNew) : ''}
@@ -52,7 +52,7 @@ function eventField({ options, choices, eventId, allowNew }) {
       </span>
       ${isNew ? html`
         <label class="label" for="c-add-event-title">${t('add.eventTitle')}</label>
-        <input class="c-add-details__input" id="c-add-event-title" data-field="eventName" type="text"
+        <input id="c-add-event-title" data-field="eventName" type="text"
           maxlength="120" autocomplete="off" value="${choices.eventName}">
       ` : ''}
     </div>
@@ -70,7 +70,7 @@ function lookupField({ label, field, values, pick, typed, isOwner }) {
     <div class="field">
       <label class="label" for="c-add-${field}">${label}</label>
       <span class="field__select">
-        <select class="c-add-details__select" id="c-add-${field}" data-field="${field}">
+        <select id="c-add-${field}" data-field="${field}">
           ${labelled('', t('add.optional'), pick === '')}
           ${values.map((name) => option(name, pick === name))}
           ${isOwner ? labelled(NEW, newLabel, pick === NEW) : ''}
@@ -78,7 +78,7 @@ function lookupField({ label, field, values, pick, typed, isOwner }) {
       </span>
       ${isOwner && pick === NEW ? html`
         <label class="label" for="c-add-${field}-new">${newNameLabel}</label>
-        <input class="c-add-details__input" id="c-add-${field}-new" data-field="${field}New" type="text"
+        <input id="c-add-${field}-new" data-field="${field}New" type="text"
           maxlength="80" autocomplete="off" value="${typed}">
       ` : ''}
     </div>
@@ -94,7 +94,7 @@ function placementField(choices) {
     <div class="field">
       <label class="label" for="c-add-placement">${t('add.placement')}</label>
       <span class="field__select">
-        <select class="c-add-details__select" id="c-add-placement" data-field="placement">
+        <select id="c-add-placement" data-field="placement">
           ${['event', 'shared_story', 'post', 'unsorted'].map((p) => labelled(p, t(`add.placement.${p}`), choices.placement === p))}
         </select>
       </span>
@@ -222,11 +222,11 @@ export function render({ draft, options, isOwner, choices, media = null, showAct
  * @returns {void}
  */
 export function bind(el, { onChange, onNext, onSave }) {
-  on(el, '.c-add-details__select', 'change', (_event, target) => {
+  on(el, 'select[data-field]', 'change', (_event, target) => {
     const field = target.getAttribute('data-field');
     if (field) onChange(field, target.value);
   });
-  on(el, '.c-add-details__input', 'input', (_event, target) => {
+  on(el, 'input[type="text"][data-field]', 'input', (_event, target) => {
     const field = target.getAttribute('data-field');
     if (field) onChange(field, target.value);
   });

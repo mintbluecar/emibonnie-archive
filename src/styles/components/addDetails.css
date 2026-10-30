@@ -3,7 +3,7 @@
  * primitives since the styling system's Task 9): the card under the
  * preview, its fields and the read-only values. Fields, labels, the
  * dropdowns, the hashtag badges and the checkbox are primitives; this is
- * the card's spacing and the text sizes the controls keep. See
+ * the card's spacing and the read-only value's look. See
  * STYLING.md.
  */
 
@@ -18,11 +18,6 @@
 
 .c-add-details__fields {
   margin-top: var(--space-3);
-}
-
-.c-add-details__select,
-.c-add-details__input {
-  font-size: var(--text-14);
 }
 
 .c-add-details__value {

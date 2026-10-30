@@ -108,13 +108,13 @@ test('the owner opens a held entry and publishes it from the edit page', async (
 
   // The edit page offers save & publish, and is accessible.
   await checkPage(page, `/edit/translation/${HELD_ID}`);
-  await expect(page.locator('.notice--accent')).toBeVisible();
+  await expect(page.locator('[data-held]')).toBeVisible();
   const publish = page.locator('[data-action="save-publish"]');
   await expect(publish).toBeVisible();
 
   // Publishing from here (no changes to save) makes the entry public.
   await publish.click();
-  await expect(page.locator('.notice--accent')).toHaveCount(0);
+  await expect(page.locator('[data-held]')).toHaveCount(0);
   await expect(page.locator('.c-edit__published')).toBeVisible();
   const entry = await gotoReady(page, `/t/${HELD_ID}`);
   expect(entry?.status()).toBe(200);

@@ -1,8 +1,8 @@
 /*
  * The add flow's own pieces (Plan 2a Task 13; on primitives since the
  * styling system's Task 9): the step dots over the cards, the cards'
- * shared heading spacing and action row, the unmapped note, the paste
- * box's and "already subbed" text sizes, and the page-level notice. Each
+ * shared heading spacing and action row, the unmapped note, the
+ * "already subbed" text size, and the page-level notice. Each
  * step's card has its own file: addLink.css, addDetails.css,
  * speakerStep.css, with personPicker.css, lineFix.css and edit.css
  * alongside. See STYLING.md.
@@ -35,10 +35,6 @@
 
 .c-add__note {
   flex: 1 1 100%;
-}
-
-.c-add__url {
-  font-size: var(--text-14);
 }
 
 .c-add__check {

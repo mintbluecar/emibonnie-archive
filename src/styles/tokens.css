@@ -220,6 +220,10 @@
   /* The small button size (Styling system Task 4, btn--sm): shorter than
      --tap-target, still above --target-min. */
   --control-sm: 32px;
+  /* The large chip (Styling system Task 9, chip--lg): the person
+     picker's people and roles, which were 36px before they became
+     chips. */
+  --control-md: 36px;
   /* The smallest target any control may have (WCAG 2.2 SC 2.5.8, Target
      Size (Minimum), level AA): chips and checkbox labels (Styling system
      Task 4), which keep their compact look rather than --tap-target. */

@@ -48,7 +48,7 @@ function writesRunOnce(testInfo) {
  * @returns {Promise<void>}
  */
 async function pasteLink(page, id) {
-  await page.locator('.c-add__url').fill(tweetUrl(id));
+  await page.locator('#c-add-url').fill(tweetUrl(id));
   await page.locator('[data-add-form] button[type="submit"]').click();
   await expect(page.locator('.c-add-details')).toBeVisible();
 }
@@ -61,7 +61,7 @@ test('add, signed in: step 1 asks for the link and names who is adding, and axe 
   await signInAs(page, 'member');
   await checkPage(page, '/add');
   await expect(page.locator('.c-add-link__as')).toHaveText('adding as @dev_member');
-  await expect(page.locator('.c-add__url')).toBeVisible();
+  await expect(page.locator('#c-add-url')).toBeVisible();
   await expect(page.locator('.c-add__steps')).toBeVisible();
   await expect(page.locator('[data-add-form] .btn--primary')).toBeEnabled();
 });

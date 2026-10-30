@@ -11,9 +11,11 @@
  *   <button class="btn btn--quiet btn--icon" type="button" aria-label="Close">x</button>
  *   <button class="btn btn--primary btn--block" type="submit">Continue</button>
  *   <a class="btn btn--secondary" href="/me">A link that looks like a button</a>
+ *   <button class="btn btn--secondary" type="button" aria-pressed="true">Speech</button>
  *
  * btn--icon is square and has no text of its own: it needs aria-label.
- * btn--sm combines with any variant, btn--icon included.
+ * btn--sm combines with any variant, btn--icon included. A toggle button
+ * says its state with aria-pressed; pressed, it takes the label tint.
  */
 
 .btn {
@@ -85,6 +87,12 @@
 .btn--block {
   display: flex;
   width: 100%;
+}
+
+.btn[aria-pressed="true"] {
+  color: var(--color-label-on-tint);
+  background: var(--color-label-tint);
+  border-color: var(--color-label);
 }
 
 .btn:disabled,

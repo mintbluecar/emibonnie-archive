@@ -181,6 +181,11 @@ test.describe('style guide (/dev/styleguide): primitives', () => {
     expect(icon.width).toBeCloseTo(icon.height, 0);
     expect(await page.locator('#button .btn--icon:not([aria-label])')).toHaveCount(0);
 
+    // A toggle (aria-pressed): pressed takes the label tint and colour, not pressed stays secondary.
+    expect(await computed(page, '#button .btn[aria-pressed="true"]', 'background-color')).toBe(await resolved(page, 'background-color', 'var(--color-label-tint)'));
+    expect(await computed(page, '#button .btn[aria-pressed="true"]', 'color')).toBe(await resolved(page, 'color', 'var(--color-label-on-tint)'));
+    expect(await computed(page, '#button .btn[aria-pressed="false"]', 'background-color')).toBe(await resolved(page, 'background-color', 'var(--color-card)'));
+
     const block = await box('#button .btn--block');
     const parent = await page.locator('#button .btn--block').first().evaluate((el) => /** @type {HTMLElement} */ (el.parentElement).clientWidth);
     expect(block.width).toBeCloseTo(parent, 0);
@@ -243,6 +248,13 @@ test.describe('style guide (/dev/styleguide): primitives', () => {
     expect(await computed(page, '#chip .chip', 'border-top-left-radius')).toBe(await resolved(page, 'border-top-left-radius', 'var(--radius-pill)'));
     expect(await computed(page, '#chip .chip--on', 'background-color')).not.toBe(await computed(page, '#chip .chip:not(.chip--on)', 'background-color'));
     await expect(page.locator('#chip .chip .chip__count').first()).toBeVisible();
+    // chip--lg: at least --control-md tall, bold, and taller than a plain chip.
+    const md = parseFloat(await resolved(page, 'height', 'var(--control-md)'));
+    const lg = /** @type {{ height: number }} */ (await page.locator('#chip .chip--lg').first().boundingBox());
+    const plain = /** @type {{ height: number }} */ (await page.locator('#chip .chip:not(.chip--lg)').first().boundingBox());
+    expect(lg.height).toBeGreaterThanOrEqual(md);
+    expect(lg.height).toBeGreaterThan(plain.height);
+    expect(await computed(page, '#chip .chip--lg:not(.chip--on)', 'font-weight')).toBe('700');
   });
 
   test('badge: a pill; accent and danger variants from tokens', async ({ page }) => {

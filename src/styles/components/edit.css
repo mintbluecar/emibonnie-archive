@@ -10,6 +10,11 @@
   margin-top: var(--space-4);
 }
 
+/* An error takes its own line under the buttons. */
+.c-edit__notice {
+  flex: 1 1 100%;
+}
+
 .c-edit__saved,
 .c-edit__published {
   font-weight: var(--weight-bold);

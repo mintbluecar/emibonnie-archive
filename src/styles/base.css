@@ -44,6 +44,13 @@ h1, h2, h3 {
   font-family: var(--font-heading);
 }
 
+/* The hidden attribute always hides, even on an element whose class
+   sets its own display (a chip, a cluster): script toggles it to
+   filter and show/hide. */
+[hidden] {
+  display: none !important;
+}
+
 a {
   color: inherit;
   text-decoration: none;

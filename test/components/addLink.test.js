@@ -28,7 +28,7 @@ function result(status, extra = {}) {
 test('addLink: the paste form names who the entry is being added as', () => {
   const markup = String(render({ addingAs: '@tl_alpha' }));
   assert.match(markup, copyRe(t('add.addingAs', { who: '@tl_alpha' })));
-  assert.match(markup, /<input[^>]*class="c-add__url"[^>]*>/);
+  assert.match(markup, /<input[^>]*id="c-add-url"[^>]*>/);
   assert.match(markup, new RegExp(`>${pattern(t('add.next'))}<`));
 });
 
@@ -42,7 +42,7 @@ test('addLink: every status has its own copy key and at least one onward link', 
     const markup = String(render({ addingAs: 'tl_alpha', result: result(status) }));
     assert.match(markup, copyRe(t(`add.status.${status}`)), status);
     assert.match(markup, /<a [^>]*href="[^"]+"/, `${status} must link onward`);
-    assert.ok(!markup.includes('class="c-add__url"'), `${status} is not the paste form`);
+    assert.ok(!markup.includes('id="c-add-url"'), `${status} is not the paste form`);
   }
 });
 

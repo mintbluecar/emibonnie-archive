@@ -87,7 +87,7 @@ function actionsBlock(s, held) {
           ${s.busy ? t('edit.saving') : t('edit.saveAndPublish')}
         </button>
       ` : ''}
-      ${s.notice ? html`<p class="notice notice--error" role="alert">${s.notice}</p>` : ''}
+      ${s.notice ? html`<p class="notice notice--error c-edit__notice" role="alert">${s.notice}</p>` : ''}
       ${s.saved ? html`<p class="meta c-edit__saved" role="status">${t('edit.saved')}</p>` : ''}
       ${s.published ? html`<p class="meta c-edit__published" role="status">${t('edit.published')}</p>` : ''}
     </div>
@@ -103,7 +103,7 @@ export function render(s) {
     active: 'me', compact: true,
     content: html`
       <h1 class="c-me__title">${t('edit.title')}</h1>
-      ${held ? html`<p class="notice notice--accent" role="status">${t('item.held')}</p>` : ''}
+      ${held ? html`<p class="notice notice--accent" role="status" data-held>${t('item.held')}</p>` : ''}
       ${addDetails.render({ draft, options: s.options, isOwner, choices: s.choices, showActions: false, allowNewEvent: false })}
       ${speakerStep.render({ draft, options: s.options, chosen: s.chosen, open: s.open, lineFixes: s.lineFixes, showSave: false })}
       ${s.fix ? lineFixSheet.render({ line: s.fix, options: s.options, fixes: s.lineFixes }) : ''}

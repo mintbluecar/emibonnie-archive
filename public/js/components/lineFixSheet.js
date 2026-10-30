@@ -29,7 +29,7 @@ function lineText(line) {
  * @returns {import('../core/html.js').SafeHtml}
  */
 function choice(action, label, on) {
-  return html`<button type="button" class="chip${on ? ' chip--on' : ''}" data-action="${action}"
+  return html`<button type="button" class="btn btn--secondary" data-action="${action}"
     aria-pressed="${on ? 'true' : 'false'}">${label}</button>`;
 }
 
@@ -49,7 +49,7 @@ export function render({ line, options, fixes = [] }) {
       <div class="cluster cluster--2">
         ${choice('speech', t('add.lineSpeech'), fix?.as === 'speech')}
         ${choice('plain', t('add.linePlain'), fix?.as === 'plain')}
-        <button type="button" class="btn btn--secondary btn--sm c-line-fix__cancel" data-action="cancel">${t('add.cancel')}</button>
+        <button type="button" class="btn btn--secondary c-line-fix__cancel" data-action="cancel">${t('add.cancel')}</button>
       </div>
       <div class="c-line-fix__picker" hidden>
         <p class="label c-line-fix__speaker">${t('add.lineSpeaker')}</p>

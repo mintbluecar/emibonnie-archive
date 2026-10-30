@@ -7,6 +7,10 @@
  *   <button class="chip chip--on" type="button" aria-pressed="true">posts</button>
  *   <button class="chip" type="button">waiting <span class="chip__count">12</span></button>
  *   <a class="chip" href="/tag/starfest">#starfest</a>
+ *   <button class="chip chip--lg" type="button" aria-pressed="false">host</button>
+ *
+ * chip--lg is the bigger, bold pick (--control-md tall): a person or
+ * role in the speaker picker.
  */
 
 .chip {
@@ -32,6 +36,12 @@
   color: var(--color-label-on-tint);
   background: var(--color-label-tint);
   border-color: var(--color-label);
+}
+
+.chip--lg {
+  min-height: var(--control-md);
+  font-size: var(--text-12-5);
+  font-weight: var(--weight-bold);
 }
 
 .chip__count {

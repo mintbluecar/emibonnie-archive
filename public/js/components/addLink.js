@@ -57,7 +57,7 @@ function urlField({ url, error }) {
   return html`
     <div class="field">
       <label class="label" for="c-add-url">${t('add.urlLabel')}</label>
-      <input class="c-add__url" id="c-add-url" name="url" type="url" inputmode="url" autocomplete="off"
+      <input id="c-add-url" name="url" type="url" inputmode="url" autocomplete="off"
         value="${url}" placeholder="${t('add.urlPlaceholder')}" required${error ? html` aria-invalid="true" aria-describedby="c-add-url-error"` : ''}>
       ${error ? html`<p class="field__error" id="c-add-url-error" role="alert">${t('add.error')}</p>` : ''}
     </div>
@@ -96,7 +96,7 @@ export function render({ addingAs, url = '', busy = false, error = false, result
 export function bind(el, { onSubmit }) {
   on(el, '[data-add-form]', 'submit', (event, form) => {
     event.preventDefault();
-    const input = /** @type {HTMLInputElement|null} */ (form.querySelector('.c-add__url'));
+    const input = /** @type {HTMLInputElement|null} */ (form.querySelector('#c-add-url'));
     onSubmit(input?.value.trim() ?? '');
   });
 }
