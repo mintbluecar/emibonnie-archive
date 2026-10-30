@@ -3,140 +3,115 @@
  * The owner's API until Plan 3's admin (Plan 2b): `GET /api/owner` (the
  * switch, the sign-in alert, the waiting list, the reports), the approval
  * toggle, and publishing or rejecting one held entry. Every route here is
- * owner-only; a member is 403 and a signed-out visitor is 401.
+ * owner-only (`defineRoute`'s `auth: 'owner'`): a member is 403 and a
+ * signed-out visitor is 401. Every write counts against the `owner` limit.
  */
-import { NO_STORE, PRIVATE_NO_STORE } from '../http/handler.js';
-import { requireOwner } from '../services/session.js';
-import { limit } from '../services/limits.js';
+import { BadRequest } from '../http/errors.js';
+import { defineRoute, fieldsOf } from '../http/defineRoute.js';
 import { ownerView, setApproval, reviewItem, hideReportTarget, restoreReportTarget, dismissReport } from '../services/owner.js';
 import { searchUsers, setBlocked, clearSignInAlert } from '../services/ownerUsers.js';
 
-export const ownerRoute = {
+/** `{ required }`: only `true` turns approval on. @param {unknown} raw */
+const approvalBody = (raw) => ({ required: fieldsOf(raw).required === true });
+
+/** `{ state }`: published or rejected. @param {unknown} raw @returns {{ state: 'published'|'rejected' }} */
+function reviewBody(raw) {
+  const { state } = fieldsOf(raw);
+  if (state !== 'published' && state !== 'rejected') throw new BadRequest('state must be published or rejected');
+  return { state };
+}
+
+/** `{ userId }`, as a string (empty when missing). @param {unknown} raw */
+const userIdBody = (raw) => ({ userId: String(fieldsOf(raw).userId ?? '') });
+
+export const ownerRoute = defineRoute({
   method: 'GET',
   path: '/api/owner',
-  cache: PRIVATE_NO_STORE,
+  auth: 'owner',
   query: [],
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    await requireOwner(deps, input);
-    return ownerView(deps);
-  },
-};
+  run: async (_ctx, deps) => ownerView(deps),
+});
 
-export const approvalRoute = {
+export const approvalRoute = defineRoute({
   method: 'POST',
   path: '/api/owner/approval',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireOwner(deps, input);
-    await limit(deps, 'owner', user.id);
-    const required = /** @type {any} */ (input.body)?.required;
-    return setApproval(deps, required === true, user.id);
-  },
-};
+  auth: 'owner',
+  limit: 'owner',
+  body: approvalBody,
+  run: async ({ body, user }, deps) => setApproval(deps, body.required, user.id),
+});
 
-export const reviewRoute = {
+export const reviewRoute = defineRoute({
   method: 'POST',
   path: '/api/owner/items/:kind/:sourceId/review',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireOwner(deps, input);
-    await limit(deps, 'owner', user.id);
-    const body = /** @type {any} */ (input.body);
-    return reviewItem(deps, { kind: input.params.kind, sourceId: input.params.sourceId, state: body?.state, actor: user });
-  },
-};
+  auth: 'owner',
+  limit: 'owner',
+  body: reviewBody,
+  run: async ({ params, body, user }, deps) => reviewItem(deps, { kind: params.kind, sourceId: params.sourceId, state: body.state, actor: user }),
+});
 
 /**
  * The three report actions: hide what a report names (the report stays
  * open so its row can offer restore), undo that hide, or just close.
  */
-export const hideReportRoute = {
+export const hideReportRoute = defineRoute({
   method: 'POST',
   path: '/api/owner/reports/:id/hide',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireOwner(deps, input);
-    await limit(deps, 'owner', user.id);
-    return hideReportTarget(deps, { reportId: Number(input.params.id), actor: user });
-  },
-};
+  auth: 'owner',
+  limit: 'owner',
+  run: async ({ params, user }, deps) => hideReportTarget(deps, { reportId: Number(params.id), actor: user }),
+});
 
-export const restoreReportRoute = {
+export const restoreReportRoute = defineRoute({
   method: 'POST',
   path: '/api/owner/reports/:id/restore',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireOwner(deps, input);
-    await limit(deps, 'owner', user.id);
-    return restoreReportTarget(deps, { reportId: Number(input.params.id), actor: user });
-  },
-};
+  auth: 'owner',
+  limit: 'owner',
+  run: async ({ params, user }, deps) => restoreReportTarget(deps, { reportId: Number(params.id), actor: user }),
+});
 
-export const dismissReportRoute = {
+export const dismissReportRoute = defineRoute({
   method: 'POST',
   path: '/api/owner/reports/:id/dismiss',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireOwner(deps, input);
-    await limit(deps, 'owner', user.id);
-    return dismissReport(deps, { reportId: Number(input.params.id), actor: user });
-  },
-};
+  auth: 'owner',
+  limit: 'owner',
+  run: async ({ params, user }, deps) => dismissReport(deps, { reportId: Number(params.id), actor: user }),
+});
 
 /** Users search, by handle or chosen name; two characters minimum. */
-export const usersRoute = {
+export const usersRoute = defineRoute({
   method: 'GET',
   path: '/api/owner/users',
-  cache: PRIVATE_NO_STORE,
+  auth: 'owner',
   query: ['q'],
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    await requireOwner(deps, input);
-    return { users: await searchUsers(deps, input.query.q) };
-  },
-};
+  run: async ({ query }, deps) => ({ users: await searchUsers(deps, query.q) }),
+});
 
 /** `{ userId }`: hides that submitter's live items and stops them writing. */
-export const blockUserRoute = {
+export const blockUserRoute = defineRoute({
   method: 'POST',
   path: '/api/owner/users/block',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireOwner(deps, input);
-    await limit(deps, 'owner', user.id);
-    return setBlocked(deps, { userId: String(/** @type {any} */ (input.body)?.userId ?? ''), blocked: true, actor: user });
-  },
-};
+  auth: 'owner',
+  limit: 'owner',
+  body: userIdBody,
+  run: async ({ body, user }, deps) => setBlocked(deps, { userId: body.userId, blocked: true, actor: user }),
+});
 
 /** `{ userId }`: restores only what the block hid. */
-export const unblockUserRoute = {
+export const unblockUserRoute = defineRoute({
   method: 'POST',
   path: '/api/owner/users/unblock',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireOwner(deps, input);
-    await limit(deps, 'owner', user.id);
-    return setBlocked(deps, { userId: String(/** @type {any} */ (input.body)?.userId ?? ''), blocked: false, actor: user });
-  },
-};
+  auth: 'owner',
+  limit: 'owner',
+  body: userIdBody,
+  run: async ({ body, user }, deps) => setBlocked(deps, { userId: body.userId, blocked: false, actor: user }),
+});
 
 /** Clears the "an X sign-in failed" note. */
-export const signInAlertRoute = {
+export const signInAlertRoute = defineRoute({
   method: 'POST',
   path: '/api/owner/sign-in-alert/dismiss',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireOwner(deps, input);
-    await limit(deps, 'owner', user.id);
-    return clearSignInAlert(deps, user.id);
-  },
-};
+  auth: 'owner',
+  limit: 'owner',
+  run: async ({ user }, deps) => clearSignInAlert(deps, user.id),
+});

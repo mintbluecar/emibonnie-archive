@@ -58,7 +58,7 @@ async function resolveTarget(deps, target) {
  * Stores one report. `reporter` is recorded when signed in; a signed-out
  * report has no creator.
  * @param {ViewDeps} deps
- * @param {{ target: ReportTarget, reason: unknown, reporter: SessionUser|null }} input
+ * @param {{ target: unknown, reason: unknown, reporter: SessionUser|null }} input `target` is checked here (a `ReportTarget`)
  * @returns {Promise<{ id: number }>}
  */
 export async function createReport(deps, { target, reason, reporter }) {

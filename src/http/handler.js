@@ -35,7 +35,8 @@ export const NO_STORE = 'no-store';
  * @typedef {{ params: Record<string, string>, query: Record<string, string|string[]>, body: unknown, origin: string,
  *   cookies: Record<string, string>, ip: string|null }} RouteInput
  * @typedef {{ method: string, path: string, cache: string, query?: readonly string[]|null, lists?: readonly string[],
- *   run: (input: RouteInput, deps: any) => Promise<unknown> }} Route
+ *   readonly auth?: 'none'|'optional'|'user'|'owner', run: (input: RouteInput, deps: any) => Promise<unknown> }} Route
+ *   `auth`: set by `defineRoute` (src/http/defineRoute.js); a route without it counts as `'none'`.
  *   `query`: the query params a GET accepts (default none; null accepts any,
  *   for pages reached through shared links that carry tracking params --
  *   and, Task 10d, an in-place search's own state, e.g. `?people=1&people=2`:

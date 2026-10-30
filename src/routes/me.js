@@ -5,16 +5,33 @@
  * /api/me/name` (a Google user picks their public name), `POST
  * /api/auth/signout` and `/api/auth/signout-all`.
  */
-import { NO_STORE, PRIVATE_NO_STORE } from '../http/handler.js';
+import { NO_STORE } from '../http/handler.js';
 import { BadRequest } from '../http/errors.js';
 import { jsonWithCookies } from '../http/cookies.js';
-import { currentUser, requireUser, signOut, signOutEverywhere, setDisplayName, isTranslator, needsDisplayName } from '../services/session.js';
-import { limit } from '../services/limits.js';
+import { defineRoute, fieldsOf } from '../http/defineRoute.js';
+import { signOut, signOutEverywhere, setDisplayName, isTranslator, needsDisplayName } from '../services/session.js';
 import { cleanDisplayName } from '../domain/displayName.js';
 import { deleteAccount } from '../services/deleteAccount.js';
 import { addedPreviews } from '../services/added.js';
 import { translatorList, markWelcomed, removeEntries, restoreEntries, setOptOut } from '../services/translator.js';
 import { HUB_OFFSET_MAX, integer } from '../services/params.js';
+
+/** `{ items }`: `{ kind, sourceId }[]`, checked by the translator service. @param {unknown} raw */
+const itemsBody = (raw) => ({ items: fieldsOf(raw).items });
+
+/** `{ name }`: a cleaned public name, or a 400 naming why not. @param {unknown} raw @returns {string} */
+function nameBody(raw) {
+  const { name } = fieldsOf(raw);
+  const cleaned = cleanDisplayName(typeof name === 'string' ? name : '');
+  if (!cleaned.ok) throw new BadRequest(cleaned.reason);
+  return cleaned.name;
+}
+
+/** `{ confirm: 'delete' }`, or a 400. @param {unknown} raw */
+function deleteBody(raw) {
+  if (fieldsOf(raw).confirm !== 'delete') throw new BadRequest('confirm must be "delete"');
+  return { confirm: 'delete' };
+}
 
 /** @param {import('../services/session.js').SessionUser|null} user */
 function meUser(user) {
@@ -31,136 +48,108 @@ function meUser(user) {
   };
 }
 
-export const meRoute = {
+export const meRoute = defineRoute({
   method: 'GET',
   path: '/api/me',
+  auth: 'optional',
   cache: NO_STORE,
   query: [],
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => ({ user: meUser(await currentUser(deps, input)) }),
-};
+  run: async ({ user }) => ({ user: meUser(user) }),
+});
 
 /**
  * The caller's own items, every review state, newest first (Task 12).
  * Per-user, so it is never shared or stored; `reviewState` lets the page
  * label a held or rejected entry.
  */
-export const addedRoute = {
+export const addedRoute = defineRoute({
   method: 'GET',
   path: '/api/me/added',
-  cache: PRIVATE_NO_STORE,
+  auth: 'user',
   query: ['offset'],
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireUser(deps, input);
-    const offset = integer('offset', input.query.offset, HUB_OFFSET_MAX, 0);
-    return addedPreviews(deps, user.id, { offset });
-  },
-};
+  run: async ({ query, user }, deps) => addedPreviews(deps, user.id, { offset: integer('offset', query.offset, HUB_OFFSET_MAX, 0) }),
+});
 
 /** The translator's own entries, every review state, removed ones flagged. */
-export const translationsRoute = {
+export const translationsRoute = defineRoute({
   method: 'GET',
   path: '/api/me/translations',
-  cache: PRIVATE_NO_STORE,
+  auth: 'user',
   query: ['offset'],
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireUser(deps, input);
-    const offset = integer('offset', input.query.offset, HUB_OFFSET_MAX, 0);
-    return translatorList(deps, user, { offset });
-  },
-};
+  run: async ({ query, user }, deps) => translatorList(deps, user, { offset: integer('offset', query.offset, HUB_OFFSET_MAX, 0) }),
+});
 
 /**
  * Removes the caller's own entries: `{ items: [{ kind, sourceId }] }`.
  * All or nothing, 1 to 50 per request.
  */
-export const removeEntriesRoute = {
+export const removeEntriesRoute = defineRoute({
   method: 'POST',
   path: '/api/me/translations/remove',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireUser(deps, input);
-    await limit(deps, 'remove', user.id);
-    return removeEntries(deps, user, (/** @type {any} */ (input.body))?.items);
-  },
-};
+  auth: 'user',
+  limit: 'remove',
+  body: itemsBody,
+  run: async ({ body, user }, deps) => removeEntries(deps, user, body.items),
+});
 
 /** Restores entries the caller removed themselves; owner hides stay hidden. */
-export const restoreEntriesRoute = {
+export const restoreEntriesRoute = defineRoute({
   method: 'POST',
   path: '/api/me/translations/restore',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireUser(deps, input);
-    await limit(deps, 'restore', user.id);
-    return restoreEntries(deps, user, (/** @type {any} */ (input.body))?.items);
-  },
-};
+  auth: 'user',
+  limit: 'restore',
+  body: itemsBody,
+  run: async ({ body, user }, deps) => restoreEntries(deps, user, body.items),
+});
 
 /**
  * Opts the caller's X accounts out of the archive (or back in): no
  * soft delete, just `accounts.opted_out_at`, which every public query
  * already respects.
  */
-export const optOutRoute = {
+export const optOutRoute = defineRoute({
   method: 'POST',
   path: '/api/me/translations/opt-out',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireUser(deps, input);
-    await limit(deps, 'optOut', user.id);
-    return setOptOut(deps, user, true);
-  },
-};
+  auth: 'user',
+  limit: 'optOut',
+  run: async ({ user }, deps) => setOptOut(deps, user, true),
+});
 
 /** Clears the opt-out; the account's entries become visible again. */
-export const optInRoute = {
+export const optInRoute = defineRoute({
   method: 'POST',
   path: '/api/me/translations/opt-in',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireUser(deps, input);
-    await limit(deps, 'optIn', user.id);
+  auth: 'user',
+  limit: 'optIn',
+  run: async ({ user }, deps) => {
     if (user.translatorAccountIds.length === 0) throw new BadRequest('not_a_translator');
     return setOptOut(deps, user, false);
   },
-};
+});
 
 /** Marks the one-time translator welcome as shown. Idempotent. */
-export const welcomedRoute = {
+export const welcomedRoute = defineRoute({
   method: 'POST',
   path: '/api/me/welcomed',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireUser(deps, input);
-    await limit(deps, 'welcome', user.id);
+  auth: 'user',
+  limit: 'welcome',
+  run: async ({ user }, deps) => {
     if (isTranslator(user)) await markWelcomed(deps, user.id);
     return { ok: true };
   },
-};
+});
 
-export const setNameRoute = {
+export const setNameRoute = defineRoute({
   method: 'POST',
   path: '/api/me/name',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireUser(deps, input);
-    await limit(deps, 'setName', user.id);
-    const raw = typeof (/** @type {any} */ (input.body))?.name === 'string' ? (/** @type {any} */ (input.body)).name : '';
-    const cleaned = cleanDisplayName(raw);
-    if (!cleaned.ok) throw new BadRequest(cleaned.reason);
-    await setDisplayName(deps, user.id, cleaned.name);
-    return { ok: true, name: cleaned.name };
+  auth: 'user',
+  limit: 'setName',
+  body: nameBody,
+  run: async ({ body: name, user }, deps) => {
+    await setDisplayName(deps, user.id, name);
+    return { ok: true, name };
   },
-};
+});
 
 export const signOutRoute = {
   method: 'POST',
@@ -170,29 +159,21 @@ export const signOutRoute = {
   run: async (input, deps) => jsonWithCookies({ ok: true }, [await signOut(deps, input)]),
 };
 
-export const signOutAllRoute = {
+export const signOutAllRoute = defineRoute({
   method: 'POST',
   path: '/api/auth/signout-all',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireUser(deps, input);
-    await signOutEverywhere(deps, user.id);
-    return jsonWithCookies({ ok: true }, [await signOut(deps, input)]);
+  auth: 'user',
+  run: async (ctx, deps) => {
+    await signOutEverywhere(deps, ctx.user.id);
+    return jsonWithCookies({ ok: true }, [await signOut(deps, ctx)]);
   },
-};
+});
 
-export const deleteAccountRoute = {
+export const deleteAccountRoute = defineRoute({
   method: 'POST',
   path: '/api/me/delete',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireUser(deps, input);
-    await limit(deps, 'deleteAccount', user.id);
-    const confirm = /** @type {any} */ (input.body)?.confirm;
-    if (confirm !== 'delete') throw new BadRequest('confirm must be "delete"');
-    const clear = await deleteAccount(deps, user.id);
-    return jsonWithCookies({ ok: true }, [clear]);
-  },
-};
+  auth: 'user',
+  limit: 'deleteAccount',
+  body: deleteBody,
+  run: async ({ user }, deps) => jsonWithCookies({ ok: true }, [await deleteAccount(deps, user.id)]),
+});

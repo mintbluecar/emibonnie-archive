@@ -1,23 +1,23 @@
 // @ts-check
 /**
- * `POST /api/reports`: the public report form. No sign-in; the handler's
- * Origin check applies, and the per-IP report limit lives in the service's
- * caller (src/services/limits.js `report`).
+ * `POST /api/reports`: the public report form. No sign-in needed (a
+ * signed-in reporter is recorded); the handler's Origin check applies, and
+ * the `report` limit counts per IP (src/services/limits.js).
  */
-import { NO_STORE } from '../http/handler.js';
-import { currentUser } from '../services/session.js';
-import { limit } from '../services/limits.js';
+import { defineRoute, fieldsOf } from '../http/defineRoute.js';
 import { createReport } from '../services/reports.js';
 
-export const route = {
+/** `{ target, reason }`, checked by `createReport`. @param {unknown} raw */
+function reportBody(raw) {
+  const { target, reason } = fieldsOf(raw);
+  return { target, reason };
+}
+
+export const route = defineRoute({
   method: 'POST',
   path: '/api/reports',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const reporter = await currentUser(deps, input);
-    await limit(deps, 'report', input.ip);
-    const body = /** @type {any} */ (input.body);
-    return createReport(deps, { target: body?.target, reason: body?.reason, reporter });
-  },
-};
+  auth: 'optional',
+  limit: 'report',
+  body: reportBody,
+  run: async ({ body, user }, deps) => createReport(deps, { target: body.target, reason: body.reason, reporter: user }),
+});
