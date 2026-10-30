@@ -261,3 +261,27 @@ test('validateSite (Task 14): a font naming neither package nor files (or both) 
   assert.equal(both.ok, false);
   if (!both.ok) assert.ok(both.errors.some((e) => e.startsWith('fonts[0]:')), both.errors.join('\n'));
 });
+
+test(
+  'validateSite (Task 14, fix round 1): package must be a valid npm package name -- a traversal, an absolute path or an escaped scope all fail',
+  () => {
+    const raw = readFixture('examples/solluna/site.json');
+    for (const bad of ['../../etc', '/abs', '@scope/../x', '@scope\\..\\x']) {
+      raw.fonts = [{ family: 'Bad Package', package: bad, subsets: ['latin'], weights: [400] }];
+      const result = validateSite(raw);
+      assert.equal(result.ok, false, bad);
+      if (result.ok) continue;
+      assert.ok(result.errors.some((e) => e.startsWith('fonts[0].package:')), `${bad}: ${result.errors.join('\n')}`);
+    }
+  },
+);
+
+test('validateSite (Task 14, fix round 1): a valid scoped or unscoped package name is accepted', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  for (const good of ['@fontsource/some-display', 'some-display']) {
+    raw.fonts = [{ family: 'Good Package', package: good, subsets: ['latin'], weights: [400] }];
+    const result = validateSite(raw);
+    assert.ok(result.ok, `${good}: ${!result.ok && result.errors.join('\n')}`);
+    if (result.ok) assert.equal(result.site.fonts[0].package, good);
+  }
+});

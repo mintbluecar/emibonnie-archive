@@ -14,7 +14,7 @@ import { readFileSync, mkdtempSync, rmSync, writeFileSync, cpSync } from 'node:f
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { runBuild } from '../../scripts/build.js';
-import { findDefinedCssTokens, findUndeclaredFontFamilies } from '../../scripts/buildChecks.js';
+import { findDefinedCssTokens, findUndeclaredFontFamilies, findFontFamilyReferences } from '../../scripts/buildChecks.js';
 import { FONT_SPECS } from '../../scripts/buildAssets.js';
 
 /** The declarations inside the first `{…}` after `selector`, comments dropped, whitespace normalised. @param {string} css @param {string} selector */
@@ -158,6 +158,14 @@ test('Task 14, spec "2b. Fonts a site can choose": a theme naming an undeclared 
     [...engineFamilies, 'Site Custom Font'],
   );
   assert.deepEqual(declaredBySite, [], 'naming a family site.json itself declares is never undeclared');
+});
+
+test('findFontFamilyReferences (Task 14, fix round 1): a declaration with no trailing ; (the last one before the block\'s closing }) is still found', () => {
+  const noSemicolon = findFontFamilyReferences([":root { --font-heading: 'Last Declaration' }"]);
+  assert.deepEqual([...noSemicolon], ['Last Declaration']);
+
+  const bothStyles = findFontFamilyReferences([":root { --font-body: 'First'; --font-heading: 'Last' }"]);
+  assert.deepEqual([...bothStyles].sort(), ['First', 'Last']);
 });
 
 test('the bundled example site and this repo\'s own site only name font families the engine ships (neither declares its own fonts yet)', () => {

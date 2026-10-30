@@ -12,7 +12,7 @@ import { mkdtempSync, rmSync, readFileSync, existsSync, cpSync, writeFileSync, m
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { runBuild } from '../../scripts/build.js';
-import { buildAppCss } from '../../scripts/buildAssets.js';
+import { buildAppCss, buildFontsCss } from '../../scripts/buildAssets.js';
 
 /**
  * A temp repo root with `src/`, the solluna example as `site/`, and one
@@ -223,6 +223,26 @@ test('runBuild (Task 14): fails, naming the font and the weight, when a referenc
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });
+
+test(
+  'buildFontsCss (Task 14, fix round 1): defence in depth -- a font.package that resolves outside node_modules is rejected ' +
+    'even if schema validation is bypassed (direct call, not through validateSite)',
+  () => {
+    const outDir = mkdtempSync(path.join(tmpdir(), 'fan-archive-fonts-escape-out-'));
+    const siteDir = mkdtempSync(path.join(tmpdir(), 'fan-archive-fonts-escape-site-'));
+    try {
+      writeFileSync(path.join(siteDir, 'theme.css'), ":root {\n  --font-heading: 'Escaping Font', var(--font-body);\n}\n");
+      const escapingFont = { family: 'Escaping Font', package: '../../../../../etc', subsets: ['latin'], weights: [400], style: 'normal' };
+      assert.throws(
+        () => buildFontsCss(process.cwd(), outDir, { siteDir, fonts: [escapingFont] }),
+        /Escaping Font.*outside node_modules/s,
+      );
+    } finally {
+      rmSync(outDir, { recursive: true, force: true });
+      rmSync(siteDir, { recursive: true, force: true });
+    }
+  },
+);
 
 test('runBuild (Task 14, Review Focus 5): a site with no theme.css and no fonts builds, and fonts.css has only the engine families', async () => {
   const { repoRoot, siteDir } = makeBundlingRepoRoot();

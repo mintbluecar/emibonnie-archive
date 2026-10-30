@@ -11,6 +11,14 @@ const FONT_WEIGHT_MIN = 100;
 const FONT_WEIGHT_MAX = 900;
 
 /**
+ * A valid (scoped or unscoped) npm package name -- lowercase, no `..`,
+ * no leading `/` and no backslash, so `font.package` can be joined
+ * straight onto `node_modules/` (`scripts/buildAssets.js`'s
+ * `siteFontFacesFromPackage`) without a path escaping it.
+ */
+const PACKAGE_NAME_RE = /^(@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/;
+
+/**
  * @param {string[]} errors
  * @param {string} path
  * @param {unknown} value
@@ -133,8 +141,8 @@ function checkFontFiles(errors, base, raw) {
  * @returns {{ package: string, subsets: string[], weights: number[] }}
  */
 function checkFontPackageSource(errors, base, raw) {
-  const pkg = typeof raw.package === 'string' && raw.package.length > 0 ? raw.package : '';
-  if (!pkg) errors.push(`${base}.package: must be a non-empty string`);
+  const pkg = typeof raw.package === 'string' && PACKAGE_NAME_RE.test(raw.package) ? raw.package : '';
+  if (!pkg) errors.push(`${base}.package: must be a valid npm package name (e.g. '@fontsource/nunito')`);
   return {
     package: pkg,
     subsets: checkFontSubsets(errors, `${base}.subsets`, raw.subsets),

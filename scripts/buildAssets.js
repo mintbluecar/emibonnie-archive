@@ -175,11 +175,41 @@ function fontFilePath(engineRoot, spec, subset, weight) {
 }
 
 /**
- * Copies every weight/subset a font spec ships into `fontsDir`, each
- * renamed to `<original-stem>-<hash>.woff2` -- `/build/*` is cached
- * `immutable` for a year, so a same-named `@fontsource` update (a new
- * version shipping different bytes under the same filename) must still
- * reach visitors as a new URL, the same as `app.css`/`fonts.css`.
+ * `srcPath` is (or isn't) inside `dir` -- used as defence in depth
+ * before reading a path built from a site's own `font.package`
+ * (`src/site/fontValidators.js` already rejects a `..`/`/`-laden
+ * package name at the schema level; this catches it again here, in
+ * case that validation is ever bypassed or weakened).
+ * @param {string} srcPath @param {string} dir
+ * @returns {boolean}
+ */
+function isInsideDir(srcPath, dir) {
+  const rel = path.relative(dir, srcPath);
+  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
+/**
+ * Reads `srcPath`'s bytes, writes them into `fontsDir` renamed to
+ * `<original-stem>-<hash>.woff2`, and returns that filename -- the one
+ * read-hash-write step every self-hosted font file goes through,
+ * whether it's one of the engine's own `@fontsource` files, a site's
+ * own `@fontsource/*` package, or a site's own `site/fonts/*.woff2`
+ * file. `/build/*` is cached `immutable` for a year, so a same-named
+ * source update (a new version shipping different bytes under the same
+ * filename) must still reach visitors as a new URL, the same as
+ * `app.css`/`fonts.css`.
+ * @param {string} fontsDir @param {string} srcPath
+ * @returns {string}
+ */
+function copyFontFile(fontsDir, srcPath) {
+  const bytes = readFileSync(srcPath);
+  const fileName = `${path.basename(srcPath, '.woff2')}-${contentHash(bytes)}.woff2`;
+  writeFileSync(path.join(fontsDir, fileName), bytes);
+  return fileName;
+}
+
+/**
+ * Copies every weight/subset a font spec ships into `fontsDir`.
  * @param {string} engineRoot @param {string} fontsDir @param {FontSpec} spec
  * @returns {FontFace[]}
  */
@@ -190,9 +220,7 @@ function copyOneFontSpec(engineRoot, fontsDir, spec) {
     for (const subset of spec.subsets) {
       const src = fontFilePath(engineRoot, spec, subset, weight);
       if (!src) continue;
-      const bytes = readFileSync(src);
-      const fileName = `${path.basename(src, '.woff2')}-${contentHash(bytes)}.woff2`;
-      writeFileSync(path.join(fontsDir, fileName), bytes);
+      const fileName = copyFontFile(fontsDir, src);
       faces.push({ family: spec.family, weight, style: 'normal', fileName, unicodeRange: spec.subsets.length > 1 ? UNICODE_RANGES[subset] : null });
     }
   }
@@ -209,18 +237,18 @@ function fontFaceRule(face) {
 }
 
 /**
- * The bytes of one site font's `files[]` entry, read from
- * `site/fonts/<path>`. Fails loudly, naming the font and the missing
- * file, rather than silently shipping fewer faces than declared.
+ * The absolute path of one site font's `files[]` entry, under
+ * `site/fonts/`. Fails loudly, naming the font and the missing file,
+ * rather than silently shipping fewer faces than declared.
  * @param {string} siteDir @param {string} family @param {{ path: string }} file
- * @returns {Buffer}
+ * @returns {string}
  */
-function siteFontFileBytes(siteDir, family, file) {
+function siteFontFilePath(siteDir, family, file) {
   const absPath = path.join(siteDir, 'fonts', file.path);
   if (!existsSync(absPath)) {
     throw new Error(`build failed: site font '${family}' names file '${file.path}', which isn't in site/fonts/`);
   }
-  return readFileSync(absPath);
+  return absPath;
 }
 
 /**
@@ -233,10 +261,8 @@ function siteFontFileBytes(siteDir, family, file) {
 function siteFontFacesFromFiles(siteDir, fontsDir, font) {
   if (!('files' in font)) return [];
   return font.files.map((file) => {
-    const bytes = siteFontFileBytes(siteDir, font.family, file);
-    const fileName = `${path.basename(file.path, '.woff2')}-${contentHash(bytes)}.woff2`;
-    writeFileSync(path.join(fontsDir, fileName), bytes);
-    return { family: font.family, weight: file.weight, style: file.style, fileName, unicodeRange: file.unicodeRange ?? null };
+    const fileName = copyFontFile(fontsDir, siteFontFilePath(siteDir, font.family, file));
+    return { family: font.family, weight: file.weight, style: file.style ?? 'normal', fileName, unicodeRange: file.unicodeRange ?? null };
   });
 }
 
@@ -245,23 +271,30 @@ function siteFontFacesFromFiles(siteDir, fontsDir, font) {
  * the site installed as its own dev dependency. Fails loudly, naming the
  * font, the package and the missing weight, if the package doesn't ship
  * one of the requested weights at any of the requested subsets.
+ * `src/site/fontValidators.js` already rejects a `font.package` that
+ * isn't a valid npm package name (no `..`, no leading `/`); `isInsideDir`
+ * checks the path it resolves to again here, in case that validation is
+ * ever bypassed.
  * @param {string} engineRoot @param {string} fontsDir @param {import('../src/site/schema.js').SiteFont} font
  * @returns {FontFace[]}
  */
 function siteFontFacesFromPackage(engineRoot, fontsDir, font) {
   if (!('package' in font)) return [];
   const fileStem = font.package.replace(/^@fontsource\//, '');
+  const nodeModulesDir = path.join(engineRoot, 'node_modules');
+  const style = font.style ?? 'normal';
   /** @type {FontFace[]} */
   const faces = [];
   for (const weight of font.weights) {
     const shippedBefore = faces.length;
     for (const subset of font.subsets) {
-      const file = path.join(engineRoot, 'node_modules', font.package, 'files', `${fileStem}-${subset}-${weight}-${font.style}.woff2`);
+      const file = path.join(nodeModulesDir, font.package, 'files', `${fileStem}-${subset}-${weight}-${style}.woff2`);
+      if (!isInsideDir(file, nodeModulesDir)) {
+        throw new Error(`build failed: site font '${font.family}' names a package ('${font.package}') that resolves outside node_modules`);
+      }
       if (!existsSync(file)) continue;
-      const bytes = readFileSync(file);
-      const fileName = `${path.basename(file, '.woff2')}-${contentHash(bytes)}.woff2`;
-      writeFileSync(path.join(fontsDir, fileName), bytes);
-      faces.push({ family: font.family, weight, style: font.style, fileName, unicodeRange: font.subsets.length > 1 ? (UNICODE_RANGES[subset] ?? null) : null });
+      const fileName = copyFontFile(fontsDir, file);
+      faces.push({ family: font.family, weight, style, fileName, unicodeRange: font.subsets.length > 1 ? (UNICODE_RANGES[subset] ?? null) : null });
     }
     if (faces.length === shippedBefore) {
       throw new Error(`build failed: site font '${font.family}' (${font.package}) doesn't ship weight ${weight}`);

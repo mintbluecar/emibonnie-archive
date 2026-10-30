@@ -24,7 +24,7 @@ export { ALLOWED_REGIONS } from './regions.js';
  *   otherAccounts: OtherAccount[] }} FeaturedPerson
  */
 /** @typedef {{ code: string, platformCode: string, pattern: string }} LivePattern */
-/** @typedef {{ path: string, weight: number, style: 'normal'|'italic', unicodeRange?: string }} SiteFontFile */
+/** @typedef {{ path: string, weight: number, style?: 'normal'|'italic', unicodeRange?: string }} SiteFontFile */
 /**
  * A site's own self-hosted font (spec "2b. Fonts a site can choose"):
  * a family and weights, shipped either from an `@fontsource/*` package
@@ -32,7 +32,9 @@ export { ALLOWED_REGIONS } from './regions.js';
  * from the site's own `site/fonts/*.woff2` files (`path` relative to
  * `site/fonts/`). Only shipped by the build if some token in
  * `tokens.css` or the site's `theme.css` actually names the family.
- * @typedef {{ family: string, style: 'normal'|'italic', weights: number[] } & (
+ * `style` is optional on input (default `'normal'`); normalised, it is
+ * always one of the two literals.
+ * @typedef {{ family: string, style?: 'normal'|'italic', weights: number[] } & (
  *   { package: string, subsets: string[] } | { files: SiteFontFile[] }
  * )} SiteFont
  */
