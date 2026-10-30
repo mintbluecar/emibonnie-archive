@@ -45,6 +45,19 @@ test('as=owner signs in, marks the browser, and redirects back', async () => {
   assert.equal(me.user.isOwner, true);
 });
 
+test('as=google signs in as a Google user (no X handle), marks the browser, and redirects back', async () => {
+  const res = await dev.call('GET', '/api/auth/dev?as=google');
+  assert.equal(res.status, 302, res.text);
+  assert.equal(res.headers.get('location'), '/');
+  assert.equal(cookieValue(res.setCookies, 'dev_as'), 'google');
+  const sid = cookieValue(res.setCookies, 'sid');
+  assert.ok(sid);
+  const me = JSON.parse((await dev.call('GET', '/api/me', { cookies: { sid } })).text);
+  assert.equal(me.user.via, 'google');
+  assert.equal(me.user.handle, null);
+  assert.equal(me.user.isOwner, false);
+});
+
 test('an off-site returnTo goes nowhere off-site', async () => {
   const res = await dev.call('GET', `/api/auth/dev?as=member&returnTo=${encodeURIComponent('//evil.example/')}`);
   assert.equal(res.status, 302);

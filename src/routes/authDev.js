@@ -10,6 +10,8 @@
  * same sign-in for a browser, then a redirect back. `as=guest` signs out
  * instead. Either way it sets a `dev_as` cookie, which tells the dev
  * server (`DEV_AS`, scripts/dev.js) not to sign the browser in again.
+ * Note this GET changes state (a session, cookies) -- acceptable only
+ * because the route is dev-only and never exists when deployed.
  */
 import { NO_STORE } from '../http/handler.js';
 import { NotFound } from '../http/errors.js';
