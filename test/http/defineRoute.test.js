@@ -10,7 +10,7 @@ import { ingestDeps } from '../helpers/ingest.js';
 import { apiFor } from '../helpers/api.js';
 import { signInUser } from '../../src/services/session.js';
 import { defineRoute } from '../../src/http/defineRoute.js';
-import { PUBLIC_CACHE, PRIVATE_NO_STORE } from '../../src/http/handler.js';
+import { PUBLIC_CACHE, PRIVATE_NO_STORE, createHandler } from '../../src/http/handler.js';
 import { ownerRoute, approvalRoute, reviewRoute } from '../../src/routes/owner.js';
 import { addedRoute, setNameRoute } from '../../src/routes/me.js';
 
@@ -99,4 +99,30 @@ test('a user-keyed limit needs a route that always has a user', () => {
 test('a route\'s auth is read-only', () => {
   const route = defineRoute({ method: 'POST', path: '/api/x', auth: 'owner', run: async () => ({}) });
   assert.throws(() => { /** @type {any} */ (route).auth = 'none'; }, TypeError);
+});
+
+test('the sign-in hint is added only to a private or no-store answer, never a publicly cacheable one', async () => {
+  const sid = await sidFor('7770099');
+  const shared = defineRoute({ method: 'GET', path: '/t/shared', auth: 'optional', cache: PUBLIC_CACHE, query: [], run: async () => ({ ok: true }) });
+  const mine = defineRoute({ method: 'GET', path: '/t/mine', auth: 'optional', cache: PUBLIC_CACHE, query: [],
+    run: async () => Response.json({ ok: true }, { headers: { 'cache-control': PRIVATE_NO_STORE } }) });
+  const owner = defineRoute({ method: 'GET', path: '/t/owner', auth: 'user', query: [], run: async () => ({ ok: true }) });
+  const handle = createHandler({
+    routes: [shared, mine, owner], env: {}, log: (line) => { throw new Error(line); },
+    makeDeps: (env) => ({ ...deps, db: { ...deps.db, end: async () => {} }, env }), waitUntil: () => {},
+  });
+  const get = (/** @type {string} */ path) => handle(new Request(`https://archive.example${path}`, { headers: { cookie: `sid=${sid}` } }));
+
+  const pub = await get('/t/shared');
+  assert.equal(pub.status, 200);
+  assert.match(String(pub.headers.get('vercel-cdn-cache-control')), /s-maxage/, 'a CDN-cached answer');
+  assert.deepEqual(pub.headers.getSetCookie(), [], 'a publicly cacheable answer never carries a Set-Cookie');
+
+  const priv = await get('/t/mine');
+  assert.equal(priv.headers.get('cache-control'), PRIVATE_NO_STORE);
+  assert.deepEqual(priv.headers.getSetCookie().map((c) => c.split(';')[0]), ['signed_in=1']);
+
+  const signedIn = await get('/t/owner');
+  assert.equal(signedIn.headers.get('cache-control'), PRIVATE_NO_STORE);
+  assert.deepEqual(signedIn.headers.getSetCookie().map((c) => c.split(';')[0]), ['signed_in=1']);
 });

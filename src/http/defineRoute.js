@@ -9,7 +9,11 @@
  * 2. applies `spec.limit` (a `LIMITS` name): an IP-keyed bucket counts the
  *    caller's IP, any other bucket the user's id;
  * 3. parses the body with `spec.body`, which throws `BadRequest` (a 400);
- * 4. runs the route with `{ params, query, body, user, ip, origin, cookies }`.
+ * 4. runs the route with `{ params, query, body, user, ip, origin, cookies }`;
+ * 5. for a signed-in caller whose request has no `signed_in` hint cookie (a
+ *    session from before the hint existed), adds the hint's Set-Cookie --
+ *    only to a private or no-store answer, never a publicly cacheable one,
+ *    and never when the route already sets or clears the hint itself.
  *
  * The cache defaults to `PRIVATE_NO_STORE` for a GET that requires a user and
  * `NO_STORE` for a write; any other GET declares its own. Declaring
@@ -19,7 +23,8 @@
  * The returned `Route` carries a read-only `auth`. A route not built here
  * counts as `auth: 'none'`.
  */
-import { NO_STORE, PRIVATE_NO_STORE, PUBLIC_CACHE } from './handler.js';
+import { NO_STORE, PRIVATE_NO_STORE, PUBLIC_CACHE, finalCache } from './handler.js';
+import { hintCookie } from '../domain/cookies.js';
 import { currentUser, requireOwner, requireUser } from '../services/session.js';
 import { LIMITS, limit } from '../services/limits.js';
 
@@ -93,6 +98,29 @@ function userFor(deps, input, auth) {
   return Promise.resolve(null);
 }
 
+/** The hint cookie's name (src/domain/cookies.js `hintCookie`). */
+const HINT = 'signed_in';
+
+/**
+ * `result` with the sign-in hint's Set-Cookie added, when a signed-in
+ * caller's request lacks the hint, the answer it becomes is private or
+ * no-store, and the route does not set or clear the hint itself; otherwise
+ * `result` unchanged.
+ * @param {unknown} result @param {{ method: string, cache: string }} route
+ * @param {{ user: SessionUser|null, cookies: Record<string, string>|undefined }} caller
+ * @returns {unknown}
+ */
+function withHint(result, route, { user, cookies }) {
+  if (!user || cookies?.[HINT]) return result;
+  const own = result instanceof Response ? result : null;
+  const cache = finalCache(own, route);
+  if (cache !== NO_STORE && cache !== PRIVATE_NO_STORE) return result;
+  if (own?.headers.getSetCookie().some((cookie) => cookie.startsWith(`${HINT}=`))) return result;
+  const response = own ?? Response.json(result);
+  response.headers.append('set-cookie', hintCookie(true));
+  return response;
+}
+
 /**
  * @template {Auth} A
  * @template [T=unknown]
@@ -111,7 +139,8 @@ export function defineRoute(spec) {
     if (limitName) await limit(deps, limitName, ipKeyed(limitName) ? input.ip : (user?.id ?? null));
     const body = spec.body ? spec.body(input.body) : /** @type {T} */ (input.body);
     const { params, query, ip, origin, cookies } = input;
-    return spec.run({ params, query, body, user: /** @type {UserFor<A>} */ (user), ip: ip ?? null, origin, cookies: cookies ?? {} }, deps);
+    const result = await spec.run({ params, query, body, user: /** @type {UserFor<A>} */ (user), ip: ip ?? null, origin, cookies: cookies ?? {} }, deps);
+    return withHint(result, { method: spec.method, cache }, { user, cookies });
   };
   return Object.freeze({ method: spec.method, path: spec.path, auth: spec.auth, cache, query: spec.query, run });
 }

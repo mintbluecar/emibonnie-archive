@@ -113,18 +113,25 @@ function errorResponse(err, route, { method, pathname, log }) {
 }
 
 /**
- * The route's cache header always wins, with two exceptions: a GET route's
- * own Response may shorten it to `NOT_FOUND_CACHE` (the meta pages' generic
- * meta for a hidden or missing target), or mark it `PRIVATE_NO_STORE` (an
- * answer that must never be shared or stored).
- * @param {unknown} result @param {Route} route
+ * The cache header a route's answer ends up with. The route's cache header
+ * always wins, with two exceptions: a GET route's own Response may shorten
+ * it to `NOT_FOUND_CACHE` (the meta pages' generic meta for a hidden or
+ * missing target), or mark it `PRIVATE_NO_STORE` (an answer that must never
+ * be shared or stored).
+ * @param {Response|null} own the route's own Response, if it returned one
+ * @param {Pick<Route, 'method'|'cache'>} route
+ * @returns {string}
  */
+export function finalCache(own, route) {
+  const header = own?.headers.get('cache-control') ?? null;
+  const kept = header === NOT_FOUND_CACHE || header === PRIVATE_NO_STORE;
+  return route.method === 'GET' && kept ? /** @type {string} */ (header) : route.cache;
+}
+
+/** @param {unknown} result @param {Route} route */
 function toResponse(result, route) {
   const response = result instanceof Response ? result : json(200, result, route.cache);
-  const own = response.headers.get('cache-control');
-  const kept = own === NOT_FOUND_CACHE || own === PRIVATE_NO_STORE;
-  const cache = route.method === 'GET' && kept ? /** @type {string} */ (own) : route.cache;
-  response.headers.set('cache-control', cache);
+  response.headers.set('cache-control', finalCache(result instanceof Response ? result : null, route));
   return response;
 }
 

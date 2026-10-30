@@ -55,6 +55,32 @@ test('GET /api/me signed out is { user: null }', async () => {
   assert.deepEqual(JSON.parse(res.text), { user: null });
 });
 
+test('a session from before the hint cookie gets the hint on its next private answer; never twice, never for a visitor', async () => {
+  const token = await sidFor({ via: 'x', subject: '71', handle: 'pre_hint' });
+  const api = apiFor(deps());
+  const upgraded = await api.call('GET', '/api/me', { cookies: { sid: token } });
+  assert.equal(upgraded.status, 200, upgraded.text);
+  assert.equal(upgraded.headers.get('cache-control'), 'no-store');
+  assert.deepEqual(upgraded.setCookies.filter((c) => c.startsWith('signed_in=')), [
+    'signed_in=1; Max-Age=604800; Secure; SameSite=Lax; Path=/',
+  ]);
+  assert.ok(JSON.parse(upgraded.text).user, 'the body is unchanged');
+
+  const hinted = await api.call('GET', '/api/me', { cookies: { sid: token, signed_in: '1' } });
+  assert.deepEqual(hinted.setCookies, [], 'the hint is already there');
+  const visitor = await api.call('GET', '/api/me');
+  assert.deepEqual(visitor.setCookies, [], 'no session, no hint');
+  const stale = await api.call('GET', '/api/me', { cookies: { sid: 'not-a-session' } });
+  assert.deepEqual(stale.setCookies, [], 'an unknown sid is no session');
+});
+
+test('signing out everywhere without a hint clears it, never re-adds it', async () => {
+  const token = await sidFor({ via: 'x', subject: '72', handle: 'leaving' });
+  const res = await apiFor(deps()).call('POST', '/api/auth/signout-all', { cookies: { sid: token } });
+  assert.equal(res.status, 200, res.text);
+  assert.deepEqual(res.setCookies.filter((c) => c.startsWith('signed_in=')), ['signed_in=; Max-Age=0; Secure; SameSite=Lax; Path=/']);
+});
+
 test('a google user needs a name until they set one', async () => {
   const token = await sidFor({ via: 'google', subject: 'g-1', handle: null });
   const api = apiFor(deps());
