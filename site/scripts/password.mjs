@@ -12,6 +12,7 @@
  * `app-role.mjs` sends this plaintext password (see its header).
  */
 import { randomBytes } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 
 /**
  * A strong, URL-safe password: 33 random bytes, base64url, unpadded --
@@ -23,4 +24,35 @@ import { randomBytes } from 'node:crypto';
  */
 export function randomPassword() {
   return randomBytes(33).toString('base64url');
+}
+
+/**
+ * Splits a connection string into a password-free URL and the password, so
+ * `pg_dump`/`psql` can take the URL in argv (visible to `ps`) and the
+ * password through `PGPASSWORD`. libpq: "PGPASSWORD behaves the same as the
+ * password connection parameter", and a parameter given in the connection
+ * string would win over it, so the URL must not carry one
+ * (https://www.postgresql.org/docs/current/libpq-envars.html). The password
+ * comes back percent-decoded, as libpq would read it from the URL.
+ * @param {string} url
+ * @returns {{ url: string, password: string }}
+ */
+export function splitDbUrl(url) {
+  const parsed = new URL(url);
+  const password = decodeURIComponent(parsed.password);
+  parsed.password = '';
+  return { url: parsed.toString(), password };
+}
+
+// `DATABASE_URL=... node site/scripts/password.mjs url|password` prints one
+// half (site/Taskfile.yml's backup and takedown). The URL arrives through
+// the environment and the password leaves through stdout: neither is argv.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const part = process.argv[2];
+  if ((part !== 'url' && part !== 'password') || !process.env.DATABASE_URL) {
+    process.stderr.write('usage: DATABASE_URL=<url> node site/scripts/password.mjs url|password\n');
+    process.exitCode = 1;
+  } else {
+    process.stdout.write(splitDbUrl(process.env.DATABASE_URL)[part]);
+  }
 }

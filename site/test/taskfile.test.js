@@ -70,6 +70,8 @@ test('task deploy:dry refuses, via its precondition, when the preview env var is
   });
 });
 
+const OWNER_URL = 'postgres://owner:owner-secret-token@ep-main.example.neon.tech/db?sslmode=require';
+
 /**
  * Fix round 3, I-T: the `takedown` task must never splice its id argument
  * into shell text via `{{ }}` -- only through `env: TAKEDOWN_ID`, read
@@ -83,11 +85,15 @@ function makeTakedownScratch() {
   mkdirSync(path.join(dir, 'site'));
   copyFileSync(path.join(REPO_ROOT, 'Taskfile.yml'), path.join(dir, 'Taskfile.yml'));
   copyFileSync(path.join(REPO_ROOT, 'site/Taskfile.yml'), path.join(dir, 'site/Taskfile.yml'));
+  // The tasks split the owner URL with site/scripts/password.mjs (splitDbUrl).
+  mkdirSync(path.join(dir, 'site/scripts'));
+  copyFileSync(path.join(REPO_ROOT, 'site/scripts/password.mjs'), path.join(dir, 'site/scripts/password.mjs'));
   const binDir = path.join(dir, 'bin');
   mkdirSync(binDir);
-  const fakePsql = path.join(binDir, 'psql');
-  writeFileSync(fakePsql, '#!/usr/bin/env bash\necho "FAKE_PSQL_ARGS: $*"\necho "UPDATE 1"\n');
-  chmodSync(fakePsql, 0o755);
+  for (const tool of ['psql', 'pg_dump']) {
+    writeFileSync(path.join(binDir, tool), `#!/usr/bin/env bash\necho "FAKE_ARGS: ${tool} $*"\necho "FAKE_PGPASSWORD: \${PGPASSWORD:-}"\necho "UPDATE 1"\n`);
+    chmodSync(path.join(binDir, tool), 0o755);
+  }
   return { dir, binDir };
 }
 
@@ -102,7 +108,7 @@ function runTakedown(dir, binDir, id, taskArgs = ['takedown', '-y', '--', id]) {
     const output = execFileSync('task', taskArgs, {
       cwd: dir,
       encoding: 'utf8',
-      env: { PATH: `${binDir}:${process.env.PATH ?? ''}`, EMIBONNIE_DB: 'postgres://u:p@h/db' },
+      env: { PATH: `${binDir}:${process.env.PATH ?? ''}`, HOME: dir, EMIBONNIE_DB: OWNER_URL },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     return { status: 0, output, touchedPayload: existsSync(payloadMarker) };
@@ -116,7 +122,7 @@ test('task takedown: a valid numeric id reaches the fake psql, quoted, with no s
   try {
     const { status, output } = runTakedown(dir, path.join(dir, 'bin'), '2112858824172531819');
     assert.equal(status, 0, output);
-    assert.match(output, /FAKE_PSQL_ARGS:.*-v id=2112858824172531819/);
+    assert.match(output, /FAKE_ARGS: psql.*-v id=2112858824172531819/);
     assert.match(output, /UPDATE 1/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -129,7 +135,7 @@ test('task takedown: rejects `1"; touch PAYLOAD_TOUCHED; echo "` without running
     const { status, output, touchedPayload } = runTakedown(dir, path.join(dir, 'bin'), '1"; touch PAYLOAD_TOUCHED; echo "');
     assert.notEqual(status, 0);
     assert.match(output, /numeric tweet id only/);
-    assert.doesNotMatch(output, /FAKE_PSQL_ARGS/, 'psql must never be reached');
+    assert.doesNotMatch(output, /FAKE_ARGS/, 'psql must never be reached');
     assert.equal(touchedPayload, false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -142,7 +148,7 @@ test('task takedown: rejects `$(touch PAYLOAD_TOUCHED)` without running it', { s
     const { status, output, touchedPayload } = runTakedown(dir, path.join(dir, 'bin'), '$(touch PAYLOAD_TOUCHED)');
     assert.notEqual(status, 0);
     assert.match(output, /numeric tweet id only/);
-    assert.doesNotMatch(output, /FAKE_PSQL_ARGS/, 'psql must never be reached');
+    assert.doesNotMatch(output, /FAKE_ARGS/, 'psql must never be reached');
     assert.equal(touchedPayload, false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -166,8 +172,27 @@ for (const [label, argsFor] of /** @type {[string, (id: string) => string[]][]} 
       const { status, output, touchedPayload } = runTakedown(dir, path.join(dir, 'bin'), payload, argsFor(payload));
       assert.notEqual(status, 0, output);
       assert.match(output, /numeric tweet id only/);
-      assert.doesNotMatch(output, /FAKE_PSQL_ARGS/, 'psql must never be reached');
+      assert.doesNotMatch(output, /FAKE_ARGS/, 'psql must never be reached');
       assert.equal(touchedPayload, false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+}
+
+for (const [label, taskArgs, tool] of /** @type {[string, string[], string][]} */ ([
+  ['takedown', ['takedown', '-y', '--', '2112858824172531819'], 'psql'],
+  ['backup', ['backup'], 'pg_dump'],
+])) {
+  test(`task ${label}: the owner password reaches ${tool} through PGPASSWORD, never argv`, { skip: !HAVE_TASK && 'task is not installed' }, () => {
+    const { dir, binDir } = makeTakedownScratch();
+    try {
+      const { status, output } = runTakedown(dir, binDir, '', taskArgs);
+      assert.equal(status, 0, output);
+      const args = output.split('\n').find((line) => line.startsWith(`FAKE_ARGS: ${tool} `)) ?? '';
+      assert.match(args, /postgres:\/\/owner@ep-main\.example\.neon\.tech\/db\?sslmode=require/);
+      assert.doesNotMatch(args, /owner-secret-token/);
+      assert.match(output, /FAKE_PGPASSWORD: owner-secret-token$/m);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

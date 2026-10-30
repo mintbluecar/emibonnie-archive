@@ -245,7 +245,12 @@ tasks:
     cmds:
       - mkdir -p "$HOME/emibonnie-backups"
       - chmod 700 "$HOME/emibonnie-backups"
-      - pg_dump --format=custom --file="$HOME/emibonnie-backups/$(date +%F)-main.dump" --dbname="$EMIBONNIE_DB"
+      # The password goes through PGPASSWORD, never argv (site/scripts/password.mjs, splitDbUrl).
+      - |
+        PGURL="$(DATABASE_URL="$EMIBONNIE_DB" node site/scripts/password.mjs url)" || exit 1
+        PGPASSWORD="$(DATABASE_URL="$EMIBONNIE_DB" node site/scripts/password.mjs password)" || exit 1
+        export PGPASSWORD
+        pg_dump --format=custom --file="$HOME/emibonnie-backups/$(date +%F)-main.dump" --dbname="$PGURL"
 
   test:
     desc: "npm test, plus this site's own test/ (name-leak guard, deploy scripts)"
@@ -333,8 +338,12 @@ tasks:
       - sh: '[[ $TAKEDOWN_ID =~ ^[0-9]+$ ]]'
         msg: "Pass a numeric tweet id only: task takedown -- <id>, or ID=<id> task takedown."
     cmds:
+      # The password goes through PGPASSWORD, never argv (see backup).
       - |
-        psql "$EMIBONNIE_DB" -v ON_ERROR_STOP=1 -v id="$TAKEDOWN_ID" <<'SQL'
+        PGURL="$(DATABASE_URL="$EMIBONNIE_DB" node site/scripts/password.mjs url)" || exit 1
+        PGPASSWORD="$(DATABASE_URL="$EMIBONNIE_DB" node site/scripts/password.mjs password)" || exit 1
+        export PGPASSWORD
+        psql "$PGURL" -v ON_ERROR_STOP=1 -v id="$TAKEDOWN_ID" <<'SQL'
         begin;
         select set_config('app.actor', 'system', true);
 
