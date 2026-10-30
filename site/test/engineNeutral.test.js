@@ -74,14 +74,17 @@ const SUBSTRING_MIN_LENGTH = 5;
  * `EMIBONNIE_DB` and `emibonnieArchive` hide a name from `\b...\b` (`_`
  * and letters are word characters), so a term of 5+ characters matches as a
  * case-insensitive substring. A shorter one (`emi`, `leo`) would match
- * inside ordinary words, so it must stand alone: no letter, digit or `_`
- * on either side. Unicode-aware, so a Thai term is bounded the same way.
+ * inside ordinary words, so it must stand alone. An ASCII term is bounded
+ * by ASCII word characters only, exactly as `\b` was, so `Leoเอ` and `Leoé`
+ * still match (Thai runs a name into the next word without a space). A
+ * non-ASCII short term is bounded by any Unicode letter, digit or `_`.
  * @param {string} term
  */
 function termPattern(term) {
   const escaped = escapeForRegExp(term);
   if ([...term].length >= SUBSTRING_MIN_LENGTH) return new RegExp(escaped, 'iu');
-  return new RegExp(`(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`, 'iu');
+  const word = /^[\x00-\x7f]*$/.test(term) ? '[A-Za-z0-9_]' : '[\\p{L}\\p{N}_]';
+  return new RegExp(`(?<!${word})${escaped}(?!${word})`, 'iu');
 }
 
 /**
@@ -138,6 +141,11 @@ test('the name guard finds names inside identifiers and in UTF-8', () => {
     ]);
     // A short term still needs to stand alone: 'emi' is not in 'premium'.
     assert.deepEqual(offenders(['short.md'], ['emi'], dir), []);
+    // ...but an ASCII one is bounded only by ASCII word characters, as \b
+    // was: Thai runs a name straight into the next word, without a space.
+    writeFileSync(path.join(dir, 'thai-run.md'), 'Leoเอ\n', 'utf8');
+    writeFileSync(path.join(dir, 'accent.md'), 'Leoé\n', 'utf8');
+    assert.deepEqual(offenders(['thai-run.md', 'accent.md'], ['leo'], dir), ["thai-run.md: 'leo'", "accent.md: 'leo'"]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -194,12 +194,14 @@ const DEPLOY_URL = 'https://archive-new123-fanteam.vercel.app';
  *   args?: string[], env?: Record<string, string>, input?: string,
  *   listOutput?: string, listToStderr?: boolean, listStatus?: number,
  *   npmFail?: string, buildStatus?: number, vercelId?: string, httpStatus?: string,
+ *   siteJson?: string | null, roleCheckFails?: boolean,
  * }} [options]
  */
 function runReal({
   args = [], env = { EMIBONNIE_DB_PREVIEW: PREVIEW_URL }, input = '',
   listOutput = LIST_WITH_DEPLOYMENT, listToStderr = false, listStatus = 0,
   npmFail = '', buildStatus = 0, vercelId = 'sin1::sin1::a', httpStatus = '200',
+  siteJson = '{ "region": "sin1" }\n', roleCheckFails = false,
 } = {}) {
   const dir = mkdtempSync(path.join(tmpdir(), 'fan-archive-deploy-'));
   try {
@@ -207,7 +209,7 @@ function runReal({
     mkdirSync(path.join(dir, '.vercel/output'), { recursive: true });
     writeFileSync(path.join(dir, '.vercel/project.json'), '{}');
     writeFileSync(path.join(dir, '.vercel/output/stale-marker'), 'from an earlier run');
-    writeFileSync(path.join(dir, 'site/site.json'), '{ "region": "sin1" }\n');
+    if (siteJson !== null) writeFileSync(path.join(dir, 'site/site.json'), siteJson);
     copyFileSync(DEPLOY_SH, path.join(dir, 'site/scripts/deploy.sh'));
     copyFileSync(path.join(REPO_ROOT, 'site/scripts/lib.sh'), path.join(dir, 'site/scripts/lib.sh'));
     writeFileSync(path.join(dir, 'list-output'), listOutput);
@@ -229,7 +231,7 @@ printf '%s | %s%s\\n' "$WHAT" "$seen" "\${DATABASE_URL:+ db=$DATABASE_URL}" >> "
 esac
 exit 0\n`);
     fake(path.join(binDir, 'curl'), `WHAT="curl $*"\n${record}printf 'HTTP/2 ${httpStatus}\\r\\ncontent-type: application/json\\r\\nx-vercel-id: ${vercelId}\\r\\n\\r\\n'\n`);
-    fake(path.join(dir, 'site/scripts/check-app-role.sh'), `WHAT="check-app-role.sh $*"\n${record}`);
+    fake(path.join(dir, 'site/scripts/check-app-role.sh'), `WHAT="check-app-role.sh $*"\n${record}${roleCheckFails ? 'echo "NOT_LEAST_PRIVILEGE: app can UPDATE audit_log" >&2\nexit 1\n' : ''}`);
     // Step 5 runs the real `node --test site/test/`: give it one test that records itself.
     mkdirSync(path.join(dir, 'site/test'));
     writeFileSync(path.join(dir, 'site/test/guard.test.cjs'),
@@ -385,3 +387,24 @@ test('deploy says when it could not check the function region', () => {
   assert.equal(r.status, 0, r.output);
   assert.match(r.stderr, /could not check the function region \(HTTP 401\)/);
 });
+
+test('a failed least-privilege check stops before vercel deploy', () => {
+  const r = runReal({ roleCheckFails: true });
+  assert.notEqual(r.status, 0, r.output);
+  assert.match(r.output, /NOT_LEAST_PRIVILEGE/);
+  assert.ok(ran(r.calls).includes('check-app-role.sh '), r.calls.join('\n'));
+  assert.ok(!ran(r.calls).some((c) => c.startsWith('vercel deploy') || c.startsWith('curl')), r.calls.join('\n'));
+});
+
+for (const [label, siteJson] of /** @type {[string, string | null][]} */ ([
+  ['site.json has no region', '{ "name": "x" }\n'],
+  ['site.json is not JSON', '{ not json\n'],
+  ['site.json is missing', null],
+])) {
+  test(`the region check never fails a shipped deploy: ${label}`, () => {
+    const r = runReal({ siteJson });
+    assert.equal(r.status, 0, r.output);
+    assert.ok(ran(r.calls).includes('vercel deploy --prebuilt'), r.calls.join('\n'));
+    assert.match(r.stderr, /could not check the function region \(no region in site\/site\.json\)/);
+  });
+}

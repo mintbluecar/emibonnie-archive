@@ -269,7 +269,12 @@ deploy_prebuilt() {
 # failure: the deployment has already shipped.
 post_deploy_region() {
   local url="$1" expected headers status id ran
-  expected="$(node -e 'process.stdout.write(String(JSON.parse(require("fs").readFileSync("site/site.json", "utf8")).region ?? ""))')"
+  # Guarded: an unreadable site.json must not stop the script (set -e) after the deploy shipped.
+  expected="$(node -e 'process.stdout.write(String(JSON.parse(require("fs").readFileSync("site/site.json", "utf8")).region ?? ""))' 2>/dev/null || true)"
+  if [ -z "$expected" ]; then
+    echo "deploy.sh: could not check the function region (no region in site/site.json)" >&2
+    return 0
+  fi
   headers="$(curl -sI --max-time 30 "$url/api/home" | tr -d '\r' || true)"
   status="$(printf '%s\n' "$headers" | awk 'NR == 1 { print $2 }')"
   if [ "$status" != "200" ]; then

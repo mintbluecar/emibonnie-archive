@@ -53,6 +53,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     process.stderr.write('usage: DATABASE_URL=<url> node site/scripts/password.mjs url|password\n');
     process.exitCode = 1;
   } else {
-    process.stdout.write(splitDbUrl(process.env.DATABASE_URL)[part]);
+    try {
+      process.stdout.write(splitDbUrl(process.env.DATABASE_URL)[part]);
+    } catch {
+      // Never the error itself: node's ERR_INVALID_URL carries the whole
+      // input, password included, in its `input` field.
+      process.stderr.write('password.mjs: the connection string is not a valid URL (percent-encode any special characters in the password)\n');
+      process.exitCode = 1;
+    }
   }
 }
