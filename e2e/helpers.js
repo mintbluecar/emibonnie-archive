@@ -152,32 +152,23 @@ async function assertTablesHaveHeadings(page) {
 }
 
 /**
- * Review Focus 1's browser half: in a browser emulating dark mode,
- * `body`'s rendered background must be the engine's dark `--color-bg`
- * from `tokens.css`, never the light default a site's `theme.css` sets
- * on a plain, unlayered `:root` (the bug the `theme` layer, spec "1.
- * Layers, applied by the build", fixes). Both the expected dark value and
- * the light value asserted against are read from the page's own built
- * CSS via the CSSOM -- never hard-coded -- so a site that changes either
- * still gets a meaningful check. No-op outside dark mode.
- * @param {import('@playwright/test').Page} page @returns {Promise<void>}
+ * Statically reads `--color-bg`'s declared value off the one rule whose
+ * `selectorText` is exactly `selector`, anywhere in the page's CSSOM --
+ * recursing into grouping rules (`@layer`, `@media`, ...), since the
+ * build wraps every source file in its own `@layer` (spec "1. Layers,
+ * applied by the build") and the engine's two dark blocks each sit
+ * inside `@media (prefers-color-scheme: dark)` or a plain attribute
+ * selector. This reads the rule as authored, independent of which rule
+ * is actually winning the live cascade right now -- see
+ * `assertDarkBodyBackground` for why that independence matters.
+ * @param {import('@playwright/test').Page} page @param {string} selector @returns {Promise<string|null>}
  */
-async function assertDarkBodyBackground(page) {
-  const isDark = await page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches);
-  if (!isDark) return;
-
-  // The light default is the one declared on the plain, unconditional
-  // `:root` rule -- never inside a media query or an attribute selector
-  // -- which is what's in effect for a browser that prefers light. It
-  // sits inside `tokens.css`'s own `@layer tokens { ... }` block (the
-  // build wraps every source file in its layer, spec "1. Layers, applied
-  // by the build"), so the search must recurse into grouping rules
-  // (`@layer`, `@media`, ...), not just the stylesheet's top level.
-  const lightValue = await page.evaluate(() => {
+function colorBgDeclaredOn(page, selector) {
+  return page.evaluate((sel) => {
     /** @param {CSSRuleList} rules @returns {string|null} */
     function search(rules) {
       for (const rule of Array.from(rules)) {
-        if (rule instanceof CSSStyleRule && rule.selectorText === ':root') {
+        if (rule instanceof CSSStyleRule && rule.selectorText === sel) {
           const v = rule.style.getPropertyValue('--color-bg').trim();
           if (v) return v;
         }
@@ -195,11 +186,54 @@ async function assertDarkBodyBackground(page) {
       if (found) return found;
     }
     return null;
-  });
+  }, selector);
+}
+
+/**
+ * Review Focus 1's browser half: in a browser emulating dark mode,
+ * `body`'s rendered background must be the engine's dark `--color-bg`
+ * from `tokens.css`, never the light default a site's `theme.css` sets
+ * on a plain, unlayered `:root` (the bug the `theme` layer, spec "1.
+ * Layers, applied by the build", fixes). No-op outside dark mode.
+ *
+ * Both the expected light *and* dark values are read statically off
+ * their own source rules via the CSSOM, never off the live cascade
+ * (fix round 1, Critical): reading the "expected dark" value live, off
+ * `document.documentElement`, made the first assertion true by
+ * construction -- `body`'s own background is `var(--color-bg)` with
+ * nothing redeclaring it in between, so it always equals whatever
+ * `--color-bg` resolves to live, dark value or a leaked light one
+ * alike. Worse, if a leak made the live value equal the light one, the
+ * second assertion's `resolvedLight !== resolvedDark` guard went false
+ * and skipped it too -- exactly the case it exists to catch. Sourcing
+ * both independently of the live cascade breaks the circularity: now
+ * "the dark value" means what the engine's own dark rule declares, not
+ * whatever happens to be cascading.
+ * @param {import('@playwright/test').Page} page @returns {Promise<void>}
+ */
+async function assertDarkBodyBackground(page) {
+  const isDark = await page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches);
+  if (!isDark) return;
+
+  // A visitor who explicitly forced light (`data-theme="light"`) really
+  // does see light, whatever the OS/emulated preference -- that's the
+  // switch working, not a leak -- so there is no engine dark rule in
+  // effect here to compare against (`docs/site-settings.md`, "Light and
+  // dark": `:root:not([data-theme="light"])` -- note `:not` -- is the
+  // device/media-query block, and only `:root[data-theme="dark"]` is the
+  // visitor's own forced-dark choice).
+  const explicitTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+  if (explicitTheme === 'light') return;
+
+  const lightValue = await colorBgDeclaredOn(page, ':root');
   expect(lightValue, 'found the engine light --color-bg declaration').not.toBeNull();
 
-  // The dark value actually in effect right now, in this dark browser.
-  const darkValue = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim());
+  // Whichever of the two kept-in-sync dark blocks actually governs here:
+  // the visitor's own forced-dark choice if they made one, else the
+  // device/media-query block that otherwise shows dark mode.
+  const darkSelector = explicitTheme === 'dark' ? ':root[data-theme="dark"]' : ':root:not([data-theme="light"])';
+  const darkValue = await colorBgDeclaredOn(page, darkSelector);
+  expect(darkValue, `found the engine dark --color-bg declaration (${darkSelector})`).not.toBeNull();
 
   // Resolve both token values the way the browser would, via a probe
   // element (CSSOM, never a `style=` attribute -- the CSP allows this),
@@ -213,7 +247,7 @@ async function assertDarkBodyBackground(page) {
     probe.remove();
     return out;
   }, value);
-  const resolvedDark = await resolve(darkValue);
+  const resolvedDark = await resolve(/** @type {string} */ (darkValue));
   const resolvedLight = await resolve(/** @type {string} */ (lightValue));
 
   const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
