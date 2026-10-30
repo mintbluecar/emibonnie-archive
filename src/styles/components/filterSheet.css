@@ -93,16 +93,18 @@
   background-color: var(--color-card);
   border: 1.5px solid var(--color-card-shadow);
   border-radius: 14px;
-  padding: 0 10px;
+  /* Longhands, never the `padding` shorthand: a select's right padding is
+     base.css's own (room for its chevron); an input's is its UA zero. */
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 10px;
   font-family: inherit;
   font-size: var(--text-13);
   color: var(--color-ink);
 }
 
-/* The padding shorthand above would leave base.css's chevron no room:
-   a select keeps base.css's own right padding. */
-.c-filter-sheet__field select {
-  padding-right: calc(var(--space-6) + var(--space-2));
+.c-filter-sheet__field input {
+  padding-right: 10px;
 }
 
 .c-filter-sheet__apply {

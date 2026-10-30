@@ -49,6 +49,10 @@
      so a site that sets it gets matching badges without touching these. */
   --color-label-tint: color-mix(in srgb, var(--color-label) 12%, var(--color-card));
   --color-label-on-tint: color-mix(in srgb, var(--color-label) 75%, var(--color-ink));
+  /* The border around a --color-label-tint surface (Styling system Task
+     4: badge--accent, notice--accent). Derived like the two above, so it
+     follows a site's label colour and dark mode without its own value. */
+  --color-label-border: color-mix(in srgb, var(--color-label) 30%, var(--color-card));
   /* Search results' match highlight (Task 9b; mockups/search-v2.html's
      #ffd9a8). Ink on it is 11.4:1. */
   --color-highlight: #ffd9a8;

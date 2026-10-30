@@ -99,19 +99,27 @@ textarea {
 }
 
 /* The native arrow can't be positioned or recoloured, so it's hidden and
-   replaced by a chevron drawn as two gradients (never an image: the CSP's
-   img-src stays untouched), inset from the right edge, vertically
-   centred. Sized in `em` (never `px`) so it scales with the field's own
-   font-size without a token of its own. */
+   replaced by an open "v" chevron -- the look the old .c-select wrapper
+   drew with a rotated bordered box -- here as two diagonal strokes, one
+   gradient per half (never an image: the CSP's img-src stays
+   untouched). The left half's stripe runs top-left to bottom-right, the
+   right half's bottom-left to top-right. Each stroke sits on the inner
+   side of its diagonal (as the old border did inside its box), so the
+   halves meet in a sharp point; a half-pixel soft edge anti-aliases it.
+   Each half's box is taller than wide: an angled gradient's diagonal
+   always runs through the box's centre, so the extra height only gives
+   the strokes' top ends room instead of clipping them. Inset from the
+   right edge like the old wrapper's arrow, and vertically centred. This
+   is every select's only chevron (Styling system Task 4, fix round 1). */
 select {
   appearance: none;
   -webkit-appearance: none;
   padding-right: calc(var(--space-6) + var(--space-2));
   background-image:
-    linear-gradient(45deg, transparent 50%, var(--color-ink-muted) 50%),
-    linear-gradient(135deg, var(--color-ink-muted) 50%, transparent 50%);
-  background-position: calc(100% - 1.3em) center, calc(100% - 1em) center;
-  background-size: 0.35em 0.35em, 0.35em 0.35em;
+    linear-gradient(45deg, transparent calc(50% - 0.5px), var(--color-ink-muted) 50%, var(--color-ink-muted) calc(50% + 1.5px), transparent calc(50% + 2px)),
+    linear-gradient(-45deg, transparent calc(50% - 0.5px), var(--color-ink-muted) 50%, var(--color-ink-muted) calc(50% + 1.5px), transparent calc(50% + 2px));
+  background-position: right 21.5px top calc(50% + 1px), right 16.5px top calc(50% + 1px);
+  background-size: 5px 8px, 5px 8px;
   background-repeat: no-repeat;
 }
 

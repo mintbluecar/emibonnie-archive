@@ -29,5 +29,5 @@
   font-weight: var(--weight-bold);
   color: var(--color-label-on-tint);
   background: var(--color-label-tint);
-  border-color: color-mix(in srgb, var(--color-label) 30%, var(--color-card));
+  border-color: var(--color-label-border);
 }
