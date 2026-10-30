@@ -7,10 +7,14 @@
  * must not depend on which worker wrote first.
  */
 import { test, expect } from '@playwright/test';
-import { checkPage, signInAs } from './helpers.js';
+import { checkPage, signInAs, gotoReady } from './helpers.js';
 
 test('me as a translator: the badge, the two tabs and an accessible page', async ({ page }) => {
   await signInAs(page, 'translator');
+  // A selectable checkbox is on screen, so checkPage's 24px target check
+  // really measures its label rather than passing with none to measure.
+  await gotoReady(page, '/me');
+  await expect(page.locator('[data-action="select"]').first()).toBeVisible();
   await checkPage(page, '/me');
   await expect(page.locator('.c-me__who [data-translator-badge]')).toContainText('translator');
   await expect(page.locator('[data-action="tab"]')).toHaveCount(2);

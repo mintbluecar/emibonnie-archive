@@ -115,17 +115,39 @@
   margin-top: var(--space-3);
 }
 
-/* The warning itself reads as body text; the notice's danger colour
-   stays on its border and the confirm button. */
+/* The owner-approved solid red opt-out box (Plan 2 spec, "the solid red
+   opt out box"), so it never reads like "delete my account" below it:
+   card-coloured text on the danger colour (4.78:1 light, 5.06:1 dark),
+   and its confirm, a btn--danger, a card-coloured surface on it. */
+.c-me__optout--solid {
+  padding: var(--space-3);
+  color: var(--color-card);
+  background: var(--color-danger);
+  border-radius: var(--radius-card);
+}
+
+.c-me__optout-title {
+  font-size: var(--text-14);
+  font-weight: var(--weight-heavy);
+}
+
 .c-me__optout-body {
   font-size: var(--text-12);
-  font-weight: var(--weight-regular);
   line-height: 1.45;
-  color: var(--color-ink);
 }
 
 .c-me__optout-done {
+  font-size: var(--text-12);
   font-weight: var(--weight-heavy);
+}
+
+/* "See my translations": the flat label colour it had before, not the
+   primary gradient. Accent text on --color-label is the pair
+   --color-accent-text is chosen for (tokens.css). */
+.c-me__welcome-see {
+  color: var(--color-accent-text);
+  background: var(--color-label);
+  border-color: var(--color-label);
 }
 
 .c-me__status {

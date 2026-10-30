@@ -59,7 +59,7 @@ function welcomeBlock(state) {
         translations: totals.translations, events: totals.events, sharedStories: totals.sharedStories,
       })}</p>
       <div class="cluster cluster--2 c-me__welcome-actions">
-        <button class="btn btn--primary" type="button" data-action="welcome-see">${t('me.welcome.see')}</button>
+        <button class="btn btn--secondary c-me__welcome-see" type="button" data-action="welcome-see">${t('me.welcome.see')}</button>
         <a class="btn btn--secondary" href="/add">${t('me.welcome.add')}</a>
       </div>
     </div>
@@ -75,7 +75,7 @@ function row(item, state) {
   const key = keyOf(item);
   const selectable = !item.removedByYou && !item.hidden && item.reviewState !== 'rejected';
   return html`
-    <li class="c-me__entry" ${item.removedByYou || item.hidden ? 'data-faded' : ''}>
+    <li class="c-me__entry"${item.removedByYou || item.hidden ? html` data-faded` : ''}>
       <div class="c-me__entry-top">
         ${selectable ? html`
           <label class="check c-me__select">
@@ -113,15 +113,15 @@ function removeBar(state) {
 function optOutBox(state) {
   if (state.optedOut) {
     return html`
-      <section class="notice stack stack--2 c-me__optout">
+      <section class="card card--compact stack stack--2 c-me__optout">
         <p class="c-me__optout-done">${t('me.optOut.done')}</p>
-        <button class="btn btn--secondary btn--block" type="button" data-action="opt-in">${t('me.optOut.back')}</button>
+        <button class="btn btn--danger btn--block" type="button" data-action="opt-in">${t('me.optOut.back')}</button>
       </section>
     `;
   }
   return html`
-    <section class="notice notice--error stack stack--2 c-me__optout">
-      <h3 class="heading heading--sm">${t('me.optOut.title')}</h3>
+    <section class="stack stack--2 c-me__optout c-me__optout--solid">
+      <h3 class="c-me__optout-title">${t('me.optOut.title')}</h3>
       <p class="c-me__optout-body">${tCount('me.optOut.body', state.totals.translations)}</p>
       <button class="btn btn--danger btn--block" type="button" data-action="opt-out">${t('me.optOut.confirm')}</button>
     </section>

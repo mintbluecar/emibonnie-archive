@@ -26,7 +26,7 @@ export function startHref(provider, returnTo) {
 function mark(provider) {
   return provider === 'x'
     ? html`<span class="c-signin__mark" aria-hidden="true">𝕏</span>`
-    : html`<span class="c-signin__mark" aria-hidden="true">G</span>`;
+    : html`<span class="c-signin__mark c-signin__mark--google" aria-hidden="true">G</span>`;
 }
 
 /**

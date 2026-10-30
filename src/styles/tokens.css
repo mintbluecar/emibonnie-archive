@@ -78,6 +78,14 @@
      notice/error backgrounds, same derivation as --color-label-tint. */
   --color-danger: #c8433a;
   --color-danger-tint: color-mix(in srgb, var(--color-danger) 12%, var(--color-card));
+  /* Sign-in provider brand colours (Styling system Task 11, signIn.css),
+     the same in both themes, so neither dark block sets them: X's black
+     button with white text (19.2:1), and Google's blue "G" mark (decorative
+     and aria-hidden, a logotype: 3.5:1 on the light --color-card, 5.0:1
+     on the dark one). */
+  --color-brand-x: #0f0f0f;
+  --color-on-brand-x: #fff;
+  --color-brand-google: #4285f4;
   /* The dim layer behind a modal dialog (Styling system Task 11,
      base.css's dialog::backdrop): the 45% black the filter sheet, the
      person picker and the report dialog each hand-copied. Black reads as

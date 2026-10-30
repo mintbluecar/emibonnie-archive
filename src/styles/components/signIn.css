@@ -2,11 +2,11 @@
  * public/js/components/signIn.js: the sign-in screen (Task 12, mockup
  * translator-signin-v2.html; on primitives since the styling system's
  * Task 11). One centred card: brand, what signing in is for, then X
- * (first, in ink) and Google (a secondary button), and the "what we
+ * (first, black) and Google (a secondary button), and the "what we
  * keep" note. Phone-first; it is the whole page, so it is narrow on a
  * desktop too. The card, badge, notice, buttons and muted texts are
- * primitives; this file keeps the brand block and the X button's
- * inverted colours. See STYLING.md.
+ * primitives; this file keeps the brand block and the X and Google
+ * brand colours. See STYLING.md.
  */
 
 .c-signin {
@@ -56,17 +56,21 @@
   margin-bottom: var(--space-2);
 }
 
-/* X's own look, the page's ink as the surface: dark on a light page,
-   light on a dark one. */
+/* X's own look: black, in both themes (the mockup's "X first, black"). */
 .c-signin__provider--x {
-  color: var(--color-card);
-  background: var(--color-ink);
-  border-color: var(--color-ink);
+  color: var(--color-on-brand-x);
+  background: var(--color-brand-x);
+  border-color: var(--color-brand-x);
 }
 
 .c-signin__mark {
   font-size: var(--text-16);
   line-height: 1;
+}
+
+.c-signin__mark--google {
+  font-weight: var(--weight-heavy);
+  color: var(--color-brand-google);
 }
 
 .c-signin__keep {
