@@ -64,6 +64,15 @@ export async function count(db, sql, params = []) {
 }
 
 /**
+ * An item's sources (with the credited handle), by role then position.
+ * @param {any} db @param {number} itemId
+ */
+export async function sourcesOf(db, itemId) {
+  return rows(db, `select s.role, s.position, s.external_id, s.media, s.editable_until, a.handle
+    from item_sources s left join accounts a on a.id = s.account_id where s.item_id = $1 order by s.role, s.position`, [itemId]);
+}
+
+/**
  * A `fetchImpl` serving the fixtures, with `patch(kind, id, json)` able
  * to rewrite any response body, and a count of requests per id.
  * @param {(kind: 'syn'|'fx'|'thread', id: string, json: any) => any} patch
