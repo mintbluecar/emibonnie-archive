@@ -153,7 +153,7 @@ test('search passes list params through as lists', async () => {
   assert.equal(some.results.length, 2);
 });
 
-test('every public GET has s-maxage=300 (video 600), no Set-Cookie and no Vary: Cookie', async () => {
+test('every public GET has s-maxage=300 (video 600) for the CDN, a revalidate-always browser header, no Set-Cookie and no Vary: Cookie', async () => {
   const api = apiFor(deps);
   const paths = [
     '/api/home', `/api/event/${SLUG}`, `/api/item/translation/${IDS.LONG}`, '/api/search', '/api/search?q=everyone',
@@ -162,13 +162,14 @@ test('every public GET has s-maxage=300 (video 600), no Set-Cookie and no Vary: 
   for (const path of paths) {
     const res = await api.call('GET', path);
     assert.equal(res.status, 200, `${path}: ${res.text}`);
-    assert.equal(res.headers.get('cache-control'), PUBLIC, path);
+    assert.equal(res.headers.get('vercel-cdn-cache-control'), PUBLIC, path);
+    assert.equal(res.headers.get('cache-control'), 'public, max-age=0, must-revalidate', `${path}: browsers always revalidate`);
     assert.equal(res.headers.get('set-cookie'), null, path);
     assert.ok(!/cookie/i.test(res.headers.get('vary') ?? ''), path);
   }
   const video = await api.call('GET', `/api/video/translation/${IDS.EVENT_A}`);
   assert.equal(video.status, 200);
-  assert.equal(video.headers.get('cache-control'), VIDEO);
+  assert.equal(video.headers.get('vercel-cdn-cache-control'), VIDEO);
   await api.settle();
 });
 
@@ -180,7 +181,7 @@ test('the item GET refreshes an elapsed, unfinalized edit window in the backgrou
   const api = apiFor(deps);
   const res = await api.call('GET', `/api/item/translation/${IDS.PHOTO}`);
   assert.equal(res.status, 200);
-  assert.equal(res.headers.get('cache-control'), PUBLIC, 'the CDN still caches it');
+  assert.equal(res.headers.get('vercel-cdn-cache-control'), PUBLIC, 'the CDN still caches it');
   assert.equal(JSON.parse(res.text).editOpenUntil, '2026-10-01T00:00:00.000Z');
   assert.equal(api.pending.length, 1, 'one background task');
   await api.settle();
@@ -199,7 +200,7 @@ test('public GET 404s are cached for 60 s only', async () => {
   for (const path of ['/api/event/no-such-event', '/api/item/translation/1', '/api/person/nobody', '/api/account/nobody', '/api/video/translation/1']) {
     const res = await api.call('GET', path);
     assert.equal(res.status, 404, path);
-    assert.equal(res.headers.get('cache-control'), 'public, s-maxage=60', path);
+    assert.equal(res.headers.get('vercel-cdn-cache-control'), 'public, s-maxage=60', path);
   }
 });
 
@@ -227,7 +228,7 @@ test('the meta routes answer on the page paths the function sees (/t/:id, /e/:sl
   const api = apiFor(deps);
   const item = await api.call('GET', `/t/${IDS.LONG}`);
   assert.equal(item.status, 200);
-  assert.equal(item.headers.get('cache-control'), PUBLIC);
+  assert.equal(item.headers.get('vercel-cdn-cache-control'), PUBLIC);
   assert.match(item.text, /og:title/);
   const event = await api.call('GET', `/e/${SLUG}`);
   assert.equal(event.status, 200);
@@ -243,7 +244,7 @@ test('HEAD on a real route: the GET headers, an empty body', async () => {
   const api = apiFor(deps);
   const res = await api.call('HEAD', '/api/home');
   assert.equal(res.status, 200);
-  assert.equal(res.headers.get('cache-control'), PUBLIC);
+  assert.equal(res.headers.get('vercel-cdn-cache-control'), PUBLIC);
   assert.equal(res.text, '');
   const page = await api.call('HEAD', `/t/${IDS.LONG}`);
   assert.match(page.headers.get('content-type') ?? '', /^text\/html/);

@@ -11,7 +11,7 @@ import { IDS } from '../helpers/fixtures.js';
 import { seededDeps, itemIdOf, SYSTEM } from '../helpers/ingest.js';
 import { apiFor } from '../helpers/api.js';
 import { signInUser } from '../../src/services/session.js';
-import { NOT_FOUND_CACHE, PRIVATE_NO_STORE, PUBLIC_CACHE } from '../../src/http/handler.js';
+import { BROWSER_REVALIDATE, NOT_FOUND_CACHE, PRIVATE_NO_STORE, PUBLIC_CACHE } from '../../src/http/handler.js';
 
 /** @type {any} */
 let deps;
@@ -34,8 +34,10 @@ test('a signed-in reader gets the same cacheable answer as a visitor', async () 
   const signedIn = await api.call('GET', itemPath(IDS.LONG), { cookies: owner });
   assert.equal(visitor.status, 200);
   assert.equal(signedIn.status, 200);
-  assert.equal(signedIn.headers.get('cache-control'), PUBLIC_CACHE);
+  assert.equal(signedIn.headers.get('vercel-cdn-cache-control'), PUBLIC_CACHE);
+  assert.equal(signedIn.headers.get('cache-control'), BROWSER_REVALIDATE, 'browsers always revalidate');
   assert.equal(signedIn.headers.get('cache-control'), visitor.headers.get('cache-control'));
+  assert.equal(signedIn.headers.get('vercel-cdn-cache-control'), visitor.headers.get('vercel-cdn-cache-control'));
   assert.ok(signedIn.headers.get('vercel-cache-tag'), 'tagged, so a write can purge it');
   assert.equal(signedIn.headers.get('vercel-cache-tag'), visitor.headers.get('vercel-cache-tag'));
   assert.equal(signedIn.text, visitor.text, 'the same body, with no per-user field');
@@ -83,7 +85,7 @@ test('the owner gets a held entry through viewer.held; a member gets null', asyn
     for (const cookies of [undefined, owner, member]) {
       const res = await api.call('GET', itemPath(IDS.EVENT_A), { cookies });
       assert.equal(res.status, 404);
-      assert.equal(res.headers.get('cache-control'), NOT_FOUND_CACHE);
+      assert.equal(res.headers.get('vercel-cdn-cache-control'), NOT_FOUND_CACHE);
     }
 
     const asOwner = await api.call('GET', `${itemPath(IDS.EVENT_A)}/viewer`, { cookies: owner });

@@ -89,7 +89,7 @@ test('a signed-in item view is the public answer, tagged like a visitor\'s', asy
   const token = cookie.split(';')[0].split('=')[1];
   const res = await api.call('GET', `/api/item/translation/${sample.sourceId}`, { cookies: { sid: token } });
   assert.equal(res.status, 200);
-  assert.match(res.headers.get('cache-control') ?? '', /^public/);
+  assert.match(res.headers.get('vercel-cdn-cache-control') ?? '', /^public/);
   assert.ok((res.headers.get('vercel-cache-tag') ?? '').split(',').includes(`item:${sample.id}`));
 });
 

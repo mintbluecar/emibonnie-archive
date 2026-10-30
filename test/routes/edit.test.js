@@ -133,11 +133,11 @@ test('item detail is the public answer with a session; the editor flags come fro
   const api = apiFor({ ...deps, env: ENV });
   const pub = await api.call('GET', `/api/item/translation/${IDS.EVENT_A}`);
   assert.equal(pub.status, 200);
-  assert.match(pub.headers.get('cache-control') ?? '', /^public, s-maxage=300/);
+  assert.match(pub.headers.get('vercel-cdn-cache-control') ?? '', /^public, s-maxage=300/);
 
   const owner = await sidFor({ via: 'x', subject: '0', handle: 'owner' });
   const same = await api.call('GET', `/api/item/translation/${IDS.EVENT_A}`, { cookies: owner });
-  assert.match(same.headers.get('cache-control') ?? '', /^public, s-maxage=300/);
+  assert.match(same.headers.get('vercel-cdn-cache-control') ?? '', /^public, s-maxage=300/);
   const priv = await api.call('GET', `/api/item/translation/${IDS.EVENT_A}/viewer`, { cookies: owner });
   assert.equal(priv.status, 200);
   assert.match(priv.headers.get('cache-control') ?? '', /private, no-store/);

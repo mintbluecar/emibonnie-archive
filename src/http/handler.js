@@ -31,6 +31,13 @@ export const NOT_FOUND_CACHE = 'public, s-maxage=60';
 export const PRIVATE_NO_STORE = 'private, no-store';
 /** Writes and errors. */
 export const NO_STORE = 'no-store';
+/**
+ * What a browser gets for any answer the CDN caches: revalidate every time,
+ * so a reader never sees their own browser's stale copy after a write (the
+ * CDN, which writes purge, stays the one shared cache). This is also what
+ * Vercel's own docs say it returns to clients for an `s-maxage` response.
+ */
+export const BROWSER_REVALIDATE = 'public, max-age=0, must-revalidate';
 
 /**
  * @typedef {{ params: Record<string, string>, query: Record<string, string|string[]>, body: unknown, origin: string,
@@ -55,9 +62,8 @@ function json(status, body, cache) {
 }
 
 /**
- * A route's own JSON response with an explicit cache header, for a route
- * whose cache depends on the request: the item page is `private, no-store`
- * for a signed-in viewer and public otherwise. `toResponse` keeps a
+ * A route's own JSON response with an explicit cache header (the item
+ * route uses it to attach cache tags to its own Response). `toResponse` keeps a
  * `PRIVATE_NO_STORE` (or `NOT_FOUND_CACHE`) header; anything else is
  * replaced by the route's declared cache, so returning the route's own
  * public cache here is harmless.
@@ -109,9 +115,8 @@ function errorResponse(err, route, { method, pathname, log }) {
 /**
  * The route's cache header always wins, with two exceptions: a GET route's
  * own Response may shorten it to `NOT_FOUND_CACHE` (the meta pages' generic
- * meta for a hidden or missing target), or mark it `PRIVATE_NO_STORE` (the
- * item page for a signed-in viewer, so the per-user edit buttons are never
- * shared or cached).
+ * meta for a hidden or missing target), or mark it `PRIVATE_NO_STORE` (an
+ * answer that must never be shared or stored).
  * @param {unknown} result @param {Route} route
  */
 function toResponse(result, route) {
@@ -120,6 +125,32 @@ function toResponse(result, route) {
   const kept = own === NOT_FOUND_CACHE || own === PRIVATE_NO_STORE;
   const cache = route.method === 'GET' && kept ? /** @type {string} */ (own) : route.cache;
   response.headers.set('cache-control', cache);
+  return response;
+}
+
+/**
+ * The one place a response's cache headers are split between the CDN and
+ * the browser. A CDN-cached answer (any `s-maxage`) moves its policy to
+ * `Vercel-CDN-Cache-Control` and tells the browser `BROWSER_REVALIDATE`;
+ * private and no-store answers keep their one header. Vercel's docs
+ * (https://vercel.com/docs/caching/cache-control-headers, "Behavior"):
+ * "`Vercel-CDN-Cache-Control` is exclusive to Vercel and has top priority
+ * ... Vercel's proxy consumes this header for all requests. After
+ * processing it, the CDN does not include it in the final HTTP response to
+ * the client." and, of `Cache-Control`: "You can still set `Cache-Control`
+ * while using the other two, and it will be forwarded to the client as is."
+ * (https://vercel.com/docs/caching/cdn-cache, "CDN-Cache-Control":
+ * "`Vercel-CDN-Cache-Control` headers are not returned to the browser or
+ * forwarded to other CDNs.") The local dev server has no CDN, so there the
+ * browser sees exactly the header it gets in production.
+ * @param {Response} response
+ * @returns {Response}
+ */
+function splitForCdn(response) {
+  const cache = response.headers.get('cache-control');
+  if (!cache || !/(?:^|[\s,])s-maxage=/.test(cache)) return response;
+  response.headers.set('vercel-cdn-cache-control', cache);
+  response.headers.set('cache-control', BROWSER_REVALIDATE);
   return response;
 }
 
@@ -177,7 +208,10 @@ function withHead(handle) {
  * @returns {(request: Request) => Promise<Response>}
  */
 export function createHandler({ routes, makeDeps, waitUntil, log = console.error, env = process.env }) {
-  return withHead(async function handle(request) {
+  return withHead(async (request) => splitForCdn(await answer(request)));
+
+  /** @param {Request} request @returns {Promise<Response>} */
+  async function answer(request) {
     const url = new URL(request.url);
     const ctx = { method: request.method, pathname: url.pathname, log };
     /** @type {Route|null} */
@@ -197,5 +231,5 @@ export function createHandler({ routes, makeDeps, waitUntil, log = console.error
     } catch (err) {
       return errorResponse(err, route, ctx);
     }
-  });
+  }
 }
