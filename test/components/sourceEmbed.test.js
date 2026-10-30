@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { MiniElement } from '../helpers/miniDom.js';
 import { mount } from '../../public/js/core/dom.js';
+import { html } from '../../public/js/core/html.js';
 // Dynamic import: see test/components/header.test.js for why.
 const { render, bind, canEmbed, WIDGETS_SRC, WIDGETS_ID } = await import('../../public/js/components/sourceEmbed.js');
 
@@ -47,7 +48,27 @@ function fakeBrowser({ dark }) {
     createElement: (/** @type {string} */ tag) => new MiniElement(tag),
   });
   globalThis.window = /** @type {any} */ ({ matchMedia: (/** @type {string} */ q) => ({ matches: dark && q === '(prefers-color-scheme: dark)' }) });
+  observers.length = 0;
   return { head, byId };
+}
+
+/** Every `IntersectionObserver` made since the last `fakeBrowser()`, with what it watches. */
+/** @type {{ callback: Function, options: any, targets: any[], disconnected: boolean }[]} */
+const observers = [];
+globalThis.IntersectionObserver = /** @type {any} */ (class {
+  /** @param {Function} callback @param {any} options */
+  constructor(callback, options) {
+    this.record = { callback, options, targets: /** @type {any[]} */ ([]), disconnected: false };
+    observers.push(this.record);
+  }
+  /** @param {any} target */
+  observe(target) { this.record.targets.push(target); }
+  disconnect() { this.record.disconnected = true; }
+});
+
+/** Reports `isIntersecting` for every watched target of every live observer. @param {boolean} isIntersecting */
+function intersect(isIntersecting) {
+  for (const o of observers.filter((r) => !r.disconnected)) o.callback(o.targets.map((target) => ({ target, isIntersecting })));
 }
 
 test('sourceEmbed.bind: adds widgets.js once (external, async) however many times it runs; dark mode sets data-theme="dark"', () => {
@@ -56,6 +77,7 @@ test('sourceEmbed.bind: adds widgets.js once (external, async) however many time
   mount(/** @type {any} */ (root), render(PROPS));
   bind(/** @type {any} */ (root));
   bind(/** @type {any} */ (root));
+  intersect(true);
   const scripts = head.querySelectorAll('script');
   assert.equal(scripts.length, 1);
   assert.equal(/** @type {any} */ (scripts[0]).src, WIDGETS_SRC);
@@ -69,6 +91,7 @@ test('sourceEmbed.bind: light mode leaves data-theme unset; a page with no embed
   const root = new MiniElement('div');
   mount(/** @type {any} */ (root), render(PROPS));
   bind(/** @type {any} */ (root));
+  intersect(true);
   assert.equal(root.querySelector('blockquote')?.getAttribute('data-theme'), null);
 
   const second = fakeBrowser({ dark: false });
@@ -114,4 +137,25 @@ test('sourceEmbed (Task 10d extra): the box is the column\'s width up to X\'s 55
   const block = /\.c-embed-box\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
   assert.match(block, /width:\s*var\(--embed-width\)/);
   assert.match(block, /margin-inline:\s*auto/);
+});
+
+test('Task 11: widgets.js is added once, when the first embed intersects (200px early), and the observer then disconnects', () => {
+  const { head } = fakeBrowser({ dark: false });
+  const root = new MiniElement('div');
+  mount(/** @type {any} */ (root), html`${render(PROPS)}${render(PROPS)}`);
+  bind(/** @type {any} */ (root));
+  assert.equal(observers.length, 1);
+  assert.equal(observers[0].options.rootMargin, '200px');
+  assert.equal(observers[0].targets.length, 2, 'every embed is watched');
+  assert.equal(head.querySelectorAll('script').length, 0, 'nothing from X before an embed nears the viewport');
+  assert.equal(head.querySelectorAll('meta').length, 0);
+  intersect(false);
+  assert.equal(head.querySelectorAll('script').length, 0, 'an entry that isn\'t intersecting loads nothing');
+  observers[0].callback([{ target: observers[0].targets[1], isIntersecting: true }]);
+  assert.equal(head.querySelectorAll('script').length, 1);
+  assert.equal(head.querySelectorAll('meta[name="twitter:widgets:csp"]').length, 1);
+  assert.equal(observers[0].disconnected, true);
+  bind(/** @type {any} */ (root));
+  assert.equal(observers.length, 1, 'once widgets.js is on the page, no new observer');
+  assert.equal(head.querySelectorAll('script').length, 1);
 });

@@ -24,7 +24,9 @@
  *
  * `widgets.js` is an external script, added once (by id, as X's own
  * loader does: docs.x.com/x-for-websites/javascript-api/guides/set-up-x-for-websites),
- * only when the page has an embed. It's loaded from
+ * only when the page has an embed, and only once one comes within 200px
+ * of the viewport (Task 11: it sits below the clip and the translation,
+ * so the first screen never waits on X). It's loaded from
  * `platform.twitter.com` directly: the docs' `platform.x.com/widgets.js`
  * answers a 302 to that host, which would put both hosts in the CSP.
  */
@@ -117,12 +119,26 @@ function cspMeta() {
   return meta;
 }
 
+/** Adds X's CSP switch and `widgets.js`, unless a call before this one already did. @returns {void} */
+function loadWidgets() {
+  if (document.getElementById(WIDGETS_ID)) return;
+  document.head.appendChild(cspMeta());
+  const script = document.createElement('script');
+  script.id = WIDGETS_ID;
+  script.src = WIDGETS_SRC;
+  script.async = true;
+  script.setAttribute('charset', 'utf-8');
+  document.head.appendChild(script);
+}
+
 /**
  * Sets the dark theme on every embed when the page is dark (the header's
  * switch, else the device: `isDark()`; X renders it once, so a later
  * switch shows on the next load),
- * then adds X's CSP switch and `widgets.js` -- once per page, and only
- * when there's an embed.
+ * then watches the embeds with one `IntersectionObserver`: the first one
+ * within `rootMargin: '200px'` of the viewport adds X's CSP switch and
+ * `widgets.js` (once per page) and the observer disconnects. Nothing
+ * when there's no embed, or `widgets.js` is already on the page.
  * @param {Element} root
  * @returns {void}
  */
@@ -132,11 +148,10 @@ export function bind(root) {
   if (quotes.length === 0) return;
   if (isDark()) for (const quote of quotes) quote.setAttribute('data-theme', 'dark');
   if (document.getElementById(WIDGETS_ID)) return;
-  document.head.appendChild(cspMeta());
-  const script = document.createElement('script');
-  script.id = WIDGETS_ID;
-  script.src = WIDGETS_SRC;
-  script.async = true;
-  script.setAttribute('charset', 'utf-8');
-  document.head.appendChild(script);
+  const observer = new IntersectionObserver((entries) => {
+    if (!entries.some((entry) => entry.isIntersecting)) return;
+    observer.disconnect();
+    loadWidgets();
+  }, { rootMargin: '200px' });
+  for (const quote of quotes) observer.observe(quote);
 }
