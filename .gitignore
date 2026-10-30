@@ -32,3 +32,5 @@ public/js/kinds/_registry.js
 
 # This site repo
 .gstack/
+/links.txt
+/import-report.csv
