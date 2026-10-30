@@ -9,7 +9,7 @@
  *   (a) a class whose block (`c-<block>`/`k-<block>`, the text up to its
  *       first `__` or `--`) is styled by a file still on
  *       `scripts/stylelintPending.json`: today's unstyled controls
- *       (`.c-add-link__next`, `.c-import__more`, ...) stay that way
+ *       (`.c-import__more`, ...) stay that way
  *       until their migration task, so they pass here too -- the same
  *       list `stylelintPending.test.js` keeps honest shrinks this
  *       exception as components migrate;

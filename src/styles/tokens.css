@@ -131,7 +131,7 @@
   /* The card look's shadow (resultCard.css, previewCard.css, me.css,
      add.css, adminImport.css, owner.css, signIn.css, eventCard.css all
      hand-copy this), and the raised look used by a sheet/dialog sitting
-     above the page (add.css's .c-line-fix, the bottom-sheet "line fix"
+     above the page (lineFix.css's .c-line-fix, the bottom-sheet "line fix"
      dialog). */
   --shadow-card: 0 2px 0 var(--color-card-shadow);
   --shadow-raised: 0 -6px 24px var(--color-card-shadow);

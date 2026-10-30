@@ -1,0 +1,55 @@
+/*
+ * The edit page (Plan 2a Task 13; on primitives since the styling
+ * system's Task 9): one Save bar under steps 2 and 3, then the owner's
+ * history, each entry with a revert icon button. Buttons, notices, the
+ * card and the reverted badge are primitives; this is the bar's spacing
+ * and the history rows' grid. See STYLING.md.
+ */
+
+.c-edit__actions {
+  margin-top: var(--space-4);
+}
+
+.c-edit__saved,
+.c-edit__published {
+  font-weight: var(--weight-bold);
+}
+
+.c-edit__history {
+  margin-top: var(--space-3);
+}
+
+.c-edit__edits {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.c-edit__edit {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-12);
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+}
+
+.c-edit__when {
+  font-weight: var(--weight-heavy);
+}
+
+.c-edit__what {
+  grid-column: 1;
+}
+
+.c-edit__reverted,
+.c-edit__revert {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-self: center;
+}
+
+.c-edit__revert {
+  font-size: var(--text-16);
+}

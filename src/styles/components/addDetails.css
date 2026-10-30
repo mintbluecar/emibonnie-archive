@@ -1,0 +1,31 @@
+/*
+ * Step 2 of the add flow and the edit page (Plan 2a Task 13; on
+ * primitives since the styling system's Task 9): the card under the
+ * preview, its fields and the read-only values. Fields, labels, the
+ * dropdowns, the hashtag badges and the checkbox are primitives; this is
+ * the card's spacing and the text sizes the controls keep. See
+ * STYLING.md.
+ */
+
+.c-add-details {
+  margin-top: var(--space-3);
+}
+
+.c-add-details__who {
+  margin-bottom: var(--space-2);
+  font-weight: var(--weight-heavy);
+}
+
+.c-add-details__fields {
+  margin-top: var(--space-3);
+}
+
+.c-add-details__select,
+.c-add-details__input {
+  font-size: var(--text-14);
+}
+
+.c-add-details__value {
+  font-size: var(--text-13);
+  font-weight: var(--weight-bold);
+}

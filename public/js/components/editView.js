@@ -55,17 +55,17 @@ function whenLabel(at) {
 /** @param {any[]} history @returns {import('../core/html.js').SafeHtml} */
 function historyBlock(history) {
   return html`
-    <section class="c-edit__history">
-      <h2 class="c-add__heading">${t('edit.history')}</h2>
+    <section class="card c-edit__history">
+      <h2 class="heading heading--sm c-add__heading">${t('edit.history')}</h2>
       ${history.length === 0 ? '' : html`
-        <ul class="c-edit__edits">
+        <ul class="stack stack--2 c-edit__edits">
           ${history.map((entry) => html`
             <li class="c-edit__edit">
               <p class="c-edit__when">${t('edit.by', { name: entry.by })} · ${whenLabel(entry.at)}</p>
-              <p class="c-edit__what">${t('edit.changed', { fields: entry.changed.join(', ') })}</p>
+              <p class="meta c-edit__what">${t('edit.changed', { fields: entry.changed.join(', ') })}</p>
               ${entry.reverted
-                ? html`<span class="c-edit__reverted">${t('edit.reverted')}</span>`
-                : html`<button type="button" class="c-edit__revert" data-action="revert" data-edit="${entry.id}"
+                ? html`<span class="badge c-edit__reverted">${t('edit.reverted')}</span>`
+                : html`<button type="button" class="btn btn--secondary btn--icon c-edit__revert" data-action="revert" data-edit="${entry.id}"
                     title="${t('edit.revert')}" aria-label="${t('edit.revert')}">↺</button>`}
             </li>
           `)}
@@ -78,18 +78,18 @@ function historyBlock(history) {
 /** The buttons and the save/publish messages. @param {EditState} s @param {boolean} held */
 function actionsBlock(s, held) {
   return html`
-    <div class="c-edit__actions">
-      <button class="c-add__save" type="button" data-action="save"${s.busy ? ' disabled' : ''}>
+    <div class="cluster cluster--3 c-edit__actions">
+      <button class="btn btn--primary" type="button" data-action="save"${s.busy ? ' disabled' : ''}>
         ${s.busy ? t('edit.saving') : t('edit.save')}
       </button>
       ${held ? html`
-        <button class="c-add__save" type="button" data-action="save-publish"${s.busy ? ' disabled' : ''}>
+        <button class="btn btn--primary" type="button" data-action="save-publish"${s.busy ? ' disabled' : ''}>
           ${s.busy ? t('edit.saving') : t('edit.saveAndPublish')}
         </button>
       ` : ''}
-      ${s.notice ? html`<p class="c-edit__notice" role="alert">${s.notice}</p>` : ''}
-      ${s.saved ? html`<p class="c-edit__saved" role="status">${t('edit.saved')}</p>` : ''}
-      ${s.published ? html`<p class="c-edit__published" role="status">${t('edit.published')}</p>` : ''}
+      ${s.notice ? html`<p class="notice notice--error" role="alert">${s.notice}</p>` : ''}
+      ${s.saved ? html`<p class="meta c-edit__saved" role="status">${t('edit.saved')}</p>` : ''}
+      ${s.published ? html`<p class="meta c-edit__published" role="status">${t('edit.published')}</p>` : ''}
     </div>
   `;
 }
@@ -103,7 +103,7 @@ export function render(s) {
     active: 'me', compact: true,
     content: html`
       <h1 class="c-me__title">${t('edit.title')}</h1>
-      ${held ? html`<p class="c-item__held" role="status">${t('item.held')}</p>` : ''}
+      ${held ? html`<p class="notice notice--accent" role="status">${t('item.held')}</p>` : ''}
       ${addDetails.render({ draft, options: s.options, isOwner, choices: s.choices, showActions: false, allowNewEvent: false })}
       ${speakerStep.render({ draft, options: s.options, chosen: s.chosen, open: s.open, lineFixes: s.lineFixes, showSave: false })}
       ${s.fix ? lineFixSheet.render({ line: s.fix, options: s.options, fixes: s.lineFixes }) : ''}

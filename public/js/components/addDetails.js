@@ -41,8 +41,8 @@ function eventField({ options, choices, eventId, allowNew }) {
   const matchName = matched?.name ?? (eventId === null ? null : t('edit.eventById', { id: eventId }));
   const isNew = allowNew && choices.eventMode === 'new';
   return html`
-    <div class="c-add-details__field">
-      <label class="c-add-details__label" for="c-add-event">${t('add.event')}</label>
+    <div class="field">
+      <label class="label" for="c-add-event">${t('add.event')}</label>
       <span class="field__select">
         <select class="c-add-details__select" id="c-add-event" data-field="event">
           ${matchName ? labelled('match', `${matchName} · ${t('add.matches')}`, choices.eventMode === 'match') : ''}
@@ -51,7 +51,7 @@ function eventField({ options, choices, eventId, allowNew }) {
         </select>
       </span>
       ${isNew ? html`
-        <label class="c-add-details__label" for="c-add-event-title">${t('add.eventTitle')}</label>
+        <label class="label" for="c-add-event-title">${t('add.eventTitle')}</label>
         <input class="c-add-details__input" id="c-add-event-title" data-field="eventName" type="text"
           maxlength="120" autocomplete="off" value="${choices.eventName}">
       ` : ''}
@@ -67,8 +67,8 @@ function lookupField({ label, field, values, pick, typed, isOwner }) {
   const newLabel = field === 'category' ? t('add.newType') : t('add.newClient');
   const newNameLabel = field === 'category' ? t('add.newTypeName') : t('add.newClientName');
   return html`
-    <div class="c-add-details__field">
-      <label class="c-add-details__label" for="c-add-${field}">${label}</label>
+    <div class="field">
+      <label class="label" for="c-add-${field}">${label}</label>
       <span class="field__select">
         <select class="c-add-details__select" id="c-add-${field}" data-field="${field}">
           ${labelled('', t('add.optional'), pick === '')}
@@ -77,7 +77,7 @@ function lookupField({ label, field, values, pick, typed, isOwner }) {
         </select>
       </span>
       ${isOwner && pick === NEW ? html`
-        <label class="c-add-details__label" for="c-add-${field}-new">${newNameLabel}</label>
+        <label class="label" for="c-add-${field}-new">${newNameLabel}</label>
         <input class="c-add-details__input" id="c-add-${field}-new" data-field="${field}New" type="text"
           maxlength="80" autocomplete="off" value="${typed}">
       ` : ''}
@@ -91,8 +91,8 @@ function lookupField({ label, field, values, pick, typed, isOwner }) {
  */
 function placementField(choices) {
   return html`
-    <div class="c-add-details__field">
-      <label class="c-add-details__label" for="c-add-placement">${t('add.placement')}</label>
+    <div class="field">
+      <label class="label" for="c-add-placement">${t('add.placement')}</label>
       <span class="field__select">
         <select class="c-add-details__select" id="c-add-placement" data-field="placement">
           ${['event', 'shared_story', 'post', 'unsorted'].map((p) => labelled(p, t(`add.placement.${p}`), choices.placement === p))}
@@ -105,9 +105,9 @@ function placementField(choices) {
 /** @param {string[]} tags @returns {import('../core/html.js').SafeHtml} */
 function hashtagsField(tags) {
   return html`
-    <div class="c-add-details__field">
-      <p class="c-add-details__label">${t('add.hashtags')}</p>
-      <p class="c-add-details__pills">${tags.map((tag) => html`<span class="c-add-details__pill">${tag}</span>`)}</p>
+    <div class="field">
+      <p class="label">${t('add.hashtags')}</p>
+      <p class="cluster cluster--1">${tags.map((tag) => html`<span class="badge badge--accent">${tag}</span>`)}</p>
     </div>
   `;
 }
@@ -115,8 +115,8 @@ function hashtagsField(tags) {
 /** @param {string} label @param {string} value @returns {import('../core/html.js').SafeHtml} */
 function textField(label, value) {
   return html`
-    <div class="c-add-details__field">
-      <p class="c-add-details__label">${label}</p>
+    <div class="field">
+      <p class="label">${label}</p>
       <p class="c-add-details__value">${value}</p>
     </div>
   `;
@@ -125,7 +125,7 @@ function textField(label, value) {
 /** @param {Choices} choices @returns {import('../core/html.js').SafeHtml} */
 function subbedCheck(choices) {
   return html`
-    <label class="c-add__check">
+    <label class="check c-add__check">
       <input type="checkbox" data-field="subbed"${choices.subbed ? ' checked' : ''}>
       ${t('add.subbed')}
     </label>
@@ -137,12 +137,12 @@ function subbedCheck(choices) {
  * @returns {import('../core/html.js').SafeHtml}
  */
 function actionBar({ choices, showActions }) {
-  if (!showActions) return html`<div class="c-add__actions"></div>`;
+  if (!showActions) return html`<div class="cluster cluster--3 c-add__actions"></div>`;
   return html`
-    <div class="c-add__actions">
+    <div class="cluster cluster--3 c-add__actions">
       ${choices.subbed
-        ? html`<button class="c-add__save" type="button" data-action="save">${t('add.save')}</button>`
-        : html`<button class="c-add__next" type="button" data-action="next">${t('add.nextSpeakers')}</button>`}
+        ? html`<button class="btn btn--primary" type="button" data-action="save">${t('add.save')}</button>`
+        : html`<button class="btn btn--primary" type="button" data-action="next">${t('add.nextSpeakers')}</button>`}
     </div>
   `;
 }
@@ -159,8 +159,8 @@ function previewBlock({ common, tweet, media }) {
     common.occurredOn ? dayLabel(common.occurredOn) : '',
   ].filter(Boolean).join(' · ');
   return html`
-    <div class="c-add-details__preview">
-      ${who ? html`<p class="c-add-details__who">${who}</p>` : ''}
+    <div>
+      ${who ? html`<p class="meta c-add-details__who">${who}</p>` : ''}
       ${media ? mediaBox.render({ media }) : ''}
     </div>
   `;
@@ -176,7 +176,7 @@ function previewBlock({ common, tweet, media }) {
 function fieldsBlock({ common, tweet, newTags, options, isOwner, choices, allowNewEvent }) {
   const clipBy = tweet.clipSource?.handle ?? tweet.authorHandle ?? null;
   return html`
-    <div class="c-add-details__fields">
+    <div class="stack stack--3 c-add-details__fields">
       ${placementField(choices)}
       ${choices.placement === 'event' ? eventField({ options, choices, eventId: common.eventId ?? null, allowNew: allowNewEvent }) : ''}
       ${newTags.length > 0 ? hashtagsField(newTags) : ''}
@@ -201,8 +201,8 @@ function fieldsBlock({ common, tweet, newTags, options, isOwner, choices, allowN
 export function render({ draft, options, isOwner, choices, media = null, showActions = true, allowNewEvent = true }) {
   const { common = {}, tweet = {}, newTags = [] } = draft;
   return html`
-    <section class="c-add-details">
-      <h2 class="c-add__heading">${t('add.detailsTitle')}</h2>
+    <section class="card c-add-details">
+      <h2 class="heading heading--sm c-add__heading">${t('add.detailsTitle')}</h2>
       ${previewBlock({ common, tweet, media })}
       ${fieldsBlock({ common, tweet, newTags, options, isOwner, choices, allowNewEvent })}
       ${actionBar({ choices, showActions })}

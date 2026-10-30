@@ -1,0 +1,39 @@
+/*
+ * The speaker picker behind every marker row and the line-fix sheet
+ * (Plan 2a Task 13; on primitives since the styling system's Task 9):
+ * people and roles are chips, the search and new-person boxes are
+ * fields, the add button and the error are primitives. This is the
+ * picker's divider, the new-person panel and the handle's size. See
+ * STYLING.md.
+ */
+
+.c-person-picker {
+  padding: var(--space-3);
+  border-top: 1.5px solid var(--color-card-shadow);
+}
+
+/* The search box hides non-matching people with the hidden attribute;
+   the chip's own display would otherwise keep them showing. */
+.c-person-picker [hidden] {
+  display: none;
+}
+
+.c-person-picker__handle {
+  font-size: var(--text-10-5);
+  color: var(--color-ink-muted);
+}
+
+.c-person-picker__search,
+.c-person-picker__new-input {
+  font-size: var(--text-14);
+}
+
+.c-person-picker__new {
+  padding: var(--space-3);
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+}
+
+.c-person-picker__add {
+  align-self: flex-start;
+}

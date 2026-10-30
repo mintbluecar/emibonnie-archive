@@ -1,0 +1,53 @@
+/*
+ * The line-by-line fix sheet (Plan 2a Task 13; on primitives since the
+ * styling system's Task 9): a bottom card on a phone, a centred one on a
+ * desktop, raised over the page. The heading, the speech/plain chips,
+ * cancel and the speaker label are primitives; this is the sheet itself.
+ * See STYLING.md.
+ */
+
+.c-line-fix {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+  background: var(--color-card);
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  box-shadow: var(--shadow-raised);
+}
+
+.c-line-fix__title {
+  margin-bottom: var(--space-2);
+}
+
+.c-line-fix__line {
+  margin-bottom: var(--space-3);
+  font-size: var(--text-14);
+}
+
+.c-line-fix__cancel {
+  margin-left: auto;
+}
+
+.c-line-fix__picker {
+  margin-top: var(--space-3);
+}
+
+.c-line-fix__speaker {
+  margin-bottom: var(--space-2);
+}
+
+@media (min-width: 860px) {
+  .c-line-fix {
+    left: 50%;
+    right: auto;
+    bottom: var(--space-6);
+    width: min(560px, calc(100% - 2 * var(--space-6)));
+    transform: translateX(-50%);
+    border-radius: var(--radius-card);
+  }
+}

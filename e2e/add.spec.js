@@ -63,7 +63,7 @@ test('add, signed in: step 1 asks for the link and names who is adding, and axe 
   await expect(page.locator('.c-add-link__as')).toHaveText('adding as @dev_member');
   await expect(page.locator('.c-add__url')).toBeVisible();
   await expect(page.locator('.c-add__steps')).toBeVisible();
-  await expect(page.locator('.c-add-link__next')).toBeEnabled();
+  await expect(page.locator('[data-add-form] .btn--primary')).toBeEnabled();
 });
 
 /**
@@ -78,7 +78,7 @@ test('edit, as the owner: the steps, the picker and the sheet, a Save bar and th
   await checkPage(page, `/edit/translation/${LONG}`);
   await expect(page.locator('.c-add-details')).toBeVisible();
   await expect(page.locator('.c-speaker-step')).toBeVisible();
-  await expect(page.locator('.c-edit__actions .c-add__save')).toHaveText('save changes');
+  await expect(page.locator('.c-edit__actions [data-action="save"]')).toHaveText('save changes');
   await expect(page.locator('.c-edit__history')).toBeVisible();
   // The edit API takes an existing event only: no "new event" choice here.
   await expect(page.locator('#c-add-event option[value="new"]')).toHaveCount(0);
@@ -91,6 +91,12 @@ test('edit, as the owner: the steps, the picker and the sheet, a Save bar and th
   await page.locator('.c-speaker-step__marker summary').first().click();
   await expect(page.locator('.c-speaker-step__marker').first().locator('[data-pick-person]').first()).toBeVisible();
   await assertNoSeriousA11yViolations(page);
+
+  // The search box hides the people it doesn't match (the hidden
+  // attribute must win over the chip's own display).
+  const marker = page.locator('.c-speaker-step__marker').first();
+  await marker.locator('[data-picker-search]').fill('no such person zzz');
+  await expect(marker.locator('[data-pick-person]').first()).toBeHidden();
 });
 
 /**
