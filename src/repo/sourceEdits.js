@@ -6,7 +6,7 @@
  * to the one source that archives it.
  */
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 
 /** Refreshes of one item closer together than this are refused by `touchRefresh`. */
 const REFRESH_GAP_SECONDS = 60;

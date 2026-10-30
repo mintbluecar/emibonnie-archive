@@ -11,7 +11,7 @@ import { EVENT_NOT_DELETED } from './items.js';
 /** How many items per event are looked at for a picture. */
 export const COVER_CANDIDATES = 3;
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 
 /**
  * @param {Tx} db

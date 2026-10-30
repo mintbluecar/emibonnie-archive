@@ -6,7 +6,7 @@
  * `schema_migrations`). Run once after each migrate.
  */
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 
 /** @param {Tx} tx @param {string} role @returns {Promise<void>} */
 export async function grantAppRole(tx, role) {

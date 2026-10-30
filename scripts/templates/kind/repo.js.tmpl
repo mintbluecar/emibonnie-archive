@@ -7,7 +7,7 @@
  */
 import { addSources, listSourcesFor } from '../../repo/itemSources.js';
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {import('../../db/common.js').Queryable} Tx */
 /** @typedef {{ body: string, sources: Record<string, unknown>[] }} __Pascal__Details */
 
 const KIND = '__name__';

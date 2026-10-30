@@ -6,9 +6,18 @@
 
 /** @typedef {{ rows: any[], rowCount: number }} QueryResult */
 /**
- * @typedef {object} Tx
+ * Anything a repo function can run a read or write query against: `Db`
+ * outside a transaction, or `Tx` inside one. Most repo functions take
+ * this, not `Tx` specifically, because the same query often runs either
+ * way (a read on `deps.db`, a write on the transaction's `tx`).
+ * @typedef {object} Queryable
  * @property {(sql: string, params?: unknown[]) => Promise<QueryResult>} query
- * @property {(sql: string) => Promise<void>} exec Runs several `;`-separated statements (no params).
+ */
+/**
+ * A transaction, with the one extra capability `Queryable` doesn't carry:
+ * multi-statement SQL with no params. Only the migration runner and the
+ * driver's own transaction setup need it.
+ * @typedef {Queryable & { exec: (sql: string) => Promise<void> }} Tx
  */
 /**
  * @typedef {object} Db

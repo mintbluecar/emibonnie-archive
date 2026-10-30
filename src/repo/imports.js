@@ -5,7 +5,7 @@
  * row state and the job/state index. Every state change is a repo call so
  * the two writers can't drift.
  */
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[], rowCount?: number }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 /** @typedef {'queued'|'fetched'|'needs_speakers'|'check'|'published'|'skipped'|'failed'|'attached'} RowState */
 
 /** Rows whose item (or held part) is still waiting on the owner. */

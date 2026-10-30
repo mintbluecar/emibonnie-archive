@@ -10,7 +10,7 @@
 import { camelRow, camelRows } from './rows.js';
 import { visibleItem } from './visibility.js';
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 /**
  * @typedef {object} SourceInput
  * @property {string} platform

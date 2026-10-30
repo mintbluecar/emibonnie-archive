@@ -5,7 +5,7 @@
  * same pair under the same relation twice writes one row.
  */
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 
 /**
  * @param {Tx} tx

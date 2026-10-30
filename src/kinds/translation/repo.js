@@ -6,7 +6,7 @@
  */
 import { listSourcesFor } from '../../repo/itemSources.js';
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {import('../../db/common.js').Queryable} Tx */
 /** @typedef {import('../../domain/speakers.js').SpeakerMap} SpeakerMap */
 /**
  * @typedef {{ parts: string[], body: string, speakers: SpeakerMap, sources: Record<string, unknown>[],

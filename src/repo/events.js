@@ -10,7 +10,7 @@ import { camelRow } from './rows.js';
 import { ensureTags } from './tags.js';
 import { visibleEvent } from './visibility.js';
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[], rowCount?: number }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 /** @typedef {import('../domain/events.js').Event} Event */
 /** @typedef {import('../domain/events.js').EventProposal} EventProposal */
 

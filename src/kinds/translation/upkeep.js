@@ -23,7 +23,7 @@ import { asFetched } from './source.js';
 import { GONE_GRACE_HOURS } from '../../domain/constants.js';
 
 /** @typedef {import('../../db/common.js').Db} Db */
-/** @typedef {import('../../db/common.js').Tx} Tx */
+/** @typedef {import('../../db/common.js').Queryable} Tx */
 /** @typedef {import('../../sources/normalize.js').Tweet} Tweet */
 /** @typedef {{ db: Db, fetchImpl: typeof fetch, now?: () => Date }} UpkeepDeps */
 /** @typedef {Awaited<ReturnType<typeof unfinalizedSources>>[number]} OpenSource */

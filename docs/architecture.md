@@ -44,7 +44,8 @@ site/                    a site's own folder (gitignored in the template); examp
      - `kinds/*/domain.js` follows the domain rules.
    - `import/no-cycle` is an error.
 4. **Dependency injection.**
-   - `deps = { db, fetchImpl, now, site }`, built per request by `withDeps()` and closed in `finally`.
+   - One typed `Deps` (`src/http/deps.js`): `{ db, fetchImpl, now, site, env, pages, invalidateByTag, dangerouslyDeleteByTag, defer }`. `api/index.js`'s `makeDeps` builds every field but `defer`, fresh per request; `withDeps()` (`src/http/handler.js`) adds `defer` and closes `db` in `finally`. A route's `run` (and `defineRoute`'s) `deps` is typed `Deps`, so the type flows down; a service takes only the fields it needs, typed structurally (e.g. `{ db, site }`), not the whole `Deps`.
+   - The clock is always `deps.now()` -- never `Date.now()`/`new Date()` reached for directly in a route or service.
    - No module-level mutable state, except memoised pure lookups keyed by the `db` instance.
 5. **Kinds are plugins.** Adding a kind (`npm run new kind <k>`) means:
    - a new `src/kinds/<k>/` folder
