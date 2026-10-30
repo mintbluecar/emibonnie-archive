@@ -15,10 +15,9 @@
  */
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { createDb, dbOptionsFromEnv } from '../src/db/client.js';
 import { loadSite } from '../src/site/loadSite.js';
 import { remapItem } from '../src/services/remap.js';
-import { errorText } from './migrate.js';
+import { runCli } from './cli.js';
 
 const USAGE = "usage: npm run remap -- <sourceId> '<marker>=person:<igHandle>'|'<marker>=role:<role>'… [--kind <kind>]";
 
@@ -39,16 +38,6 @@ export function remapRefs(args) {
 }
 
 /**
- * Where it writes: `DATABASE_URL` or a local `PGLITE_DIR`; with neither it
- * refuses, rather than remapping a throwaway in-memory database.
- * @param {Record<string, string|undefined>} env
- */
-export function remapTargetOf(env) {
-  if (!env.DATABASE_URL && !env.PGLITE_DIR) throw new Error('DATABASE_URL is not set (set PGLITE_DIR to remap on a local dev database)');
-  return dbOptionsFromEnv(env);
-}
-
-/**
  * @param {{ args: string[], deps: { db: any, site: any }, log?: (line: string) => void }} options
  * @returns {Promise<void>}
  */
@@ -62,18 +51,13 @@ export async function runRemap({ args, deps, log = console.log }) {
   log(`  people: ${result.people.map((p) => `${p.personId}/${p.role}`).join(', ') || 'none'}`);
 }
 
-async function main() {
-  const db = createDb(remapTargetOf(process.env));
-  try {
-    await runRemap({ args: process.argv.slice(2), deps: { db, site: loadSite(process.env.SITE_DIR ?? 'site') } });
-  } finally {
-    await db.end();
-  }
+function main() {
+  return runCli(({ db, siteDir, log }) => {
+    const deps = { db: /** @type {import('../src/db/common.js').Db} */ (db), site: loadSite(siteDir) };
+    return runRemap({ args: process.argv.slice(2), deps, log });
+  }, { db: 'required' });
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((/** @type {any} */ err) => {
-    console.error(errorText(err));
-    process.exitCode = 1;
-  });
+  main();
 }

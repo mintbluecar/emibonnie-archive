@@ -10,13 +10,13 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { createDb, dbOptionsFromEnv } from '../src/db/client.js';
 import { loadSite } from '../src/site/loadSite.js';
 import { createJob, getJob, insertRows, rowsForRun, setJobStatus, updateRow } from '../src/repo/imports.js';
 import { parseNotionCsv, extractStatusLinks, resolveArtists, eventOverrideOf } from '../src/services/importSources.js';
 import { ensureOwnerUser, runRow } from '../src/services/importJob.js';
 import { retryingFetch } from '../src/services/importFetch.js';
 import { statusUrl } from '../src/sources/url.js';
+import { runCli } from './cli.js';
 
 const OPTIONS = /** @type {const} */ ({
   notion: { type: 'string' },
@@ -177,11 +177,14 @@ export async function runImport({ args, deps: rawDeps, read = (/** @type {string
   return { jobs };
 }
 
+function main() {
+  return runCli(({ db, siteDir, env }) => {
+    const site = loadSite(siteDir);
+    const deps = { db, site, fetchImpl: globalThis.fetch, env };
+    return runImport({ args: process.argv.slice(2), deps });
+  }, { db: 'required' });
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const args = process.argv.slice(2);
-  const site = loadSite();
-  const deps = { db: createDb(dbOptionsFromEnv(process.env)), site, fetchImpl: globalThis.fetch, env: process.env };
-  runImport({ args, deps })
-    .then(() => deps.db.end())
-    .catch(async (err) => { console.error(String(err?.message ?? err)); await deps.db.end(); process.exitCode = 1; });
+  main();
 }
