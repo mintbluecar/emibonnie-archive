@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * Plan 3 Task 3: the owner resolves held (pending) entries privately on the
- * entry and edit pages; everyone else gets the same 404 as a missing item,
+ * entry page (through `…/viewer`, Task 13) and the edit page; everyone else gets the same 404 as a missing item,
  * and a held entry's link-preview meta stays generic.
  */
 import assert from 'node:assert/strict';
@@ -43,17 +43,20 @@ before(async () => {
 
 after(async () => { await deps.db.end(); });
 
-test('the owner sees a held item page privately; a member and a visitor get 404', async () => {
+test('the owner sees a held item page privately through …/viewer; the public answer is a 404 for everyone', async () => {
   const owner = await sidFor(deps.site.ownerXUserId, 'the_owner');
   const member = await sidFor('555001', 'a_member');
 
-  const asOwner = await api.call('GET', `/api/item/translation/${sample.sourceId}`, { cookies: { sid: owner } });
+  const asOwner = await api.call('GET', `/api/item/translation/${sample.sourceId}/viewer`, { cookies: { sid: owner } });
   assert.equal(asOwner.status, 200, asOwner.text);
-  const view = JSON.parse(asOwner.text);
+  const view = JSON.parse(asOwner.text).held;
   assert.equal(view.reviewState, 'pending');
   assert.match(asOwner.headers.get('cache-control') ?? '', /private/);
 
-  assert.equal((await api.call('GET', `/api/item/translation/${sample.sourceId}`, { cookies: { sid: member } })).status, 404);
+  assert.equal(JSON.parse((await api.call('GET', `/api/item/translation/${sample.sourceId}/viewer`, { cookies: { sid: member } })).text).held, null);
+  for (const sid of [owner, member]) {
+    assert.equal((await api.call('GET', `/api/item/translation/${sample.sourceId}`, { cookies: { sid } })).status, 404);
+  }
   assert.equal((await api.call('GET', `/api/item/translation/${sample.sourceId}`)).status, 404);
 });
 

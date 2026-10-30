@@ -79,7 +79,7 @@ async function representativeCalls() {
   for (const kind of Object.values(kindsRegistry)) {
     for (const id of ids) {
       calls.push(
-        ['GET', `/api/item/${kind.name}/${id}`], ['POST', `/api/item/${kind.name}/${id}/refresh`],
+        ['GET', `/api/item/${kind.name}/${id}`], ['GET', `/api/item/${kind.name}/${id}/viewer`], ['POST', `/api/item/${kind.name}/${id}/refresh`],
         ['GET', `/api/video/${kind.name}/${id}`], ['GET', `${kind.urlPrefix}${id}`],
       );
     }

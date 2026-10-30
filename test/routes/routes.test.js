@@ -60,10 +60,11 @@ test('a GET that resolves a user is never publicly cached', () => {
   const signedIn = routes.filter((r) => r.method === 'GET' && (r.auth === 'user' || r.auth === 'owner'));
   assert.ok(signedIn.length > 0);
   for (const r of signedIn) assert.ok(neverStored(r.cache), `${r.path}: per-user, so never shared or stored`);
-  // An optional-user GET may be public only by answering a signed-in viewer
-  // privately itself (the item page; test/routes/edit.test.js checks that response).
+  // An optional-user GET could share one viewer's answer with the next, so
+  // none is public: the item page's per-user fields live in `…/viewer`.
   const optionalPublic = routes.filter((r) => r.method === 'GET' && r.auth === 'optional' && !neverStored(r.cache));
-  assert.deepEqual(optionalPublic.map((r) => r.path), [itemRoute.path]);
+  assert.deepEqual(optionalPublic.map((r) => r.path), []);
+  assert.equal(itemRoute.auth, 'none', 'the item answer reads no session');
 });
 
 test('event returns sections[0].kind', async () => {

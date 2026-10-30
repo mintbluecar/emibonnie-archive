@@ -14,6 +14,7 @@ import { unnamedSource } from '../http/router.js';
 import { route as home } from './home.js';
 import { route as event } from './event.js';
 import { route as item } from './item.js';
+import { route as itemViewer } from './itemViewer.js';
 import { route as refresh } from './refresh.js';
 import { route as search } from './search.js';
 import { route as filters } from './filters.js';
@@ -37,7 +38,7 @@ import { ownerRoute, approvalRoute, reviewRoute, hideReportRoute, restoreReportR
 
 /** @type {import('../http/handler.js').Route[]} */
 export const routes = [
-  home, event, item, refresh, search, filters, person, account, video,
+  home, event, item, itemViewer, refresh, search, filters, person, account, video,
   authXStart, authXCallback,
   authGoogleStart, authGoogleCallback,
   meRoute, addedRoute, translationsRoute, removeEntriesRoute, restoreEntriesRoute, optOutRoute, optInRoute, welcomedRoute, setNameRoute, signOutRoute, signOutAllRoute, deleteAccountRoute,

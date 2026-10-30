@@ -4,6 +4,7 @@ import { after, before, test } from 'node:test';
 import { IDS } from '../../helpers/fixtures.js';
 import { seededDeps, itemIdOf, SYSTEM, ingestDeps, ingest } from '../../helpers/ingest.js';
 import { itemView } from '../../../src/services/itemView.js';
+import { itemViewer } from '../../../src/services/itemPage.js';
 import { previewsFor, presenterContext } from '../../../src/services/cards.js';
 import { addParts, loadDetails, setSpeakers } from '../../../src/kinds/translation/repo.js';
 import { resolveSpeakerRefs } from '../../../src/services/intakeRefs.js';
@@ -434,9 +435,9 @@ test('canCheckFollowUps is false for a kind with no checkFollowUps (the Kind con
     await ingest(own, IDS.THREAD);
     const viewer = /** @type {any} */ ({ id: 'x:0', isOwner: true, translatorAccountIds: [] });
     const kindWithout = { ...translation, checkFollowUps: undefined };
-    const view = await itemView({ ...own, kinds: { translation: kindWithout } }, 'translation', IDS.THREAD, viewer);
-    assert.equal(view?.canEdit, true, 'the owner may still edit');
-    assert.equal(view?.canCheckFollowUps, false, 'no button for a kind that cannot check follow-ups');
+    const view = await itemViewer({ ...own, kinds: { translation: kindWithout } }, 'translation', IDS.THREAD, viewer);
+    assert.equal(view.canEdit, true, 'the owner may still edit');
+    assert.equal(view.canCheckFollowUps, false, 'no button for a kind that cannot check follow-ups');
   } finally {
     await own.db.end();
   }

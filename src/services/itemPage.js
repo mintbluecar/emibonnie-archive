@@ -16,12 +16,13 @@ import { findItemIdBySource } from '../repo/itemState.js';
 import { touchRefresh, unfinalizedSources } from '../repo/sourceEdits.js';
 import { Conflict } from '../domain/errors.js';
 import { kindNamed } from './cards.js';
-import { itemView } from './itemView.js';
+import { itemView, viewerFieldsOf } from './itemView.js';
 import { accountTag, eventTag, itemTag, personTag } from '../domain/cacheTags.js';
 
 /** @typedef {import('./cards.js').ViewDeps & { fetchImpl: typeof fetch, now?: () => Date }} ItemDeps */
 /** @typedef {import('../http/contracts.js').ItemView} ItemView */
 /** @typedef {import('../http/contracts.js').VariantVM} VariantVM */
+/** @typedef {import('../http/contracts.js').ItemViewerVM} ItemViewerVM */
 /** @typedef {Readonly<import('../kinds/defineKind.js').Kind>} Kind */
 
 const ACTOR = { actor: 'system' };
@@ -41,7 +42,7 @@ async function visibleItem(deps, kindName, sourceId, { allowAnyState = false } =
 
 /**
  * The public page's cache tags: the entry, its event, its people and its
- * translator. A signed-in view is private and never tagged.
+ * translator.
  * @param {number} id @param {ItemView} view @returns {string[]}
  */
 function tagsOfView(id, view) {
@@ -71,25 +72,63 @@ async function guardedRefresh(deps, { kind, id }) {
   return fresh ? refresh(deps, id, ACTOR) : null;
 }
 
+/** @param {ItemDeps} deps @param {{ kind: Kind, id: number }} target @returns {Promise<string|null>} */
+async function editOpenUntilOf(deps, target) {
+  return target.kind.refresh ? latestUntil(await unfinalizedSources(deps.db, target.id)) : null;
+}
+
 /**
- * The item page: `itemView` plus `editOpenUntil` (the latest unfinalized
- * `editable_until`, or null) and, when an unfinalized window has elapsed,
- * a `refresh` for the caller to run in the background. A post with no
- * window is finalized at intake, so it never schedules one.
- * @param {ItemDeps} deps @param {string} kindName @param {string} sourceId
- * @param {import('./session.js').SessionUser|null} [viewer]
- * @returns {Promise<{ view: ItemView & { editOpenUntil: string|null, canEdit: boolean, canCheckFollowUps: boolean }, refresh: (() => Promise<unknown>)|null, tags: string[] } | null>}
+ * `itemView` plus `editOpenUntil` (the latest unfinalized `editable_until`,
+ * or null) and, when an unfinalized window has elapsed, a `refresh` for
+ * the caller to run in the background. A post with no window is finalized
+ * at intake, so it never schedules one.
+ * @param {ItemDeps} deps @param {{ kind: Kind, id: number }} target
+ * @param {{ kindName: string, sourceId: string, anyState: boolean }} ask
  */
-export async function itemPage(deps, kindName, sourceId, viewer = null) {
-  const target = await visibleItem(deps, kindName, sourceId, { allowAnyState: viewer?.isOwner === true });
-  const view = target ? await itemView(deps, kindName, sourceId, viewer) : null;
-  if (!target || !view) return null;
+async function pageOf(deps, target, { kindName, sourceId, anyState }) {
+  const view = await itemView(deps, kindName, sourceId, { anyState });
+  if (!view) return null;
   const tags = tagsOfView(target.id, view);
   if (!target.kind.refresh) return { view: { ...view, editOpenUntil: null }, refresh: null, tags };
   const open = await unfinalizedSources(deps.db, target.id);
   const now = (deps.now?.() ?? new Date()).getTime();
   const elapsed = open.some((s) => s.editableUntil !== null && new Date(s.editableUntil).getTime() < now);
   return { view: { ...view, editOpenUntil: latestUntil(open) }, refresh: elapsed ? () => guardedRefresh(deps, target) : null, tags };
+}
+
+/**
+ * The public item page, the same for every caller: `itemView` plus
+ * `editOpenUntil`, a background `refresh` once an edit window has elapsed,
+ * and its cache tags. Null for a hidden or unknown item -- held entries
+ * included, whoever asks; the owner reaches those through `itemViewer`.
+ * @param {ItemDeps} deps @param {string} kindName @param {string} sourceId
+ * @returns {Promise<{ view: ItemView & { editOpenUntil: string|null }, refresh: (() => Promise<unknown>)|null, tags: string[] } | null>}
+ */
+export async function itemPage(deps, kindName, sourceId) {
+  const target = await visibleItem(deps, kindName, sourceId);
+  return target ? pageOf(deps, target, { kindName, sourceId, anyState: false }) : null;
+}
+
+/** What `itemViewer` answers for an item the caller can't see (or that doesn't exist). */
+const NOTHING = Object.freeze({ canEdit: false, canCheckFollowUps: false, editOpenUntil: null, held: null });
+
+/**
+ * The signed-in caller's own fields on an item page (`ItemViewerVM`):
+ * their buttons and the fresh `editOpenUntil`. For an entry the public
+ * can't see, the owner alone also gets its whole page as `held` (with its
+ * `reviewState`); anyone else gets the same answer as for a missing item.
+ * @param {ItemDeps} deps @param {string} kindName @param {string} sourceId
+ * @param {import('./session.js').SessionUser} viewer
+ * @returns {Promise<ItemViewerVM>}
+ */
+export async function itemViewer(deps, kindName, sourceId, viewer) {
+  const visible = await visibleItem(deps, kindName, sourceId);
+  const target = visible ?? (viewer.isOwner ? await visibleItem(deps, kindName, sourceId, { allowAnyState: true }) : null);
+  if (!target) return { ...NOTHING };
+  const fields = await viewerFieldsOf(deps.db, target.kind, target.id, viewer);
+  if (visible) return { ...fields, editOpenUntil: await editOpenUntilOf(deps, target), held: null };
+  const held = (await pageOf(deps, target, { kindName, sourceId, anyState: true }))?.view ?? null;
+  return { ...fields, editOpenUntil: held?.editOpenUntil ?? null, held };
 }
 
 /**

@@ -128,7 +128,7 @@ test('history is owner-only', async () => {
   assert.deepEqual(memberView.history, [], 'non-owner sees no history');
 });
 
-test('item detail is private no-store with a session, public without', async () => {
+test('item detail is the public answer with a session; the editor flags come from …/viewer', async () => {
   await ingest(deps, IDS.EVENT_A);
   const api = apiFor({ ...deps, env: ENV });
   const pub = await api.call('GET', `/api/item/translation/${IDS.EVENT_A}`);
@@ -136,7 +136,9 @@ test('item detail is private no-store with a session, public without', async () 
   assert.match(pub.headers.get('cache-control') ?? '', /^public, s-maxage=300/);
 
   const owner = await sidFor({ via: 'x', subject: '0', handle: 'owner' });
-  const priv = await api.call('GET', `/api/item/translation/${IDS.EVENT_A}`, { cookies: owner });
+  const same = await api.call('GET', `/api/item/translation/${IDS.EVENT_A}`, { cookies: owner });
+  assert.match(same.headers.get('cache-control') ?? '', /^public, s-maxage=300/);
+  const priv = await api.call('GET', `/api/item/translation/${IDS.EVENT_A}/viewer`, { cookies: owner });
   assert.equal(priv.status, 200);
   assert.match(priv.headers.get('cache-control') ?? '', /private, no-store/);
   const json = JSON.parse(priv.text);
