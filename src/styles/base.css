@@ -22,7 +22,7 @@ html {
 body {
   background: var(--color-bg);
   color: var(--color-ink);
-  font-family: var(--font-latin);
+  font-family: var(--font-body);
   font-size: var(--text-16);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -35,6 +35,13 @@ body {
 
 h1, h2, h3, h4, p, figure {
   margin: 0;
+}
+
+/* Headings default to the body font (Styling system Task 2, spec "2b.
+   Fonts a site can choose"): nothing changes until a site points
+   --font-heading at something else in theme.css. */
+h1, h2, h3 {
+  font-family: var(--font-heading);
 }
 
 a {

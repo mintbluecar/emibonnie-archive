@@ -89,3 +89,25 @@ test("dark blocks still outrank a site's light :root (Task 1 build-level guard, 
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });
+
+test('Task 2, Review Focus 2: a site that overrides only --font-latin (and never mentions --font-body) still changes the body font', async () => {
+  const repoRoot = mkdtempSync(path.join(tmpdir(), 'fan-archive-font-role-'));
+  try {
+    cpSync('src', path.join(repoRoot, 'src'), { recursive: true });
+    cpSync('public/js', path.join(repoRoot, 'public/js'), { recursive: true });
+    cpSync('examples/solluna', path.join(repoRoot, 'site'), { recursive: true });
+    cpSync('robots.txt', path.join(repoRoot, 'robots.txt'));
+    const siteDir = path.join(repoRoot, 'site');
+    writeFileSync(path.join(siteDir, 'theme.css'), ":root {\n  --font-latin: 'X', sans-serif;\n}\n");
+
+    const { runBuild } = await import('../../scripts/build.js');
+    await runBuild({ repoRoot, siteDir });
+    const manifest = JSON.parse(readFileSync(path.join(repoRoot, 'public/build/manifest.json'), 'utf8'));
+    const css = readFileSync(path.join(repoRoot, 'public/build', manifest.appCss), 'utf8');
+
+    assert.match(css, /--font-body:\s*var\(--font-latin\)/, 'the tokens layer still defines --font-body as an alias of --font-latin');
+    assert.match(css, /body\{[^}]*font-family:var\(--font-body\)/, 'base.css\'s body rule uses --font-body, not --font-latin directly');
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});

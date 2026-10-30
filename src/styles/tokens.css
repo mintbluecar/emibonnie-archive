@@ -60,7 +60,21 @@
      White passes 5.97:1 here; dark mode's own value (below) is picked
      for its own --gradient-to instead. */
   --color-accent-text: #fff;
+  /* Error colour (Styling system Task 2, spec "2. Tokens"): the audit
+     found the de facto error colour #c8433a hand-copied 8 times (danger
+     links, the failed-import state, the opt-out flow). 4.78:1 against
+     --color-card. --color-danger-tint is a pale wash of it for
+     notice/error backgrounds, same derivation as --color-label-tint. */
+  --color-danger: #c8433a;
+  --color-danger-tint: color-mix(in srgb, var(--color-danger) 12%, var(--color-card));
+  /* Radius scale (Styling system Task 2): the audit found radii at
+     8/10/12/14/999px across components; migrated screens collapse onto
+     --radius-sm/--radius-md (10px and 14px both round to their nearer
+     neighbour), keeping --radius-card as its own, larger step. */
+  --radius-sm: 8px;
+  --radius-md: 12px;
   --radius-card: 16px;
+  --radius-pill: 999px;
   /* A chip's padding (Task 10c, chips.css and cast.css): its size is its
      content plus this, never a fixed height. */
   --chip-pad-x: 10px;
@@ -83,6 +97,50 @@
   --thumb-size: 56px;
   --font-latin: 'Nunito', sans-serif;
   --font-script: 'IBM Plex Sans Thai', sans-serif;
+  /* Font roles (Styling system Task 2, spec "2b. Fonts a site can
+     choose"): --font-body covers everything, --font-heading covers
+     h1-h3 and the heading primitive and defaults to the body font (so
+     nothing changes until a site sets it), and --font-latin stays as an
+     alias of --font-body, so a site overriding today's name keeps
+     working without ever mentioning --font-body (Review Focus 2). */
+  --font-body: var(--font-latin);
+  --font-heading: var(--font-body);
+
+  /* Spacing, radius, shadow, weight and focus-ring scales (Styling
+     system Task 2, spec "2. Tokens"): values are drawn from what's
+     already in use across components, so migrated screens (a later
+     task) move a pixel or two, not more. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  /* The card look's shadow (resultCard.css, previewCard.css, me.css,
+     add.css, adminImport.css, owner.css, signIn.css, eventCard.css all
+     hand-copy this), and the raised look used by a sheet/dialog sitting
+     above the page (add.css's .c-line-fix, the bottom-sheet "line fix"
+     dialog). */
+  --shadow-card: 0 2px 0 var(--color-card-shadow);
+  --shadow-raised: 0 -6px 24px var(--color-card-shadow);
+  --weight-regular: 400;
+  --weight-bold: 700;
+  --weight-heavy: 800;
+  /* Keyboard focus ring (base.css's :focus-visible, a later task):
+     defaults to --color-label, the engine's existing accent-for-text
+     colour, so it's visible on both --color-bg and --color-card without
+     a new colour token. */
+  --focus-ring-color: var(--color-label);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  /* The one desktop breakpoint value lint allows in a media query
+     (documentation only: per the CSS Custom Properties spec, a media
+     feature's value can't be a var() reference, so a custom property
+     can't drive a media query's condition). The literal 860px below,
+     and every other media query in this engine, must match this
+     value. */
+  --bp-desktop: 860px;
 
   /* Type scale (Task 10b). Every font size in the engine's CSS is one of
      these tokens, never a literal px value. Each is named after its size
@@ -197,6 +255,12 @@
        passes 3.83:1 -- review round 2, I3) and 7.35:1 against
        --gradient-from, so it's correct for a solid accent surface. */
     --color-accent-text: #000;
+    /* Same hue as the light-mode #c8433a, lightened for this background:
+       5.06:1 against the dark --color-card (--color-danger's hue held
+       constant, lightness raised, the same approach as --gradient-to
+       above). */
+    --color-danger: #d36962;
+    --color-danger-tint: color-mix(in srgb, var(--color-danger) 12%, var(--color-card));
   }
 }
 
@@ -220,4 +284,10 @@
      passes 3.83:1 -- review round 2, I3) and 7.35:1 against
      --gradient-from, so it's correct for a solid accent surface. */
   --color-accent-text: #000;
+  /* Same hue as the light-mode #c8433a, lightened for this background:
+     5.06:1 against the dark --color-card (--color-danger's hue held
+     constant, lightness raised, the same approach as --gradient-to
+     above). */
+  --color-danger: #d36962;
+  --color-danger-tint: color-mix(in srgb, var(--color-danger) 12%, var(--color-card));
 }
