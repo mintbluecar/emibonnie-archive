@@ -11,18 +11,21 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 
 import path from 'node:path';
 import crypto from 'node:crypto';
 import * as esbuild from 'esbuild';
+import { findFontFamilyReferences } from './buildChecks.js';
 
 /** @typedef {{ family: string, pkg: string, fileStem: string, subsets: string[], weights: number[] }} FontSpec */
-/** @typedef {{ family: string, weight: number, fileName: string, unicodeRange: string|null }} FontFace */
+/** @typedef {{ family: string, weight: number, style: 'normal'|'italic', fileName: string, unicodeRange: string|null }} FontFace */
 
 /**
  * Fonts this engine self-hosts (`@fontsource/*`, dev dependencies), one
  * per CSS font-stack token. A family only gets the weights it actually
  * ships at (IBM Plex Sans Thai has no 800); nothing here forces a
- * missing weight to exist.
+ * missing weight to exist. Exported so the theme test (spec "2b. Fonts
+ * a site can choose") can build its allowed-families list without
+ * duplicating the names.
  * @type {FontSpec[]}
  */
-const FONT_SPECS = [
+export const FONT_SPECS = [
   { family: 'Nunito', pkg: '@fontsource/nunito', fileStem: 'nunito', subsets: ['latin'], weights: [400, 600, 700, 800] },
   {
     family: 'IBM Plex Sans Thai',
@@ -190,7 +193,7 @@ function copyOneFontSpec(engineRoot, fontsDir, spec) {
       const bytes = readFileSync(src);
       const fileName = `${path.basename(src, '.woff2')}-${contentHash(bytes)}.woff2`;
       writeFileSync(path.join(fontsDir, fileName), bytes);
-      faces.push({ family: spec.family, weight, fileName, unicodeRange: spec.subsets.length > 1 ? UNICODE_RANGES[subset] : null });
+      faces.push({ family: spec.family, weight, style: 'normal', fileName, unicodeRange: spec.subsets.length > 1 ? UNICODE_RANGES[subset] : null });
     }
   }
   return faces;
@@ -200,21 +203,112 @@ function copyOneFontSpec(engineRoot, fontsDir, spec) {
 function fontFaceRule(face) {
   const range = face.unicodeRange ? `\n  unicode-range: ${face.unicodeRange};` : '';
   return (
-    `@font-face {\n  font-family: '${face.family}';\n  font-style: normal;\n  font-weight: ${face.weight};` +
+    `@font-face {\n  font-family: '${face.family}';\n  font-style: ${face.style};\n  font-weight: ${face.weight};` +
     `\n  font-display: swap;\n  src: url('./fonts/${face.fileName}') format('woff2');${range}\n}`
   );
 }
 
 /**
- * Copies the self-hosted font files into `outDir/fonts/` and builds the
- * content-hashed `fonts-<hash>.css` of `@font-face` rules for them.
+ * The bytes of one site font's `files[]` entry, read from
+ * `site/fonts/<path>`. Fails loudly, naming the font and the missing
+ * file, rather than silently shipping fewer faces than declared.
+ * @param {string} siteDir @param {string} family @param {{ path: string }} file
+ * @returns {Buffer}
+ */
+function siteFontFileBytes(siteDir, family, file) {
+  const absPath = path.join(siteDir, 'fonts', file.path);
+  if (!existsSync(absPath)) {
+    throw new Error(`build failed: site font '${family}' names file '${file.path}', which isn't in site/fonts/`);
+  }
+  return readFileSync(absPath);
+}
+
+/**
+ * `FontFace[]` for one site font shipped from its own `site/fonts/*.woff2`
+ * files (docs/site-settings.md, "Fonts"), each copied in and content-hashed
+ * the same way the engine's own fonts are.
+ * @param {string} siteDir @param {string} fontsDir @param {import('../src/site/schema.js').SiteFont} font
+ * @returns {FontFace[]}
+ */
+function siteFontFacesFromFiles(siteDir, fontsDir, font) {
+  if (!('files' in font)) return [];
+  return font.files.map((file) => {
+    const bytes = siteFontFileBytes(siteDir, font.family, file);
+    const fileName = `${path.basename(file.path, '.woff2')}-${contentHash(bytes)}.woff2`;
+    writeFileSync(path.join(fontsDir, fileName), bytes);
+    return { family: font.family, weight: file.weight, style: file.style, fileName, unicodeRange: file.unicodeRange ?? null };
+  });
+}
+
+/**
+ * `FontFace[]` for one site font shipped from an `@fontsource/*` package
+ * the site installed as its own dev dependency. Fails loudly, naming the
+ * font, the package and the missing weight, if the package doesn't ship
+ * one of the requested weights at any of the requested subsets.
+ * @param {string} engineRoot @param {string} fontsDir @param {import('../src/site/schema.js').SiteFont} font
+ * @returns {FontFace[]}
+ */
+function siteFontFacesFromPackage(engineRoot, fontsDir, font) {
+  if (!('package' in font)) return [];
+  const fileStem = font.package.replace(/^@fontsource\//, '');
+  /** @type {FontFace[]} */
+  const faces = [];
+  for (const weight of font.weights) {
+    const shippedBefore = faces.length;
+    for (const subset of font.subsets) {
+      const file = path.join(engineRoot, 'node_modules', font.package, 'files', `${fileStem}-${subset}-${weight}-${font.style}.woff2`);
+      if (!existsSync(file)) continue;
+      const bytes = readFileSync(file);
+      const fileName = `${path.basename(file, '.woff2')}-${contentHash(bytes)}.woff2`;
+      writeFileSync(path.join(fontsDir, fileName), bytes);
+      faces.push({ family: font.family, weight, style: font.style, fileName, unicodeRange: font.subsets.length > 1 ? (UNICODE_RANGES[subset] ?? null) : null });
+    }
+    if (faces.length === shippedBefore) {
+      throw new Error(`build failed: site font '${font.family}' (${font.package}) doesn't ship weight ${weight}`);
+    }
+  }
+  return faces;
+}
+
+/**
+ * The site fonts (spec "2b. Fonts a site can choose") that some custom
+ * property in `tokensCss` or the site's own `theme.css` actually names
+ * -- "a site family that's never pointed at by a token isn't shipped".
+ * @param {import('../src/site/schema.js').SiteFont[]} fonts @param {string} tokensCss @param {string} themeCss
+ * @returns {import('../src/site/schema.js').SiteFont[]}
+ */
+function fontsPointedAtBy(fonts, tokensCss, themeCss) {
+  const referenced = [...findFontFamilyReferences([tokensCss, themeCss])].map((name) => name.toLowerCase());
+  return fonts.filter((font) => referenced.includes(font.family.toLowerCase()));
+}
+
+/**
+ * Copies the engine's self-hosted font files into `outDir/fonts/`, plus
+ * any of the site's own `site.json` `fonts` (`options.fonts`) that some
+ * token in `tokens.css` or the site's `theme.css` (under
+ * `options.siteDir`) actually names, and builds the content-hashed
+ * `fonts-<hash>.css` of `@font-face` rules for all of them. A site with
+ * no `fonts` (or a `fonts` entry no token ever points at) ships only
+ * the engine's own families (Review Focus 5).
  * @param {string} engineRoot @param {string} outDir
+ * @param {{ siteDir?: string, fonts?: import('../src/site/schema.js').SiteFont[] }} [options]
  * @returns {string} the filename written under `outDir`
  */
-export function buildFontsCss(engineRoot, outDir) {
+export function buildFontsCss(engineRoot, outDir, { siteDir, fonts = [] } = {}) {
   const fontsDir = path.join(outDir, 'fonts');
   mkdirSync(fontsDir, { recursive: true });
   const faces = FONT_SPECS.flatMap((spec) => copyOneFontSpec(engineRoot, fontsDir, spec));
+
+  if (fonts.length > 0 && siteDir) {
+    const tokensCss = readFileSync(path.join(engineRoot, 'src/styles/tokens.css'), 'utf8');
+    const themeCssPath = path.join(siteDir, 'theme.css');
+    const themeCss = existsSync(themeCssPath) ? readFileSync(themeCssPath, 'utf8') : '';
+    for (const font of fontsPointedAtBy(fonts, tokensCss, themeCss)) {
+      faces.push(...siteFontFacesFromFiles(siteDir, fontsDir, font));
+      faces.push(...siteFontFacesFromPackage(engineRoot, fontsDir, font));
+    }
+  }
+
   const css = `${faces.map(fontFaceRule).join('\n\n')}\n`;
   return writeHashedAsset(outDir, 'fonts', 'css', css);
 }

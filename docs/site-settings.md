@@ -33,6 +33,7 @@ path).
 | `embedSources` | boolean | default `false` | When true, a translation page shows its original post as X's official embed (X's `widgets.js`, loaded only on pages with an embed), with the archived text and author as the fallback inside it; the build adds X's hosts to the CSP, and the privacy page gains a notice that X may set cookies and collect visitor data. Review that notice (`privacy.embedNotice` in `site/copy.json`) before turning it on. When false (the default), the page links to the original post instead and loads nothing from X. |
 | `roleEmoji` | `{ fan?, host?, speaker? }` of strings | default `{}` | Overrides the default emoji a generic role shows when the translator's marker had none (a bare `:`): 💬 fan, 🎤 host, 🗣 speaker. A translator's own emoji always wins; crowd has none (it shows as an inline note). E.g. `{ "host": "🎙️" }`. |
 | `favicon` | path | default: the logo | The browser-tab icon and apple-touch-icon: a `.png` or `.svg` file inside the site folder, as a relative path (e.g. `"favicon.png"`). Left out, the site's `logo.svg` / `logo.png` is used. A square PNG of at least 180×180 works everywhere; iOS ignores an SVG touch icon. The build copies it content-hashed into `/build/`. |
+| `fonts` | `SiteFont[]` | default `[]` | The site's own self-hosted fonts, beyond the engine's Nunito and IBM Plex Sans Thai. See "Fonts" below. |
 
 ### `FeaturedPerson`
 
@@ -156,6 +157,76 @@ A worked example: a site with its own paper, label colour and gradient.
 
 `--color-bg` needs no dark value of its own here: the engine's dark blocks
 set it, and they outrank the light `:root`.
+
+## Fonts
+
+By default a site can only pick between the two families the engine
+self-hosts, Nunito and IBM Plex Sans Thai (`FONT_SPECS` in
+`scripts/buildAssets.js`) -- the CSP (`font-src 'self'`) blocks any
+hosted font service, so any other family otherwise means an engine
+change. A site can self-host its own font instead, in two steps: declare
+it in `site/site.json`'s `fonts`, then point a font role at it in
+`site/theme.css`.
+
+### Declaring a font (`site/site.json`'s `fonts`)
+
+Each entry names a family and ships it from one of two routes:
+
+| Field | Type | Notes |
+|---|---|---|
+| `family` | string | The name used in the built `@font-face` rule and in `theme.css`'s token value. |
+| `style` | `'normal'` \| `'italic'` | Default `'normal'`. |
+| `weights` | `number[]`, 100-900 | Route 1 only (below); route 2's `weights` is derived from `files[].weight` and never written by hand. |
+
+**Route 1, an `@fontsource/*` package:** install it as a dev dependency
+(the same way the engine installs its own Nunito and IBM Plex Sans
+Thai), then name the package and the subsets to ship:
+
+```json
+{ "family": "Some Display", "package": "@fontsource/some-display", "subsets": ["latin"], "weights": [400, 700] }
+```
+
+The build fails, naming the font and the missing weight, if the package
+doesn't actually ship one of the requested weights at any of the
+requested subsets.
+
+**Route 2, the site's own files:** `.woff2` files under `site/fonts/`
+(the CSP allows no other format from a site), each entry naming its own
+weight, and optionally its style and a `unicode-range` (for a subsetted
+font):
+
+```json
+{
+  "family": "Our Own Font",
+  "files": [
+    { "path": "our-own-font-regular.woff2", "weight": 400 },
+    { "path": "our-own-font-bold.woff2", "weight": 700 }
+  ]
+}
+```
+
+`path` is relative to `site/fonts/`. The build fails, naming the font
+and the file, if a `files[].path` isn't actually there.
+
+### Pointing a role at it (`site/theme.css`)
+
+`site/theme.css` sets one of the three font-role tokens
+(`src/styles/tokens.css`): `--font-body` (everything), `--font-heading`
+(h1-h3 and the heading primitive; defaults to `--font-body` until set)
+or `--font-script` (Thai and other `lang`-marked text):
+
+```css
+:root {
+  --font-heading: 'Our Own Font', var(--font-body);
+}
+```
+
+A `fonts` entry no token ever names (in `tokens.css` or `theme.css`)
+isn't shipped into `fonts.css` at all -- declaring a font and a token
+actually using it are different things. A font token naming a family
+that's neither one of the engine's own nor declared in `fonts` fails the
+engine's theme checks. The dev-only style guide (`/dev/styleguide`)
+shows each font role in each weight actually in use.
 
 ## `site/copy.json`
 

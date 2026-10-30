@@ -118,6 +118,126 @@ test('runBuild: every font file is content-hashed, and every fonts.css url resol
   }
 });
 
+/**
+ * Writes `fonts` into the temp repo's `site/site.json`, and writes
+ * `theme.css` so `--font-heading` names `pointedAtFamily` (Styling
+ * system Task 14, spec "2b. Fonts a site can choose": only a family
+ * some token actually names is shipped). `null` leaves the site with
+ * no `theme.css` at all.
+ * @param {string} siteDir @param {import('../../src/site/schema.js').SiteFont[]} fonts @param {string|null} pointedAtFamily
+ */
+function setSiteFonts(siteDir, fonts, pointedAtFamily) {
+  const sitePath = path.join(siteDir, 'site.json');
+  const site = JSON.parse(readFileSync(sitePath, 'utf8'));
+  site.fonts = fonts;
+  writeFileSync(sitePath, JSON.stringify(site));
+  if (pointedAtFamily) writeFileSync(path.join(siteDir, 'theme.css'), `:root {\n  --font-heading: '${pointedAtFamily}', var(--font-body);\n}\n`);
+}
+
+test('runBuild (Task 14): ships a site\'s own site/fonts/*.woff2 file, content-hashed, when a theme token names it -- a declared-but-unreferenced font is skipped', async () => {
+  const { repoRoot, siteDir } = makeBundlingRepoRoot();
+  try {
+    mkdirSync(path.join(siteDir, 'fonts'), { recursive: true });
+    writeFileSync(path.join(siteDir, 'fonts', 'our-display-regular.woff2'), 'fixture woff2 bytes, never parsed by the build');
+    writeFileSync(path.join(siteDir, 'fonts', 'unused-font-regular.woff2'), 'fixture woff2 bytes for the unreferenced font');
+    setSiteFonts(
+      siteDir,
+      [
+        { family: 'Our Display', files: [{ path: 'our-display-regular.woff2', weight: 400 }] },
+        { family: 'Unused Font', files: [{ path: 'unused-font-regular.woff2', weight: 400 }] },
+      ],
+      'Our Display',
+    );
+
+    await runBuild({ repoRoot, siteDir });
+    const manifest = JSON.parse(readFileSync(path.join(repoRoot, 'public/build/manifest.json'), 'utf8'));
+    const fontsCss = readFileSync(path.join(repoRoot, 'public/build', manifest.fontsCss), 'utf8');
+
+    assert.match(fontsCss, /font-family: 'Our Display';[\s\S]*?font-weight: 400;/);
+    assert.ok(!fontsCss.includes('Unused Font'), "a site font no token names isn't shipped");
+
+    const urls = [...fontsCss.matchAll(/url\('\.\/fonts\/([^']+)'\)/g)].map((m) => m[1]);
+    const ourDisplayFile = urls.find((u) => u.startsWith('our-display-regular-'));
+    assert.ok(ourDisplayFile, 'our-display-regular is copied, content-hashed');
+    assert.ok(!urls.some((u) => u.startsWith('unused-font-regular-')));
+    assert.ok(existsSync(path.join(repoRoot, 'public/build/fonts', ourDisplayFile)));
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+/**
+ * Each `@font-face` block's family and weight, as a fontsCss parse that
+ * doesn't let one family's blocks bleed into the next (unlike a single
+ * lazy regex spanning the whole file would).
+ * @param {string} fontsCss
+ * @returns {{ family: string, weight: number }[]}
+ */
+function parseFontFaces(fontsCss) {
+  return [...fontsCss.matchAll(/@font-face \{([^}]*)\}/g)].map((match) => ({
+    family: /font-family: '([^']+)';/.exec(match[1])?.[1] ?? '',
+    weight: Number(/font-weight: (\d+);/.exec(match[1])?.[1]),
+  }));
+}
+
+test('runBuild (Task 14): ships a site\'s @fontsource/* package font at exactly the weights it asks for, when a theme token names it', async () => {
+  const { repoRoot, siteDir } = makeBundlingRepoRoot();
+  try {
+    setSiteFonts(siteDir, [{ family: 'Reused Nunito', package: '@fontsource/nunito', subsets: ['latin'], weights: [400, 600] }], 'Reused Nunito');
+
+    await runBuild({ repoRoot, siteDir });
+    const manifest = JSON.parse(readFileSync(path.join(repoRoot, 'public/build/manifest.json'), 'utf8'));
+    const fontsCss = readFileSync(path.join(repoRoot, 'public/build', manifest.fontsCss), 'utf8');
+
+    const weights = parseFontFaces(fontsCss)
+      .filter((face) => face.family === 'Reused Nunito')
+      .map((face) => face.weight)
+      .sort((a, b) => a - b);
+    assert.deepEqual(weights, [400, 600]);
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test('runBuild (Task 14): fails, naming the font and the file, when a referenced files[].path isn\'t in site/fonts/', async () => {
+  const { repoRoot, siteDir } = makeBundlingRepoRoot();
+  try {
+    setSiteFonts(siteDir, [{ family: 'Missing File Font', files: [{ path: 'nowhere.woff2', weight: 400 }] }], 'Missing File Font');
+    await assert.rejects(() => runBuild({ repoRoot, siteDir }), /Missing File Font.*nowhere\.woff2/s);
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test('runBuild (Task 14): fails, naming the font and the weight, when a referenced package doesn\'t ship a requested weight', async () => {
+  const { repoRoot, siteDir } = makeBundlingRepoRoot();
+  try {
+    // IBM Plex Sans Thai's own thai subset has no 800 weight (FONT_SPECS's own comment, scripts/buildAssets.js).
+    setSiteFonts(
+      siteDir,
+      [{ family: 'Reused Plex Thai', package: '@fontsource/ibm-plex-sans-thai', subsets: ['thai'], weights: [800] }],
+      'Reused Plex Thai',
+    );
+    await assert.rejects(() => runBuild({ repoRoot, siteDir }), /Reused Plex Thai.*800/s);
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test('runBuild (Task 14, Review Focus 5): a site with no theme.css and no fonts builds, and fonts.css has only the engine families', async () => {
+  const { repoRoot, siteDir } = makeBundlingRepoRoot();
+  try {
+    rmSync(path.join(siteDir, 'theme.css'), { force: true });
+    await runBuild({ repoRoot, siteDir });
+    const manifest = JSON.parse(readFileSync(path.join(repoRoot, 'public/build/manifest.json'), 'utf8'));
+    const fontsCss = readFileSync(path.join(repoRoot, 'public/build', manifest.fontsCss), 'utf8');
+    const families = [...fontsCss.matchAll(/font-family: '([^']+)'/g)].map((m) => m[1]);
+    assert.deepEqual([...new Set(families)].sort(), ['IBM Plex Sans Thai', 'Nunito']);
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
 test('runBuild: /build/* gets an immutable cache header, and the CSP has font-src self with no Google Fonts', async () => {
   const { repoRoot, siteDir } = makeBundlingRepoRoot();
   try {

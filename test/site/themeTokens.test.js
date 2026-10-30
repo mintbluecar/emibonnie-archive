@@ -14,7 +14,8 @@ import { readFileSync, mkdtempSync, rmSync, writeFileSync, cpSync } from 'node:f
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { runBuild } from '../../scripts/build.js';
-import { findDefinedCssTokens } from '../../scripts/buildChecks.js';
+import { findDefinedCssTokens, findUndeclaredFontFamilies } from '../../scripts/buildChecks.js';
+import { FONT_SPECS } from '../../scripts/buildAssets.js';
 
 /** The declarations inside the first `{…}` after `selector`, comments dropped, whitespace normalised. @param {string} css @param {string} selector */
 function declarations(css, selector) {
@@ -137,5 +138,32 @@ test('the bundled example site and this repo\'s own site set only tokens that to
     const setByTheme = findDefinedCssTokens(readFileSync(themeFile, 'utf8'));
     const notDefined = [...setByTheme].filter((token) => !definedByTokens.has(token));
     assert.deepEqual(notDefined, [], themeFile);
+  }
+});
+
+test('Task 14, spec "2b. Fonts a site can choose": a theme naming an undeclared font family fails -- a font token may only name a family the engine ships or site.json declares', () => {
+  const engineFamilies = FONT_SPECS.map((spec) => spec.family);
+
+  const madeUp = findUndeclaredFontFamilies(
+    [":root {\n  --font-heading: 'Not A Real Font', var(--font-body);\n}\n"],
+    engineFamilies,
+  );
+  assert.deepEqual(madeUp, ['Not A Real Font']);
+
+  const engineOwn = findUndeclaredFontFamilies([`:root {\n  --font-heading: '${engineFamilies[0]}', var(--font-body);\n}\n`], engineFamilies);
+  assert.deepEqual(engineOwn, [], 'naming one of the engine\'s own families is never undeclared');
+
+  const declaredBySite = findUndeclaredFontFamilies(
+    [":root {\n  --font-heading: 'Site Custom Font', var(--font-body);\n}\n"],
+    [...engineFamilies, 'Site Custom Font'],
+  );
+  assert.deepEqual(declaredBySite, [], 'naming a family site.json itself declares is never undeclared');
+});
+
+test('the bundled example site and this repo\'s own site only name font families the engine ships (neither declares its own fonts yet)', () => {
+  const engineFamilies = FONT_SPECS.map((spec) => spec.family);
+  for (const themeFile of ['examples/solluna/theme.css', 'site/theme.css']) {
+    const undeclared = findUndeclaredFontFamilies([readFileSync(themeFile, 'utf8')], engineFamilies);
+    assert.deepEqual(undeclared, [], themeFile);
   }
 });

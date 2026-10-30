@@ -11,9 +11,12 @@
 
   One <section id="..."> per element/primitive group; later tasks add
   sections as primitives land. #elements is the on-brand defaults
-  base.css gives a bare control (Task 3); #button through #spacing are
-  the primitives in src/styles/primitives/, one section each, every
-  variant (Task 4). The page itself sits in a container--wide.
+  base.css gives a bare control (Task 3); #fonts shows each --font-*
+  role (tokens.css) in each weight it's actually used at (Task 14,
+  spec "2b. Fonts a site can choose", "Checks": "the style guide page
+  shows each role in each weight in use"); #button through #spacing
+  are the primitives in src/styles/primitives/, one section each,
+  every variant (Task 4). The page itself sits in a container--wide.
 -->
 <!doctype html>
 <html lang="en">
@@ -66,6 +69,19 @@ component doesn't style its own.</p>
 </table>
 
 <p><a href="#elements">A bare link</a></p>
+</section>
+
+<section id="fonts">
+<h2>Fonts (tokens.css's --font-* roles)</h2>
+<p>Each role, in each weight it's actually used at in this engine's own CSS; a site's <code>theme.css</code> can point any role at its own self-hosted family (<code>docs/site-settings.md</code>, "Fonts").</p>
+<div class="stack stack--2">
+<p>--font-body, --weight-regular: plain body text, the default everywhere.</p>
+<p><strong>--font-body, --weight-bold: field labels, notices and button text.</strong></p>
+<p><span class="badge">--font-body, --weight-heavy: badge, chip--on, label</span></p>
+<p class="heading heading--sm">--font-heading, --weight-heavy: h1-h3 and the heading primitive</p>
+<p lang="th">--font-script, --weight-regular: ขอบคุณทุกคนที่มาในคืนนี้</p>
+<p lang="th"><strong>--font-script, --weight-bold: ขอบคุณทุกคนที่มาในคืนนี้</strong></p>
+</div>
 </section>
 
 <section id="button">

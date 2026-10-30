@@ -199,17 +199,21 @@ function writeHtmlPages(htmlDir, publicDir, manifest) {
  * `manifest.json`, then the built HTML pages. `engineRoot` is
  * where `node_modules` (esbuild, @fontsource) actually lives; `repoRoot`
  * is where output goes (the same checkout in production, a temp dir in
- * tests).
- * @param {{ repoRoot: string, engineRoot: string, siteThemePath: string|null, faviconPath?: string|null }} options
+ * tests). `siteDir`/`fonts` (Styling system Task 14, spec "2b. Fonts a
+ * site can choose") are the site's own folder and its validated
+ * `site.json` `fonts` list, so `buildFontsCss` can self-host whichever
+ * of them a token actually points at.
+ * @param {{ repoRoot: string, engineRoot: string, siteThemePath: string|null, faviconPath?: string|null,
+ *   siteDir?: string, fonts?: import('../src/site/schema.js').SiteFont[] }} options
  * @returns {Promise<Manifest>}
  */
-export async function runBundling({ repoRoot, engineRoot, siteThemePath, faviconPath = null }) {
+export async function runBundling({ repoRoot, engineRoot, siteThemePath, faviconPath = null, siteDir, fonts }) {
   const outDir = path.join(repoRoot, 'public/build');
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
 
   const appCss = buildAppCss(repoRoot, outDir, siteThemePath);
-  const fontsCss = buildFontsCss(engineRoot, outDir);
+  const fontsCss = buildFontsCss(engineRoot, outDir, { siteDir, fonts });
   const pages = await bundlePages(repoRoot, outDir);
   const boot = await bundleBoot(repoRoot, outDir);
 

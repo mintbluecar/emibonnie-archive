@@ -211,7 +211,12 @@ export async function runBuild(options = {}) {
 
   const siteThemePath = path.join(publicSiteDir, 'theme.css');
   await runBundling({
-    repoRoot, engineRoot: REPO_ROOT, siteThemePath: existsSync(siteThemePath) ? siteThemePath : null, faviconPath: faviconSourceOf(siteDir, site),
+    repoRoot,
+    engineRoot: REPO_ROOT,
+    siteThemePath: existsSync(siteThemePath) ? siteThemePath : null,
+    faviconPath: faviconSourceOf(siteDir, site),
+    siteDir,
+    fonts: site.fonts,
   });
 
   // Styling system Task 3: the dev-only style guide, never deployed (dev/
