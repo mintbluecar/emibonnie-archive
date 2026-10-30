@@ -210,7 +210,7 @@ function bindAreas(root, ctx) {
     on(slot, '[data-action="clear-filters"]', 'click', () => commit(root, ctx, cleared(ctx.state, ctx.scope)));
   }
   const searchEl = root.querySelector('.c-search');
-  if (searchEl) on(searchEl, '.c-search__more', 'click', (_e, button) => loadMore(searchEl, ctx, button));
+  if (searchEl) on(searchEl, '[data-action="more-results"]', 'click', (_e, button) => loadMore(searchEl, ctx, button));
 }
 
 /** @param {(value: string) => void} fn @param {number} ms @returns {(value: string) => void} */

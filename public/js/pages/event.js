@@ -42,7 +42,7 @@ const APP_SELECTOR = 'app';
 /** @typedef {{ order: 'asc'|'desc' }} EventPageState */
 
 /** @param {string} slug @returns {import('../core/html.js').SafeHtml} */
-const backLink = (slug) => html`<a class="meta c-event__back" href="${HOME_PATH}" data-slug="${slug}">${t('event.back')}</a>`;
+const backLink = (slug) => html`<a class="meta tap-link" href="${HOME_PATH}" data-slug="${slug}">${t('event.back')}</a>`;
 
 /**
  * @param {import('../../../src/http/contracts.js').EventView['event']} event
@@ -117,7 +117,7 @@ export function eventSearch(event, query = '') {
  */
 export function composeEvent(data, search = eventSearch(data.event)) {
   const list = html`
-    <button type="button" class="btn btn--secondary c-event__newest-toggle" aria-pressed="false" data-action="newest-first">${t('event.newestFirst')}</button>
+    <button type="button" class="btn btn--quiet btn--sm c-event__newest-toggle" aria-pressed="false" data-action="newest-first">${t('event.newestFirst')}</button>
     <div class="stack" data-event-sections>${data.sections.map(sectionBlock)}</div>
   `;
   const content = html`
@@ -128,7 +128,7 @@ export function composeEvent(data, search = eventSearch(data.event)) {
     ${eventTags.render(data.event)}
     ${pillsRow(data.event)}
     ${region(search, list)}
-    <button class="btn btn--quiet" type="button" data-action="report">${t('event.report')}</button>
+    <button class="btn btn--quiet c-event__report" type="button" data-action="report">${t('event.report')}</button>
     ${reportForm.render()}
   `;
   return pageShell.render({ active: 'home', compact: true, headerProps: headerProps(search), content });

@@ -6,7 +6,6 @@
 
 .c-home-month__label {
   text-transform: lowercase;
-  margin: var(--space-4) 0 var(--space-2);
 }
 
 .c-home-month__grid {

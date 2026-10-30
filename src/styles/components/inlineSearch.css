@@ -19,10 +19,6 @@
   margin: 0 0 var(--space-2);
 }
 
-.c-search__more {
-  margin-top: var(--space-2);
-}
-
 /* The live region (fix round 1, I2): read out, never seen. */
 .c-search__status {
   position: absolute;

@@ -7,12 +7,6 @@
  * "more" and report buttons are primitives.
  */
 
-.c-event__back {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--tap-target);
-}
-
 .c-event__head {
   display: flex;
   align-items: flex-start;
@@ -24,8 +18,15 @@
   margin: var(--space-1) 0 var(--space-2);
 }
 
+/* Quiet text buttons whose text starts at the content's edge, like the
+   back link: pulled left by their own inline padding. */
 .c-event__newest-toggle {
   margin-bottom: var(--space-2);
+  margin-left: calc(-1 * var(--space-3));
+}
+
+.c-event__report {
+  margin-left: calc(-1 * var(--space-4));
 }
 
 /* The event's hashtag/type pills sit in the head; the people filter starts

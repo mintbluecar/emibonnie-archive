@@ -66,7 +66,7 @@ function mounted(state = EMPTY_STATE) {
   const root = new MiniElement('div');
   mount(root, render({ state, options: OPTIONS, count: 0 }));
   globalThis.document = fakeDocument();
-  const dialog = /** @type {any} */ (root.querySelector('.c-filter-sheet'));
+  const dialog = /** @type {any} */ (root.querySelector('[data-filter-sheet]'));
   let closed = false;
   dialog.close = () => { closed = true; };
   const opener = { focus: () => { opener.focused = true; }, focused: false };
@@ -99,7 +99,7 @@ test('bind: Escape closes the sheet and returns focus to the opener, without cal
   const { root, isClosed, opener } = mounted();
   let onChangeCalls = 0;
   bind(root, { state: EMPTY_STATE, onChange: () => { onChangeCalls += 1; }, opener });
-  root.dispatchEvent({ type: 'keydown', target: root.querySelector('.c-filter-sheet'), key: 'Escape' });
+  root.dispatchEvent({ type: 'keydown', target: root.querySelector('[data-filter-sheet]'), key: 'Escape' });
   assert.ok(isClosed(), 'the dialog was closed');
   assert.ok(opener.focused, 'focus returned to the opener');
   assert.equal(onChangeCalls, 0, 'Escape discards the tentative state, it never applies it');
@@ -123,7 +123,7 @@ test('bind: onTentativeChange fires live as chips are picked (so the page\'s fil
   assert.deepEqual(seen.at(-1)?.people, [2]);
   assert.deepEqual(seen.at(-1)?.types, ['live']);
 
-  root.dispatchEvent({ type: 'keydown', target: root.querySelector('.c-filter-sheet'), key: 'Escape' });
+  root.dispatchEvent({ type: 'keydown', target: root.querySelector('[data-filter-sheet]'), key: 'Escape' });
   assert.deepEqual(seen.at(-1), EMPTY_STATE, 'Escape reverts the live preview back to the committed state');
 });
 

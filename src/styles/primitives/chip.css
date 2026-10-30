@@ -28,6 +28,12 @@
   background: var(--color-bg);
   border: 1.5px solid var(--color-card-shadow);
   border-radius: var(--radius-pill);
+}
+
+/* Only a chip that does something shows the pointer: a display-only pill
+   (a <span>) doesn't. */
+button.chip,
+a.chip {
   cursor: pointer;
 }
 

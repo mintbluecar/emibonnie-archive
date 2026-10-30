@@ -159,7 +159,7 @@ test('the filter sheet: opens from the icon, keeps focus inside, Escape closes i
   await gotoReady(page, EVENT);
   const filterBtn = page.locator('.c-header__filter-btn');
   await filterBtn.click();
-  const dialog = page.locator('.c-filter-sheet');
+  const dialog = page.locator('[data-filter-sheet]');
   await expect(dialog).toBeVisible();
   await expect(dialog.locator('[data-filter="event"]')).toHaveValue('solluna-at-starfest-2026-10-18');
   // showModal() makes the rest of the page inert: Tab only ever reaches the sheet's own
@@ -170,7 +170,7 @@ test('the filter sheet: opens from the icon, keeps focus inside, Escape closes i
     const where = await page.evaluate(() => {
       const el = document.activeElement;
       if (!el || el === document.body) return 'none';
-      return el.closest('.c-filter-sheet') ? 'sheet' : 'page';
+      return el.closest('[data-filter-sheet]') ? 'sheet' : 'page';
     });
     expect(where, `tab ${i + 1}`).not.toBe('page');
     if (where === 'sheet') inside += 1;

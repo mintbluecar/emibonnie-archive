@@ -6,6 +6,7 @@
  * and still pick a readable label colour. Gradients and backgrounds keep
  * `--gradient-from`/`--gradient-to`.
  */
+import '../helpers/siteFixture.js';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -13,7 +14,32 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const STYLES = fileURLToPath(new URL('../../src/styles/', import.meta.url));
-const JS = fileURLToPath(new URL('../../public/js/', import.meta.url));
+// Dynamic imports: see test/components/header.test.js for why.
+const { MiniElement } = await import('../helpers/miniDom.js');
+const { mount } = await import('../../public/js/core/dom.js');
+const { composeHome } = await import('../../public/js/pages/home.js');
+const { composePerson } = await import('../../public/js/pages/person.js');
+const resultCard = await import('../../public/js/components/resultCard.js');
+const HOME = JSON.parse(readFileSync(new URL('../snapshots/home.json', import.meta.url), 'utf8'));
+const PERSON = JSON.parse(readFileSync(new URL('../snapshots/person.json', import.meta.url), 'utf8'));
+
+/**
+ * Mounts `markup` into a mini DOM and returns the class list of every
+ * element `selector` matches, so a test asserts on what renders, not on
+ * the template's source text.
+ * @param {unknown} markup @param {string} selector @returns {string[][]}
+ */
+function classesOf(markup, selector) {
+  const root = new MiniElement('div');
+  mount(root, /** @type {any} */ (markup));
+  return root.querySelectorAll(selector).map((/** @type {any} */ el) => (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean));
+}
+
+/** Every match has `cls`, and there is at least one. @param {string[][]} lists @param {string} cls @param {string} what */
+function allHave(lists, cls, what) {
+  assert.ok(lists.length > 0, `${what}: rendered`);
+  for (const list of lists) assert.ok(list.includes(cls), `${what}: has ${cls} (got ${list.join(' ')})`);
+}
 
 /** @param {string} dir @returns {string[]} */
 const cssFiles = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (
@@ -39,10 +65,13 @@ test('--color-label is defined for light and dark mode, defaulting to --gradient
   // Styling system Task 12: the month and group headings and the result
   // card's event line are the label primitive, which uses --color-label.
   assert.match(readFileSync(path.join(STYLES, 'primitives/text.css'), 'utf8'), /\.label\s*\{[^}]*color:\s*var\(--color-label\)/);
-  for (const [file, pattern] of [['pages/home.js', /class="label c-home-month__label"/], ['pages/hubGroups.js', /class="label c-hub-group__label"/],
-    ['components/resultCard.js', /class="label c-result-card__event"/]]) {
-    assert.match(readFileSync(path.join(JS, file), 'utf8'), pattern, `${file} renders its heading as the label primitive`);
-  }
+  allHave(classesOf(composeHome(HOME), 'h2'), 'label', 'home month headings');
+  allHave(classesOf(composePerson(PERSON), '[data-hub-group] h2'), 'label', 'person page group headings');
+  const result = {
+    kind: 'translation', sourceId: '1', url: '/t/1', lines: [], people: [], accountHandle: null, accountUrl: null, hasVideo: false, thumb: null,
+    followsOnFrom: null, occurredOn: '2026-10-14', placement: 'post', event: { slug: 'e', name: 'An event' }, matchLines: ['a line'],
+  };
+  allHave(classesOf(resultCard.render({ result: /** @type {any} */ (result), q: '' }), '.c-result-card__event'), 'label', 'result card event line');
 });
 
 /** @param {string} css @param {string} name @returns {string|undefined} */
@@ -70,16 +99,18 @@ test('Task 9b: the label tint tokens derive from --color-label (so a site that s
     const block = css.slice(css.indexOf(`${selector} {`));
     return block.slice(0, block.indexOf('}'));
   };
-  // Styling system Task 12: the count badge is badge--accent; the
-  // segmented control's chosen view and the active filter chips are chip--on.
-  for (const [file, selector] of [['badge.css', '.badge--accent'], ['chip.css', '.chip--on']]) {
+  // Styling system Task 12: the count badge is badge--accent, the view
+  // switch's chosen option is the segmented primitive's pressed option,
+  // and the active filter chips are chip--on.
+  for (const [file, selector] of [['badge.css', '.badge--accent'], ['segmented.css', '.segmented__option[aria-pressed="true"],\n.segmented__option[aria-current="page"]'],
+    ['chip.css', '.chip--on']]) {
     const block = uses(file, selector);
     assert.match(block, /background:\s*var\(--color-label-tint\)/, `${selector} background`);
     assert.match(block, /color:\s*var\(--color-label-on-tint\)/, `${selector} text`);
   }
-  for (const [file, pattern] of [['components/eventCard.js', /class="badge badge--accent c-event-card__count"/],
-    ['pages/hubGroups.js', /class="chip chip--lg\$\{value === active \? ' chip--on' : ''\}"/],
-    ['components/inlineSearchView.js', /class="chip chip--on" data-action="remove-filter"/]]) {
-    assert.match(readFileSync(path.join(JS, file), 'utf8'), pattern, `${file} uses the primitive`);
-  }
+  allHave(classesOf(composeHome(HOME), '.c-event-card__count'), 'badge--accent', 'home event card counts');
+  const person = composePerson(PERSON);
+  allHave(classesOf(person, '.c-hub__seg'), 'segmented', 'the view switch');
+  allHave(classesOf(person, '.c-hub__seg [aria-pressed="true"]'), 'segmented__option', 'the chosen view');
+  allHave(classesOf(person, '[data-action="remove-filter"]'), 'chip--on', 'the active filter chip');
 });

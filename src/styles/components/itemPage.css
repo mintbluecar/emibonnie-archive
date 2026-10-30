@@ -54,13 +54,6 @@
   padding: var(--space-1) 0;
 }
 
-.c-item__prev,
-.c-item__next {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--tap-target);
-}
-
 /* The footer row: the source links, who added it, copy and report, and
    the editor's controls pushed to the end. */
 .c-item__footer {

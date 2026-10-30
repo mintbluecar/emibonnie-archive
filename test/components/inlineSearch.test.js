@@ -238,7 +238,7 @@ test('reopening the filter sheet never piles up duplicate listeners (review roun
     for (let i = 0; i < 3; i++) {
       filterBtn.click();
       await flush();
-      const dialog = /** @type {any} */ (root.querySelector('.c-filter-sheet'));
+      const dialog = /** @type {any} */ (root.querySelector('[data-filter-sheet]'));
       dialog.close = () => {};
       root.dispatchEvent({ type: 'keydown', target: dialog, key: 'Escape' });
     }
@@ -350,7 +350,7 @@ test('a loadMore failure just re-enables the button, leaving the existing result
   try {
     const { root } = await mountedPage({ query: 'q=hug' });
     fail = true;
-    const more = /** @type {any} */ (root.querySelector('.c-search__more'));
+    const more = /** @type {any} */ (root.querySelector('[data-action="more-results"]'));
     assert.ok(more, 'a "more" button renders when results.length < count');
     more.click();
     await flush();

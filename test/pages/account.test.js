@@ -46,8 +46,8 @@ test('composeAccount: grouped by event, a shared story, and a post', () => {
   const markup = String(composeAccount(ACCOUNT));
   assert.match(markup, /SOLLUNA AT STARFEST · 18 Oct 2026/);
   assert.match(markup, /luna tiktok live · 12 Feb 2026/);
-  assert.match(markup, /<h2 class="label c-hub-group__label">shared story · 2 Mar 2026<\/h2>/);
-  assert.match(markup, /<h2 class="label c-hub-group__label">posts<\/h2>/);
+  assert.match(markup, /<h2 class="label label--section">shared story · 2 Mar 2026<\/h2>/);
+  assert.match(markup, /<h2 class="label label--section">posts<\/h2>/);
 });
 
 test('composeOptedOut: only account.optedOut, and nothing else from the page', () => {
@@ -73,7 +73,7 @@ test('bind: switching to "all, newest" re-renders flat, without a group label', 
   const allChip = /** @type {any} */ (root.querySelector('.c-hub__seg [data-value="all"]'));
   allChip.click();
   const content = /** @type {any} */ (root.querySelector('[data-hub-content]'));
-  assert.equal(content.querySelectorAll('.c-hub-group__label').length, 0, 'flat view has no group labels');
+  assert.equal(content.querySelectorAll('[data-hub-group] h2').length, 0, 'flat view has no group labels');
   assert.ok(content.querySelector('a[href="/t/1900000000000000005"]'), 'the shared-story entry is still there, just ungrouped');
   delete (/** @type {any} */ (globalThis)).document;
 });
@@ -98,13 +98,13 @@ test('bind: "more" fetches the kind\'s next page with the right offset, appends,
       calls.push(String(url));
       return new Response(JSON.stringify(nextPage), { status: 200 });
     });
-    const more = /** @type {any} */ (root.querySelector('.c-hub__more'));
+    const more = /** @type {any} */ (root.querySelector('[data-action="more"]'));
     assert.ok(more, 'a "more" button is rendered when a section hasMore');
     more.click();
     await flush();
     assert.match(calls[0], /\/api\/account\/tl_alpha\?offset=4/, `expected offset=4 (the 4 items already loaded), got ${calls[0]}`);
     assert.ok(root.querySelector('a[href="/t/NEW_ITEM"]'), 'the newly fetched item is now rendered');
-    assert.ok(!root.querySelector('.c-hub__more'), 'no more button once hasMore is false');
+    assert.ok(!root.querySelector('[data-action="more"]'), 'no more button once hasMore is false');
   } finally {
     cleanup();
   }

@@ -111,7 +111,7 @@ function datesSection(state) {
  */
 export function render({ state, options, count }) {
   return html`
-    <dialog class="c-sheet c-filter-sheet" aria-label="${t('search.filters')}">
+    <dialog class="c-sheet" data-filter-sheet aria-label="${t('search.filters')}">
       <button type="button" class="btn btn--secondary btn--icon btn--round c-sheet__close" data-action="close-filters" title="${t('search.closeFilters')}" aria-label="${t('search.closeFilters')}">✕</button>
       <h2 class="heading heading--sm c-sheet__title">${t('search.filters')}</h2>
       ${peopleSection(options.people, state)}
@@ -197,7 +197,7 @@ function makeClose(opener, dialog) {
  * @returns {void}
  */
 export function bind(el, { state, options = { people: [], categories: [], clients: [], events: [], accounts: [] }, onChange, opener = null, onTentativeChange }) {
-  const dialog = el.querySelector('.c-filter-sheet') ?? el;
+  const dialog = el.querySelector('[data-filter-sheet]') ?? el;
   chips.bind(el);
   let tentative = state;
   /** @type {Store} */

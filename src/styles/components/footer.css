@@ -11,9 +11,3 @@
   gap: var(--space-4);
   margin-bottom: var(--space-2);
 }
-
-.c-footer__link {
-  min-height: var(--tap-target);
-  display: inline-flex;
-  align-items: center;
-}

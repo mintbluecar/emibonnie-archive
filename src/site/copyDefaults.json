@@ -257,6 +257,7 @@
   "person.sharedStories.one": "{n} shared story",
   "person.sharedStories.other": "{n} shared stories",
   "person.byEvent": "by event",
+  "person.viewLabel": "view",
   "person.allNewest": "all, newest",
   "person.with": "with…",
   "person.withTitle": "who else?",

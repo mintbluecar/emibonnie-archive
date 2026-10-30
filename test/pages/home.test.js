@@ -25,7 +25,7 @@ test('composeHome: shows the header, tab bar and footer', () => {
 
 test('composeHome: shows "october 2026" for an event in that month, newest first', () => {
   const markup = String(composeHome(HOME));
-  assert.match(markup, /<h2 class="label c-home-month__label">october 2026<\/h2>/);
+  assert.match(markup, /<h2 class="label label--section c-home-month__label">october 2026<\/h2>/);
   const octoberIndex = markup.indexOf('october 2026');
   const marchIndex = markup.indexOf('march 2026');
   assert.ok(octoberIndex !== -1 && marchIndex !== -1 && octoberIndex < marchIndex, 'months are newest first');

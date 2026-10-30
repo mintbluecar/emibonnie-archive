@@ -33,14 +33,6 @@
   margin-bottom: var(--space-3);
 }
 
-.c-hub-group__label {
-  margin: var(--space-4) 0 var(--space-2);
-}
-
-.c-hub__more {
-  margin-top: var(--space-2);
-}
-
 .c-hub__picker-apply {
   margin-top: var(--space-3);
 }

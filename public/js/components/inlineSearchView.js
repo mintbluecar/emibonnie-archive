@@ -136,7 +136,7 @@ export function resultsBody(ctx) {
   if (ctx.data.results.length === 0) return emptyState.render({ message: t('search.empty') });
   const hasMore = ctx.data.results.length < ctx.data.count;
   const results = ctx.data.results.map((r) => resultCard.render({ result: r, q: ctx.state.q }));
-  return html`${countLine(ctx)}<div class="stack" data-search-results>${results}</div>${hasMore ? html`<button type="button" class="btn btn--quiet btn--block c-search__more">${t('search.more')}</button>` : ''}`;
+  return html`${countLine(ctx)}<div class="stack stack--2"><div class="stack" data-search-results>${results}</div>${hasMore ? html`<button type="button" class="btn btn--quiet btn--block" data-action="more-results">${t('search.more')}</button>` : ''}</div>`;
 }
 
 /**

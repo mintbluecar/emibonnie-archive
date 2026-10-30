@@ -96,6 +96,8 @@ component doesn't style its own.</p>
 <div class="cluster cluster--2">
 <button class="btn btn--secondary" type="button" aria-pressed="true">Toggle, pressed</button>
 <button class="btn btn--secondary" type="button" aria-pressed="false">Toggle, not pressed</button>
+<button class="btn btn--quiet btn--sm" type="button" aria-pressed="false">Quiet toggle</button>
+<button class="btn btn--quiet btn--sm" type="button" aria-pressed="true">Quiet toggle, pressed</button>
 </div>
 <p><button class="btn btn--primary btn--block" type="button">Block (full width)</button></p>
 </div>
@@ -190,6 +192,7 @@ component doesn't style its own.</p>
 <button class="chip" type="button" aria-pressed="false">waiting <span class="chip__count">12</span></button>
 <button class="chip chip--on" type="button" aria-pressed="true">done <span class="chip__count">3</span></button>
 <a class="chip" href="#chip">#starfest</a>
+<span class="chip">a display-only pill</span>
 </div>
 <div class="cluster cluster--2">
 <button class="chip chip--lg" type="button" aria-pressed="false">Large</button>
@@ -212,6 +215,16 @@ component doesn't style its own.</p>
 <p class="notice notice--info">notice--info: Saved. It shows on the archive in a minute.</p>
 <p class="notice notice--error">notice--error: That link isn't a post on X.</p>
 <div class="notice notice--accent">notice--accent: Not published yet -- only you can see this.</div>
+<p class="notice notice--strong">notice--strong: Held -- only you can see this entry.</p>
+</div>
+</section>
+
+<section id="segmented">
+<h2>Segmented (primitives/segmented.css)</h2>
+<div class="segmented" role="group" aria-label="View">
+<button class="segmented__option" type="button" aria-pressed="true">by event</button>
+<button class="segmented__option" type="button" aria-pressed="false">all, newest</button>
+<button class="segmented__option" type="button" aria-pressed="false">with...</button>
 </div>
 </section>
 
@@ -221,6 +234,8 @@ component doesn't style its own.</p>
 <p>Body text, for comparison.</p>
 <p class="meta">meta: @tl_gamma · 21 Oct 2026</p>
 <p class="label">label: october 2026</p>
+<p class="label label--section">label label--section: a list's heading</p>
+<p><a class="meta tap-link" href="#text">meta tap-link: a small link with a full target</a></p>
 <p class="heading heading--lg">heading heading--lg</p>
 <p class="heading heading--md">heading heading--md</p>
 <p class="heading heading--sm">heading heading--sm</p>

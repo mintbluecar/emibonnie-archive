@@ -3,12 +3,17 @@
  *
  *   <p class="meta">@tl_gamma · 21 Oct 2026</p>
  *   <h2 class="label">october 2026</h2>
+ *   <h2 class="label label--section">october 2026</h2>
+ *   <a class="meta tap-link" href="/">‹ events</a>
  *   <h1 class="heading heading--lg">Import review</h1>
  *   <h2 class="heading heading--md">Speakers</h2>
  *   <h3 class="heading heading--sm">Check the details</h3>
  *
  * The heading classes set the look, never the level: pick the element
- * for the outline and the class for the size.
+ * for the outline and the class for the size. label--section is a label
+ * heading a list below it: room above, a little below. tap-link is a
+ * small text link whose target is still --tap-target tall (pair it with
+ * meta for a muted one).
  */
 
 .meta {
@@ -20,6 +25,16 @@
   font-size: var(--text-11);
   font-weight: var(--weight-heavy);
   color: var(--color-label);
+}
+
+.label--section {
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.tap-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-target);
 }
 
 .heading {

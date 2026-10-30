@@ -145,7 +145,26 @@ function computed(page, selector, property, pseudo) {
 }
 
 /** The primitive sections (Task 4), in page order. */
-const PRIMITIVE_SECTIONS = ['#button', '#field', '#card', '#table', '#chip', '#badge', '#notice', '#text', '#spacing'];
+const PRIMITIVE_SECTIONS = ['#button', '#field', '#card', '#table', '#chip', '#badge', '#notice', '#segmented', '#text', '#spacing'];
+
+/**
+ * WCAG contrast of two computed colours (opaque): `rgb(r, g, b)` with
+ * 0-255 channels, or -- what a color-mix() token computes to --
+ * `color(srgb r g b)` with 0-1 channels.
+ * @param {string} a @param {string} b @returns {number}
+ */
+function contrastOf(a, b) {
+  const lum = (/** @type {string} */ c) => {
+    const scale = c.startsWith('color(srgb') ? 1 : 255;
+    const [r, g, bl] = (c.replace(/^color\(srgb/, '').match(/[\d.]+/g) ?? []).slice(0, 3).map(Number).map((v) => {
+      const s = v / scale;
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
 
 test.describe('style guide (/dev/styleguide): primitives', () => {
   test.beforeEach(async ({ page }) => {
@@ -185,6 +204,10 @@ test.describe('style guide (/dev/styleguide): primitives', () => {
     expect(await computed(page, '#button .btn[aria-pressed="true"]', 'background-color')).toBe(await resolved(page, 'background-color', 'var(--color-label-tint)'));
     expect(await computed(page, '#button .btn[aria-pressed="true"]', 'color')).toBe(await resolved(page, 'color', 'var(--color-label-on-tint)'));
     expect(await computed(page, '#button .btn[aria-pressed="false"]', 'background-color')).toBe(await resolved(page, 'background-color', 'var(--color-card)'));
+    // A quiet toggle stays text: muted when off, the label colour (no tint) when on.
+    expect(await computed(page, '#button .btn--quiet[aria-pressed="false"]', 'color')).toBe(await resolved(page, 'color', 'var(--color-ink-muted)'));
+    expect(await computed(page, '#button .btn--quiet[aria-pressed="true"]', 'color')).toBe(await resolved(page, 'color', 'var(--color-label)'));
+    expect(await computed(page, '#button .btn--quiet[aria-pressed="true"]', 'background-color')).toBe('rgba(0, 0, 0, 0)');
 
     const block = await box('#button .btn--block');
     const parent = await page.locator('#button .btn--block').first().evaluate((el) => /** @type {HTMLElement} */ (el.parentElement).clientWidth);
@@ -248,6 +271,9 @@ test.describe('style guide (/dev/styleguide): primitives', () => {
     expect(await computed(page, '#chip .chip', 'border-top-left-radius')).toBe(await resolved(page, 'border-top-left-radius', 'var(--radius-pill)'));
     expect(await computed(page, '#chip .chip--on', 'background-color')).not.toBe(await computed(page, '#chip .chip:not(.chip--on)', 'background-color'));
     await expect(page.locator('#chip .chip .chip__count').first()).toBeVisible();
+    // Only a chip that does something shows the pointer.
+    expect(await computed(page, '#chip button.chip', 'cursor')).toBe('pointer');
+    expect(await computed(page, '#chip span.chip', 'cursor')).toBe('auto');
     // chip--lg: at least --control-md tall, bold, and taller than a plain chip.
     const md = parseFloat(await resolved(page, 'height', 'var(--control-md)'));
     const lg = /** @type {{ height: number }} */ (await page.locator('#chip .chip--lg').first().boundingBox());
@@ -270,6 +296,25 @@ test.describe('style guide (/dev/styleguide): primitives', () => {
     expect(await computed(page, '#notice .notice--error', 'background-color')).toBe(await resolved(page, 'background-color', 'var(--color-card)'));
     expect(await computed(page, '#notice .notice--accent', 'background-color')).toBe(await resolved(page, 'background-color', 'var(--color-label-tint)'));
     expect(await computed(page, '#notice .notice--info', 'border-top-left-radius')).toBe(await resolved(page, 'border-top-left-radius', 'var(--radius-md)'));
+    // notice--strong: the solid bar, card-colour text on the dark label shade, at least 4.5:1 in this theme.
+    const strongBg = await computed(page, '#notice .notice--strong', 'background-color');
+    const strongInk = await computed(page, '#notice .notice--strong', 'color');
+    expect(strongBg).toBe(await resolved(page, 'background-color', 'var(--color-label-on-tint)'));
+    expect(strongInk).toBe(await resolved(page, 'color', 'var(--color-card)'));
+    expect(contrastOf(strongBg, strongInk)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test('segmented: one pill track, the pressed option tinted with the label colour, the others muted; options share the width', async ({ page }) => {
+    expect(await computed(page, '#segmented .segmented', 'border-top-left-radius')).toBe(await resolved(page, 'border-top-left-radius', 'var(--radius-pill)'));
+    expect(await computed(page, '#segmented .segmented', 'background-color')).toBe(await resolved(page, 'background-color', 'var(--color-card)'));
+    const on = '#segmented .segmented__option[aria-pressed="true"]';
+    const off = '#segmented .segmented__option[aria-pressed="false"]';
+    expect(await computed(page, on, 'background-color')).toBe(await resolved(page, 'background-color', 'var(--color-label-tint)'));
+    expect(await computed(page, on, 'color')).toBe(await resolved(page, 'color', 'var(--color-label-on-tint)'));
+    expect(await computed(page, off, 'color')).toBe(await resolved(page, 'color', 'var(--color-ink-muted)'));
+    expect(await computed(page, off, 'background-color')).toBe('rgba(0, 0, 0, 0)');
+    const boxes = await page.locator('#segmented .segmented__option').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width));
+    for (const w of boxes) expect(w).toBeCloseTo(boxes[0], 0);
   });
 
   test('text: meta is small and muted, label is the label colour, headings step down', async ({ page }) => {

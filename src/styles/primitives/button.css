@@ -13,11 +13,14 @@
  *   <button class="btn btn--primary btn--block" type="submit">Continue</button>
  *   <a class="btn btn--secondary" href="/me">A link that looks like a button</a>
  *   <button class="btn btn--secondary" type="button" aria-pressed="true">Speech</button>
+ *   <button class="btn btn--quiet btn--sm" type="button" aria-pressed="false">newest first</button>
  *
  * btn--icon is square and has no text of its own: it needs aria-label.
  * btn--sm combines with any variant, btn--icon included. btn--round is
  * the round close button of a sheet or dialog. A toggle button says its
- * state with aria-pressed; pressed, it takes the label tint. A button
+ * state with aria-pressed; pressed, it takes the label tint -- except a
+ * quiet toggle, which stays text: muted when off, bold label colour when
+ * on. A button
  * waiting on its own request says so with aria-busy="true" and dims like
  * a disabled one.
  */
@@ -101,6 +104,19 @@
   color: var(--color-label-on-tint);
   background: var(--color-label-tint);
   border-color: var(--color-label);
+}
+
+/* A quiet toggle stays text-like: muted and regular when off, the label
+   colour and bold when on (no tint). After the rule above, so it wins. */
+.btn--quiet[aria-pressed="false"] {
+  font-weight: var(--weight-regular);
+  color: var(--color-ink-muted);
+}
+
+.btn--quiet[aria-pressed="true"] {
+  color: var(--color-label);
+  background: transparent;
+  border-color: transparent;
 }
 
 .btn:disabled,

@@ -1,7 +1,7 @@
 /*
  * public/js/components/filterSheet.js: the in-place search's filters, in
- * a bottom sheet (sheet.css) on a phone and a centred modal from the
- * shared 860px breakpoint. The close and apply buttons, the title, the
+ * a sheet (sheet.css): a bottom sheet on a phone, a centred modal on
+ * desktop. The close and apply buttons, the title, the
  * chips and the fields are primitives; this file lays the sheet's own
  * content out.
  */
@@ -36,21 +36,4 @@
 /* The apply button keeps its taller target. */
 .c-filter-sheet__apply {
   min-height: calc(var(--tap-target) + var(--space-1));
-}
-
-/* Both classes: sheet.css comes after this file in the bundle, so its
-   phone layout would otherwise win. */
-@media (min-width: 860px) {
-  .c-sheet.c-filter-sheet {
-    inset: 0;
-    margin: auto;
-    top: 50%;
-    left: 50%;
-    bottom: auto;
-    right: auto;
-    transform: translate(-50%, -50%);
-    width: 420px;
-    max-height: 80vh;
-    border-radius: var(--radius-card);
-  }
 }

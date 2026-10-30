@@ -21,7 +21,7 @@ export function render(props) {
       <span class="c-person-header__emoji c-emoji" aria-hidden="true">${person.emoji}</span>
       <h1 class="c-person-header__name">${person.name}</h1>
       ${person.igHandle ? html`<p class="c-person-header__handle">@${person.igHandle}</p>` : ''}
-      ${counts ? html`<p class="c-person-header__counts">${counts}</p>` : ''}
+      ${counts ? html`<p class="meta c-person-header__counts">${counts}</p>` : ''}
       ${action ? html`<div class="c-person-header__action">${action}</div>` : ''}
     </div>
   `;

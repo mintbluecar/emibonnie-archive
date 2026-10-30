@@ -41,9 +41,9 @@
   color: color-mix(in srgb, var(--color-ink-muted) 75%, var(--color-ink));
 }
 
-/* The page's counts line, in ink: it sits on the person's tint. */
+/* The page's counts line (meta), in ink rather than muted: it sits on
+   the person's tint. */
 .c-person-header__counts {
-  font-size: var(--text-11-5);
   color: var(--color-ink);
   margin: var(--space-2) 0 0;
 }

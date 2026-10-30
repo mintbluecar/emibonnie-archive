@@ -37,8 +37,8 @@ function prevNextNav(data) {
   if (!data.prev && !data.next) return html``;
   return html`
     <nav class="c-item__prevnext">
-      ${data.prev ? html`<a class="meta c-item__prev" href="${data.prev.url}">${t('item.prev')}</a>` : ''}
-      ${data.next ? html`<a class="meta c-item__next" href="${data.next.url}">${t('item.next')}</a>` : ''}
+      ${data.prev ? html`<a class="meta tap-link" href="${data.prev.url}">${t('item.prev')}</a>` : ''}
+      ${data.next ? html`<a class="meta tap-link" href="${data.next.url}">${t('item.next')}</a>` : ''}
     </nav>
   `;
 }
@@ -83,7 +83,7 @@ function bodyContent(data) {
  */
 function heldBanner(data) {
   if (/** @type {any} */ (data).reviewState !== 'pending') return html``;
-  return html`<p class="notice notice--accent c-item__held" role="status">${t('item.held')}</p>`;
+  return html`<p class="notice notice--strong c-item__held" role="status">${t('item.held')}</p>`;
 }
 
 /**

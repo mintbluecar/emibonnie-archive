@@ -58,7 +58,7 @@ test('composePerson: grouped by event, each event name its own group label', () 
 
 test('composePerson: two standalone posts (no event) fold into one "posts" group', () => {
   const markup = String(composePerson(PERSON));
-  const postsHeadings = markup.match(/<h2 class="label c-hub-group__label">posts<\/h2>/g) ?? [];
+  const postsHeadings = markup.match(/<h2 class="label label--section">posts<\/h2>/g) ?? [];
   assert.equal(postsHeadings.length, 1, 'one "posts" heading, not one per post');
   assert.match(markup, /href="\/t\/1900000000000000009"/);
   assert.match(markup, /href="\/t\/1900000000000000008"/);
@@ -66,8 +66,8 @@ test('composePerson: two standalone posts (no event) fold into one "posts" group
 
 test('composePerson: a shared-story item groups under "shared story · <day>", distinct from "posts" and from an event', () => {
   const markup = String(composePerson(PERSON_GROUPS));
-  assert.match(markup, /<h2 class="label c-hub-group__label">shared story · 2 Mar 2026<\/h2>/);
-  assert.match(markup, /<h2 class="label c-hub-group__label">posts<\/h2>/);
+  assert.match(markup, /<h2 class="label label--section">shared story · 2 Mar 2026<\/h2>/);
+  assert.match(markup, /<h2 class="label label--section">posts<\/h2>/);
   assert.match(markup, /SOLLUNA AT STARFEST · 18 Oct 2026/);
 });
 
@@ -85,8 +85,10 @@ test('bind: switching to "all, newest" re-renders flat, without a group label', 
   bind(root, PERSON, 'solsunny');
   const allChip = /** @type {any} */ (root.querySelector('.c-hub__seg [data-value="all"]'));
   allChip.click();
+  assert.equal(allChip.getAttribute('aria-pressed'), 'true', 'the chosen view is pressed');
+  assert.equal(root.querySelector('.c-hub__seg [data-value="byEvent"]')?.getAttribute('aria-pressed'), 'false', 'and the other is not');
   const content = /** @type {any} */ (root.querySelector('[data-hub-content]'));
-  assert.equal(content.querySelectorAll('.c-hub-group__label').length, 0, 'flat view has no group labels');
+  assert.equal(content.querySelectorAll('[data-hub-group] h2').length, 0, 'flat view has no group labels');
   assert.ok(content.querySelector('a[href="/t/1900000000000000009"]'), 'the entries are still there, just ungrouped');
   assert.equal(allChip.getAttribute('aria-pressed'), 'true');
   delete (/** @type {any} */ (globalThis)).document;
@@ -118,13 +120,13 @@ test('bind: "more" fetches the kind\'s next page with the right offset, appends,
       calls.push(String(url));
       return new Response(JSON.stringify(nextPage), { status: 200 });
     });
-    const more = /** @type {any} */ (root.querySelector('.c-hub__more'));
+    const more = /** @type {any} */ (root.querySelector('[data-action="more"]'));
     assert.ok(more, 'a "more" button is rendered when a section hasMore');
     more.click();
     await flush();
     assert.match(calls[0], /\/api\/person\/solsunny\?offset=6/, `expected offset=6 (the 6 items already loaded), got ${calls[0]}`);
     assert.ok(root.querySelector('a[href="/t/NEW_ITEM"]'), 'the newly fetched item is now rendered');
-    assert.ok(!root.querySelector('.c-hub__more'), 'no more button once hasMore is false');
+    assert.ok(!root.querySelector('[data-action="more"]'), 'no more button once hasMore is false');
   } finally {
     cleanup();
   }
@@ -139,7 +141,7 @@ test('bind: "more" is guarded by a sequence number against a stale response (rev
     mock.method(globalThis, 'fetch', () => new Promise((resolve) => {
       releasers.push((page) => resolve(new Response(JSON.stringify(page), { status: 200 })));
     }));
-    const more = /** @type {any} */ (root.querySelector('.c-hub__more'));
+    const more = /** @type {any} */ (root.querySelector('[data-action="more"]'));
     more.click();
     more.click(); // fires again while the first is still in flight (button isn't disabled until the click handler runs synchronously first)
     // Resolve the *first* request last, with a response that would be wrong if it won.

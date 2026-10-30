@@ -67,8 +67,8 @@ test('composeItem: a <select>-free active "home" tab, per pageShell (review roun
 
 test('composeItem: prev/next links when ItemView carries neighbours', () => {
   const markup = String(composeItem(itemVm()));
-  assert.match(markup, /<a class="meta c-item__prev" href="\/t\/1">/);
-  assert.match(markup, /<a class="meta c-item__next" href="\/t\/2">/);
+  assert.match(markup, /<a class="meta tap-link" href="\/t\/1">/);
+  assert.match(markup, /<a class="meta tap-link" href="\/t\/2">/);
 });
 
 test('composeItem: no prev/next nav when there are no neighbours', () => {
@@ -306,7 +306,7 @@ test('start: a non-404 failure renders the generic page.loadFailed fallback, nev
 
 test('composeItem: a held entry shows the owner banner; a public entry does not', () => {
   const held = String(composeItem(itemVm({ reviewState: 'pending' })));
-  assert.match(held, /class="notice notice--accent c-item__held"/);
+  assert.match(held, /class="notice notice--strong c-item__held"/);
   assert.match(held, copyRe(t('item.held')));
 
   const open = String(composeItem(itemVm()));

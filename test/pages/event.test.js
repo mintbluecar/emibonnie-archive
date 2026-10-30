@@ -25,7 +25,7 @@ const flush = () => new Promise((resolve) => { setTimeout(resolve, 0); });
 
 test('composeEvent: back link, name, and the translation section with its entries', () => {
   const markup = String(composeEvent(EVENT));
-  assert.match(markup, /c-event__back/);
+  assert.match(markup, /<a class="meta tap-link" href="\/" data-slug=/);
   assert.match(markup, /<h1 class="heading heading--md">SOLLUNA HAPPY DAY<\/h1>/);
   assert.match(markup, /data-kind="translation"/);
   assert.match(markup, /href="\/t\/1900000000000000002"/);
@@ -56,8 +56,8 @@ test('composeEvent: a "more" button with the right data-kind/data-offset when a 
 
 test('composeEvent: the newest-first toggle and the report link', () => {
   const markup = String(composeEvent(EVENT));
-  assert.match(markup, /<button type="button" class="btn btn--secondary c-event__newest-toggle" aria-pressed="false" data-action="newest-first">newest first<\/button>/);
-  assert.match(markup, /<button class="btn btn--quiet" type="button" data-action="report">report<\/button>/);
+  assert.match(markup, /<button type="button" class="btn btn--quiet btn--sm c-event__newest-toggle" aria-pressed="false" data-action="newest-first">newest first<\/button>/);
+  assert.match(markup, /<button class="btn btn--quiet c-event__report" type="button" data-action="report">report<\/button>/);
   assert.match(markup, /<dialog[^>]*aria-labelledby="c-report-title"/);
 });
 
