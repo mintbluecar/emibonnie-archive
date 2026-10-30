@@ -9,7 +9,13 @@
  * on the card surface: the danger colour on its own tint is under 4.5:1.
  */
 
-.notice {
+/* notice--info has no override of its own: the default .notice look already
+   reads as an info banner, spelt out for callers that want to say so
+   (Styling system Task 5's class-usage check: a modifier with no look of
+   its own still needs a selector somewhere, same as .btn/.btn--secondary
+   above). */
+.notice,
+.notice--info {
   padding: var(--space-3) var(--space-4);
   font-size: var(--text-13);
   color: var(--color-ink);

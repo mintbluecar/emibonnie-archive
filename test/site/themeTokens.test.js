@@ -3,6 +3,10 @@
  * Task 10c (f): every dark value is written twice -- for the device's
  * dark mode unless forced light, and for a forced dark -- and the two
  * copies must never drift.
+ *
+ * Styling system Task 5 (spec "6. Enforcement", "Theme test"): a site
+ * `theme.css` may only set custom properties `tokens.css` defines --
+ * it overrides, never adds (`tokens.css`'s own doc comment).
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -10,6 +14,7 @@ import { readFileSync, mkdtempSync, rmSync, writeFileSync, cpSync } from 'node:f
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { runBuild } from '../../scripts/build.js';
+import { findDefinedCssTokens } from '../../scripts/buildChecks.js';
 
 /** The declarations inside the first `{…}` after `selector`, comments dropped, whitespace normalised. @param {string} css @param {string} selector */
 function declarations(css, selector) {
@@ -109,5 +114,21 @@ test('Task 2, Review Focus 2: a site that overrides only --font-latin (and never
     assert.match(css, /body\{[^}]*font-family:var\(--font-body\)/, 'base.css\'s body rule uses --font-body, not --font-latin directly');
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test('a theme setting --made-up fails: a theme.css may only set custom properties tokens.css defines', () => {
+  const definedByTokens = findDefinedCssTokens(readFileSync('src/styles/tokens.css', 'utf8'));
+  const setByTheme = findDefinedCssTokens(':root {\n  --made-up: 1px;\n}\n');
+  const notDefined = [...setByTheme].filter((token) => !definedByTokens.has(token));
+  assert.deepEqual(notDefined, ['--made-up']);
+});
+
+test('the bundled example site and this repo\'s own site set only tokens that tokens.css defines', () => {
+  const definedByTokens = findDefinedCssTokens(readFileSync('src/styles/tokens.css', 'utf8'));
+  for (const themeFile of ['examples/solluna/theme.css', 'site/theme.css']) {
+    const setByTheme = findDefinedCssTokens(readFileSync(themeFile, 'utf8'));
+    const notDefined = [...setByTheme].filter((token) => !definedByTokens.has(token));
+    assert.deepEqual(notDefined, [], themeFile);
   }
 });

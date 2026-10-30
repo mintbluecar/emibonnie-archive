@@ -126,6 +126,16 @@ export default [
     },
   },
   {
+    // eslint-import-resolver-node@0.3.10 doesn't follow a package.json with
+    // only an `exports` map and no `main`/`module` field (stylelint ships
+    // ESM-only, that way) -- Node itself resolves it fine (confirmed with
+    // `import.meta.resolve('stylelint')`); only this resolver can't.
+    files: ['scripts/lintStyles.js'],
+    rules: {
+      'import/no-unresolved': ['error', { ignore: ['^stylelint$'] }],
+    },
+  },
+  {
     files: ['public/js/state/**/*.js'],
     rules: {
       'no-restricted-imports': ['error', { patterns: [stateRestrictedPattern] }],

@@ -1,0 +1,36 @@
+{
+  "rules": {
+    "color-no-hex": true,
+    "function-disallowed-list": ["rgb", "rgba", "hsl", "hsla"],
+    "declaration-property-unit-disallowed-list": {
+      "/^padding/": ["px"],
+      "/^margin/": ["px"],
+      "gap": ["px"],
+      "border-radius": ["px"],
+      "min-height": ["px"]
+    },
+    "media-feature-name-value-allowed-list": {
+      "min-width": ["860px"],
+      "max-width": ["859.98px"]
+    },
+    "no-duplicate-selectors": true,
+    "at-rule-disallowed-list": ["layer"]
+  },
+  "overrides": [
+    {
+      "files": ["src/styles/tokens.css", "examples/*/theme.css"],
+      "rules": {
+        "color-no-hex": null,
+        "function-disallowed-list": null
+      }
+    },
+    {
+      "files": ["src/styles/components/*.css"],
+      "rules": {
+        "selector-disallowed-list": [
+          "/\\.(btn|field|check|card|table|chip|badge|notice|meta|label|heading|stack|cluster)\\b/"
+        ]
+      }
+    }
+  ]
+}
