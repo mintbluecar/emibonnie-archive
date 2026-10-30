@@ -24,15 +24,15 @@ export const STATES = Object.freeze(['fetched', 'needs_speakers', 'check', 'atta
  * @param {string} action @param {string} label @param {string} glyph @param {number} rowId
  */
 function iconButton(action, label, glyph, rowId) {
-  return html`<button class="c-import__icon" type="button" data-action="${action}" data-row="${rowId}"
+  return html`<button class="btn btn--secondary btn--sm btn--icon" type="button" data-action="${action}" data-row="${rowId}"
     title="${label}" aria-label="${label}">${glyph}</button>`;
 }
 
 /** @param {ImportRow} row */
 function actionsOf(row) {
-  const open = row.entryUrl ? html`<a class="c-import__link" href="${row.entryUrl}">${t('import.row.open')}</a>` : '';
-  const edit = row.editUrl ? html`<a class="c-import__link" href="${row.editUrl}">${t('import.row.edit')}</a>` : '';
-  const tweet = row.sourceUrl ? html`<a class="c-import__link" href="${row.sourceUrl}" target="_blank" rel="noopener noreferrer">${t('import.row.tweet')}</a>` : '';
+  const open = row.entryUrl ? html`<a class="btn btn--secondary btn--sm" href="${row.entryUrl}">${t('import.row.open')}</a>` : '';
+  const edit = row.editUrl ? html`<a class="btn btn--secondary btn--sm" href="${row.editUrl}">${t('import.row.edit')}</a>` : '';
+  const tweet = row.sourceUrl ? html`<a class="btn btn--secondary btn--sm" href="${row.sourceUrl}" target="_blank" rel="noopener noreferrer">${t('import.row.tweet')}</a>` : '';
   if (row.state === 'published') return html`${open}${edit}${tweet}`;
   if (row.state === 'failed') return html`${tweet}${iconButton('retry', t('import.row.retry'), '↻', row.id)}${iconButton('skip', t('import.row.skip'), '✕', row.id)}`;
   if (row.state === 'check') return html`${open}${edit}${tweet}${iconButton('skip', t('import.row.skip'), '✕', row.id)}${iconButton('archive', t('import.row.archive'), '✓', row.id)}`;
@@ -45,13 +45,51 @@ function actionsOf(row) {
 function chips(state) {
   const total = Object.values(state.counts).reduce((sum, count) => sum + count, 0);
   const chip = (/** @type {string} */ value, /** @type {string} */ label, /** @type {number} */ count) => html`
-    <button class="c-import__chip${state.state === value ? ' c-import__chip--on' : ''}" type="button"
-      data-action="filter" data-state="${value}" aria-pressed="${state.state === value}">${label} ${count}</button>
+    <button class="chip${state.state === value ? ' chip--on' : ''}" type="button"
+      data-action="filter" data-state="${value}" aria-pressed="${String(state.state === value)}">${label} <span class="chip__count">${count}</span></button>
   `;
   return html`
-    <div class="c-import__chips">
+    <div class="cluster cluster--2">
       ${chip('', t('import.state.queued') === 'queued' ? 'all' : 'all', total)}
       ${STATES.map((value) => chip(value, t(`import.state.${value}`), state.counts[value] ?? 0))}
+    </div>
+  `;
+}
+
+/**
+ * Every row as a table: a card per row on a phone, each cell under its
+ * column's name (its data-label).
+ * @param {ImportRow[]} rows
+ */
+function table(rows) {
+  const col = {
+    state: t('import.col.state'), translator: t('import.col.translator'), text: t('import.col.text'),
+    event: t('import.col.event'), actions: t('import.col.actions'),
+  };
+  return html`
+    <div class="c-import__rows">
+      <table class="table table--stack">
+        <thead>
+          <tr>
+            <th scope="col">${col.state}</th>
+            <th scope="col">${col.translator}</th>
+            <th scope="col">${col.text}</th>
+            <th scope="col">${col.event}</th>
+            <th class="table__actions" scope="col">${col.actions}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => html`
+            <tr>
+              <td class="c-import__state c-import__state--${row.state}" data-label="${col.state}">${t(`import.state.${row.state}`)}</td>
+              <td class="meta" data-label="${col.translator}">${row.translator?.handle ? `@${row.translator.handle}` : '—'}</td>
+              <td data-label="${col.text}"><span class="c-import__text">${row.text || row.error || row.externalId}</span></td>
+              <td class="meta" data-label="${col.event}">${row.event?.name ?? '—'}</td>
+              <td class="table__actions" data-label="${col.actions}"><div class="cluster cluster--2">${actionsOf(row)}</div></td>
+            </tr>
+          `)}
+        </tbody>
+      </table>
     </div>
   `;
 }
@@ -59,33 +97,21 @@ function chips(state) {
 /** @param {RowsState} state */
 export function render(state) {
   const { job, rows } = state;
-  const list = rows.length > 0 ? html`
-    <ul class="c-import__rows">
-      ${rows.map((row) => html`
-        <li class="c-import__row">
-          <span class="c-import__state c-import__state--${row.state}">${t(`import.state.${row.state}`)}</span>
-          <span class="c-import__who">${row.translator?.handle ? `@${row.translator.handle}` : '—'}</span>
-          <span class="c-import__text">${row.text || row.error || row.externalId}</span>
-          <span class="c-import__event">${row.event?.name ?? '—'}</span>
-          <span class="c-import__actions">${actionsOf(row)}</span>
-        </li>
-      `)}
-    </ul>
-  ` : html`<p class="c-import__empty">${t('import.empty')}</p>`;
+  const list = rows.length > 0 ? table(rows) : html`<p class="meta">${t('import.empty')}</p>`;
   return html`
-    <section class="c-import">
-      <header class="c-import__head">
-        <h1 class="c-import__title">${t('import.title')} ${job.id}</h1>
-        <p class="c-import__meta">${t(`import.source.${job.source}`)} · ${t(`import.status.${job.status}`)} · ${job.createdAt.slice(0, 10)}</p>
+    <section class="c-import stack stack--3">
+      <header class="stack stack--1">
+        <h1 class="heading heading--lg">${t('import.title')} ${job.id}</h1>
+        <p class="meta">${t(`import.source.${job.source}`)} · ${t(`import.status.${job.status}`)} · ${job.createdAt.slice(0, 10)}</p>
       </header>
       ${chips(state)}
-      <form class="c-import__search">
-        <label class="c-import__label" for="c-import-q">${t('import.search')}</label>
-        <input class="c-import__input" id="c-import-q" type="search" value="${state.q}" autocomplete="off">
+      <form class="field" data-import-search>
+        <label class="field__label" for="c-import-q">${t('import.search')}</label>
+        <input id="c-import-q" type="search" value="${state.q}" autocomplete="off">
       </form>
       ${list}
-      ${state.hasMore ? html`<button class="c-import__more" type="button" data-action="more">${t('import.more')}</button>` : ''}
-      <p class="c-import__status" role="status" data-import-status></p>
+      ${state.hasMore ? html`<div class="cluster"><button class="btn btn--secondary" type="button" data-action="more">${t('import.more')}</button></div>` : ''}
+      <p class="meta" role="status" data-import-status></p>
     </section>
   `;
 }
@@ -103,9 +129,9 @@ export function bind(root, { state, reload }) {
     state.state = button.getAttribute('data-state') ?? '';
     void reload().catch(fail);
   });
-  on(root, '.c-import__search', 'submit', (event, form) => {
+  on(root, '[data-import-search]', 'submit', (event, form) => {
     event.preventDefault();
-    const input = /** @type {HTMLInputElement|null} */ (form.querySelector('.c-import__input'));
+    const input = /** @type {HTMLInputElement|null} */ (form.querySelector('input[type="search"]'));
     state.q = input?.value.trim() ?? '';
     void reload().catch(fail);
   });

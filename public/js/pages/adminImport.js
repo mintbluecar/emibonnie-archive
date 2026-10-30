@@ -46,7 +46,7 @@ function mountSignIn(root) {
 function mountNotFound(root) {
   mountPage(root, pageShell.render({
     active: 'me', compact: true,
-    content: html`<p class="c-import__empty">${t('import.notFound')}</p>`,
+    content: html`<p class="meta">${t('import.notFound')}</p>`,
   }));
 }
 
