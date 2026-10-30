@@ -18,7 +18,7 @@ that's a check to add, not a one-off fix.
 `app.css` is one file, in cascade layers declared once:
 
 ```css
-@layer tokens, theme, base, primitives, layout, components;
+@layer tokens, base, primitives, layout, components;
 ```
 
 The build (`scripts/buildAssets.js`, `LAYER_ORDER`) wraps each source
@@ -28,18 +28,22 @@ rejects it if someone does:
 | Folder / file | Layer | Holds |
 |---|---|---|
 | `src/styles/tokens.css` | `tokens` | custom properties only |
-| a site's `theme.css` | `theme` | token overrides only, never a new token |
+| a site's `theme.css` | `tokens`, right after `tokens.css` | token overrides only, never a new token |
 | `src/styles/base.css` | `base` | element defaults |
 | `src/styles/primitives/*.css` | `primitives` | the shared building blocks below |
 | `src/styles/layout.css` | `layout` | page-level layout (`.container`, `.container--wide`) |
 | `src/styles/components/*.css` | `components` | one file per screen/component |
 
 Components sit above primitives, so a component *can* adjust a
-primitive -- but never by redeclaring its look (section 5). The site's
-`theme` layer sits right after `tokens`, so specificity between a site's
-override and the engine's two dark-mode blocks works exactly as
-`docs/site-settings.md` ("Light and dark") describes; nothing about
-layers changes what a site writes there.
+primitive -- but never by redeclaring its look (section 5). A site's
+`theme.css` has no layer of its own: the build puts it in `tokens`,
+right after `tokens.css`. Layers are compared before specificity, so a
+separate theme layer would let a light value on a plain `:root` beat the
+engine's dark-mode blocks; inside the same layer, specificity and source
+order decide exactly as `docs/site-settings.md` ("Light and dark")
+describes -- the engine's dark blocks beat a theme's plain `:root`, and
+the theme's own dark blocks beat the engine's. Nothing about layers
+changes what a site writes there.
 
 ## 2. Tokens (`src/styles/tokens.css`)
 

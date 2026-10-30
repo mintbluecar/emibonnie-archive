@@ -107,8 +107,12 @@ specific than a plain `:root`:
   a dark device, unless the visitor forced light;
 - `:root[data-theme="dark"] { … }`: forced dark, whatever the device.
 
-Both are specificity (0,2,0); a plain `:root` is (0,1,0). That decides
-how a site's `theme.css` must be written:
+Both are specificity (0,2,0); a plain `:root` is (0,1,0). Since 0.5.0
+`app.css` is built in cascade layers (`STYLING.md`, "Layers"); your
+`theme.css` loads in the same layer as the engine's tokens, right after
+them, so specificity and order decide everything below exactly as
+before -- no change needed. That decides how a site's `theme.css` must
+be written:
 
 - **Light values go on a plain `:root`.** It works because the engine's
   dark blocks outrank it wherever dark applies, and nothing outranks it
