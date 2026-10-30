@@ -66,7 +66,7 @@ export const callbackRoute = {
       const token = await exchangeCode(deps, { code: String(input.query.code ?? ''), verifier, redirectUri: redirectUriFor(input) });
       const me = await fetchMe(deps, token);
       const signedIn = await signInUser(deps, { via: 'x', subject: me.id, handle: me.username });
-      return redirectWithCookies(returnTo, [clearStateCookie(), signedIn.cookie]);
+      return redirectWithCookies(returnTo, [clearStateCookie(), ...signedIn.cookies]);
     } catch {
       return signInFailed(deps);
     }

@@ -58,7 +58,7 @@ export const callbackRoute = {
     try {
       const { sub } = await exchangeCode(deps, { code: String(input.query.code ?? ''), verifier, redirectUri: redirectUriFor(input), nonce });
       const signedIn = await signInUser(deps, { via: 'google', subject: sub, handle: null });
-      return redirectWithCookies(returnTo, [clearStateCookie(), signedIn.cookie]);
+      return redirectWithCookies(returnTo, [clearStateCookie(), ...signedIn.cookies]);
     } catch {
       return redirectWithCookies('/me?signin=failed', [clearStateCookie()]);
     }

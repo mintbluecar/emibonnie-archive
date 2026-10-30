@@ -156,7 +156,7 @@ export const signOutRoute = {
   path: '/api/auth/signout',
   cache: NO_STORE,
   /** @param {import('../http/handler.js').RouteInput} input @param {import('../http/deps.js').Deps} deps */
-  run: async (input, deps) => jsonWithCookies({ ok: true }, [await signOut(deps, input)]),
+  run: async (input, deps) => jsonWithCookies({ ok: true }, await signOut(deps, input)),
 };
 
 export const signOutAllRoute = defineRoute({
@@ -165,7 +165,7 @@ export const signOutAllRoute = defineRoute({
   auth: 'user',
   run: async (ctx, deps) => {
     await signOutEverywhere(deps, ctx.user.id);
-    return jsonWithCookies({ ok: true }, [await signOut(deps, ctx)]);
+    return jsonWithCookies({ ok: true }, await signOut(deps, ctx));
   },
 });
 
@@ -175,5 +175,5 @@ export const deleteAccountRoute = defineRoute({
   auth: 'user',
   limit: 'deleteAccount',
   body: deleteBody,
-  run: async ({ user }, deps) => jsonWithCookies({ ok: true }, [await deleteAccount(deps, user.id)]),
+  run: async ({ user }, deps) => jsonWithCookies({ ok: true }, await deleteAccount(deps, user.id)),
 });

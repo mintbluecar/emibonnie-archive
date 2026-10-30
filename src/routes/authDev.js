@@ -31,11 +31,11 @@ export const route = {
     const as = (/** @type {any} */ (input.body))?.as;
     if (as === 'owner') {
       const signedIn = await signInUser(deps, { via: 'x', subject: deps.site.ownerXUserId, handle: 'owner' });
-      return jsonWithCookies({ ok: true }, [signedIn.cookie]);
+      return jsonWithCookies({ ok: true }, signedIn.cookies);
     }
     if (as === 'member') {
       const signedIn = await signInUser(deps, { via: 'x', subject: '999999', handle: 'dev_member' });
-      return jsonWithCookies({ ok: true }, [signedIn.cookie]);
+      return jsonWithCookies({ ok: true }, signedIn.cookies);
     }
     if (as === 'translator') {
       // The first X account with a visible credited entry: the e2e's way into
@@ -49,11 +49,11 @@ export const route = {
       );
       if (!rows[0]) return jsonWithCookies({ error: 'not_found' }, [], 404);
       const signedIn = await signInUser(deps, { via: 'x', subject: rows[0].external_id, handle: rows[0].handle });
-      return jsonWithCookies({ ok: true, handle: rows[0].handle }, [signedIn.cookie]);
+      return jsonWithCookies({ ok: true, handle: rows[0].handle }, signedIn.cookies);
     }
     if (as === 'google') {
       const signedIn = await signInUser(deps, { via: 'google', subject: 'dev-google', handle: null });
-      return jsonWithCookies({ ok: true }, [signedIn.cookie]);
+      return jsonWithCookies({ ok: true }, signedIn.cookies);
     }
     return jsonWithCookies({ error: 'bad_request', message: 'unknown as' }, [], 400);
   },

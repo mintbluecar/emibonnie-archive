@@ -25,6 +25,7 @@ test('delete removes sessions and name; past items show a fan', async () => {
   const res = await api.call('POST', '/api/me/delete', { cookies: { sid }, body: { confirm: 'delete' } });
   assert.equal(res.status, 200, res.text);
   assert.ok(res.setCookies.some((c) => c.startsWith('sid=') && c.includes('Max-Age=0')), 'clears the session cookie');
+  assert.ok(res.setCookies.some((c) => c.startsWith('signed_in=;') && c.includes('Max-Age=0')), 'clears the signed_in hint');
 
   // Sessions are gone, the user is soft-deleted with no name.
   assert.equal(await count(deps.db, 'select count(*)::int as n from sessions where user_id = $1', ['x:55']), 0);

@@ -99,10 +99,12 @@ test('sign out clears the session; sign out all ends every session', async () =>
   const all = await api.call('POST', '/api/auth/signout-all', { cookies: { sid: token } });
   assert.equal(all.status, 200, all.text);
   assert.ok(all.setCookies.some((c) => c.startsWith('sid=') && c.includes('Max-Age=0')));
+  assert.ok(all.setCookies.some((c) => c.startsWith('signed_in=;') && c.includes('Max-Age=0')), 'sign out everywhere clears the hint');
 
   // A plain signout also works (already signed out; still returns 200 + clear).
   const out = await api.call('POST', '/api/auth/signout', { cookies: { sid: token } });
   assert.equal(out.status, 200);
+  assert.ok(out.setCookies.some((c) => c.startsWith('signed_in=;') && c.includes('Max-Age=0')), 'sign out clears the hint');
 });
 
 test('dev sign-in is 404 when VERCEL is set', async () => {
@@ -116,6 +118,7 @@ test('dev sign-in works when DEV_SIGN_IN=1 and no VERCEL', async () => {
   const res = await api.call('POST', '/api/auth/dev', { body: { as: 'member' } });
   assert.equal(res.status, 200, res.text);
   assert.ok(res.setCookies.some((c) => c.startsWith('sid=')));
+  assert.ok(res.setCookies.some((c) => c.startsWith('signed_in=1')), 'dev sign-in sets the hint too');
 });
 
 test('dev sign-in still works when VERCEL is present but empty (the e2e dev server forces it empty)', async () => {

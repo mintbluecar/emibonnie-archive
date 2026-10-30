@@ -6,16 +6,17 @@
  * end sessions.
  *
  * Session cookies are `HttpOnly; Secure; SameSite=Lax; Path=/`
- * (src/http/cookies.js), and only the token's SHA-256 is stored.
+ * (src/http/cookies.js), and only the token's SHA-256 is stored. Signing in
+ * also sets the readable `signed_in=1` hint (`hintCookie`), and signing
+ * out clears it with the session.
  */
 import { randomBytes } from 'node:crypto';
 import { Unauthorized, Forbidden, Conflict } from '../domain/errors.js';
-import { serializeCookie } from '../domain/cookies.js';
+import { SESSION_MAX_AGE, hintCookie, serializeCookie } from '../domain/cookies.js';
 import { linkXAccountToUser, xAccountIdsOfUser, xAccountsOptedOutOfUser } from '../repo/accounts.js';
 import { createSession, deleteSession, deleteUserSessions, userIdForToken } from '../repo/sessions.js';
 import { set as settingsSet } from '../repo/settings.js';
 
-const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days
 const COOKIE_NAME = 'sid';
 
 /** @typedef {{ db: import('../db/common.js').Db, site: import('../site/schema.js').Site, now?: () => Date }} SessionDeps */
@@ -59,10 +60,12 @@ async function upsertUserRow(tx, { site, via, subject, handle }) {
 
 /**
  * Sign the user in: upsert their user row, link their X account (for X),
- * create a 7-day session, and return the `SessionUser` plus its cookie.
+ * create a 7-day session, and return the `SessionUser`, its session cookie
+ * (`cookie`) and every cookie the response sets (`cookies`: the session
+ * and the hint).
  * @param {SessionDeps} deps
  * @param {{ via: 'x'|'google', subject: string, handle: string|null }} input
- * @returns {Promise<{ user: SessionUser, cookie: string }>}
+ * @returns {Promise<{ user: SessionUser, cookie: string, cookies: string[] }>}
  */
 export async function signInUser(deps, { via, subject, handle }) {
   const now = (deps.now ?? (() => new Date()))();
@@ -75,7 +78,8 @@ export async function signInUser(deps, { via, subject, handle }) {
     return userId;
   }, { actor: `${via}:${subject}` });
 
-  return { user: await loadSessionUser(deps, userId), cookie: serializeCookie(COOKIE_NAME, token, { maxAge: SESSION_MAX_AGE }) };
+  const cookie = serializeCookie(COOKIE_NAME, token, { maxAge: SESSION_MAX_AGE });
+  return { user: await loadSessionUser(deps, userId), cookie, cookies: [cookie, hintCookie(true)] };
 }
 
 /** @param {unknown} value @returns {string|null} */
@@ -179,16 +183,21 @@ export async function requireOwner(deps, input) {
 }
 
 /**
- * Sign the request out: delete the session and return the cookie that
- * clears it. Safe to call when there is no active session.
+ * Sign the request out: delete the session and return the cookies that
+ * clear it and the hint. Safe to call when there is no active session.
  * @param {SessionDeps} deps
  * @param {RouteInput} input
- * @returns {Promise<string>}
+ * @returns {Promise<string[]>}
  */
 export async function signOut(deps, input) {
   const token = input.cookies[COOKIE_NAME];
   if (token) await deps.db.transaction((tx) => deleteSession(tx, token), { actor: 'system' });
-  return serializeCookie(COOKIE_NAME, '', { maxAge: 0 });
+  return signedOutCookies();
+}
+
+/** The cookies that clear a session and its hint. @returns {string[]} */
+export function signedOutCookies() {
+  return [serializeCookie(COOKIE_NAME, '', { maxAge: 0 }), hintCookie(false)];
 }
 
 /** @param {SessionDeps} deps @param {string} userId */

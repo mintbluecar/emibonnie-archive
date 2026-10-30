@@ -64,6 +64,7 @@ test('callback signs in and sets sid, redirecting to returnTo', async () => {
   assert.match(sid, /HttpOnly/);
   // The oauth cookie is cleared.
   assert.ok(cb.setCookies.some((c) => c.startsWith('oauth=') && c.includes('Max-Age=0')));
+  assert.ok(cb.setCookies.includes('signed_in=1; Max-Age=604800; Secure; SameSite=Lax; Path=/'), 'sets the signed_in hint');
   // A user row was created, with no email or profile image.
   const { rows } = await db.query("select id, meta from users where id = 'x:12345'");
   assert.equal(rows.length, 1);
