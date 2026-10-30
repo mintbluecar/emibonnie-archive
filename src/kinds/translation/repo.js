@@ -282,18 +282,22 @@ export async function heldItemIds(db, { limit }) {
  * Approves or rejects held parts of one item: approving publishes them
  * (`pending = false`), rejecting keeps them hidden (`rejected = true`) so
  * they leave the waiting list and the verbatim text is never destroyed.
- * With `sourceId`, only that follow-up's part is touched (one import row).
+ * With `sourceId`, only that follow-up's part is touched (one import row);
+ * without it, `keepSourceIds` names follow-ups left as they are (parts an
+ * import still shows as their own `attached` rows).
  * @param {Tx} tx
- * @param {{ itemId: number, approve: boolean, sourceId?: string|null }} input
+ * @param {{ itemId: number, approve: boolean, sourceId?: string|null, keepSourceIds?: string[] }} input
  * @returns {Promise<void>}
  */
-export async function reviewHeld(tx, { itemId, approve, sourceId = null }) {
+export async function reviewHeld(tx, { itemId, approve, sourceId = null, keepSourceIds = [] }) {
   // One import row is one follow-up part: scoping by its external id keeps a
   // second held part on the same parent out of the decision.
-  const scoped = sourceId === null
-    ? ''
-    : ' and source_id in (select id from item_sources where item_id = $1 and external_id = $2)';
-  const params = sourceId === null ? [itemId] : [itemId, sourceId];
+  /** @type {[string, unknown[]]} */
+  const [scoped, params] = sourceId !== null
+    ? [' and source_id in (select id from item_sources where item_id = $1 and external_id = $2)', [itemId, sourceId]]
+    : keepSourceIds.length > 0
+      ? [' and source_id not in (select id from item_sources where item_id = $1 and external_id = any($2::text[]))', [itemId, keepSourceIds]]
+      : ['', [itemId]];
   if (approve) {
     await tx.query(`update translation_parts set pending = false where item_id = $1 and pending${scoped}`, params);
     return;

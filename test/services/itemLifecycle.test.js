@@ -64,9 +64,25 @@ test('publish approves the item and its held parts in one transaction', async ()
 test('publish with a part changes only that part', async () => {
   const itemId = await itemWithHeldParts('published', ['880011', '880012', '880013']);
   await write(deps(), 'system', (w) => publish(w, { itemId, kindName: 'translation', part: '880012' }));
-  const { parts } = await stateOf(itemId);
+  const { reviewState, parts } = await stateOf(itemId);
   assert.equal(parts[1].pending, false, 'its own part is approved');
   assert.equal(parts[2].pending, true, 'the sibling is unchanged');
+  assert.equal(parts[0].pending, true, "the item's own part is unchanged");
+  assert.equal(reviewState, 'published', "the item's own state is unchanged");
+
+  const held = await itemWithHeldParts('pending', ['880014', '880015']);
+  await write(deps(), 'system', (w) => publish(w, { itemId: held, kindName: 'translation', part: '880015' }));
+  const after = await stateOf(held);
+  assert.equal(after.reviewState, 'pending', 'a held item stays held when only a part is published');
+  assert.deepEqual(after.parts.map((part) => part.pending), [true, false]);
+});
+
+test('publish with keepHeld approves the item and every held part but those', async () => {
+  const itemId = await itemWithHeldParts('pending', ['880016', '880017', '880018']);
+  await write(deps(), 'system', (w) => publish(w, { itemId, kindName: 'translation', keepHeld: ['880018'] }));
+  const { reviewState, parts } = await stateOf(itemId);
+  assert.equal(reviewState, 'published');
+  assert.deepEqual(parts.map((part) => part.pending), [false, false, true]);
 });
 
 test('reject rejects the item and its held parts; remove soft-deletes with the reason', async () => {

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { IDS } from '../helpers/fixtures.js';
 import { ingestDeps, ingest, rows, SYSTEM } from '../helpers/ingest.js';
+import { insertItem, insertSource } from '../helpers/seed.js';
 import { createJob, insertRows, rowsPage, updateRow, getRow } from '../../src/repo/imports.js';
 import { publishRows, skipRow, archiveRow, retryRows } from '../../src/services/importActions.js';
 
@@ -144,6 +145,45 @@ test('skipping an attached row rejects only its own held part', async () => {
   assert.equal((await partAt(data.parentId, sibling.position)).rejected, false, "the other job's part is untouched");
   const parent = await rows(deps.db, 'select review_state from items where id = $1', [data.parentId]);
   assert.equal(parent[0].review_state, 'published', 'the parent is untouched');
+});
+
+test('publish ready on a thread job leaves an attached reply held, and a later skip rejects it truthfully', async () => {
+  // A held thread head (fetched) with its reply attached as a held part, in one job.
+  const { headId, jobId: job, replyRow } = await deps.db.transaction(async (tx) => {
+    const id = await insertItem(tx, { reviewState: 'pending' });
+    await tx.query('insert into translations (item_id) values ($1)', [id]);
+    for (const [position, externalId] of ['990040', '990041'].entries()) {
+      const sourceId = await insertSource(tx, { itemId: id, externalId, role: position === 0 ? 'primary' : 'follow_up' });
+      await tx.query(
+        'insert into translation_parts (item_id, position, source_id, body, pending) values ($1, $2, $3, $4, true)',
+        [id, position, sourceId, `part ${externalId}`],
+      );
+    }
+    const created = await createJob(tx, { source: 'notion', actor: 'system' });
+    await insertRows(tx, created, [
+      { platform: 'x', externalId: '990040', overrides: {} },
+      { platform: 'x', externalId: '990041', overrides: {} },
+    ]);
+    const { rows: all } = await rowsPage(tx, created, { offset: 0, limit: 10 });
+    const head = all.find((row) => row.externalId === '990040');
+    const reply = all.find((row) => row.externalId === '990041');
+    await updateRow(tx, head.id, { state: 'fetched', itemId: id });
+    await updateRow(tx, reply.id, { state: 'attached', itemId: id });
+    return { headId: id, jobId: created, replyRow: reply.id };
+  }, SYSTEM);
+
+  assert.equal((await publishRows(deps, { jobId: job, scope: 'ready', actor })).published, 1);
+  const item = await rows(deps.db, 'select review_state from items where id = $1', [headId]);
+  assert.equal(item[0].review_state, 'published', 'the head is published');
+  assert.equal((await partAt(headId, 0)).pending, false, "the head's own part is published");
+  assert.equal((await partAt(headId, 1)).pending, true, 'the attached reply stays held');
+  assert.equal((await getRow(deps.db, replyRow)).state, 'attached', 'and its row still reads attached');
+
+  await skipRow(deps, { jobId: job, rowId: replyRow, actor });
+  const reply = await partAt(headId, 1);
+  assert.equal(reply.rejected, true, 'the skip rejects the reply');
+  assert.equal(reply.pending, true, 'never published');
+  assert.equal((await getRow(deps.db, replyRow)).state, 'skipped');
 });
 
 test('archive publishes a check row; skipping a published row is refused', async () => {

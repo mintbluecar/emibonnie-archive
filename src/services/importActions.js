@@ -24,14 +24,29 @@ async function kindNameOf(w, itemId) {
 }
 
 /**
+ * The follow-ups of `itemId` that import rows still show as `attached`
+ * (held, awaiting their own publish or skip).
+ * @param {Write} w @param {number} itemId
+ * @returns {Promise<string[]>}
+ */
+async function attachedParts(w, itemId) {
+  const { rows } = await w.tx.query("select external_id from import_rows where item_id = $1 and state = 'attached'", [itemId]);
+  return rows.map((/** @type {any} */ row) => row.external_id);
+}
+
+/**
  * Publishes one row's item -- or, for an `attached` row, only its own held
- * part -- and marks the row published, in one transaction.
+ * part -- and marks the row published, in one transaction. A whole item's
+ * publish leaves held the parts still `attached` rows (a thread's replies):
+ * each is decided by its own row, so the row never reads `attached` while
+ * its part is public.
  * @param {Write} w @param {{ id: number, state: string, itemId: number, externalId: string }} row
  * @returns {Promise<void>}
  */
 async function publishRow(w, row) {
   const kindName = await kindNameOf(w, row.itemId);
-  await publish(w, { itemId: row.itemId, kindName, ...(row.state === 'attached' ? { part: row.externalId } : {}) });
+  const scope = row.state === 'attached' ? { part: row.externalId } : { keepHeld: await attachedParts(w, row.itemId) };
+  await publish(w, { itemId: row.itemId, kindName, ...scope });
   await updateRow(w.tx, row.id, { state: 'published' });
 }
 
