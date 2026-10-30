@@ -1,10 +1,11 @@
 // @ts-check
 /**
  * The non-JS half of the bundling step: the shared `app.css` (tokens,
- * base, layout, components, the site's theme), the self-hosted font
- * files + their `@font-face` CSS, and the content hashing both share.
- * `scripts/buildBundle.js` adds esbuild's page JS and ties this together
- * with `manifest.json` and the HTML placeholder rewrite.
+ * base, primitives, layout, components, the site's theme -- each in its
+ * own cascade layer, see `LAYER_ORDER`/`layerOf` below), the self-hosted
+ * font files + their `@font-face` CSS, and the content hashing both
+ * share. `scripts/buildBundle.js` adds esbuild's page JS and ties this
+ * together with `manifest.json` and the HTML placeholder rewrite.
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
@@ -62,16 +63,62 @@ export function writeHashedAsset(outDir, name, ext, content) {
 }
 
 /**
- * The engine CSS sources that make up `app.css`, in load order: tokens,
- * base, layout, then any `src/styles/components/*.css` (Task 2), then
- * the site's own `theme.css` last (so it can only override, never add,
- * per `src/styles/tokens.css`'s own doc comment).
+ * `app.css`'s cascade layers, declared once, in this order (the spec,
+ * "1. Layers, applied by the build"): the site's `theme` sits right
+ * after `tokens` so it can only ever beat `tokens`, never an unlayered
+ * rule's absence of a layer -- an unlayered theme would otherwise win
+ * over the engine's dark-mode blocks in `tokens.css`
+ * (`:root:not([data-theme="light"])`/`:root[data-theme="dark"]`),
+ * forcing a site's light colours into dark mode. Exported so tests can
+ * assert on it without duplicating the literal list.
+ * @type {string[]}
+ */
+export const LAYER_ORDER = ['tokens', 'theme', 'base', 'primitives', 'layout', 'components'];
+
+/**
+ * The cascade layer a build CSS source belongs to, decided from its path
+ * alone (so authors never write `@layer` themselves): `tokens.css` ->
+ * tokens, `base.css` -> base, `layout.css` -> layout, anything named
+ * `theme.css` (the site's own, copied in by `scripts/build.js`) ->
+ * theme, anything under a `primitives/` folder -> primitives, anything
+ * under a `components/` folder -> components.
+ * @param {string} filePath
+ * @returns {string}
+ */
+export function layerOf(filePath) {
+  const segments = filePath.split(path.sep);
+  const base = segments[segments.length - 1];
+  const dir = segments[segments.length - 2];
+  if (base === 'tokens.css') return 'tokens';
+  if (base === 'base.css') return 'base';
+  if (base === 'layout.css') return 'layout';
+  if (base === 'theme.css') return 'theme';
+  if (dir === 'primitives') return 'primitives';
+  if (dir === 'components') return 'components';
+  throw new Error(`build failed: ${filePath} doesn't match any known cascade layer`);
+}
+
+/**
+ * The engine CSS sources that make up `app.css`, in this order: tokens,
+ * base, any `src/styles/primitives/*.css` (sorted), layout, any
+ * `src/styles/components/*.css` (sorted, Task 2), then the site's own
+ * `theme.css` last (so it can only override, never add, per
+ * `src/styles/tokens.css`'s own doc comment). The build wraps each of
+ * these in its own `@layer` by folder (`buildAppCss`), so this
+ * concatenation order is cosmetic -- the layer order declared once, up
+ * front, is what actually decides the cascade.
  * @param {string} repoRoot @param {string|null} siteThemePath
  * @returns {string[]}
  */
 function collectAppCssSources(repoRoot, siteThemePath) {
   const stylesDir = path.join(repoRoot, 'src/styles');
-  const files = ['tokens.css', 'base.css', 'layout.css'].map((name) => path.join(stylesDir, name));
+  const files = ['tokens.css', 'base.css'].map((name) => path.join(stylesDir, name));
+  const primitivesDir = path.join(stylesDir, 'primitives');
+  if (existsSync(primitivesDir)) {
+    const sorted = readdirSync(primitivesDir).filter((f) => f.endsWith('.css')).sort();
+    files.push(...sorted.map((f) => path.join(primitivesDir, f)));
+  }
+  files.push(path.join(stylesDir, 'layout.css'));
   const componentsDir = path.join(stylesDir, 'components');
   if (existsSync(componentsDir)) {
     const sorted = readdirSync(componentsDir).filter((f) => f.endsWith('.css')).sort();
@@ -82,13 +129,33 @@ function collectAppCssSources(repoRoot, siteThemePath) {
 }
 
 /**
- * Builds the one shared, minified, content-hashed `app-<hash>.css`.
+ * Wraps one source file's text in its cascade layer, failing loudly (and
+ * naming the file) if the source already declares `@layer` itself --
+ * layers are assigned by folder, by the build, never by hand (globals.md:
+ * "nobody writes `@layer` by hand").
+ * @param {string} file @param {string} text
+ * @returns {string}
+ */
+function wrapInLayer(file, text) {
+  if (/@layer\b/.test(text)) {
+    throw new Error(`build failed: ${file} declares @layer itself; cascade layers are assigned by folder, by the build`);
+  }
+  return `@layer ${layerOf(file)} {\n${text}\n}`;
+}
+
+/**
+ * Builds the one shared, minified, content-hashed `app-<hash>.css`,
+ * assembled in cascade layers: the layer order declared once, first,
+ * then each source wrapped in its layer by `wrapInLayer`. esbuild's CSS
+ * minifier keeps `@layer` statements and blocks intact.
  * @param {string} repoRoot @param {string} outDir @param {string|null} siteThemePath
  * @returns {string} the filename written under `outDir`
  */
 export function buildAppCss(repoRoot, outDir, siteThemePath) {
   const sources = collectAppCssSources(repoRoot, siteThemePath);
-  const concatenated = sources.map((file) => readFileSync(file, 'utf8')).join('\n');
+  const layerStatement = `@layer ${LAYER_ORDER.join(', ')};`;
+  const layered = sources.map((file) => wrapInLayer(file, readFileSync(file, 'utf8')));
+  const concatenated = [layerStatement, ...layered].join('\n');
   const { code } = esbuild.transformSync(concatenated, { loader: 'css', minify: true });
   return writeHashedAsset(outDir, 'app', 'css', code);
 }

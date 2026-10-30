@@ -18,8 +18,10 @@ const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 /**
  * Engine CSS that must only reference tokens `src/styles/tokens.css`
- * defines: today, just that file itself, plus `public/css/**` once Plan 1b
- * adds it.
+ * defines: everything under `src/styles` -- `tokens.css`, `base.css`,
+ * `layout.css`, `src/styles/primitives/*.css` and
+ * `src/styles/components/*.css` alike, `walkFiles` recurses into every
+ * subfolder -- plus `public/css/**` once Plan 1b adds it.
  * @param {string} repoRoot
  * @returns {{ path: string, text: string }[]}
  */

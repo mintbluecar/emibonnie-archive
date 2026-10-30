@@ -12,6 +12,7 @@ import { mkdtempSync, rmSync, readFileSync, existsSync, cpSync, writeFileSync, m
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { runBuild } from '../../scripts/build.js';
+import { buildAppCss } from '../../scripts/buildAssets.js';
 
 /**
  * A temp repo root with `src/`, the solluna example as `site/`, and one
@@ -197,11 +198,109 @@ test('runBuild: an unresolved asset placeholder fails the build loudly', async (
   }
 });
 
+/**
+ * A temp repo root with one `src/styles/*` source per cascade layer --
+ * `tokens.css`, `base.css`, `primitives/mark.css`, `layout.css`,
+ * `components/mark.css` -- each setting a `--marker` custom property to
+ * its own folder's name, plus a separate site theme file. Lets a test
+ * assert which `@layer` each source landed in without esbuild's minifier
+ * rewriting the assertable value (a plain identifier custom-property
+ * value survives minification unchanged; a named colour doesn't -- it
+ * gets shortened to a hex triplet). Caller must
+ * `rmSync(repoRoot, { recursive: true, force: true })`.
+ * @returns {{ repoRoot: string, siteThemePath: string }}
+ */
+function makeLayeredStylesRepoRoot() {
+  const repoRoot = mkdtempSync(path.join(tmpdir(), 'fan-archive-layers-'));
+  const stylesDir = path.join(repoRoot, 'src/styles');
+  mkdirSync(path.join(stylesDir, 'primitives'), { recursive: true });
+  mkdirSync(path.join(stylesDir, 'components'), { recursive: true });
+  writeFileSync(path.join(stylesDir, 'tokens.css'), ':root { --marker: tokens; }');
+  writeFileSync(path.join(stylesDir, 'base.css'), ':root { --marker: base; }');
+  writeFileSync(path.join(stylesDir, 'primitives/mark.css'), ':root { --marker: primitives; }');
+  writeFileSync(path.join(stylesDir, 'layout.css'), ':root { --marker: layout; }');
+  writeFileSync(path.join(stylesDir, 'components/mark.css'), ':root { --marker: components; }');
+  const siteThemePath = path.join(repoRoot, 'theme.css');
+  writeFileSync(siteThemePath, ':root { --color-bg: #f6efe3; }');
+  return { repoRoot, siteThemePath };
+}
+
+test('buildAppCss: app.css declares the layer order once, first', () => {
+  const { repoRoot, siteThemePath } = makeLayeredStylesRepoRoot();
+  const outDir = mkdtempSync(path.join(tmpdir(), 'fan-archive-layers-out-'));
+  try {
+    const fileName = buildAppCss(repoRoot, outDir, siteThemePath);
+    const css = readFileSync(path.join(outDir, fileName), 'utf8');
+    assert.ok(css.startsWith('@layer tokens,theme,base,primitives,layout,components;'), css.slice(0, 80));
+    assert.equal(
+      [...css.matchAll(/@layer tokens,theme,base,primitives,layout,components;/g)].length,
+      1,
+      'the order statement appears exactly once',
+    );
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+    rmSync(outDir, { recursive: true, force: true });
+  }
+});
+
+test('buildAppCss: each source lands in its layer', () => {
+  const { repoRoot, siteThemePath } = makeLayeredStylesRepoRoot();
+  const outDir = mkdtempSync(path.join(tmpdir(), 'fan-archive-layers-out-'));
+  try {
+    const fileName = buildAppCss(repoRoot, outDir, siteThemePath);
+    const css = readFileSync(path.join(outDir, fileName), 'utf8');
+    for (const [layer, rule] of [
+      ['tokens', ':root{--marker: tokens}'],
+      ['base', ':root{--marker: base}'],
+      ['primitives', ':root{--marker: primitives}'],
+      ['layout', ':root{--marker: layout}'],
+      ['components', ':root{--marker: components}'],
+      ['theme', ':root{--color-bg: #f6efe3}'],
+    ]) {
+      assert.ok(css.includes(`@layer ${layer}{${rule}}`), `expected @layer ${layer}{${rule}} in ${css}`);
+    }
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+    rmSync(outDir, { recursive: true, force: true });
+  }
+});
+
+test('buildAppCss: a hand-written @layer in a source fails the build, naming the file', () => {
+  const repoRoot = mkdtempSync(path.join(tmpdir(), 'fan-archive-layers-bad-'));
+  const stylesDir = path.join(repoRoot, 'src/styles');
+  mkdirSync(stylesDir, { recursive: true });
+  const basePath = path.join(stylesDir, 'base.css');
+  writeFileSync(path.join(stylesDir, 'tokens.css'), ':root { --marker: tokens; }');
+  writeFileSync(basePath, '@layer evil { button { color: red; } }');
+  writeFileSync(path.join(stylesDir, 'layout.css'), '.container {}');
+  const outDir = mkdtempSync(path.join(tmpdir(), 'fan-archive-layers-bad-out-'));
+  try {
+    assert.throws(() => buildAppCss(repoRoot, outDir, null), new RegExp(basePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+    rmSync(outDir, { recursive: true, force: true });
+  }
+});
+
+test('buildAppCss: the site theme is layered, never unlayered', () => {
+  const { repoRoot, siteThemePath } = makeLayeredStylesRepoRoot();
+  const outDir = mkdtempSync(path.join(tmpdir(), 'fan-archive-layers-out-'));
+  try {
+    const fileName = buildAppCss(repoRoot, outDir, siteThemePath);
+    const css = readFileSync(path.join(outDir, fileName), 'utf8');
+    assert.ok(css.includes('@layer theme{:root{--color-bg: #f6efe3}}'), css);
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+    rmSync(outDir, { recursive: true, force: true });
+  }
+});
+
 test('type scale (Task 10b): every font size in src/styles is a --text-* token (none hard-coded), and each token is defined in tokens.css with the bump', async () => {
   const { readdirSync, readFileSync: read } = await import('node:fs');
   const stylesDir = new URL('../../src/styles/', import.meta.url);
   const files = [...readdirSync(stylesDir).filter((f) => f.endsWith('.css')).map((f) => new URL(f, stylesDir)),
-    ...readdirSync(new URL('components/', stylesDir)).filter((f) => f.endsWith('.css')).map((f) => new URL(`components/${f}`, stylesDir))];
+    ...readdirSync(new URL('components/', stylesDir)).filter((f) => f.endsWith('.css')).map((f) => new URL(`components/${f}`, stylesDir)),
+    ...readdirSync(new URL('primitives/', stylesDir)).filter((f) => f.endsWith('.css')).map((f) => new URL(`primitives/${f}`, stylesDir))];
   const tokens = read(new URL('tokens.css', stylesDir), 'utf8');
   assert.match(tokens, /--text-bump: 2px;/);
   for (const file of files) {
