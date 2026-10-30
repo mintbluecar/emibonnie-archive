@@ -36,3 +36,29 @@ test('extractTweetIds: preserves order and drops duplicates', () => {
 
   assert.deepEqual(extractTweetIds(text), ['1900000000000000001', '1900000000000000002']);
 });
+
+test('extractTweetIds: links wrapped in punctuation still count', () => {
+  const cases = [
+    ['[t](https://x.com/u/status/123456)', ['123456']],
+    ['<https://x.com/u/status/123456>', ['123456']],
+    ['"https://x.com/u/status/123456"', ['123456']],
+    ['https://x.com/u/status/123456.', ['123456']],
+    ['(x.com/u/status/123456)', ['123456']],
+    ['https://x.com/u/status/123456,https://x.com/u/status/777777', ['123456', '777777']],
+    ['HTTPS://X.COM/u/status/123456', ['123456']],
+    ['see twitter.com/u/status/123456!', ['123456']],
+  ];
+  for (const [text, ids] of cases) assert.deepEqual(extractTweetIds(/** @type {string} */ (text)), ids, String(text));
+});
+
+test('extractTweetIds: other hosts and bare numbers are ignored', () => {
+  const cases = [
+    'fox.com/a/status/12345',
+    'https://notx.com/a/status/123456',
+    'https://evil.example/x.com/a/status/654321',
+    'https://fxtwitter.com/u/status/123456',
+    'https://vxtwitter.com/u/status/123456',
+    'order 1900000000000000001 shipped',
+  ];
+  for (const text of cases) assert.deepEqual(extractTweetIds(text), [], text);
+});

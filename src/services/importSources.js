@@ -122,17 +122,13 @@ export function parseNotionCsv(text) {
   return { rows, skipped };
 }
 
-/** A bare `x.com/…` or `twitter.com/…` (no scheme, not inside another host or path). */
-const BARE_TWEET_HOST = /(?<![\w./:@-])((?:www\.|mobile\.)?(?:x|twitter)\.com\/)/giu;
-
 /**
- * Every tweet id in a block of text, in first-seen order, deduped. Links
- * pasted without a scheme get one, then `extractTweetIds` reads them
- * (so only x.com/twitter.com hosts count).
+ * Every tweet id in a block of text, in first-seen order, deduped
+ * (`extractTweetIds`: x.com/twitter.com links only, scheme optional).
  * @param {string} text @returns {string[]}
  */
 export function extractStatusLinks(text) {
-  return extractTweetIds(text.replace(BARE_TWEET_HOST, 'https://$1'));
+  return extractTweetIds(text);
 }
 
 /**
