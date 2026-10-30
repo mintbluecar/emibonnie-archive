@@ -19,9 +19,11 @@ export const devImportRoute = defineRoute({
   method: 'POST',
   path: '/api/dev/import',
   auth: 'none',
-  body: idsBody,
-  run: async ({ body: ids }, deps) => {
+  // No `body` parser: the gate answers 404 before the body is read, so a
+  // deployed site never reveals the route.
+  run: async ({ body }, deps) => {
     if (!(deps.env?.DEV_SIGN_IN === '1' && !deps.env?.VERCEL)) throw new NotFound();
+    const ids = idsBody(body);
     return ids.length === 0 ? { jobId: null, rows: [] } : seedHeldJob(deps, ids);
   },
 });

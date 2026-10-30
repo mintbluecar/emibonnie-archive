@@ -107,3 +107,10 @@ test('the dev seed is a 404 without DEV_SIGN_IN', async () => {
   const res = await off.call('POST', '/api/dev/import', { cookies: owner, body: { urls: [`https://x.com/a/status/${IDS.POST}`] } });
   assert.equal(res.status, 404);
 });
+
+test('on Vercel the dev seed is a 404 before its body is read', async () => {
+  const deployed = apiFor(deps, { env: { DEV_SIGN_IN: '1', VERCEL: '1' } });
+  // `String(url)` would throw on this object: only the gate may answer.
+  const res = await deployed.call('POST', '/api/dev/import', { body: { urls: [{ toString: 1 }] } });
+  assert.equal(res.status, 404, res.text);
+});
