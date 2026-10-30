@@ -142,6 +142,7 @@
 .c-import__icon {
   width: 28px;
   height: 28px;
+  padding: 0;
   border: 1px solid var(--color-card-shadow);
   border-radius: 8px;
   background: transparent;

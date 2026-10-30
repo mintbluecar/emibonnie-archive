@@ -160,6 +160,19 @@ function resolveAssetToken(token, manifest) {
 }
 
 /**
+ * Resolves every `{{asset:...}}` placeholder in `text` against `manifest`
+ * (`resolveAssetToken`) -- the one place a page template's placeholders
+ * become real `/build/...` URLs, shared by every page `writeHtmlPages`
+ * writes and, Styling system Task 3, `scripts/styleguide.js`'s dev-only
+ * style guide page.
+ * @param {string} text @param {Manifest} manifest
+ * @returns {string}
+ */
+export function resolveAssetPlaceholders(text, manifest) {
+  return text.replace(ASSET_PLACEHOLDER, (_whole, token) => resolveAssetToken(token, manifest));
+}
+
+/**
  * Writes every page template (`src/html/*.html`, tracked, with
  * `{{asset:...}}` placeholders) to `public/<name>.html` (generated,
  * gitignored) with its placeholders resolved to the manifest's hashed
@@ -177,7 +190,7 @@ function writeHtmlPages(htmlDir, publicDir, manifest) {
   for (const entry of readdirSync(htmlDir, { withFileTypes: true })) {
     if (!entry.isFile() || !entry.name.endsWith('.html')) continue;
     const text = readFileSync(path.join(htmlDir, entry.name), 'utf8');
-    writeFileSync(path.join(publicDir, entry.name), text.replace(ASSET_PLACEHOLDER, (_whole, token) => resolveAssetToken(token, manifest)));
+    writeFileSync(path.join(publicDir, entry.name), resolveAssetPlaceholders(text, manifest));
   }
 }
 

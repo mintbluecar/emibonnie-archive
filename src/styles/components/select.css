@@ -15,6 +15,9 @@
   -webkit-appearance: none;
   width: 100%;
   padding-right: 40px;
+  /* The wrapper draws its own chevron below (::after); cancels base.css's
+     background-gradient chevron so a wrapped select never shows both. */
+  background-image: none;
 }
 
 .c-select::after {

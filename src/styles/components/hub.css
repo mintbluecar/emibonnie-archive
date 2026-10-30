@@ -77,6 +77,9 @@
   width: 100%;
   min-height: 44px;
   margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
   font-size: var(--text-12);
   color: var(--color-ink-muted);
   text-align: center;
@@ -113,6 +116,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  border: 0;
   border-radius: 999px;
   background: var(--color-card);
 }
@@ -133,6 +138,7 @@
   width: 100%;
   margin-top: 14px;
   padding: 10px;
+  border: 0;
   border-radius: 12px;
   font-weight: 800;
   color: var(--color-accent-text);

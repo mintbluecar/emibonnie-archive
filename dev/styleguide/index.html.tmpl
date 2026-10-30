@@ -1,0 +1,70 @@
+<!--
+  Styling system Task 3 (spec "7. Docs and the style guide"): the
+  dev-only style guide, reachable at /dev/styleguide in local dev only
+  (scripts/dev.js) -- never built into public/, never deployed. Every
+  primitive and element default, in every variant, light and dark,
+  rendered from the real built app and fonts CSS, resolved by
+  scripts/styleguide.js the same way every other page's asset
+  placeholders are. Light/dark here comes from the OS/browser's own
+  prefers-color-scheme -- the same thing tokens.css itself keys off --
+  so there is nothing to toggle on the page.
+
+  One <section id="..."> per element/primitive group; later tasks add
+  sections as primitives land. This task's section is #elements: the
+  on-brand defaults base.css now gives a bare control.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Style guide</title>
+<link rel="stylesheet" href="{{asset:app.css}}">
+<link rel="stylesheet" href="{{asset:fonts.css}}">
+</head>
+<body>
+<main>
+<h1>Style guide</h1>
+<p>Dev only -- never built into <code>public/</code>, never deployed.</p>
+
+<section id="elements">
+<h2>Elements (base.css)</h2>
+<p>A bare, unclassed control: the on-brand default every page gets when a
+component doesn't style its own.</p>
+
+<p><button type="button">Button</button></p>
+
+<p><input type="text" value="Text input"></p>
+
+<p><input type="search" value="Search input"></p>
+
+<p>
+<select>
+<option>One</option>
+<option>Two</option>
+<option>Three</option>
+</select>
+</p>
+
+<p><textarea rows="3">Textarea</textarea></p>
+
+<p><label><input type="checkbox"> Checkbox, with its label</label></p>
+
+<p><label><input type="radio" name="styleguide-radio"> Radio, with its label</label></p>
+
+<table>
+<thead>
+<tr><th>Name</th><th>Role</th></tr>
+</thead>
+<tbody>
+<tr><td>Moon</td><td>Translator</td></tr>
+<tr><td>Sunny</td><td>Owner</td></tr>
+</tbody>
+</table>
+
+<p><a href="#elements">A bare link</a></p>
+</section>
+</main>
+</body>
+</html>

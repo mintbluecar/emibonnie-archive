@@ -12,6 +12,7 @@ import {
   writeKindsRegistries,
 } from './buildOutputs.js';
 import { runBundling } from './buildBundle.js';
+import { buildStyleguide } from './styleguide.js';
 import { unnamedSource } from '../src/http/router.js';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -211,6 +212,14 @@ export async function runBuild(options = {}) {
   const siteThemePath = path.join(publicSiteDir, 'theme.css');
   await runBundling({
     repoRoot, engineRoot: REPO_ROOT, siteThemePath: existsSync(siteThemePath) ? siteThemePath : null, faviconPath: faviconSourceOf(siteDir, site),
+  });
+
+  // Styling system Task 3: the dev-only style guide, never deployed (dev/
+  // sits outside public/) -- built after bundling so it gets this build's
+  // real, hashed app.css/fonts.css like every other page.
+  buildStyleguide({
+    manifestPath: path.join(repoRoot, 'public/build/manifest.json'),
+    outPath: path.join(repoRoot, 'dev/styleguide/index.html'),
   });
 
   const routeRewrites = await readRouteRewrites();

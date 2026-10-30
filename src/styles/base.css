@@ -54,13 +54,100 @@ img, video {
   display: block;
 }
 
+/*
+ * Styling system Task 3 (spec "3. On-brand element defaults"): an
+ * unclassed button, text field, select, textarea, checkbox, radio, table
+ * and the keyboard focus ring all look on-brand instead of falling back
+ * to the browser -- or, for button, to bare text, as this file did until
+ * now. A component sits in a higher cascade layer, so any property it
+ * sets of its own still wins; these are only what's left to the browser
+ * when a component doesn't.
+ */
+
+/* A bare button reads as a secondary button: on the card surface, bordered,
+   never plain text. font-family only (never the `font` shorthand, and
+   never a literal font-size -- every font-size in src/styles must be a
+   --text-* token, test/core/bundling.test.js): the shorthand also sets
+   line-height, which would nudge text in an already-styled control that
+   sets its own font-size/colour but never its own line-height -- a
+   visual change this task must not make. */
 button {
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: 0;
-  padding: 0;
+  font-family: inherit;
+  color: var(--color-ink);
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
   cursor: pointer;
+}
+
+/* Every text-like field (not checkbox/radio, which get their own rule
+   below) shares one box, on the page background. */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  font-family: inherit;
+  color: var(--color-ink);
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+}
+
+textarea {
+  resize: vertical;
+}
+
+/* The native arrow can't be positioned or recoloured, so it's hidden and
+   replaced by a chevron drawn as two gradients (never an image: the CSP's
+   img-src stays untouched), inset from the right edge, vertically
+   centred. Sized in `em` (never `px`) so it scales with the field's own
+   font-size without a token of its own. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: calc(var(--space-6) + var(--space-2));
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--color-ink-muted) 50%),
+    linear-gradient(135deg, var(--color-ink-muted) 50%, transparent 50%);
+  background-position: calc(100% - 1.3em) center, calc(100% - 1em) center;
+  background-size: 0.35em 0.35em, 0.35em 0.35em;
+  background-repeat: no-repeat;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  /* No visible text of their own, but still a control: the body font
+     throughout (Review Focus, style guide e2e), same as every other
+     bare control. */
+  font-family: inherit;
+  width: var(--space-5);
+  height: var(--space-5);
+  accent-color: var(--color-label);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+  font-weight: var(--weight-bold);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1.5px solid var(--color-card-shadow);
+}
+
+td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-card-shadow);
+}
+
+/* Keyboard focus, every interactive primitive, light and dark (Review
+   Focus 4): a ring from the focus tokens, never the browser's own. */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 @media (prefers-reduced-motion: reduce) {

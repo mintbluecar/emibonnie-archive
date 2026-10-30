@@ -46,6 +46,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  border: 0;
   background: rgba(0, 0, 0, 0.5);
   color: #fff;
   border-radius: 999px;

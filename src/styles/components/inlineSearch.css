@@ -52,6 +52,8 @@
 
 .c-search__clear-all {
   padding: var(--chip-pad-y) 2px;
+  border: 0;
+  background: none;
   font-size: var(--text-11);
   color: var(--color-ink-muted);
   text-decoration: underline;
@@ -79,6 +81,9 @@
   width: 100%;
   min-height: 44px;
   margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
   font-size: var(--text-12);
   color: var(--color-ink-muted);
   text-align: center;

@@ -8,6 +8,7 @@ import { Readable } from 'node:stream';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { parseCookies } from '../src/domain/cookies.js';
 import { DEV_ROLES } from '../src/routes/authDev.js';
+import { DEV_STYLEGUIDE_PATH, serveDevStyleguide } from './devStyleguide.js';
 
 /**
  * The dev stand-in for Vercel's request context, which `waitUntil` from
@@ -263,6 +264,14 @@ export function devSignInRedirect(devAs, req, url) {
 }
 
 /**
+ * The incoming request's URL. The Host header keeps the port, so the
+ * result's origin is the browser's own (the Origin check).
+ * @param {import('node:http').IncomingMessage} req
+ * @returns {URL}
+ */
+const requestUrl = (req) => new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+
+/**
  * Creates a dev HTTP server that mirrors Vercel's routing for the
  * generated `vercel.json`: a redirect answers first (Vercel runs
  * `redirects` before `rewrites`); then the first matching rewrite wins; one whose
@@ -272,18 +281,20 @@ export function devSignInRedirect(devAs, req, url) {
  * serves its destination file; no match serves the path as a static
  * file. Used both for local development and, through the same contract,
  * by tests exercising the Vercel function's behaviour without Vercel.
- * `devAs` signs a browser in first (`devSignInRedirect`).
- * @param {{ root: string, routes?: unknown[], rewrites?: Rewrite[], redirects?: Redirect[], headers?: HeaderRule[], handle: ApiHandler, devAs?: string }} options
+ * `devAs` signs a browser in first (`devSignInRedirect`). `/dev/styleguide`
+ * (Styling system Task 3) is served from `devStyleguidePath` before any
+ * rewrite is even considered -- it isn't a production route at all, so it
+ * can't be reached through `vercel.json`'s rewrites.
+ * @param {{ root: string, routes?: unknown[], rewrites?: Rewrite[], redirects?: Redirect[], headers?: HeaderRule[], handle: ApiHandler, devAs?: string, devStyleguidePath?: string }} options
  * @returns {import('node:http').Server}
  */
-export function createServer({ root, rewrites = [], redirects = [], headers = [], handle, devAs }) {
+export function createServer({ root, rewrites = [], redirects = [], headers = [], handle, devAs, devStyleguidePath = DEV_STYLEGUIDE_PATH }) {
   installRequestContext();
   assertUnnamedSources(rewrites);
   /** @type {import('node:http').Server} */
   const server = http.createServer(async (req, res) => {
     try {
-      // The Host header keeps the port, so the request URL's origin is the browser's (the Origin check).
-      const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+      const url = requestUrl(req);
       // Matched against the incoming path, not the rewritten one -- same as Vercel's own
       // `headers` config (review round 2, "also, small"): a `source` names what the browser
       // actually requested, regardless of which file or function answers it.
@@ -300,6 +311,7 @@ export function createServer({ root, rewrites = [], redirects = [], headers = []
         res.end();
         return;
       }
+      if (url.pathname === '/dev/styleguide') { await serveDevStyleguide(devStyleguidePath, res); return; }
       const file = staticTargetOf(rewrites, url.pathname);
       if (file === null) {
         await serveApi(handle, toWebRequest(req, url), res).then((results) => server.emit('waitUntilSettled', results));
