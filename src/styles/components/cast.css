@@ -1,8 +1,12 @@
 /*
  * public/js/components/cast.js: the cast legend, one pill per speaker,
- * outlined in that person's colour (--c). Sized like a chip (content plus
- * --chip-pad-y/--chip-pad-x) but never clickable, so it isn't the chip
- * primitive: no pointer, no target. Its emoji is bubbles.css's .c-emoji.
+ * outlined in that person's colour (--c). Padded like a chip
+ * (--chip-pad-y/--chip-pad-x), but it isn't the chip primitive (even a
+ * display-only <span class="chip">) because its look differs on almost
+ * every line: smaller text (--text-11), a card-coloured fill rather than
+ * the paper, a per-person outline, and no --target-min floor -- it's a
+ * legend, never a control, so it stays as short as its text. Using chip
+ * would mean overriding most of it. Its emoji is bubbles.css's .c-emoji.
  */
 
 .c-cast {

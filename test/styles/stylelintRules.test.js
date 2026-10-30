@@ -67,3 +67,15 @@ test('selector-disallowed-list never flags a hyphenated name that merely starts 
   const results = await Promise.all(selectors.map((selector) => lintComponent(`${selector} { color: red; }`)));
   results.forEach((result, i) => assert.equal(result.errored, false, selectors[i]));
 });
+
+test('selector-disallowed-list covers the later primitives too: segmented and tap-link (final review M2)', async () => {
+  const flagged = ['.segmented', '.segmented__option', '.tap-link', '.c-x .tap-link--quiet'];
+  const flaggedResults = await Promise.all(flagged.map((selector) => lintComponent(`${selector} { color: red; }`)));
+  flaggedResults.forEach((result, i) => {
+    assert.equal(result.errored, true, flagged[i]);
+    assert.match(result.report, /selector-disallowed-list/, flagged[i]);
+  });
+  const allowed = ['.segmented-control', '.tap-linker', '.c-tap-link'];
+  const allowedResults = await Promise.all(allowed.map((selector) => lintComponent(`${selector} { color: red; }`)));
+  allowedResults.forEach((result, i) => assert.equal(result.errored, false, allowed[i]));
+});

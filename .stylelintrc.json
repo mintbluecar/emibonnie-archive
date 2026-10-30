@@ -34,7 +34,7 @@
       "plugins": ["./scripts/stylelint/no-rebuilt-primitive.js"],
       "rules": {
         "selector-disallowed-list": [
-          "/\\.(btn|field|check|card|table|chip|badge|notice|meta|label|heading|stack|cluster)(?=$|__|--|[^\\w-])/"
+          "/\\.(btn|field|check|card|table|chip|badge|notice|segmented|meta|label|heading|tap-link|stack|cluster)(?=$|__|--|[^\\w-])/"
         ],
         "local/no-rebuilt-primitive": true
       }

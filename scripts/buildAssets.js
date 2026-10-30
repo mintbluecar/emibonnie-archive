@@ -143,12 +143,13 @@ function collectAppCssSources(repoRoot, siteThemePath) {
  * Wraps one source file's text in its cascade layer, failing loudly (and
  * naming the file) if the source already declares `@layer` itself --
  * layers are assigned by folder, by the build, never by hand (globals.md:
- * "nobody writes `@layer` by hand").
+ * "nobody writes `@layer` by hand"). Comments are stripped before the
+ * check, so a comment that merely mentions the at-rule never fails it.
  * @param {string} file @param {string} text
  * @returns {string}
  */
 function wrapInLayer(file, text) {
-  if (/@layer\b/.test(text)) {
+  if (/@layer\b/.test(text.replace(/\/\*[\s\S]*?\*\//g, ''))) {
     throw new Error(`build failed: ${file} declares @layer itself; cascade layers are assigned by folder, by the build`);
   }
   return `@layer ${layerOf(file)} {\n${text}\n}`;

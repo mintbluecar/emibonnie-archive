@@ -422,6 +422,26 @@ test('buildAppCss: a hand-written @layer in a source fails the build, naming the
   }
 });
 
+test('buildAppCss: a comment that merely mentions @layer passes -- only a real at-rule fails (final review T1)', () => {
+  const repoRoot = mkdtempSync(path.join(tmpdir(), 'fan-archive-layers-comment-'));
+  const stylesDir = path.join(repoRoot, 'src/styles');
+  mkdirSync(stylesDir, { recursive: true });
+  writeFileSync(path.join(stylesDir, 'tokens.css'), ':root { --marker: tokens; }');
+  writeFileSync(path.join(stylesDir, 'base.css'), '/* the build adds @layer base around this file */\nbutton { color: red; }');
+  writeFileSync(path.join(stylesDir, 'layout.css'), '.container {}');
+  const outDir = mkdtempSync(path.join(tmpdir(), 'fan-archive-layers-comment-out-'));
+  try {
+    const css = readFileSync(path.join(outDir, buildAppCss(repoRoot, outDir, null)), 'utf8');
+    assert.match(css, /@layer base\{button\{color:red\}\}/);
+
+    writeFileSync(path.join(stylesDir, 'base.css'), '/* a comment */\n@layer evil { button { color: red; } }');
+    assert.throws(() => buildAppCss(repoRoot, outDir, null), /declares @layer itself/);
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+    rmSync(outDir, { recursive: true, force: true });
+  }
+});
+
 test('buildAppCss: the site theme goes in the tokens layer, right after tokens.css and before base -- never unlayered, never a layer of its own', () => {
   const { repoRoot, siteThemePath } = makeLayeredStylesRepoRoot();
   const outDir = mkdtempSync(path.join(tmpdir(), 'fan-archive-layers-out-'));
