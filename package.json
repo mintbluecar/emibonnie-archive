@@ -23,6 +23,7 @@
     "init-site": "node scripts/initSite.js",
     "seed-dev": "node scripts/seedDev.js",
     "pull-prod": "node scripts/pullProd.js",
+    "screens": "node scripts/screens.js",
     "e2e": "playwright test && npm run e2e:add",
     "e2e:add": "playwright test -c playwright.add.config.js",
     "e2e:site": "node scripts/e2eSite.js",

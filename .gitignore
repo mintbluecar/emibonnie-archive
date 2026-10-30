@@ -24,6 +24,8 @@ public/js/kinds/_registry.js
 /test-results/
 /playwright-report/
 /blob-report/
+# Styling system Task 7: npm run screens' gallery -- for people to look at, never committed.
+/.screens/
 
 # --- Site repos: delete the lines in this block that apply to you (docs/start-your-own.md, step 2). ---
 # It stays last, with nothing else beside it: the engine adds new ignore lines
