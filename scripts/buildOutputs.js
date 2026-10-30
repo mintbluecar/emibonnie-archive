@@ -98,8 +98,8 @@ export function buildGeneratedSiteModule(site, copy, assets = { logo: null }) {
 
 /**
  * `public/site/site.js`: the public subset of `site` (without
- * `ownerXUserId`) plus `copy` and the site's logo path (if any, copied by
- * `copySiteAssets()` into this same `public/site/` directory), so
+ * `ownerXUserId`) plus `copy` and the site's logo path (if any:
+ * `/build/logo-<hash>.<ext>`, copied there by `runBundling()`), so
  * `public/js/core/site.js`'s `t()` and `site` have everything a page or
  * component needs from this one module.
  * @param {import('../src/site/schema.js').Site} site

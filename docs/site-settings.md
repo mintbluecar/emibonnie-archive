@@ -170,7 +170,10 @@ call in engine code uses a key the merged copy doesn't define.
 
 ## `site/logo.svg` (or `.png`)
 
-The archive's logo, copied into `public/site/` at build time.
+The archive's logo, copied content-hashed into `/build/` at build time
+(`/build/logo-<hash>.svg`, cached for a year like the rest of the build).
+The header, the sign-in screen, link previews and (with no `favicon`) the
+browser tab all use that one file.
 
 ## `site/seed/` (optional)
 

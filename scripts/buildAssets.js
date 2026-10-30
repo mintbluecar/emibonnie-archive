@@ -6,7 +6,7 @@
  * `scripts/buildBundle.js` adds esbuild's page JS and ties this together
  * with `manifest.json` and the HTML placeholder rewrite.
  */
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, copyFileSync } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import * as esbuild from 'esbuild';
@@ -46,6 +46,28 @@ const UNICODE_RANGES = {
 /** @param {string|Buffer} content @returns {string} a short, stable content hash for cache-busting filenames */
 export function contentHash(content) {
   return crypto.createHash('sha256').update(content).digest('hex').slice(0, 10);
+}
+
+/**
+ * `<name>-<hash><ext>` for the file at `src` (its own extension): the
+ * name `copyHashed` gives it, known before the copy is made (the site
+ * module carries the logo's path, and is bundled first).
+ * @param {string} src @param {string} name
+ * @returns {string}
+ */
+export function hashedNameOf(src, name) {
+  return `${name}-${contentHash(readFileSync(src))}${path.extname(src).toLowerCase()}`;
+}
+
+/**
+ * Copies the file at `src` into `outDir` as `hashedNameOf(src, name)`.
+ * @param {string} src @param {string} outDir @param {string} name
+ * @returns {string} that filename
+ */
+export function copyHashed(src, outDir, name) {
+  const fileName = hashedNameOf(src, name);
+  copyFileSync(src, path.join(outDir, fileName));
+  return fileName;
 }
 
 /**

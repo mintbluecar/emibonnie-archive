@@ -6,11 +6,10 @@
  * each `src/html/*.html` page template to `public/` with its asset
  * placeholders resolved from it.
  */
-import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync, copyFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
+import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import * as esbuild from 'esbuild';
-import { buildAppCss, buildFontsCss } from './buildAssets.js';
+import { buildAppCss, buildFontsCss, copyHashed } from './buildAssets.js';
 
 /** @typedef {{ file: string, type: string }} Favicon */
 /** @typedef {{ appCss: string, fontsCss: string, pages: Record<string, string>, boot: string|null, favicon?: Favicon|null }} Manifest */
@@ -20,19 +19,17 @@ const FAVICON_TYPES = /** @type {Record<string, string>} */ ({ '.png': 'image/pn
 /**
  * The site's favicon (Task 10c, j) copied into `outDir` content-hashed
  * (`favicon-<hash>.<ext>`), so it's served from `/build/` with the
- * immutable cache like every other build file. `null` with no source.
- * @param {string|null} src @param {string} outDir
+ * immutable cache like every other build file -- or, when it is the logo
+ * (no `favicon` setting), the logo's own `logo-<hash>.<ext>` (Task 11:
+ * one file for the header and the tab). `null` with no source.
+ * @param {string|null} src @param {string} outDir @param {string|null} logoPath
  * @returns {Favicon|null}
  */
-function copyFavicon(src, outDir) {
+function copyFavicon(src, outDir, logoPath) {
   if (!src) return null;
-  const ext = path.extname(src).toLowerCase();
-  const type = FAVICON_TYPES[ext];
+  const type = FAVICON_TYPES[path.extname(src).toLowerCase()];
   if (!type) throw new Error(`build failed: the favicon must be a .png or .svg file, got ${path.basename(src)}`);
-  const hash = createHash('sha256').update(readFileSync(src)).digest('hex').slice(0, 10);
-  const file = `favicon-${hash}${ext}`;
-  copyFileSync(src, path.join(outDir, file));
-  return { file, type };
+  return { file: copyHashed(src, outDir, src === logoPath ? 'logo' : 'favicon'), type };
 }
 
 /**
@@ -183,14 +180,15 @@ function writeHtmlPages(htmlDir, publicDir, manifest) {
 
 /**
  * The whole bundling step: `app.css`, self-hosted fonts, every page's JS,
- * `manifest.json`, then the built HTML pages. `engineRoot` is
+ * the site's logo (`logo-<hash>.<ext>`, the name `scripts/build.js` already
+ * put in the site module), `manifest.json`, then the built HTML pages. `engineRoot` is
  * where `node_modules` (esbuild, @fontsource) actually lives; `repoRoot`
  * is where output goes (the same checkout in production, a temp dir in
  * tests).
- * @param {{ repoRoot: string, engineRoot: string, siteThemePath: string|null, faviconPath?: string|null }} options
+ * @param {{ repoRoot: string, engineRoot: string, siteThemePath: string|null, faviconPath?: string|null, logoPath?: string|null }} options
  * @returns {Promise<Manifest>}
  */
-export async function runBundling({ repoRoot, engineRoot, siteThemePath, faviconPath = null }) {
+export async function runBundling({ repoRoot, engineRoot, siteThemePath, faviconPath = null, logoPath = null }) {
   const outDir = path.join(repoRoot, 'public/build');
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
@@ -199,9 +197,10 @@ export async function runBundling({ repoRoot, engineRoot, siteThemePath, favicon
   const fontsCss = buildFontsCss(engineRoot, outDir);
   const pages = await bundlePages(repoRoot, outDir);
   const boot = await bundleBoot(repoRoot, outDir);
+  if (logoPath) copyHashed(logoPath, outDir, 'logo');
 
   /** @type {Manifest} */
-  const manifest = { appCss, fontsCss, pages, boot, favicon: copyFavicon(faviconPath, outDir) };
+  const manifest = { appCss, fontsCss, pages, boot, favicon: copyFavicon(faviconPath, outDir, logoPath) };
   writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
   writeHtmlPages(path.join(repoRoot, 'src/html'), path.join(repoRoot, 'public'), manifest);
