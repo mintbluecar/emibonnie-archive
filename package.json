@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
-    "@vercel/functions": "^3.10.2"
+    "@vercel/functions": "^3.10.4"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
