@@ -14,24 +14,25 @@ import { editHref } from '../core/routes.js';
 /** @typedef {import('../../../src/http/contracts.js').AddedPreview} AddedPreview */
 
 /**
+ * The review state as a badge: held is the accent, refused the danger;
+ * a published entry has none (an empty span keeps the edit icon right).
  * @param {{ reviewState: string }} preview
- * @returns {string}
+ * @returns {import('../core/html.js').SafeHtml}
  */
-function stateLabel(preview) {
-  if (preview.reviewState === 'pending') return t('me.pending');
-  if (preview.reviewState === 'rejected') return t('me.rejected');
-  return '';
+function stateBadge(preview) {
+  if (preview.reviewState === 'pending') return html`<span class="badge badge--accent">${t('me.pending')}</span>`;
+  if (preview.reviewState === 'rejected') return html`<span class="badge badge--danger">${t('me.rejected')}</span>`;
+  return html`<span></span>`;
 }
 
 /** @param {AddedPreview} preview @returns {import('../core/html.js').SafeHtml} */
 function entry(preview) {
-  const label = stateLabel(preview);
   return html`
     <li class="c-me__entry">
       ${previewCard.render({ result: preview, compact: true })}
       <div class="c-me__bar">
-        ${label ? html`<span class="c-me__state c-me__state--${preview.reviewState}">${label}</span>` : html`<span></span>`}
-        <a class="c-me__icon c-me__edit" href="${editHref(preview.kind, preview.sourceId)}"
+        ${stateBadge(preview)}
+        <a class="btn btn--secondary btn--icon" href="${editHref(preview.kind, preview.sourceId)}"
           title="${t('me.edit')}" aria-label="${t('me.edit')}">${pencil()}</a>
       </div>
     </li>
@@ -52,10 +53,10 @@ function pencil() {
  */
 export function tabs(state) {
   return html`
-    <div class="c-me__tabs" role="tablist">
-      <button class="c-me__tab${state.tab === 'translations' ? ' c-me__tab--on' : ''}" type="button" role="tab"
+    <div class="cluster cluster--2 cluster--fill c-me__tabs" role="tablist">
+      <button class="chip chip--lg${state.tab === 'translations' ? ' chip--on' : ''}" type="button" role="tab"
         aria-selected="${state.tab === 'translations'}" data-action="tab" data-tab="translations">${t('me.translations.title')}</button>
-      <button class="c-me__tab${state.tab === 'added' ? ' c-me__tab--on' : ''}" type="button" role="tab"
+      <button class="chip chip--lg${state.tab === 'added' ? ' chip--on' : ''}" type="button" role="tab"
         aria-selected="${state.tab === 'added'}" data-action="tab" data-tab="added">${t('me.translations.tabAdded')}</button>
     </div>
   `;
@@ -68,11 +69,11 @@ export function tabs(state) {
 export function added(state) {
   const list = state.added.length > 0
     ? html`<ul class="c-me__list">${state.added.map(entry)}</ul>`
-    : html`<p class="c-me__empty">${t('me.empty')}</p>`;
+    : html`<p class="meta c-me__empty">${t('me.empty')}</p>`;
   return html`
-    <h2 class="c-me__heading">${t('me.addedByMe')}</h2>
+    <h2 class="label c-me__heading">${t('me.addedByMe')}</h2>
     ${list}
-    ${state.hasMore ? html`<button class="c-me__more" type="button" data-action="more">${t('me.more')}</button>` : ''}
+    ${state.hasMore ? html`<button class="btn btn--secondary btn--block c-me__more" type="button" data-action="more">${t('me.more')}</button>` : ''}
   `;
 }
 

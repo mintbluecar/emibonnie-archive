@@ -2,7 +2,10 @@
  * public/js/components/videoPlayer.js. Phone-first: `.c-video` is capped
  * at 40svh and letterboxed on a dark background (task-4 brief, owner's
  * ruling 2, option A); `aspect-ratio` comes from `data-aspect`, applied
- * in `bind()` via `style.setProperty('--aspect', …)` for CSP.
+ * in `bind()` via `style.setProperty('--aspect', …)` for CSP. The play
+ * and full-screen buttons are btn--overlay buttons; this file places
+ * them, and gives the play button its larger, ringed look. The "gone"
+ * note is notice--quiet. See STYLING.md.
  */
 
 .c-video {
@@ -10,7 +13,7 @@
   width: 100%;
   max-height: 40svh;
   aspect-ratio: var(--aspect, 16 / 9);
-  background: #000;
+  background: var(--color-media);
   overflow: hidden;
 }
 
@@ -19,7 +22,7 @@
   height: 100%;
   object-fit: contain;
   display: block;
-  background: #000;
+  background: var(--color-media);
 }
 
 /* Before play (Task 9b): a centred play button over the dark box / poster. */
@@ -30,41 +33,19 @@
   transform: translate(-50%, -50%);
   width: 56px;
   height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  color: #fff;
+  border: 2px solid color-mix(in srgb, var(--color-on-overlay) 85%, transparent);
 }
 
+/* The triangle sits optically centred, a little right of the box's centre. */
 .c-video__play svg {
-  margin-left: 3px;
+  margin-left: var(--space-1);
 }
 
+/* Top-right, clear of the native control bar along the bottom (review round 1, MINOR). */
 .c-video__full {
-  /* top-right, clear of the native control bar along the bottom (review round 1, MINOR). */
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
-  color: #fff;
-  border-radius: 10px;
-  font-size: var(--text-16);
-}
-
-.c-video__gone {
-  padding: 16px;
-  font-size: var(--text-12);
-  color: var(--color-ink-muted);
-  background: var(--color-bg);
-  border-radius: var(--radius-card);
+  top: var(--space-2);
+  right: var(--space-2);
 }
 
 @media (min-width: 860px) {

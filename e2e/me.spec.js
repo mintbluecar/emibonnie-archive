@@ -39,13 +39,13 @@ test('me, signed in as a member: who is signed in, the empty own list, and label
   await checkPage(page, '/me');
   await expect(page.locator('.c-me__who')).toHaveText('@dev_member');
   await expect(page.locator('.c-me__empty')).toBeVisible();
-  const icons = page.locator('.c-me__icon');
+  const icons = page.locator('.c-me__controls button');
   await expect(icons).toHaveCount(2);
   for (const icon of await icons.all()) {
     expect(await icon.getAttribute('title'), 'a tooltip').toBeTruthy();
     expect(await icon.getAttribute('aria-label'), 'an accessible name').toBeTruthy();
   }
-  await expect(page.locator('.c-me__delete')).toBeVisible();
+  await expect(page.locator('[data-action="open-delete"]')).toBeVisible();
 });
 
 test('add, signed out: the same sign-in screen, coming back to /add', async ({ page }, testInfo) => {

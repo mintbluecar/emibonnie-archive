@@ -1,0 +1,88 @@
+/*
+ * Field (Styling system Task 4): a label, its control, an optional hint
+ * and an optional error, stacked. The control's own look (border,
+ * radius, padding, the select chevron) comes from base.css; a field
+ * makes it full width, --tap-target tall and --text-14.
+ *
+ *   <div class="field">
+ *     <label class="field__label" for="name">Name</label>
+ *     <input id="name" type="text" aria-describedby="name-hint">
+ *     <p class="field__hint" id="name-hint">As it shows on your posts.</p>
+ *   </div>
+ *
+ *   <div class="field">
+ *     <label class="field__label" for="event">Event</label>
+ *     <span class="field__select"><select id="event">...</select></span>
+ *     <p class="field__error" id="event-error">Pick an event.</p>
+ *   </div>
+ *
+ *   <label class="check"><input type="checkbox"> Already subbed</label>
+ *   <label class="check"><input type="radio" name="mode"> Any of</label>
+ *
+ * field__select is the dropdown's wrapper (it was .c-select): base.css's
+ * select already draws the one chevron, so the wrapper only sizes the
+ * select to the field's width. A control with an error gets
+ * aria-invalid="true" and the danger border.
+ */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.field__label {
+  font-size: var(--text-12);
+  font-weight: var(--weight-bold);
+  color: var(--color-ink-muted);
+}
+
+.field__hint,
+.field__error {
+  font-size: var(--text-12);
+}
+
+.field__hint {
+  color: var(--color-ink-muted);
+}
+
+.field__error {
+  font-weight: var(--weight-bold);
+  color: var(--color-danger);
+}
+
+.field input:not([type="checkbox"]):not([type="radio"]),
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: var(--tap-target);
+  font-size: var(--text-14);
+}
+
+.field [aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.field__select {
+  display: block;
+}
+
+.field__select select {
+  width: 100%;
+}
+
+/* A checkbox or radio with its text: the label is the target, at least
+   --target-min tall (WCAG 2.2 SC 2.5.8 measures it there). */
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--target-min);
+  cursor: pointer;
+}
+
+.check input {
+  flex: none;
+  margin: 0;
+}

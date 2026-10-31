@@ -27,18 +27,17 @@ function mounted(fetchImpl) {
 
 /** @param {MiniElement} root @param {string} reason */
 async function submit(root, reason) {
-  const field = /** @type {any} */ (root.querySelector('.c-report__reason'));
+  const field = /** @type {any} */ (root.querySelector('[data-report-reason]'));
   field.value = reason;
-  const form = /** @type {any} */ (root.querySelector('.c-report__form'));
+  const form = /** @type {any} */ (root.querySelector('[data-report-form]'));
   form.dispatchEvent({ type: 'submit', target: form, preventDefault: () => {} });
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 test('the dialog is labelled, caps the reason and has submit and cancel', () => {
   const markup = String(render());
-  assert.match(markup, /class="c-report"/);
-  assert.match(markup, /aria-labelledby="c-report-title"/);
-  assert.match(markup, /<label class="c-report__label" for="c-report-reason">/);
+  assert.match(markup, /<dialog[^>]*aria-labelledby="c-report-title"/);
+  assert.match(markup, /<label class="field__label" for="c-report-reason">/);
   assert.match(markup, new RegExp(`maxlength="${MAX_REASON}"`));
   assert.equal(MAX_REASON, 2000);
   assert.match(markup, new RegExp(`>${pattern(t('report.submit'))}<`));
@@ -62,12 +61,12 @@ test('success announces the thank-you; a failure keeps the dialog and says so', 
   const ok = mounted(/** @type {any} */ (async () => Response.json({ id: 1 })));
   await submit(ok, 'wrong credit');
   assert.equal(ok.querySelector('[data-report-status]')?.textContent, t('report.done'));
-  assert.equal(/** @type {any} */ (ok.querySelector('.c-report__reason')).value, '');
+  assert.equal(/** @type {any} */ (ok.querySelector('[data-report-reason]')).value, '');
 
   const bad = mounted(/** @type {any} */ (async () => Response.json({ error: 'x' }, { status: 500 })));
   await submit(bad, 'wrong credit');
   assert.equal(bad.querySelector('[data-report-status]')?.textContent, t('report.failed'));
-  assert.equal(/** @type {any} */ (bad.querySelector('.c-report__submit')).disabled, false);
+  assert.equal(/** @type {any} */ (bad.querySelector('[data-report-submit]')).disabled, false);
 });
 
 test('an empty reason is refused without a request', async () => {
@@ -85,6 +84,6 @@ test('the item footer renders a report trigger and the dialog, not a takedown li
     followsOnFrom: null, addedBy: null, canEdit: false, canCheckFollowUps: false,
   })));
   assert.match(markup, /<button[^>]*data-action="report"[^>]*>/);
-  assert.match(markup, /class="c-report"/);
+  assert.match(markup, /<dialog[^>]*aria-labelledby="c-report-title"/);
   assert.ok(!markup.includes('/takedown'), 'no placeholder page link');
 });

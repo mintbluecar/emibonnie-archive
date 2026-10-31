@@ -1,16 +1,25 @@
-/* public/js/components/cast.js. Task 10c (g): sized like chips.css's chips -- content plus --chip-pad-y/--chip-pad-x, no fixed height -- with the emoji 0.3em from the name. A cast chip does nothing on click, so it needs no hit area. */
+/*
+ * public/js/components/cast.js: the cast legend, one pill per speaker,
+ * outlined in that person's colour (--c). Padded like a chip
+ * (--chip-pad-y/--chip-pad-x), but it isn't the chip primitive (even a
+ * display-only <span class="chip">) because its look differs on almost
+ * every line: smaller text (--text-11), a card-coloured fill rather than
+ * the paper, a per-person outline, and no --target-min floor -- it's a
+ * legend, never a control, so it stays as short as its text. Using chip
+ * would mean overriding most of it. Its emoji is bubbles.css's .c-emoji.
+ */
 
 .c-cast {
   display: flex;
-  gap: 6px 5px;
+  gap: var(--space-2) var(--space-1);
   flex-wrap: wrap;
-  margin: 8px 0;
+  margin: var(--space-2) 0;
 }
 
 .c-cast__chip {
   font-size: var(--text-11);
   line-height: 1.25;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: var(--chip-pad-y) var(--chip-pad-x);
   display: inline-flex;
   align-items: center;
@@ -18,8 +27,4 @@
   border: 1.5px solid var(--c);
   background: var(--color-card);
   color: var(--color-ink);
-}
-
-.c-cast__emoji {
-  line-height: 1;
 }

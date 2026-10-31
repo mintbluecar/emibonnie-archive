@@ -22,5 +22,5 @@ export function render(card) {
   const link = card.accountUrl
     ? html`<a class="c-card-credit__link" href="${card.accountUrl}" target="_blank" rel="noopener noreferrer">@${handle}</a>`
     : html`@${handle}`;
-  return html`<p class="c-card-credit">${t('item.translatedBy')} ${link}</p>`;
+  return html`<p class="meta c-card-credit">${t('item.translatedBy')} ${link}</p>`;
 }

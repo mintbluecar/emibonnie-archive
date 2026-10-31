@@ -1,0 +1,291 @@
+<!--
+  Styling system Task 3 (spec "7. Docs and the style guide"): the
+  dev-only style guide, reachable at /dev/styleguide in local dev only
+  (scripts/dev.js) -- never built into public/, never deployed. Every
+  primitive and element default, in every variant, light and dark,
+  rendered from the real built app and fonts CSS, resolved by
+  scripts/styleguide.js the same way every other page's asset
+  placeholders are. Light/dark here comes from the OS/browser's own
+  prefers-color-scheme -- the same thing tokens.css itself keys off --
+  so there is nothing to toggle on the page.
+
+  One <section id="..."> per element/primitive group; later tasks add
+  sections as primitives land. #elements is the on-brand defaults
+  base.css gives a bare control (Task 3); #fonts shows each --font-*
+  role (tokens.css) in each weight it's actually used at (Task 14,
+  spec "2b. Fonts a site can choose", "Checks": "the style guide page
+  shows each role in each weight in use"); #button through #spacing
+  are the primitives in src/styles/primitives/, one section each,
+  every variant (Task 4). The page itself sits in a container--wide.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Style guide</title>
+<link rel="stylesheet" href="{{asset:app.css}}">
+<link rel="stylesheet" href="{{asset:fonts.css}}">
+</head>
+<body>
+<main class="container container--wide">
+<h1>Style guide</h1>
+<p>Dev only -- never built into <code>public/</code>, never deployed.</p>
+
+<section id="elements">
+<h2>Elements (base.css)</h2>
+<p>A bare, unclassed control: the on-brand default every page gets when a
+component doesn't style its own.</p>
+
+<p><button type="button">Button</button></p>
+
+<p><input type="text" value="Text input"></p>
+
+<p><input type="search" value="Search input"></p>
+
+<p>
+<select>
+<option>One</option>
+<option>Two</option>
+<option>Three</option>
+</select>
+</p>
+
+<p><textarea rows="3">Textarea</textarea></p>
+
+<p><label><input type="checkbox"> Checkbox, with its label</label></p>
+
+<p><label><input type="radio" name="styleguide-radio"> Radio, with its label</label></p>
+
+<table>
+<thead>
+<tr><th>Name</th><th>Role</th></tr>
+</thead>
+<tbody>
+<tr><td>Moon</td><td>Translator</td></tr>
+<tr><td>Sunny</td><td>Owner</td></tr>
+</tbody>
+</table>
+
+<p><a href="#elements">A bare link</a></p>
+</section>
+
+<section id="fonts">
+<h2>Fonts (tokens.css's --font-* roles)</h2>
+<p>Each role, in each weight it's actually used at in this engine's own CSS; a site's <code>theme.css</code> can point any role at its own self-hosted family (<code>docs/site-settings.md</code>, "Fonts").</p>
+<div class="stack stack--2">
+<p>--font-body, --weight-regular: plain body text, the default everywhere.</p>
+<p><strong>--font-body, --weight-bold: field labels, notices and button text.</strong></p>
+<p><span class="badge">--font-body, --weight-heavy: badge, chip--on, label</span></p>
+<p class="heading heading--sm">--font-heading, --weight-heavy: h1-h3 and the heading primitive</p>
+<p lang="th">--font-script, --weight-regular: ขอบคุณทุกคนที่มาในคืนนี้</p>
+<p lang="th"><strong>--font-script, --weight-bold: ขอบคุณทุกคนที่มาในคืนนี้</strong></p>
+</div>
+</section>
+
+<section id="button">
+<h2>Button (primitives/button.css)</h2>
+<div class="stack stack--3">
+<div class="cluster cluster--2">
+<button class="btn" type="button">Default</button>
+<button class="btn btn--primary" type="button">Primary</button>
+<button class="btn btn--secondary" type="button">Secondary</button>
+<button class="btn btn--quiet" type="button">Quiet</button>
+<button class="btn btn--danger" type="button">Danger</button>
+<button class="btn btn--primary" type="button" disabled>Disabled</button>
+<a class="btn btn--secondary" href="#button">A link as a button</a>
+</div>
+<div class="cluster cluster--2">
+<button class="btn btn--primary btn--sm" type="button">Primary, small</button>
+<button class="btn btn--secondary btn--sm" type="button">Secondary, small</button>
+<button class="btn btn--quiet btn--sm" type="button">Quiet, small</button>
+<button class="btn btn--danger btn--sm" type="button">Danger, small</button>
+</div>
+<div class="cluster cluster--2">
+<button class="btn btn--secondary btn--icon" type="button" aria-label="Close">&times;</button>
+<button class="btn btn--quiet btn--icon" type="button" aria-label="More">&hellip;</button>
+<button class="btn btn--secondary btn--icon btn--sm" type="button" aria-label="Remove">&times;</button>
+<button class="btn btn--secondary btn--icon btn--round" type="button" aria-label="Close">&times;</button>
+<button class="btn btn--secondary" type="button" aria-busy="true">Busy</button>
+</div>
+<div class="cluster cluster--2">
+<button class="btn btn--primary btn--md" type="button">Primary, 36px (btn--md)</button>
+<button class="btn btn--secondary btn--icon btn--md" type="button" aria-label="Remove">&times;</button>
+</div>
+<p>btn--overlay, on a picture (carousel.css's box, letterboxed on --color-media):</p>
+<div class="c-carousel">
+<button class="btn btn--overlay btn--icon btn--md btn--round c-carousel__prev" type="button" aria-label="Previous picture">&lsaquo;</button>
+<button class="btn btn--overlay btn--icon btn--md btn--round c-carousel__next" type="button" aria-label="Next picture">&rsaquo;</button>
+<span class="c-carousel__count">1 / 2</span>
+</div>
+<div class="cluster cluster--2">
+<button class="btn btn--secondary" type="button" aria-pressed="true">Toggle, pressed</button>
+<button class="btn btn--secondary" type="button" aria-pressed="false">Toggle, not pressed</button>
+<button class="btn btn--quiet btn--sm" type="button" aria-pressed="false">Quiet toggle</button>
+<button class="btn btn--quiet btn--sm" type="button" aria-pressed="true">Quiet toggle, pressed</button>
+</div>
+<p><button class="btn btn--primary btn--block" type="button">Block (full width)</button></p>
+</div>
+</section>
+
+<section id="field">
+<h2>Field (primitives/field.css)</h2>
+<div class="stack stack--4">
+<div class="field">
+<label class="field__label" for="sg-name">Name</label>
+<input id="sg-name" type="text" value="Moon" aria-describedby="sg-name-hint">
+<p class="field__hint" id="sg-name-hint">A hint, under the control.</p>
+</div>
+<div class="field">
+<label class="field__label" for="sg-event">Event (field__select)</label>
+<span class="field__select"><select id="sg-event">
+<option>Starfest 2026</option>
+<option>Fan meeting, October</option>
+<option>A much longer event name than the others, to see it run under nothing</option>
+</select></span>
+</div>
+<div class="field">
+<label class="field__label" for="sg-url">Link (with an error)</label>
+<input id="sg-url" type="url" value="not a link" aria-invalid="true" aria-describedby="sg-url-error">
+<p class="field__error" id="sg-url-error">That link isn't a post on X.</p>
+</div>
+<div class="field">
+<label class="field__label" for="sg-note">Note</label>
+<textarea id="sg-note" rows="3">A textarea in a field.</textarea>
+</div>
+<div class="cluster cluster--4">
+<label class="check"><input type="checkbox" checked> Already subbed</label>
+<label class="check"><input type="radio" name="sg-mode" checked> Any of</label>
+<label class="check"><input type="radio" name="sg-mode"> All of</label>
+</div>
+</div>
+</section>
+
+<section id="card">
+<h2>Card (primitives/card.css)</h2>
+<div class="stack stack--3">
+<div class="card">card: the default padding</div>
+<div class="card card--compact">card card--compact: a dense row</div>
+<div class="card card--roomy">card card--roomy: a form or a welcome panel</div>
+<div class="card card--flush">card card--flush: no padding of its own</div>
+</div>
+</section>
+
+<section id="table">
+<h2>Table (primitives/table.css)</h2>
+<div class="stack stack--4">
+<h3 class="heading heading--sm">table</h3>
+<table class="table">
+<thead>
+<tr><th>Translator</th><th class="table__num">Items</th><th class="table__actions">Actions</th></tr>
+</thead>
+<tbody>
+<tr><td>Moon</td><td class="table__num">12</td><td class="table__actions"><div class="cluster cluster--2"><button class="btn btn--secondary btn--sm" type="button">Edit</button></div></td></tr>
+<tr><td>Sunny</td><td class="table__num">3</td><td class="table__actions"><div class="cluster cluster--2"><button class="btn btn--secondary btn--sm" type="button">Edit</button></div></td></tr>
+</tbody>
+</table>
+<h3 class="heading heading--sm">table table--stack (a card per row below 860px)</h3>
+<table class="table table--stack">
+<thead>
+<tr><th>State</th><th>Translator</th><th>Text</th><th class="table__num">Lines</th><th class="table__actions">Actions</th></tr>
+</thead>
+<tbody>
+<tr>
+<td data-label="State"><span class="badge badge--accent">waiting</span></td>
+<td data-label="Translator">@tl_gamma</td>
+<td data-label="Text">Thank you all for coming tonight.</td>
+<td class="table__num" data-label="Lines">4</td>
+<td class="table__actions" data-label="Actions"><div class="cluster cluster--2"><button class="btn btn--primary btn--sm" type="button">Publish</button><button class="btn btn--secondary btn--icon btn--sm" type="button" aria-label="Skip">&times;</button></div></td>
+</tr>
+<tr>
+<td data-label="State"><span class="badge badge--danger">failed</span></td>
+<td data-label="Translator">@a_translator_with_a_very_long_handle_that_never_breaks_on_its_own</td>
+<td data-label="Text" lang="th">ขอบคุณทุกคนที่มาในคืนนี้</td>
+<td class="table__num" data-label="Lines">1</td>
+<td class="table__actions" data-label="Actions"><div class="cluster cluster--2"><button class="btn btn--secondary btn--sm" type="button">Retry</button><button class="btn btn--secondary btn--icon btn--sm" type="button" aria-label="Skip">&times;</button></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section id="chip">
+<h2>Chip (primitives/chip.css)</h2>
+<div class="cluster cluster--1">
+<button class="chip" type="button" aria-pressed="false">live</button>
+<button class="chip chip--on" type="button" aria-pressed="true">posts</button>
+<button class="chip" type="button" aria-pressed="false">waiting <span class="chip__count">12</span></button>
+<button class="chip chip--on" type="button" aria-pressed="true">done <span class="chip__count">3</span></button>
+<a class="chip" href="#chip">#starfest</a>
+<span class="chip">a display-only pill</span>
+</div>
+<div class="cluster cluster--2">
+<button class="chip chip--lg" type="button" aria-pressed="false">Large</button>
+<button class="chip chip--lg chip--on" type="button" aria-pressed="true">Large, on</button>
+</div>
+</section>
+
+<section id="badge">
+<h2>Badge (primitives/badge.css)</h2>
+<div class="cluster cluster--2">
+<span class="badge">fan-made</span>
+<span class="badge badge--accent">translator</span>
+<span class="badge badge--danger">failed</span>
+</div>
+</section>
+
+<section id="notice">
+<h2>Notice (primitives/notice.css)</h2>
+<div class="stack stack--3">
+<p class="notice notice--info">notice--info: Saved. It shows on the archive in a minute.</p>
+<p class="notice notice--error">notice--error: That link isn't a post on X.</p>
+<div class="notice notice--accent">notice--accent: Not published yet -- only you can see this.</div>
+<p class="notice notice--strong">notice--strong: Held -- only you can see this entry.</p>
+<p class="notice notice--quiet">notice--quiet: Original tweet is no longer available. Translation kept below.</p>
+</div>
+</section>
+
+<section id="segmented">
+<h2>Segmented (primitives/segmented.css)</h2>
+<div class="segmented" role="group" aria-label="View">
+<button class="segmented__option" type="button" aria-pressed="true">by event</button>
+<button class="segmented__option" type="button" aria-pressed="false">all, newest</button>
+<button class="segmented__option" type="button" aria-pressed="false">with...</button>
+</div>
+</section>
+
+<section id="text">
+<h2>Text (primitives/text.css)</h2>
+<div class="stack stack--2">
+<p>Body text, for comparison.</p>
+<p class="meta">meta: @tl_gamma · 21 Oct 2026</p>
+<p class="label">label: october 2026</p>
+<p class="label label--section">label label--section: a list's heading</p>
+<p><a class="meta tap-link" href="#text">meta tap-link: a small link with a full target</a></p>
+<p><a class="meta tap-link tap-link--sm" href="#text">meta tap-link tap-link--sm: one in a row of small controls</a></p>
+<p class="heading heading--lg">heading heading--lg</p>
+<p class="heading heading--md">heading heading--md</p>
+<p class="heading heading--sm">heading heading--sm</p>
+</div>
+</section>
+
+<section id="spacing">
+<h2>Spacing (primitives/spacing.css)</h2>
+<div class="stack stack--4">
+<div class="stack stack--1"><span class="badge">stack--1</span><span class="badge">stack--1</span></div>
+<div class="stack stack--2"><span class="badge">stack--2</span><span class="badge">stack--2</span></div>
+<div class="stack stack--3"><span class="badge">stack--3</span><span class="badge">stack--3</span></div>
+<div class="stack stack--4"><span class="badge">stack--4</span><span class="badge">stack--4</span></div>
+<div class="stack stack--5"><span class="badge">stack--5</span><span class="badge">stack--5</span></div>
+<div class="stack stack--6"><span class="badge">stack--6</span><span class="badge">stack--6</span></div>
+<div class="cluster cluster--1"><span class="badge">cluster--1</span><span class="badge">cluster--1</span><span class="badge">cluster--1</span></div>
+<div class="cluster cluster--2"><span class="badge">cluster--2</span><span class="badge">cluster--2</span><span class="badge">cluster--2</span></div>
+<div class="cluster cluster--3"><span class="badge">cluster--3</span><span class="badge">cluster--3</span><span class="badge">cluster--3</span></div>
+<div class="cluster cluster--4"><span class="badge">cluster--4</span><span class="badge">cluster--4</span><span class="badge">cluster--4</span></div>
+<div class="cluster cluster--fill"><span class="chip chip--on">cluster--fill</span><span class="chip">cluster--fill</span></div>
+</div>
+</section>
+</main>
+</body>
+</html>

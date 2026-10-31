@@ -92,7 +92,7 @@ test('addDetails: every placement is offered, with the current one selected', ()
 
 test('addDetails: "already subbed" is a checkbox with its own visible label', () => {
   const markup = markupOf();
-  const label = markup.match(/<label[^>]*class="c-add__check"[^>]*>[\s\S]*?<\/label>/)?.[0] ?? '';
+  const label = markup.match(/<label[^>]*class="check c-add__check"[^>]*>[\s\S]*?<\/label>/)?.[0] ?? '';
   assert.match(label, /<input[^>]*type="checkbox"[^>]*data-field="subbed"/);
   assert.match(label, copyRe(t('add.subbed')));
 });

@@ -83,3 +83,10 @@ test('speakerStep: every line is shown as it will read, and is tappable', () => 
   assert.match(markup, /data-part="0"[^>]*data-line="1"/);
   assert.match(markup, /data-part="0"[^>]*data-line="2"/);
 });
+
+test('speakerStep: a line with a fix is marked data-fixed; the others are not', () => {
+  const markup = markupOf({ lineFixes: [{ part: 0, line: 1, as: 'plain' }] });
+  const lines = markup.match(/<button[^>]*class="c-speaker-step__line"[^>]*>/g) ?? [];
+  assert.equal(lines.length, 3);
+  assert.deepEqual(lines.map((tag) => /\sdata-fixed[\s>]/.test(tag)), [false, true, false]);
+});

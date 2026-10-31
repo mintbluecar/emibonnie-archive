@@ -28,12 +28,12 @@ test('previewCard: renders the opening lines via bubbles, and a meta row with a 
 
 test('previewCard (owner, 2026-10-23): the translator credit line links to their X profile, with target/rel', () => {
   const markup = String(render({ result: baseResult() }));
-  assert.match(markup, /<p class="c-card-credit">translated by: <a class="c-card-credit__link" href="https:\/\/x\.com\/tl_alpha" target="_blank" rel="noopener noreferrer">@tl_alpha<\/a><\/p>/);
+  assert.match(markup, /<p class="meta c-card-credit">translated by: <a class="c-card-credit__link" href="https:\/\/x\.com\/tl_alpha" target="_blank" rel="noopener noreferrer">@tl_alpha<\/a><\/p>/);
 });
 
 test('previewCard (owner, 2026-10-23): an account with no profile link shows plain "@handle" text, not a link', () => {
   const markup = String(render({ result: baseResult({ accountUrl: null }) }));
-  assert.match(markup, /<p class="c-card-credit">translated by: @tl_alpha<\/p>/);
+  assert.match(markup, /<p class="meta c-card-credit">translated by: @tl_alpha<\/p>/);
 });
 
 test('previewCard: no accountHandle means no credit line at all, no video, means no meta for it; follows-on shows as plain text, not a link', () => {
@@ -47,7 +47,7 @@ test('previewCard: no accountHandle means no credit line at all, no video, means
 test('previewCard: the card root is not an <a> containing another <a> -- the main link is the only one inside, the credit link is a sibling', () => {
   const markup = String(render({ result: baseResult({ followsOnFrom: { sourceId: '0', url: '/t/0' } }) }));
   assert.ok(!/^<a[\s>]/.test(markup.trim()), 'the card root is not an <a>');
-  assert.match(markup, /<a class="c-preview-card__link" href="\/t\/1">/, 'the main link is still present');
+  assert.match(markup, /<a class="card__link c-preview-card__link" href="\/t\/1">/, 'the main link is still present');
   const anchors = markup.match(/<a[\s>]/g) ?? [];
   assert.equal(anchors.length, 2, 'the main link and the credit link, never nested');
   const mainLinkClose = markup.indexOf('</a>');
@@ -64,18 +64,18 @@ test('bind: delegates to bubbles.bind, colouring the embedded avatar', () => {
 
 test('previewCard (Task 9b): compact shows the opening lines as one clamped run of "emoji text", not full bubbles, and keeps the meta row, the credit line, and the main link', () => {
   const markup = String(render({ result: baseResult(), compact: true }));
-  assert.match(markup, /class="c-preview-card c-preview-card--compact"/);
+  assert.match(markup, /class="card card--flush c-preview-card" data-compact[\s>]/);
   assert.match(markup, /c-bubbles-compact/);
   assert.ok(!markup.includes('c-bubbles__bub'));
   assert.match(markup, /c-card-credit__link" href="https:\/\/x\.com\/tl_alpha"/);
   assert.equal((markup.match(/<a[\s>]/g) ?? []).length, 2);
-  assert.ok(!String(render({ result: baseResult() })).includes('c-preview-card--compact'), 'full bubbles by default');
+  assert.ok(!String(render({ result: baseResult() })).includes('data-compact'), 'full bubbles by default');
 });
 
 test('previewCard (Task 10c): a clip poster thumbnail with a ▶ replaces the 🎬; a photo has no ▶; lazy, async, sized, alt from copy; text only has none', () => {
   const poster = { url: 'https://pbs.twimg.com/amplify_video_thumb/1/img/a.jpg', width: 1080, height: 1920, video: true };
   const clip = String(render({ result: baseResult({ thumb: poster }), compact: true }));
-  assert.match(clip, /class="c-preview-card c-preview-card--compact c-preview-card--thumb"/);
+  assert.match(clip, /class="card card--flush c-preview-card" data-compact data-thumb/);
   assert.match(clip, /<img class="c-thumb__img" src="https:\/\/pbs\.twimg\.com\/amplify_video_thumb\/1\/img\/a\.jpg" alt="clip still" width="1080" height="1920" loading="lazy" decoding="async">/);
   assert.match(clip, /c-thumb__play" aria-hidden="true">▶/);
   assert.ok(!clip.includes('🎬'), 'the ▶ thumbnail stands in for the video marker');

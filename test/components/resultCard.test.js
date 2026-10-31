@@ -69,21 +69,21 @@ test('resultCard (Task 9b): with q, only the matching lines show -- not the open
 test('resultCard (Task 10c): a thumbnail sits beside the text, the card still has one main link', () => {
   const result = { ...baseResult(['a line']), thumb: { url: 'https://pbs.twimg.com/media/b.jpg', width: 800, height: 600, video: false } };
   const markup = String(render({ result, q: '' }));
-  assert.match(markup, /class="c-result-card c-result-card--thumb"/);
+  assert.match(markup, /<article class="card card--flush" data-result-card>/);
   assert.match(markup, /<img class="c-thumb__img" src="https:\/\/pbs\.twimg\.com\/media\/b\.jpg" alt="photo" width="800" height="600" loading="lazy" decoding="async">/);
-  assert.match(markup, /<a class="c-result-card__link" href="\/t\/1">/, 'the main link is still present');
+  assert.match(markup, /<a class="card__link c-result-card__link" href="\/t\/1" data-thumb>/, 'the main link is still present');
   assert.equal((markup.match(/<a[\s>]/g) ?? []).length, 1, 'no account here, so no credit line and no second link');
 });
 
 test('resultCard (owner, 2026-10-23): the translator credit line links to their X profile, with target/rel, in place of the translate icon', () => {
   const markup = String(render({ result: { ...baseResult(['x']), accountHandle: 'tl_beta', accountUrl: 'https://x.com/tl_beta' }, q: '' }));
-  assert.match(markup, /<p class="c-card-credit">translated by: <a class="c-card-credit__link" href="https:\/\/x\.com\/tl_beta" target="_blank" rel="noopener noreferrer">@tl_beta<\/a><\/p>/);
+  assert.match(markup, /<p class="meta c-card-credit">translated by: <a class="c-card-credit__link" href="https:\/\/x\.com\/tl_beta" target="_blank" rel="noopener noreferrer">@tl_beta<\/a><\/p>/);
   assert.ok(!markup.includes('c-icon--translator'), 'the translate icon is gone');
 });
 
 test('resultCard (owner, 2026-10-23): an account with no profile link shows plain "@handle" text; no account at all omits the line', () => {
   const plain = String(render({ result: { ...baseResult(['x']), accountHandle: 'tl_beta', accountUrl: null }, q: '' }));
-  assert.match(plain, /<p class="c-card-credit">translated by: @tl_beta<\/p>/);
+  assert.match(plain, /<p class="meta c-card-credit">translated by: @tl_beta<\/p>/);
   const none = String(render({ result: baseResult(['x']), q: '' }));
   assert.ok(!none.includes('c-card-credit'));
 });

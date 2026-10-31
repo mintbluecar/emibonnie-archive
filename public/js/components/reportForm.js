@@ -21,16 +21,18 @@ export const MAX_REASON = 2000;
 /** @returns {import('../core/html.js').SafeHtml} */
 export function render() {
   return html`
-    <dialog class="c-report" aria-labelledby="c-report-title">
-      <h2 class="c-report__title" id="c-report-title">${t('report.title')}</h2>
-      <form class="c-report__form" novalidate>
-        <label class="c-report__label" for="c-report-reason">${t('report.reason')}</label>
-        <textarea class="c-report__reason" id="c-report-reason" name="reason" rows="4"
-          maxlength="${MAX_REASON}" required></textarea>
-        <p class="c-report__status" role="status" data-report-status></p>
-        <div class="c-report__actions">
-          <button class="c-report__cancel" type="button" data-action="close-report">${t('report.cancel')}</button>
-          <button class="c-report__submit" type="submit">${t('report.submit')}</button>
+    <dialog class="card c-report" aria-labelledby="c-report-title">
+      <form class="stack stack--3" novalidate data-report-form>
+        <h2 class="heading heading--md" id="c-report-title">${t('report.title')}</h2>
+        <div class="field">
+          <label class="field__label" for="c-report-reason">${t('report.reason')}</label>
+          <textarea id="c-report-reason" name="reason" rows="4"
+            maxlength="${MAX_REASON}" required data-report-reason></textarea>
+        </div>
+        <p class="meta c-report__status" role="status" data-report-status></p>
+        <div class="cluster cluster--2 c-report__actions">
+          <button class="btn btn--secondary" type="button" data-action="close-report">${t('report.cancel')}</button>
+          <button class="btn btn--primary" type="submit" data-report-submit>${t('report.submit')}</button>
         </div>
       </form>
     </dialog>
@@ -53,7 +55,7 @@ function dialogOf(root) {
 export function bind(root, target) {
   on(root, '[data-action="report"]', 'click', () => dialogOf(root)?.showModal());
   on(root, '[data-action="close-report"]', 'click', () => dialogOf(root)?.close());
-  on(root, '.c-report__form', 'submit', (event, form) => {
+  on(root, '[data-report-form]', 'submit', (event, form) => {
     event.preventDefault();
     void submitReport(form, target, dialogOf(root));
   });
@@ -62,9 +64,9 @@ export function bind(root, target) {
 /** @param {Element} form @returns {{ field: HTMLTextAreaElement|null, status: Element|null, submit: HTMLButtonElement|null }} */
 function partsOf(form) {
   return {
-    field: /** @type {HTMLTextAreaElement|null} */ (form.querySelector('.c-report__reason')),
+    field: /** @type {HTMLTextAreaElement|null} */ (form.querySelector('[data-report-reason]')),
     status: form.querySelector('[data-report-status]'),
-    submit: /** @type {HTMLButtonElement|null} */ (form.querySelector('.c-report__submit')),
+    submit: /** @type {HTMLButtonElement|null} */ (form.querySelector('[data-report-submit]')),
   };
 }
 

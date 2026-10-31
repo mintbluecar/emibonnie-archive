@@ -33,7 +33,7 @@ test('render: a 720x1280 vertical clip renders a full-screen button and data-asp
   const markup = String(render({ variants: VARIANTS, width: 720, height: 1280 }));
   assert.match(markup, /class="c-video"/);
   assert.match(markup, /data-aspect="0\.5625"/);
-  assert.match(markup, /class="c-video__full"/);
+  assert.match(markup, /class="btn btn--overlay btn--icon btn--md c-video__full"/);
   assert.match(markup, /<video[^>]*playsinline[^>]*preload="metadata"/, 'native controls come after play (Task 9b), see below');
 });
 
@@ -64,7 +64,7 @@ test('bind: an error event triggers one refetch of /api/video/:kind/:sourceId; a
     await flush();
     assert.ok(seenUrls.some((u) => u.includes('/api/video/translation/1900000000000000002')), seenUrls.join(', '));
     assert.equal(root.querySelector('video'), null, 'the video element is replaced');
-    assert.ok(root.querySelector('.c-video__gone'), 'the sourceGone note is shown');
+    assert.ok(root.querySelector('[data-media-gone]'), 'the sourceGone note is shown');
   } finally {
     mock.restoreAll();
     delete (/** @type {any} */ (globalThis)).document;
@@ -149,7 +149,7 @@ test('bind: a second error, after the refetch succeeded but the swapped-in varia
     await flush();
     assert.equal(fetchCount, 1, 'the one refetch ran and succeeded');
     assert.ok(root.querySelector('video'), 'the video is still there after a successful refetch');
-    assert.ok(!root.querySelector('.c-video__gone'), 'not given up yet after just one error');
+    assert.ok(!root.querySelector('[data-media-gone]'), 'not given up yet after just one error');
 
     // The swapped-in variant also fails to play (still a fake/synthetic URL in practice).
     const stillVideo = /** @type {any} */ (root.querySelector('video'));
@@ -157,7 +157,7 @@ test('bind: a second error, after the refetch succeeded but the swapped-in varia
     await flush();
     assert.equal(fetchCount, 1, 'no second fetch');
     assert.equal(root.querySelector('video'), null, 'gives up: the video is replaced');
-    assert.ok(root.querySelector('.c-video__gone'), 'the sourceGone note is shown');
+    assert.ok(root.querySelector('[data-media-gone]'), 'the sourceGone note is shown');
   } finally {
     mock.restoreAll();
     delete (/** @type {any} */ (globalThis)).document;
@@ -174,7 +174,7 @@ test('render (Task 9b): before play, a dark box with the poster (when there is o
   const markup = String(render({ variants: VARIANTS, width: 1280, height: 720, poster: 'https://pbs.twimg.com/amplify_video_thumb/1/img/a.jpg' }));
   assert.match(markup, /<video class="c-video__el"[^>]*poster="https:\/\/pbs\.twimg\.com\/amplify_video_thumb\/1\/img\/a\.jpg"/);
   assert.ok(!/<video[^>]*\scontrols/.test(markup), 'no controls before play');
-  assert.match(markup, /<button type="button" class="c-video__play" title="play" aria-label="play">/);
+  assert.match(markup, /<button type="button" class="btn btn--overlay btn--icon btn--round c-video__play" title="play" aria-label="play">/);
   assert.match(markup, /preload="metadata"/, 'still loads metadata, so the box is sized and errors still surface');
   assert.ok(!String(render({ variants: VARIANTS, width: 1280, height: 720, poster: null })).includes('poster='));
 });

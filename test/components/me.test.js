@@ -26,8 +26,8 @@ function result(overrides = {}) {
 
 const X_USER = { via: 'x', handle: 'vacantvolcanic', displayName: null, isOwner: false, isTranslator: false, needsName: false };
 
-/** Every `class="…c-me__icon…"` opening tag in `markup`. @param {string} markup */
-const iconTags = (markup) => [...markup.matchAll(/<[^>]*class="[^"]*c-me__icon[^"]*"[^>]*>/g)].map((m) => m[0]);
+/** Every icon-only control's (`btn--icon`) opening tag in `markup`. @param {string} markup */
+const iconTags = (markup) => [...markup.matchAll(/<[^>]*class="[^"]*\bbtn--icon\b[^"]*"[^>]*>/g)].map((m) => m[0]);
 
 test('me: signed out shows the sign-in screen, with its failed notice when asked', () => {
   const markup = String(composeSignedOut({ returnTo: '/me', failed: true }));

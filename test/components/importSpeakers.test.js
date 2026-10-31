@@ -68,6 +68,22 @@ test('a marker card shows its handle, entry count, example and a select of peopl
   assert.match(markup, copyRe(t('import.marker.remember')));
 });
 
+test('the card, select, buttons and remember box are primitives', () => {
+  const markup = String(render({ markers: [group()], people: PEOPLE, roles: ROLES, expanded: new Set(['3:☀️']), remember: true }));
+  assert.match(markup, /<article class="card card--compact stack stack--2"[^>]*data-speaker-card>/);
+  assert.match(markup, /<span class="field__select"><select data-marker-select=/);
+  assert.match(markup, /<span class="field__select"><select data-entry-select=/);
+  assert.match(markup, /<button class="btn btn--secondary btn--sm" type="button" data-action="save-marker"/);
+  assert.match(markup, /<button class="btn btn--secondary btn--sm" type="button" data-action="review"[^>]*aria-expanded="true"/);
+  assert.match(markup, /<button class="btn btn--secondary btn--sm btn--icon" type="button" data-action="save-entry"[^>]*aria-label="[^"]+"/);
+  assert.match(markup, /<label class="check meta c-import-speakers__remember">/);
+  const collapsed = String(render({ markers: [group()], people: PEOPLE, roles: ROLES, expanded: new Set(), remember: true }));
+  assert.match(collapsed, /data-action="review"[^>]*aria-expanded="false"/);
+  for (const action of ['publish-ready', 'publish-all', 'retry-import']) {
+    assert.match(markup, new RegExp(`<button class="btn btn--secondary btn--sm" type="button" data-action="${action}">`));
+  }
+});
+
 test('review expands the marker into per-entry selects with their text', () => {
   const collapsed = String(render({ markers: [group()], people: PEOPLE, roles: ROLES, expanded: new Set(), remember: true }));
   assert.match(collapsed, /data-action="review"/);

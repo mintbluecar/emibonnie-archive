@@ -7,8 +7,8 @@
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mount, on, applyColours, textShade, contrastRatio, textBackgroundsFor } from '../../public/js/core/dom.js';
-import { html, raw } from '../../public/js/core/html.js';
+import { mount, mountPage, on, applyColours, textShade, contrastRatio, textBackgroundsFor } from '../../public/js/core/dom.js';
+import { html, raw, ShellHtml } from '../../public/js/core/html.js';
 import { FakeEl } from '../helpers/fakeDom.js';
 
 /** A hex colour's RGB channels, for a simple "how far did textShade move it" distance in tests below. @param {string} hex @returns {number[]} */
@@ -35,6 +35,12 @@ class FakeElement {
     /** @type {Record<string, ((e: any) => void)[]>} */
     this.listeners = {};
     this.innerHTML = '';
+    /** @type {Record<string, string>} */
+    this.attrs = {};
+  }
+  /** @param {string} name @param {string} value */
+  setAttribute(name, value) {
+    this.attrs[name] = value;
   }
   /** @param {string} event @param {(e: any) => void} fn */
   addEventListener(event, fn) {
@@ -72,6 +78,28 @@ test('mount: accepts raw()', () => {
   const el = new FakeElement('div');
   mount(el, raw('<i>already safe</i>'));
   assert.equal(el.innerHTML, '<i>already safe</i>');
+});
+
+// mountPage (Task 6): "the shell is not optional" -- only pageShell.render()'s ShellHtml may
+// reach it, so a page can never mount without going through the shell.
+test('mountPage: refuses a plain SafeHtml from html`…`, even well-formed shell markup pasted by hand', () => {
+  const el = new FakeElement('div');
+  assert.throws(
+    () => mountPage(el, html`<header></header><main class="container">hi</main>`),
+    { name: 'TypeError', message: 'mountPage() expects pageShell.render(...)' },
+  );
+});
+
+test('mountPage: refuses raw(), which is also plain SafeHtml, not ShellHtml', () => {
+  const el = new FakeElement('div');
+  assert.throws(() => mountPage(el, raw('<p>x</p>')), TypeError);
+});
+
+test('mountPage: accepts ShellHtml (what pageShell.render() returns), mounts it and marks root ready', () => {
+  const el = new FakeElement('div');
+  mountPage(el, new ShellHtml('<header></header><main class="container">hi</main>'));
+  assert.equal(el.innerHTML, '<header></header><main class="container">hi</main>');
+  assert.equal(el.attrs['data-ready'], '');
 });
 
 test('on: delegates to a matching descendant, ignores clicks elsewhere', () => {

@@ -74,7 +74,7 @@ export function prepare({ search, scope = null, placeholder = t('search.placehol
 
 /** Shows the page's own list or the results area, never both. @param {Element} root @param {boolean} listShown */
 function showList(root, listShown) {
-  const list = /** @type {HTMLElement|null} */ (root.querySelector('.c-search__list'));
+  const list = /** @type {HTMLElement|null} */ (root.querySelector('[data-search-list]'));
   const results = /** @type {HTMLElement|null} */ (root.querySelector('.c-search'));
   if (list) list.hidden = !listShown;
   if (results) results.hidden = listShown;
@@ -88,7 +88,7 @@ function announce(root, text) {
 
 /** The chips row and the box's placeholder, after any state change. @param {Element} root @param {Ctx} ctx */
 function renderChrome(root, ctx) {
-  const slot = root.querySelector('.c-search__filters');
+  const slot = root.querySelector('[data-search-filters]');
   if (slot) mount(slot, filtersRow(ctx));
   root.querySelector('.c-header__search-box')?.setAttribute('placeholder', placeholderOf(ctx));
   updateFilterBadge(root, filterCount(ctx.state));
@@ -182,7 +182,7 @@ async function loadMore(searchEl, ctx, button) {
   try {
     const page = await getJson('/api/search', { ...toApiParams(ctx.state, ctx.options), limit: PAGE_SIZE, offset: ctx.offset });
     if (mySeq !== ctx.seq) return;
-    const container = searchEl.querySelector('.c-search__results');
+    const container = searchEl.querySelector('[data-search-results]');
     if (container) {
       const scratch = document.createElement('div');
       mount(scratch, html`${page.results.map((/** @type {any} */ r) => resultCard.render({ result: r, q: ctx.state.q }))}`);
@@ -199,18 +199,18 @@ async function loadMore(searchEl, ctx, button) {
 
 /** The chips row (remove one, clear all) and "more" -- delegated, bound once. @param {Element} root @param {Ctx} ctx */
 function bindAreas(root, ctx) {
-  const slot = root.querySelector('.c-search__filters');
+  const slot = root.querySelector('[data-search-filters]');
   if (slot) {
-    on(slot, '.c-search__active-chip', 'click', (_e, chip) => {
+    on(slot, '[data-action="remove-filter"]', 'click', (_e, chip) => {
       const field = /** @type {keyof State} */ (chip.getAttribute('data-field'));
       const raw = chip.getAttribute('data-value') ?? '';
       // `people`'s values are ids (numbers); `types`' are names; a scalar field ignores the value.
       commit(root, ctx, withoutFilter(ctx.state, field, field === 'people' ? Number(raw) : raw));
     });
-    on(slot, '.c-search__clear-all', 'click', () => commit(root, ctx, cleared(ctx.state, ctx.scope)));
+    on(slot, '[data-action="clear-filters"]', 'click', () => commit(root, ctx, cleared(ctx.state, ctx.scope)));
   }
   const searchEl = root.querySelector('.c-search');
-  if (searchEl) on(searchEl, '.c-search__more', 'click', (_e, button) => loadMore(searchEl, ctx, button));
+  if (searchEl) on(searchEl, '[data-action="more-results"]', 'click', (_e, button) => loadMore(searchEl, ctx, button));
 }
 
 /** @param {(value: string) => void} fn @param {number} ms @returns {(value: string) => void} */

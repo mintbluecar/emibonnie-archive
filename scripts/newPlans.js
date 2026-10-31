@@ -116,6 +116,7 @@ function componentPlan(v) {
     files: [
       { template: 'component/component.js.tmpl', target: `public/js/components/${v.camel}.js` },
       { template: 'component/component.test.js.tmpl', target: `test/components/${v.camel}.test.js` },
+      { template: 'component/component.css.tmpl', target: `src/styles/components/${v.camel}.css` },
     ],
     edits: [],
     conflicts: [],

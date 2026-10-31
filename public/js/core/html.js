@@ -33,6 +33,14 @@ export function raw(markup) {
   return new SafeHtml(markup);
 }
 
+/**
+ * Markup that's a whole shelled page: the type `mountPage()` (public/js/
+ * core/dom.js) requires, so a page can't mount without going through
+ * `pageShell.render()` -- the only place this class is constructed (spec
+ * "5. The shell is not optional"). Otherwise identical to `SafeHtml`.
+ */
+export class ShellHtml extends SafeHtml {}
+
 /** @param {string} text @returns {string} */
 function escape(text) {
   return text.replace(ESCAPE_CHARS, (ch) => ENTITIES[ch]);

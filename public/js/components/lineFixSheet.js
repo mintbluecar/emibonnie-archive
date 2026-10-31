@@ -24,6 +24,16 @@ function lineText(line) {
 }
 
 /**
+ * One of the sheet's two answers, on when it's the line's current fix.
+ * @param {'speech'|'plain'} action @param {string} label @param {boolean} on
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+function choice(action, label, on) {
+  return html`<button type="button" class="btn btn--secondary" data-action="${action}"
+    aria-pressed="${on ? 'true' : 'false'}">${label}</button>`;
+}
+
+/**
  * @param {{ line: any, options: any, fixes?: LineFix[] }} props
  *   `fixes`: the fixes already chosen, so the sheet shows which answer is
  *   current (a line marked plain offers speech to put it back).
@@ -34,17 +44,15 @@ export function render({ line, options, fixes = [] }) {
   const current = fix && fix.as === 'speech' ? /** @type {Speaker} */ (fix.speaker) : null;
   return html`
     <section class="c-line-fix" role="dialog" aria-label="${t('add.fixLine')}">
-      <h2 class="c-line-fix__title">${t('add.fixLine')}</h2>
+      <h2 class="heading heading--sm c-line-fix__title">${t('add.fixLine')}</h2>
       <p class="c-line-fix__line">${lineText(line)}</p>
-      <div class="c-line-fix__actions">
-        <button type="button" class="c-line-fix__action${fix && fix.as === 'speech' ? ' c-line-fix__action--on' : ''}"
-          data-action="speech">${t('add.lineSpeech')}</button>
-        <button type="button" class="c-line-fix__action${fix && fix.as === 'plain' ? ' c-line-fix__action--on' : ''}"
-          data-action="plain">${t('add.linePlain')}</button>
-        <button type="button" class="c-line-fix__cancel" data-action="cancel">${t('add.cancel')}</button>
+      <div class="cluster cluster--2">
+        ${choice('speech', t('add.lineSpeech'), fix?.as === 'speech')}
+        ${choice('plain', t('add.linePlain'), fix?.as === 'plain')}
+        <button type="button" class="btn btn--secondary c-line-fix__cancel" data-action="cancel">${t('add.cancel')}</button>
       </div>
       <div class="c-line-fix__picker" hidden>
-        <p class="c-line-fix__speaker">${t('add.lineSpeaker')}</p>
+        <p class="label c-line-fix__speaker">${t('add.lineSpeaker')}</p>
         ${personPicker.render({ options, current, idPrefix: `line-${line.part}-${line.line}` })}
       </div>
     </section>

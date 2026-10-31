@@ -1,0 +1,63 @@
+/*
+ * Notice (Styling system Task 4): a banner or inline message.
+ *
+ *   <p class="notice notice--info" role="status">Saved. It shows on the archive in a minute.</p>
+ *   <p class="notice notice--error" role="alert">That link isn't a post on X.</p>
+ *   <div class="notice notice--accent">Not published yet: only you can see this.</div>
+ *   <p class="notice notice--strong" role="status">Held: only you can see this entry.</p>
+ *   <p class="notice notice--quiet">Original tweet is no longer available. Translation kept below.</p>
+ *
+ * notice--accent is the "not published" bar. notice--error is outlined
+ * on the card surface: the danger colour on its own tint is under 4.5:1.
+ * notice--strong is the solid bar: card-colour text on the dark label
+ * shade (--color-label-on-tint), for a state the viewer must not miss.
+ * notice--quiet is the soft, centred note that stands in for something
+ * that isn't there (a deleted post's picture or clip): small muted text
+ * on the page background, no edge.
+ */
+
+/* notice--info has no override of its own: the default .notice look already
+   reads as an info banner, spelt out for callers that want to say so
+   (Styling system Task 5's class-usage check: a modifier with no look of
+   its own still needs a selector somewhere, same as .btn/.btn--secondary
+   above). */
+.notice,
+.notice--info {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-13);
+  color: var(--color-ink);
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: var(--radius-md);
+  overflow-wrap: anywhere;
+}
+
+.notice--error {
+  font-weight: var(--weight-bold);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.notice--accent {
+  font-weight: var(--weight-bold);
+  color: var(--color-label-on-tint);
+  background: var(--color-label-tint);
+  border-color: var(--color-label-border);
+}
+
+.notice--strong {
+  font-weight: var(--weight-bold);
+  color: var(--color-card);
+  background: var(--color-label-on-tint);
+  border-color: var(--color-label-on-tint);
+}
+
+.notice--quiet {
+  padding: var(--space-4);
+  font-size: var(--text-12);
+  color: var(--color-ink-muted);
+  text-align: center;
+  background: var(--color-bg);
+  border-color: transparent;
+  border-radius: var(--radius-card);
+}

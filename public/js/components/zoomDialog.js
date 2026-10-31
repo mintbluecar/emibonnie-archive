@@ -17,7 +17,7 @@ import { t } from '../core/site.js';
 function dialogMarkup(image) {
   return html`
     <dialog class="c-zoom" aria-label="${t('item.zoomLabel')}">
-      <button type="button" class="c-zoom__close" title="${t('item.zoomClose')}" aria-label="${t('item.zoomClose')}">✕</button>
+      <button type="button" class="btn btn--overlay btn--icon btn--round c-zoom__close" title="${t('item.zoomClose')}" aria-label="${t('item.zoomClose')}">✕</button>
       <img class="c-zoom__img" src="${image.url}" alt="" loading="lazy" decoding="async">
     </dialog>
   `;

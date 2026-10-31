@@ -8,9 +8,10 @@
 .c-person-header {
   position: relative;
   text-align: center;
-  border-radius: 20px;
-  padding: 16px 52px;
-  margin: 12px 0;
+  border-radius: var(--radius-lg);
+  /* Room on both sides for the action button in the top corner. */
+  padding: var(--space-4) calc(var(--tap-target) + var(--space-2));
+  margin: var(--space-3) 0;
   background: linear-gradient(160deg, color-mix(in srgb, var(--c) 12%, var(--color-card)), color-mix(in srgb, var(--c) 3%, var(--color-card)));
 }
 
@@ -27,9 +28,9 @@
  */
 .c-person-header__name {
   font-size: var(--text-22);
-  font-weight: 800;
+  font-weight: var(--weight-heavy);
   line-height: 1.25;
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
   color: var(--c-text, color-mix(in srgb, var(--c) 60%, var(--color-ink)));
 }
 
@@ -40,13 +41,15 @@
   color: color-mix(in srgb, var(--color-ink-muted) 75%, var(--color-ink));
 }
 
-.c-person-header .c-hub__counts {
+/* The page's counts line (meta), in ink rather than muted: it sits on
+   the person's tint. */
+.c-person-header__counts {
   color: var(--color-ink);
-  margin: 6px 0 0;
+  margin: var(--space-2) 0 0;
 }
 
 .c-person-header__action {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: var(--space-1);
+  right: var(--space-1);
 }

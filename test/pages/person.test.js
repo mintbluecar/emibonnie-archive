@@ -38,7 +38,7 @@ test('composePerson (Task 10d): searches within this person -- the box names the
   assert.match(markup, /placeholder="search sol…"/);
   assert.ok(!markup.includes('c-person__search'));
   assert.ok(!markup.includes('/search'));
-  assert.match(markup, /<div class="c-search__list">[\s\S]*c-hub__seg/);
+  assert.match(markup, /<div data-search-list>[\s\S]*c-hub__seg/);
   assert.match(markup, /data-field="people" data-value="1"[^>]*aria-label="remove ☀️ sol"/, 'the person is a removable chip from the start');
 });
 
@@ -58,7 +58,7 @@ test('composePerson: grouped by event, each event name its own group label', () 
 
 test('composePerson: two standalone posts (no event) fold into one "posts" group', () => {
   const markup = String(composePerson(PERSON));
-  const postsHeadings = markup.match(/<h2 class="c-hub-group__label">posts<\/h2>/g) ?? [];
+  const postsHeadings = markup.match(/<h2 class="label label--section">posts<\/h2>/g) ?? [];
   assert.equal(postsHeadings.length, 1, 'one "posts" heading, not one per post');
   assert.match(markup, /href="\/t\/1900000000000000009"/);
   assert.match(markup, /href="\/t\/1900000000000000008"/);
@@ -66,14 +66,14 @@ test('composePerson: two standalone posts (no event) fold into one "posts" group
 
 test('composePerson: a shared-story item groups under "shared story · <day>", distinct from "posts" and from an event', () => {
   const markup = String(composePerson(PERSON_GROUPS));
-  assert.match(markup, /<h2 class="c-hub-group__label">shared story · 2 Mar 2026<\/h2>/);
-  assert.match(markup, /<h2 class="c-hub-group__label">posts<\/h2>/);
+  assert.match(markup, /<h2 class="label label--section">shared story · 2 Mar 2026<\/h2>/);
+  assert.match(markup, /<h2 class="label label--section">posts<\/h2>/);
   assert.match(markup, /SOLLUNA AT STARFEST · 18 Oct 2026/);
 });
 
 test('composePerson: includes the page shell\'s compact header and tab bar', () => {
   const markup = String(composePerson(PERSON));
-  assert.match(markup, /c-header--compact/);
+  assert.match(markup, /<header class="c-header" data-compact>/);
   assert.match(markup, /c-tabbar/);
   assert.match(markup, /c-footer__links/);
 });
@@ -83,10 +83,12 @@ test('bind: switching to "all, newest" re-renders flat, without a group label', 
   mount(root, composePerson(PERSON));
   globalThis.document = fakeDocument();
   bind(root, PERSON, 'solsunny');
-  const allChip = /** @type {any} */ (root.querySelector('.c-hub__seg .c-chips__chip[data-value="all"]'));
+  const allChip = /** @type {any} */ (root.querySelector('.c-hub__seg [data-value="all"]'));
   allChip.click();
-  const content = /** @type {any} */ (root.querySelector('.c-hub__content'));
-  assert.equal(content.querySelectorAll('.c-hub-group__label').length, 0, 'flat view has no group labels');
+  assert.equal(allChip.getAttribute('aria-pressed'), 'true', 'the chosen view is pressed');
+  assert.equal(root.querySelector('.c-hub__seg [data-value="byEvent"]')?.getAttribute('aria-pressed'), 'false', 'and the other is not');
+  const content = /** @type {any} */ (root.querySelector('[data-hub-content]'));
+  assert.equal(content.querySelectorAll('[data-hub-group] h2').length, 0, 'flat view has no group labels');
   assert.ok(content.querySelector('a[href="/t/1900000000000000009"]'), 'the entries are still there, just ungrouped');
   assert.equal(allChip.getAttribute('aria-pressed'), 'true');
   delete (/** @type {any} */ (globalThis)).document;
@@ -118,13 +120,13 @@ test('bind: "more" fetches the kind\'s next page with the right offset, appends,
       calls.push(String(url));
       return new Response(JSON.stringify(nextPage), { status: 200 });
     });
-    const more = /** @type {any} */ (root.querySelector('.c-hub__more'));
+    const more = /** @type {any} */ (root.querySelector('[data-action="more"]'));
     assert.ok(more, 'a "more" button is rendered when a section hasMore');
     more.click();
     await flush();
     assert.match(calls[0], /\/api\/person\/solsunny\?offset=6/, `expected offset=6 (the 6 items already loaded), got ${calls[0]}`);
     assert.ok(root.querySelector('a[href="/t/NEW_ITEM"]'), 'the newly fetched item is now rendered');
-    assert.ok(!root.querySelector('.c-hub__more'), 'no more button once hasMore is false');
+    assert.ok(!root.querySelector('[data-action="more"]'), 'no more button once hasMore is false');
   } finally {
     cleanup();
   }
@@ -139,7 +141,7 @@ test('bind: "more" is guarded by a sequence number against a stale response (rev
     mock.method(globalThis, 'fetch', () => new Promise((resolve) => {
       releasers.push((page) => resolve(new Response(JSON.stringify(page), { status: 200 })));
     }));
-    const more = /** @type {any} */ (root.querySelector('.c-hub__more'));
+    const more = /** @type {any} */ (root.querySelector('[data-action="more"]'));
     more.click();
     more.click(); // fires again while the first is still in flight (button isn't disabled until the click handler runs synchronously first)
     // Resolve the *first* request last, with a response that would be wrong if it won.
@@ -175,7 +177,7 @@ test('bind (Task 10d): reopening the "with…" picker twice, then applying, sear
         categories: [], clients: [], events: [], accounts: [],
       }), { status: 200 });
     });
-    const withChip = /** @type {any} */ (root.querySelector('.c-hub__seg .c-chips__chip[data-value="with"]'));
+    const withChip = /** @type {any} */ (root.querySelector('.c-hub__seg [data-value="with"]'));
     withChip.click();
     await flush();
     withChip.click();
@@ -183,8 +185,8 @@ test('bind (Task 10d): reopening the "with…" picker twice, then applying, sear
     withChip.click();
     await flush();
     // sol is PERSON's own person (id 1); the picker excludes self, so only luna (id 2) is choosable.
-    assert.ok(!root.querySelector('.c-hub__picker .c-chips__chip[data-value="1"]'), 'the picker excludes self (review round 1, M2)');
-    const lunaChip = /** @type {any} */ (root.querySelector('.c-hub__picker .c-chips__chip[data-value="2"]'));
+    assert.ok(!root.querySelector('[data-person-picker] [data-value="1"]'), 'the picker excludes self (review round 1, M2)');
+    const lunaChip = /** @type {any} */ (root.querySelector('[data-person-picker] [data-value="2"]'));
     lunaChip.click();
     const applyBtn = /** @type {any} */ (root.querySelector('.c-hub__picker-apply'));
     applyBtn.click();
@@ -192,7 +194,7 @@ test('bind (Task 10d): reopening the "with…" picker twice, then applying, sear
     assert.deepEqual(urls, ['/p/solsunny?people=2&peopleMode=all'], 'one in-place search on the person\'s own page (sol is implied by the path)');
     assert.equal(searches.length, 1);
     assert.match(searches[0], /people=1%2C2&peopleMode=all/);
-    assert.ok(root.querySelector('.c-search__list').hidden, 'results replace the list');
+    assert.ok(root.querySelector('[data-search-list]').hidden, 'results replace the list');
   } finally {
     delete (/** @type {any} */ (globalThis)).history;
     cleanup();
@@ -253,13 +255,13 @@ test('start: redirectTo replaces the page at personHref(redirectTo)', async () =
 
 test('composePerson (Task 9b): entries are compact previews in both views, not full bubbles', () => {
   const markup = String(composePerson(PERSON_GROUPS));
-  assert.match(markup, /c-preview-card--compact/);
+  assert.match(markup, /data-compact/);
   assert.ok(!markup.includes('c-bubbles__bub'));
 });
 
 test('hubGroups (Task 9b): the flat "all, newest" view is compact too', async () => {
   const { activeView } = await import('../../public/js/pages/hubGroups.js');
   const markup = String(activeView('all', PERSON_GROUPS.sections, {}));
-  assert.match(markup, /c-preview-card--compact/);
+  assert.match(markup, /data-compact/);
   assert.ok(!markup.includes('c-bubbles__bub'));
 });

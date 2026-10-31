@@ -294,6 +294,77 @@ tasks:
       - npm run seed-dev
       - npm run dev:watch
 
+  dev:pull:
+    desc: "Replace .devdb with a copy of production's data (only reads production)"
+    summary: |
+      Runs `npm run pull-prod` (scripts/pullProd.js) against $EMIBONNIE_DB:
+      rebuilds .devdb from this checkout's migrations and copies every
+      table except login sessions and rate limits. Stops if production
+      applied different migrations. Then `task dev:as -- owner`.
+    silent: true
+    preconditions:
+      - sh: 'test -n "$EMIBONNIE_DB"'
+        msg: "EMIBONNIE_DB is not set -- export the main branch's connection string first."
+    env:
+      PGLITE_DIR: .devdb
+      VERCEL: ''
+    cmds:
+      - DATABASE_URL="$EMIBONNIE_DB" npm run pull-prod
+
+  dev:as:
+    desc: "Like dev, signed in as a role: task dev:as -- owner|translator|member|google|guest"
+    summary: |
+      Runs `task dev` with DEV_AS set, so the first page you open signs you
+      in as that role (scripts/dev.js). Switch while it runs with
+      `task dev:switch -- <role>`. Run `task dev:pull` first for real data.
+    # The role goes through `env:`, never `{{ }}` in shell text (see takedown), and must be one of the five.
+    env:
+      DEV_AS: '{{.ROLE | default .CLI_ARGS}}'
+      PGLITE_DIR: .devdb
+      DATABASE_URL: ''
+      VERCEL: ''
+    preconditions:
+      - sh: '[[ $DEV_AS =~ ^(owner|translator|member|google|guest)$ ]]'
+        msg: "Pick a role: task dev:as -- owner|translator|member|google|guest"
+    cmds:
+      - test -d .devdb || npm run seed-dev
+      - npm run dev:watch
+
+  screens:
+    desc: "Screenshots of every page for every role on .devdb, into .screens/"
+    summary: |
+      Runs `npm run screens -- --db .devdb`: every page as owner, translator,
+      member and guest, at 390px and 1280px, light and dark, with an index at
+      .screens/index.html. .devdb may be a copy of production (task dev:pull),
+      so .screens/ is gitignored -- never commit or share it.
+    env:
+      PGLITE_DIR: .devdb
+      DATABASE_URL: ''
+      VERCEL: ''
+    preconditions:
+      - sh: 'test -d .devdb'
+        msg: "No .devdb yet -- run task dev:pull (real data) or task dev (sample data) first."
+    cmds:
+      - npm run screens -- --db .devdb
+
+  dev:switch:
+    desc: "Switch the running local site's role in your browser: task dev:switch -- <role> [handle]"
+    summary: |
+      Opens http://localhost:3000/api/auth/dev?as=<role> (PORT overrides
+      3000), which signs the browser in as that role and lands on /me. For a
+      particular translator: task dev:switch -- translator <x handle>.
+    env:
+      DEV_SWITCH_ARGS: '{{.CLI_ARGS}}'
+    preconditions:
+      - sh: '[[ $DEV_SWITCH_ARGS =~ ^(owner|translator|member|google|guest)( [A-Za-z0-9_]{1,15})?$ ]]'
+        msg: "Pick a role: task dev:switch -- owner|translator|member|google|guest (translator may add an X handle)"
+    cmds:
+      - |
+        set -- $DEV_SWITCH_ARGS
+        url="http://localhost:${PORT:-3000}/api/auth/dev?as=$1&returnTo=/me${2:+&handle=$2}"
+        echo "$url"
+        open "$url"
+
   takedown:
     desc: "Hide one item by its /t/<id> numeric id: task takedown -- <id> (or ID=<id>)"
     summary: |

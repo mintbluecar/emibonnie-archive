@@ -142,7 +142,7 @@ test('renderCompact (Task 9b): one paragraph of "emoji text" runs -- each speake
   ];
   const markup = String(renderCompact({ bubbles }));
   assert.equal(markup.match(/<p class="c-bubbles-compact"/g)?.length, 1);
-  assert.match(markup, /<span class="c-bubbles-compact__who c-emoji" role="img" aria-label="luna">💜<\/span> hi &lt;b&gt;/);
+  assert.match(markup, /<span class="c-emoji" role="img" aria-label="luna">💜<\/span> hi &lt;b&gt;/);
   assert.equal(markup.match(/aria-label="luna"/g)?.length, 1, 'the continuation line adds no second emoji');
   assert.match(markup, /aria-label="sol &amp; unknown speaker">🧡💜<\/span> both/);
   assert.match(markup, /context/);
@@ -164,10 +164,10 @@ test('fix round 2: a speaker with no emoji (a bare ":" mapped to a role) gets a 
 
 test('fix round 2: compact, a speaker with no emoji shows its name as text ("fan:"), or "unknown speaker:" unmapped', () => {
   const mapped = String(renderCompact({ bubbles: [{ kind: 'speech', emoji: '', name: 'fan', text: 'hello', cont: false }] }));
-  assert.match(mapped, /<span class="c-bubbles-compact__who c-bubbles-compact__who--name">fan:<\/span> hello/);
+  assert.match(mapped, /<span class="c-bubbles-compact__name">fan:<\/span> hello/);
   assert.ok(!mapped.includes('role="img"'));
   const unmapped = String(renderCompact({ bubbles: [{ kind: 'speech', emoji: '', name: null, text: 'hello', cont: false }] }));
-  assert.match(unmapped, /c-bubbles-compact__who--name">unknown speaker:<\/span>/);
+  assert.match(unmapped, /c-bubbles-compact__name">unknown speaker:<\/span>/);
 });
 
 test('Task 10c (o): an avatar\'s emoji sits in its own .c-emoji box, centred by the circle\'s grid', () => {

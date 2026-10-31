@@ -25,7 +25,7 @@ import * as pageShell from '../components/pageShell.js';
 import * as inlineSearch from '../components/inlineSearch.js';
 import { filtersSlot, headerProps, region } from '../components/inlineSearchView.js';
 import { accountFromAccountPath, accountHref } from '../core/routes.js';
-import { activeView, bindMore, bindSections, segmentedControl } from './hubGroups.js';
+import { activeView, bindMore, bindSections, segmentedControl, selectSegment } from './hubGroups.js';
 import { mountLoadError } from './pageError.js';
 
 const APP_SELECTOR = 'app';
@@ -39,9 +39,9 @@ const openProfileLink = (profileUrl) => html`<a class="c-account__open-profile" 
 function headRow(data) {
   return html`
     <div class="c-account__head">
-      <h1 class="c-account__handle">@${data.account.handle}</h1>
+      <h1 class="heading heading--md" data-handle>@${data.account.handle}</h1>
       ${data.account.profileUrl ? openProfileLink(data.account.profileUrl) : ''}
-      <p class="c-hub__counts">${tCount('account.totals', data.counts.items)}</p>
+      <p class="meta c-account__counts">${tCount('account.totals', data.counts.items)}</p>
     </div>
   `;
 }
@@ -60,7 +60,7 @@ export function accountSearch(handle, query = '') {
 export function composeAccount(data, search = accountSearch(data.account.handle)) {
   const list = html`
     ${segmentedControl('byEvent', false)}
-    <div class="c-hub__content">${activeView('byEvent', data.sections, {})}</div>
+    <div data-hub-content>${activeView('byEvent', data.sections, {})}</div>
   `;
   const content = html`
     ${filtersSlot(search)}
@@ -83,16 +83,12 @@ export function bind(root, data, handle) {
   /** @type {import('./hubGroups.js').HubCtx} */
   const ctx = { seg: 'byEvent', seq: 0, offset: {} };
   if (segEl) {
-    on(segEl, '.c-chips__chip', 'click', (_e, chip) => {
+    on(segEl, '[data-value]', 'click', (_e, chip) => {
       const value = chip.getAttribute('data-value');
       if (value !== 'byEvent' && value !== 'all') return;
       ctx.seg = value;
-      for (const c of segEl.querySelectorAll('.c-chips__chip')) {
-        const isOn = c.getAttribute('data-value') === value;
-        c.classList.toggle('c-chips__chip--on', isOn);
-        c.setAttribute('aria-pressed', String(isOn));
-      }
-      const contentEl = root.querySelector('.c-hub__content');
+      selectSegment(segEl, value);
+      const contentEl = root.querySelector('[data-hub-content]');
       if (contentEl) { mount(contentEl, activeView(ctx.seg, data.sections, {})); bindSections(contentEl, data.sections); }
     });
   }

@@ -46,7 +46,7 @@ function mountSignIn(root) {
 function mountNotFound(root) {
   mountPage(root, pageShell.render({
     active: 'me', compact: true,
-    content: html`<p class="c-import__empty">${t('import.notFound')}</p>`,
+    content: html`<p class="meta">${t('import.notFound')}</p>`,
   }));
 }
 
@@ -76,13 +76,16 @@ async function fetchRows(ui, { more = false } = {}) {
 
 /** @param {ReviewUi} ui */
 function paint(ui) {
-  mountPage(ui.root, html`${importRows.render(ui.state)}${importSpeakers.render({
-    markers: ui.markers,
-    people: ui.people,
-    roles: ui.roles,
-    expanded: ui.speakers.expanded,
-    remember: ui.speakers.remember,
-  })}`);
+  mountPage(ui.root, pageShell.render({
+    active: 'me', wide: true,
+    content: html`${importRows.render(ui.state)}${importSpeakers.render({
+      markers: ui.markers,
+      people: ui.people,
+      roles: ui.roles,
+      expanded: ui.speakers.expanded,
+      remember: ui.speakers.remember,
+    })}`,
+  }));
   const onReload = (/** @type {{ more?: boolean }} */ options = {}) => refresh(ui, options);
   importRows.bind(ui.root, { state: ui.state, reload: onReload });
   importSpeakers.bind(ui.root, {

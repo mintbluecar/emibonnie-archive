@@ -36,15 +36,31 @@ function statusScreen({ result, itemHref }) {
     ? STATUS_COPY[/** @type {keyof typeof STATUS_COPY} */ (result.status)]
     : t('add.error');
   return html`
-    <section class="c-add-link c-add-link--status" data-status="${result.status}">
+    <section class="card" data-status="${result.status}">
       <p class="c-add-link__status">${sentence}</p>
-      ${result.pending ? html`<p class="c-add-link__pending">${t('add.status.pending')}</p>` : ''}
-      <div class="c-add-link__actions">
-        ${itemHref ? html`<a class="c-add-link__primary" href="${itemHref}">${t('add.openItem')}</a>` : ''}
-        ${result.status === 'pending' ? html`<a class="c-add-link__primary" href="${ME_PATH}">${t('me.addedByMe')}</a>` : ''}
-        <a class="c-add-link__secondary" href="${ADD_PATH}">${t('add.addAnother')}</a>
+      ${result.pending ? html`<p class="meta c-add-link__pending">${t('add.status.pending')}</p>` : ''}
+      <div class="cluster cluster--3 c-add-link__actions">
+        ${itemHref ? html`<a class="btn btn--primary" href="${itemHref}">${t('add.openItem')}</a>` : ''}
+        ${result.status === 'pending' ? html`<a class="btn btn--primary" href="${ME_PATH}">${t('me.addedByMe')}</a>` : ''}
+        <a class="btn btn--secondary" href="${ADD_PATH}">${t('add.addAnother')}</a>
       </div>
     </section>
+  `;
+}
+
+/**
+ * The link box, its label and, after a failed paste, its error.
+ * @param {{ url: string, error: boolean }} props
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+function urlField({ url, error }) {
+  return html`
+    <div class="field">
+      <label class="label" for="c-add-url">${t('add.urlLabel')}</label>
+      <input id="c-add-url" name="url" type="url" inputmode="url" autocomplete="off"
+        value="${url}" placeholder="${t('add.urlPlaceholder')}" required${error ? html` aria-invalid="true" aria-describedby="c-add-url-error"` : ''}>
+      ${error ? html`<p class="field__error" id="c-add-url-error" role="alert">${t('add.error')}</p>` : ''}
+    </div>
   `;
 }
 
@@ -58,17 +74,14 @@ function statusScreen({ result, itemHref }) {
 export function render({ addingAs, url = '', busy = false, error = false, result = null, itemHref = null }) {
   if (result) return statusScreen({ result, itemHref });
   return html`
-    <section class="c-add-link">
+    <section class="card">
       <p class="c-add-link__intro">${t('add.intro')}</p>
-      <p class="c-add-link__as">${t('add.addingAs', { who: addingAs })}</p>
-      <form class="c-add-link__form" data-add-form>
-        <label class="c-add-link__label" for="c-add-url">${t('add.urlLabel')}</label>
-        <input class="c-add__url" id="c-add-url" name="url" type="url" inputmode="url" autocomplete="off"
-          value="${url}" placeholder="${t('add.urlPlaceholder')}" required>
-        <button class="c-add-link__next" type="submit"${busy ? ' disabled' : ''}>${busy ? t('add.checking') : t('add.next')}</button>
-        ${error ? html`<p class="c-add-link__error" role="alert">${t('add.error')}</p>` : ''}
+      <p class="label c-add-link__as">${t('add.addingAs', { who: addingAs })}</p>
+      <form class="stack stack--2" data-add-form>
+        ${urlField({ url, error })}
+        <button class="btn btn--primary" type="submit"${busy ? ' disabled' : ''}>${busy ? t('add.checking') : t('add.next')}</button>
       </form>
-      <p class="c-add-link__note">${t('add.note')}</p>
+      <p class="meta c-add-link__note">${t('add.note')}</p>
     </section>
   `;
 }
@@ -83,7 +96,7 @@ export function render({ addingAs, url = '', busy = false, error = false, result
 export function bind(el, { onSubmit }) {
   on(el, '[data-add-form]', 'submit', (event, form) => {
     event.preventDefault();
-    const input = /** @type {HTMLInputElement|null} */ (form.querySelector('.c-add__url'));
+    const input = /** @type {HTMLInputElement|null} */ (form.querySelector('#c-add-url'));
     onSubmit(input?.value.trim() ?? '');
   });
 }

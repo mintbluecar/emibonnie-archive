@@ -74,7 +74,7 @@ test('header (Task 10d): with `search` the bar has no search icon (the box is ri
   for (const props of [{}, { compact: true }]) {
     const markup = String(render(props));
     assert.ok(!markup.includes('c-header__search'), 'no search row, so no box that could navigate');
-    assert.match(markup, /<a class="c-header__find" href="\/" title="search" aria-label="search">\s*<svg[^>]*aria-hidden="true"/);
+    assert.match(markup, /<a class="btn btn--quiet btn--icon c-header__icon c-header__find" href="\/" title="search" aria-label="search">\s*<svg[^>]*aria-hidden="true"/);
   }
   assert.ok(!String(render({ compact: true })).includes('c-header__below'), 'a compact page with no search has nothing below the bar');
 });
@@ -86,7 +86,7 @@ test('header (fix round 1, I3; owner rule): every icon-only control carries a ti
       assert.ok(tag.includes(`title="${label}"`), tag);
     }
   }
-  assert.match(String(render(SEARCH)), /class="c-header__filter-btn" type="button" title="filters" aria-label="filters"/);
+  assert.match(String(render(SEARCH)), /class="btn btn--secondary btn--icon c-header__filter-btn" type="button" title="filters" aria-label="filters"/);
 });
 
 test('fix round 1, I3 (owner rule): no button or link in public/js has an aria-label without a title (an icon-only control shows its name on hover)', async () => {

@@ -3,17 +3,15 @@
  * X's embed markup *and* its fallback: styled here as a plain quote, so
  * it reads well before widgets.js swaps it for X's iframe, or when X
  * never loads (blocked, offline, a deleted post). Once X renders, its
- * own `.twitter-tweet-rendered` container replaces the blockquote.
+ * own `.twitter-tweet-rendered` container replaces the blockquote. The
+ * heading is a label, the byline and the gone note are meta, the link a
+ * tap-link and the expand switch a quiet icon button; the row it sits
+ * in is itemPage.css's. See STYLING.md.
  */
-
-.c-item__embed {
-  flex: 1 1 100%;
-  min-width: 0;
-}
 
 .c-embed {
   margin: 0;
-  padding: 10px 12px;
+  padding: var(--space-3);
   background: var(--color-card);
   border: 1.5px solid var(--color-card-shadow);
   border-radius: var(--radius-card);
@@ -25,29 +23,18 @@
 .c-embed__text {
   overflow-wrap: anywhere;
   line-height: 1.45;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-2);
   white-space: pre-wrap;
   /* Task 10c (q): no line clamp of its own any more -- the box around it
      crops at --embed-max-height, and "show full tweet" shows it all. */
 }
 
-.c-embed__by {
-  font-size: var(--text-11);
-  color: var(--color-ink-muted);
-}
-
 .c-embed__link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  color: var(--color-ink-muted);
   text-decoration: underline;
 }
 
 .c-embed__gone {
-  margin-top: 6px;
-  font-size: var(--text-11);
-  color: var(--color-ink-muted);
+  margin-top: var(--space-2);
 }
 
 /*
@@ -56,8 +43,8 @@
  * centred in the column; X's embed fills it, and the fallback is the
  * same width, so the two match. Its height is cut at
  * --embed-max-height with a fade made of the page background, until the
- * switch opens it. `embedBox.js` marks it --tall only when the content
- * is taller than the cap.
+ * switch opens it (`data-open`). `embedBox.js` marks it `data-tall`
+ * only when the content is taller than the cap.
  */
 .c-embed-box {
   width: var(--embed-width);
@@ -65,10 +52,7 @@
 }
 
 .c-embed-box__label {
-  font-size: var(--text-11);
-  font-weight: 800;
-  color: var(--color-label);
-  margin: 4px 2px 6px;
+  margin: var(--space-1) 0 var(--space-2);
 }
 
 .c-embed-box__clip {
@@ -77,7 +61,7 @@
   overflow: hidden;
 }
 
-.c-embed-box--tall .c-embed-box__clip::after {
+.c-embed-box[data-tall] .c-embed-box__clip::after {
   content: '';
   position: absolute;
   left: 0;
@@ -88,33 +72,22 @@
   pointer-events: none;
 }
 
-.c-embed-box--open .c-embed-box__clip {
+.c-embed-box[data-open] .c-embed-box__clip {
   max-height: none;
 }
 
-.c-embed-box--open .c-embed-box__clip::after {
+.c-embed-box[data-open] .c-embed-box__clip::after {
   display: none;
 }
 
+/* The expand switch: centred under the box, a muted chevron. */
 .c-embed-box__more {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--tap-target);
-  height: var(--tap-target);
-  margin: 2px auto 0;
-  padding: 0;
-  border: 0;
-  background: none;
+  margin-inline: auto;
   color: var(--color-ink-muted);
-  cursor: pointer;
 }
 
-.c-embed-box__more[hidden] {
-  display: none;
-}
-
-.c-embed-box--open .c-embed-box__more svg {
+.c-embed-box[data-open] .c-embed-box__more svg {
   transform: rotate(180deg);
 }
 

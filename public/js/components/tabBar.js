@@ -38,7 +38,7 @@ export function render(props = {}) {
         const isActive = tab.key === active;
         return html`
           <a
-            class="c-tabbar__item${isActive ? ' c-tabbar__item--on' : ''}"
+            class="c-tabbar__item"
             href="${tab.href}"
             aria-current="${isActive ? 'page' : 'false'}"
           >${tab.key === 'add' ? html`<span aria-hidden="true">＋</span> ` : ''}${labelFor(tab.key)}</a>

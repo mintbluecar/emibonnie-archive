@@ -60,7 +60,7 @@ export function render({ editOpenUntil, now = new Date() }) {
   if (!editOpenUntil || new Date(editOpenUntil).getTime() <= now.getTime()) return html``;
   return html`
     <div class="c-refresh">
-      <button type="button" class="c-refresh__btn">
+      <button type="button" class="btn btn--secondary" data-action="check-update">
         ${t('item.checkUpdate')}
       </button>
     </div>
@@ -113,7 +113,7 @@ function registerPress(target) {
 }
 
 /**
- * Re-applies the lock countdown to whatever `.c-refresh__btn` currently
+ * Re-applies the lock countdown to whatever `[data-action="check-update"]` currently
  * exists under `el`, if the stored state is still locked. Exported so a
  * caller that re-renders just the button's container (e.g. the item
  * page's body re-render after a successful check) can resync a freshly
@@ -124,7 +124,7 @@ function registerPress(target) {
  */
 export function syncLock(el, target) {
   const existing = loadState(storageKey(target.kind, target.sourceId));
-  const button = /** @type {HTMLButtonElement|null} */ (el.querySelector('.c-refresh__btn'));
+  const button = /** @type {HTMLButtonElement|null} */ (el.querySelector('[data-action="check-update"]'));
   if (existing && existing.lockedUntil > Date.now() && button) startCountdown(button, existing.lockedUntil);
 }
 
@@ -166,7 +166,7 @@ async function postRefresh(button, target, onUpdated) {
  */
 export function bind(el, target, onUpdated) {
   syncLock(el, target);
-  on(el, '.c-refresh__btn', 'click', (_e, target_) => {
+  on(el, '[data-action="check-update"]', 'click', (_e, target_) => {
     const button = /** @type {HTMLButtonElement} */ (target_);
     if (button.disabled) return;
     const { lockedUntil } = registerPress(target);

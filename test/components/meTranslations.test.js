@@ -53,7 +53,7 @@ test('the welcome is gone once it has been marked', () => {
 
 test('a removed row is faded with a restore control; a hidden one has none', () => {
   const removed = String(render(state({ items: [item({ removedByYou: true })] })));
-  assert.match(removed, /c-me__entry--faded/);
+  assert.match(removed, /<li class="c-me__entry" data-faded>/);
   assert.match(removed, copyRe(t('me.translations.removedByYou')));
   assert.match(removed, /data-action="restore"/);
   assert.ok(!removed.includes('type="checkbox"'), 'a removed row is not selectable');
@@ -69,12 +69,13 @@ test('a rejected row is labelled and not selectable', () => {
   assert.ok(!markup.includes('type="checkbox"'));
 });
 
-test('the opt-out box names the total, warns, and its button is the red full-width confirm', () => {
+test('the opt-out box names the total, warns, and its button is the danger full-width confirm', () => {
   const markup = String(render(state()));
   assert.match(markup, copyRe(t('me.optOut.title')));
   assert.match(markup, copyRe(tCount('me.optOut.body', 12)));
   assert.match(markup, copyRe(t('me.optOut.confirm')));
-  assert.match(markup, /class="c-me__optout-confirm"/);
+  const confirm = markup.match(/<button[^>]*data-action="opt-out"[^>]*>/)?.[0] ?? '';
+  assert.match(confirm, /class="btn btn--danger btn--block"/);
 });
 
 test('a list with more pages offers a translator-specific "more" action', () => {

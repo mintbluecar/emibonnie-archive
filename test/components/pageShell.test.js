@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 // Dynamic import: see test/components/header.test.js for why.
 const { render } = await import('../../public/js/components/pageShell.js');
-const { html } = await import('../../public/js/core/html.js');
+const { html, ShellHtml } = await import('../../public/js/core/html.js');
 
 test('pageShell (Task 9b): the tab bar renders inside the header, so desktop gets one top bar (phone CSS still fixes it to the bottom)', () => {
   const markup = String(render({ active: 'home', content: html`<p>x</p>` }));
@@ -17,4 +17,17 @@ test('pageShell (Task 9b, 10d): headerProps reach the header (an in-place search
   const markup = String(render({ active: 'home', compact: true, headerProps: { search: { placeholder: 'search this event…' } }, content: html`` }));
   assert.match(markup, /c-header__below--live[\s\S]*placeholder="search this event…"/);
   assert.ok(!String(render({ active: 'home', content: html`` })).includes('c-header__search-box'), 'no headerProps, no box');
+});
+
+// Task 6: "the shell is not optional" -- mountPage() only accepts this type, so render()'s
+// output has to be it, not plain SafeHtml.
+test('pageShell: render() returns ShellHtml, the type mountPage() requires', () => {
+  assert.ok(render({ active: 'home', content: html`<p>x</p>` }) instanceof ShellHtml);
+});
+
+test('pageShell: wide puts "container container--wide" on main; the default stays plain "container"', () => {
+  const wide = String(render({ active: 'home', wide: true, content: html`<p>x</p>` }));
+  assert.match(wide, /<main class="container container--wide">/);
+  const plain = String(render({ active: 'home', content: html`<p>x</p>` }));
+  assert.match(plain, /<main class="container">/);
 });

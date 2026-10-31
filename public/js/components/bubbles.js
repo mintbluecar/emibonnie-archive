@@ -35,7 +35,7 @@ function speechBubble(bubble) {
     return html`
       <div class="c-bubbles__msg c-bubbles__msg--cont"${bubble.colour ? html` data-c="${bubble.colour}"` : ''}>
         <div class="c-bubbles__avatar c-bubbles__avatar--blank" aria-hidden="true"></div>
-        <div class="c-bubbles__bub msg cont">${thaiSpans(bubble.text)}</div>
+        <div class="c-bubbles__bub">${thaiSpans(bubble.text)}</div>
       </div>
     `;
   }
@@ -65,13 +65,13 @@ function jointBubble(bubble) {
     return html`
       <div class="c-bubbles__msg c-bubbles__msg--cont">
         <div class="c-bubbles__avatar c-bubbles__avatar--blank" aria-hidden="true"></div>
-        <div class="c-bubbles__bub msg cont">${thaiSpans(bubble.text)}</div>
+        <div class="c-bubbles__bub">${thaiSpans(bubble.text)}</div>
       </div>
     `;
   }
   const name = bubble.parts.map((p) => p.name ?? t('item.unknownSpeaker')).join(' & ');
   return html`
-    <div class="c-bubbles__msg c-bubbles__msg--joint">
+    <div class="c-bubbles__msg">
       <div class="c-bubbles__avatars">
         ${bubble.parts.map((p) => html`<div class="c-bubbles__avatar"><span class="c-emoji">${p.emoji}</span></div>`)}
       </div>
@@ -132,14 +132,14 @@ export function render(props) {
  */
 function compactWho(bubble) {
   if (bubble.kind === 'speech' && !bubble.cont && !bubble.emoji) {
-    return html`<span class="c-bubbles-compact__who c-bubbles-compact__who--name">${bubble.name ?? t('item.unknownSpeaker')}:</span> `;
+    return html`<span class="c-bubbles-compact__name">${bubble.name ?? t('item.unknownSpeaker')}:</span> `;
   }
   if (bubble.kind === 'speech' && !bubble.cont) {
-    return html`<span class="c-bubbles-compact__who c-emoji" role="img" aria-label="${bubble.name ?? t('item.unknownSpeaker')}">${bubble.emoji}</span> `;
+    return html`<span class="c-emoji" role="img" aria-label="${bubble.name ?? t('item.unknownSpeaker')}">${bubble.emoji}</span> `;
   }
   if (bubble.kind === 'joint' && !bubble.cont) {
     const names = bubble.parts.map((p) => p.name ?? t('item.unknownSpeaker')).join(' & ');
-    return html`<span class="c-bubbles-compact__who c-emoji" role="img" aria-label="${names}">${bubble.parts.map((p) => p.emoji)}</span> `;
+    return html`<span class="c-emoji" role="img" aria-label="${names}">${bubble.parts.map((p) => p.emoji)}</span> `;
   }
   return '';
 }

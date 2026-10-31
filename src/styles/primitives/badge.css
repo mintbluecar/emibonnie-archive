@@ -1,0 +1,35 @@
+/*
+ * Badge (Styling system Task 4): a small, non-interactive label -- fan
+ * made, translator, a row's state.
+ *
+ *   <span class="badge">fan-made</span>
+ *   <span class="badge badge--accent">translator</span>
+ *   <span class="badge badge--danger">failed</span>
+ *
+ * badge--danger is outlined on the card surface: the danger colour on its
+ * own tint is under 4.5:1 at this size.
+ */
+
+.badge {
+  display: inline-block;
+  padding: 0 var(--space-2);
+  font-size: var(--text-11);
+  font-weight: var(--weight-heavy);
+  line-height: 1.5;
+  white-space: nowrap;
+  color: var(--color-ink-muted);
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: var(--radius-pill);
+}
+
+.badge--accent {
+  color: var(--color-label-on-tint);
+  background: var(--color-label-tint);
+  border-color: var(--color-label-border);
+}
+
+.badge--danger {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
