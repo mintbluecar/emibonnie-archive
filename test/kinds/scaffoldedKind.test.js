@@ -52,7 +52,13 @@ delete SAFE_ENV.NODE_TEST_CONTEXT;
 
 /** @param {string} cmd @param {string[]} args @param {Record<string, string>} [env] */
 function run(cmd, args, env = {}) {
-  return execFileSync(cmd, args, { cwd: copy, env: { ...SAFE_ENV, ...env }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  try {
+    return execFileSync(cmd, args, { cwd: copy, env: { ...SAFE_ENV, ...env }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  } catch (/** @type {any} */ err) {
+    // The copy's own output is the only clue to why a nested step failed (e.g. on CI), so keep it.
+    err.message = `${err.message}\n--- stdout ---\n${err.stdout ?? ''}\n--- stderr ---\n${err.stderr ?? ''}`;
+    throw err;
+  }
 }
 /** @param {string[]} args */
 const git = (args) => run('git', ['-c', 'user.name=scaffold-proof', '-c', 'user.email=scaffold-proof@example.invalid', '-c', 'commit.gpgsign=false', ...args]);

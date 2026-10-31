@@ -73,6 +73,8 @@ jobs:
       - run: npm ci
       - run: npm run init-site
       - run: npx playwright install --with-deps chromium
+      # Writes the generated kinds registries that seed-dev (the e2e webServer) imports.
+      - run: npm run build
       - run: npm run e2e
       # Task 9a item 1: the site checks on the init-site copy, so e2e/site.spec.js keeps working.
       - run: npm run e2e:site
