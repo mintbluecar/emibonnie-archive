@@ -29,7 +29,7 @@ export function bindAccount(root, state, rerender) {
   on(root, '[data-action="cancel-delete"]', 'click', () => {
     /** @type {HTMLDialogElement|null} */ (root.querySelector('.c-me__dialog'))?.close();
   });
-  on(root, '.c-me__delete-input', 'input', (_event, input) => {
+  on(root, '[data-delete-input]', 'input', (_event, input) => {
     const confirm = /** @type {HTMLButtonElement|null} */ (root.querySelector('[data-action="confirm-delete"]'));
     if (confirm) confirm.disabled = input.value.trim() !== 'delete';
   });
@@ -39,7 +39,7 @@ export function bindAccount(root, state, rerender) {
   });
   on(root, '.c-name-form', 'submit', async (event, form) => {
     event.preventDefault();
-    const input = /** @type {HTMLInputElement|null} */ (form.querySelector('.c-name-form__input'));
+    const input = /** @type {HTMLInputElement|null} */ (form.querySelector('[data-name-input]'));
     const value = input?.value ?? '';
     try {
       await postJson('/api/me/name', { name: value });

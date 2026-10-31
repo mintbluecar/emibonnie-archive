@@ -36,19 +36,19 @@ function originalPost(data) {
       text: data.original, author: data.credits.account, source: primary, sourceLanguage: site.sourceLanguage,
     })}</div>`;
   }
-  return html`<a class="c-item__footer-link" href="${primary.url}">${t('item.originalTweet')}</a>`;
+  return html`<a class="tap-link tap-link--sm c-item__footer-link" href="${primary.url}">${t('item.originalTweet')}</a>`;
 }
 
 /** @param {import('../../../src/http/contracts.js').ItemLink|null} link @returns {import('../core/html.js').SafeHtml} */
 function followsOnLine(link) {
-  return link ? html`<a class="c-item__footer-link" href="${link.url}">${t('item.followsOn')}</a>` : html``;
+  return link ? html`<a class="tap-link tap-link--sm c-item__footer-link" href="${link.url}">${t('item.followsOn')}</a>` : html``;
 }
 
 /** @param {import('../../../src/http/contracts.js').AddedByVM|null} addedBy @returns {import('../core/html.js').SafeHtml} */
 function addedByLine(addedBy) {
   if (!addedBy) return html``;
   const who = addedBy.kind === 'handle' ? `@${addedBy.handle}` : addedBy.kind === 'name' ? addedBy.name : t('item.addedByFan');
-  return html`<p class="c-item__added-by">${t('item.addedBy')} ${who}</p>`;
+  return html`<p class="meta" data-added-by>${t('item.addedBy')} ${who}</p>`;
 }
 
 /**
@@ -60,23 +60,23 @@ function addedByLine(addedBy) {
  */
 function ownerIcons(data) {
   return html`${data.canEdit
-    ? html`<a class="c-item__icon" href="${editHref(data.kind, data.sourceId)}" title="${t('item.edit')}" aria-label="${t('item.edit')}">✎</a>`
+    ? html`<a class="btn btn--secondary btn--icon" href="${editHref(data.kind, data.sourceId)}" title="${t('item.edit')}" aria-label="${t('item.edit')}">✎</a>`
     : ''}${data.canCheckFollowUps
-    ? html`<button type="button" class="c-item__icon" data-action="follow-ups" title="${t('item.followUps')}" aria-label="${t('item.followUps')}">⟳</button>`
+    ? html`<button type="button" class="btn btn--secondary btn--icon" data-action="follow-ups" title="${t('item.followUps')}" aria-label="${t('item.followUps')}">⟳</button>`
     : ''}`;
 }
 
 /**
  * The editor's controls' place in the footer: hidden and empty until the
  * caller's own fields say they have a role (a stranger never gets a
- * `.c-item__icon`). The cached public view carries no such fields, so the
+ * `btn--icon` here). The cached public view carries no such fields, so the
  * page fills it later, through `mountOwnerControls`.
  * @param {FooterView} data
  * @returns {import('../core/html.js').SafeHtml}
  */
 function ownerControls(data) {
   const shown = data.canEdit === true || data.canCheckFollowUps === true;
-  return html`<div class="c-item__owner" ${shown ? '' : 'hidden'}>${ownerIcons(data)}</div>`;
+  return html`<div class="cluster c-item__owner" ${shown ? '' : 'hidden'}>${ownerIcons(data)}</div>`;
 }
 
 /**
@@ -100,12 +100,12 @@ export function mountOwnerControls(root, data) {
  */
 export function footerBlock(data) {
   return html`
-    <div class="c-item__footer">
+    <div class="cluster c-item__footer">
       ${originalPost(data)}
       ${followsOnLine(data.followsOnFrom)}
       ${addedByLine(data.addedBy)}
-      <button type="button" class="c-item__copy-link">${t('item.copyLink')}</button>
-      <button class="c-item__footer-link" type="button" data-action="report">${t('item.report')}</button>
+      <button type="button" class="btn btn--secondary btn--sm" data-action="copy-link">${t('item.copyLink')}</button>
+      <button class="btn btn--quiet btn--sm" type="button" data-action="report">${t('item.report')}</button>
       ${ownerControls(data)}
       <p class="c-item__follow-status" role="status" data-follow-ups-status hidden></p>
       ${reportForm.render()}

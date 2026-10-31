@@ -49,6 +49,10 @@
      so a site that sets it gets matching badges without touching these. */
   --color-label-tint: color-mix(in srgb, var(--color-label) 12%, var(--color-card));
   --color-label-on-tint: color-mix(in srgb, var(--color-label) 75%, var(--color-ink));
+  /* The border around a --color-label-tint surface (Styling system Task
+     4: badge--accent, notice--accent). Derived like the two above, so it
+     follows a site's label colour and dark mode without its own value. */
+  --color-label-border: color-mix(in srgb, var(--color-label) 30%, var(--color-card));
   /* Search results' match highlight (Task 9b; mockups/search-v2.html's
      #ffd9a8). Ink on it is 11.4:1. */
   --color-highlight: #ffd9a8;
@@ -60,7 +64,57 @@
      White passes 5.97:1 here; dark mode's own value (below) is picked
      for its own --gradient-to instead. */
   --color-accent-text: #fff;
+  /* The gradient's start stop wherever --color-accent-text sits on it
+     (Styling system Task 4, btn--primary): white on the raw
+     --gradient-from is only 2.86:1 in light mode, so the stop is darkened
+     toward black (4.79:1; the same mix header.css's filter count and
+     filterSheet.css's apply button use). Dark mode's accent text is
+     black, which already passes on the raw stop, so it's left as is. */
+  --gradient-from-strong: color-mix(in srgb, var(--gradient-from) 75%, #000);
+  /* Error colour (Styling system Task 2, spec "2. Tokens"): the audit
+     found the de facto error colour #c8433a hand-copied 8 times (danger
+     links, the failed-import state, the opt-out flow). 4.78:1 against
+     --color-card. --color-danger-tint is a pale wash of it for
+     notice/error backgrounds, same derivation as --color-label-tint. */
+  --color-danger: #c8433a;
+  --color-danger-tint: color-mix(in srgb, var(--color-danger) 12%, var(--color-card));
+  /* Sign-in provider brand colours (Styling system Task 11, signIn.css),
+     the same in both themes, so neither dark block sets them: X's black
+     button with white text (19.2:1), and Google's blue "G" mark (decorative
+     and aria-hidden, a logotype: 3.5:1 on the light --color-card, 5.0:1
+     on the dark one). */
+  --color-brand-x: #0f0f0f;
+  --color-on-brand-x: #fff;
+  --color-brand-google: #4285f4;
+  /* The dim layer behind a modal dialog (Styling system Task 11,
+     base.css's dialog::backdrop): the 45% black the filter sheet, the
+     person picker and the report dialog each hand-copied. Black reads as
+     a dim in both themes, so dark mode has no value of its own. */
+  --color-scrim: rgb(0 0 0 / 45%);
+  /* Pictures and clips (Styling system Task 13): the black a clip or a
+     carousel is letterboxed on and the full-screen zoom sits on, the
+     dark wash under a control or counter placed over a picture
+     (carousel arrows and count, the clip's play and full-screen buttons),
+     and the text and glyph colour on either. A picture looks the same in
+     both themes, so its frame does too: dark mode has no values of its
+     own. */
+  --color-media: #000;
+  --color-overlay: rgb(0 0 0 / 50%);
+  --color-on-overlay: #fff;
+  /* Radius scale (Styling system Task 2): the audit found radii at
+     8/10/12/14/999px across components; migrated screens collapse onto
+     --radius-sm/--radius-md (10px and 14px both round to their nearer
+     neighbour), keeping --radius-card as its own, larger step. */
+  --radius-sm: 8px;
+  --radius-md: 12px;
   --radius-card: 16px;
+  --radius-pill: 999px;
+  /* The two steps outside that scale (Styling system Task 12): the
+     speech bubble's pointed corner and the search match highlight
+     (--radius-xs), and the bottom sheets' top corners and the person
+     and translator head cards (--radius-lg). */
+  --radius-xs: 4px;
+  --radius-lg: 20px;
   /* A chip's padding (Task 10c, chips.css and cast.css): its size is its
      content plus this, never a fixed height. */
   --chip-pad-x: 10px;
@@ -83,6 +137,50 @@
   --thumb-size: 56px;
   --font-latin: 'Nunito', sans-serif;
   --font-script: 'IBM Plex Sans Thai', sans-serif;
+  /* Font roles (Styling system Task 2, spec "2b. Fonts a site can
+     choose"): --font-body covers everything, --font-heading covers
+     h1-h3 and the heading primitive and defaults to the body font (so
+     nothing changes until a site sets it), and --font-latin stays as an
+     alias of --font-body, so a site overriding today's name keeps
+     working without ever mentioning --font-body (Review Focus 2). */
+  --font-body: var(--font-latin);
+  --font-heading: var(--font-body);
+
+  /* Spacing, radius, shadow, weight and focus-ring scales (Styling
+     system Task 2, spec "2. Tokens"): values are drawn from what's
+     already in use across components, so migrated screens (a later
+     task) move a pixel or two, not more. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  /* The card look's shadow (resultCard.css, previewCard.css, me.css,
+     add.css, adminImport.css, owner.css, signIn.css, eventCard.css all
+     hand-copy this), and the raised look used by a sheet/dialog sitting
+     above the page (lineFix.css's .c-line-fix, the bottom-sheet "line fix"
+     dialog). */
+  --shadow-card: 0 2px 0 var(--color-card-shadow);
+  --shadow-raised: 0 -6px 24px var(--color-card-shadow);
+  --weight-regular: 400;
+  --weight-bold: 700;
+  --weight-heavy: 800;
+  /* Keyboard focus ring (base.css's :focus-visible, a later task):
+     defaults to --color-label, the engine's existing accent-for-text
+     colour, so it's visible on both --color-bg and --color-card without
+     a new colour token. */
+  --focus-ring-color: var(--color-label);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  /* The one desktop breakpoint value lint allows in a media query
+     (documentation only: per the CSS Custom Properties spec, a media
+     feature's value can't be a var() reference, so a custom property
+     can't drive a media query's condition). The literal 860px below,
+     and every other media query in this engine, must match this
+     value. */
+  --bp-desktop: 860px;
 
   /* Type scale (Task 10b). Every font size in the engine's CSS is one of
      these tokens, never a literal px value. Each is named after its size
@@ -148,6 +246,17 @@
   /* The smallest tap/click target (44px, WCAG 2.5.5): the header bar's
      search icon and nav links, so also what sets the bar's height. */
   --tap-target: 44px;
+  /* The small button size (Styling system Task 4, btn--sm): shorter than
+     --tap-target, still above --target-min. */
+  --control-sm: 32px;
+  /* The large chip (Styling system Task 9, chip--lg): the person
+     picker's people and roles, which were 36px before they became
+     chips. */
+  --control-md: 36px;
+  /* The smallest target any control may have (WCAG 2.2 SC 2.5.8, Target
+     Size (Minimum), level AA): chips and checkbox labels (Styling system
+     Task 4), which keep their compact look rather than --tap-target. */
+  --target-min: 24px;
   /* Space above and below the header bar's content: phone (the slim bar);
      desktop below. */
   --header-pad-y: 4px;
@@ -197,6 +306,14 @@
        passes 3.83:1 -- review round 2, I3) and 7.35:1 against
        --gradient-from, so it's correct for a solid accent surface. */
     --color-accent-text: #000;
+    /* See --gradient-from-strong above: black passes on the raw stop. */
+    --gradient-from-strong: var(--gradient-from);
+    /* Same hue as the light-mode #c8433a, lightened for this background:
+       5.06:1 against the dark --color-card (--color-danger's hue held
+       constant, lightness raised, the same approach as --gradient-to
+       above). */
+    --color-danger: #d36962;
+    --color-danger-tint: color-mix(in srgb, var(--color-danger) 12%, var(--color-card));
   }
 }
 
@@ -220,4 +337,12 @@
      passes 3.83:1 -- review round 2, I3) and 7.35:1 against
      --gradient-from, so it's correct for a solid accent surface. */
   --color-accent-text: #000;
+  /* See --gradient-from-strong above: black passes on the raw stop. */
+  --gradient-from-strong: var(--gradient-from);
+  /* Same hue as the light-mode #c8433a, lightened for this background:
+     5.06:1 against the dark --color-card (--color-danger's hue held
+     constant, lightness raised, the same approach as --gradient-to
+     above). */
+  --color-danger: #d36962;
+  --color-danger-tint: color-mix(in srgb, var(--color-danger) 12%, var(--color-card));
 }

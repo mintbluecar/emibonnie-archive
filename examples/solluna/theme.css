@@ -5,6 +5,11 @@
  */
 
 :root {
+  /* The engine's own light paper, set here on purpose: like most site
+     themes, this one sets light values on a plain :root, and the e2e
+     dark-mode check (e2e/helpers.js, assertDarkBodyBackground) proves
+     such a value never leaks into dark mode. */
+  --color-bg: #f6efe3;
   --gradient-from: #c47a12;
   /* Darkened slightly from lunamoon's #6a5cd6: --gradient-to is also the
      default --color-label (accent text: headings, active tab, links), and #6a5cd6 was only

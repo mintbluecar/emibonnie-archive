@@ -16,7 +16,7 @@ test('me as the owner: the owner section, the switch and an accessible page', as
   await checkPage(page, '/me');
   await expect(page.locator('.c-owner')).toBeVisible();
   await expect(page.locator('[data-action="approval"]')).toBeVisible();
-  await expect(page.locator('.c-owner__search')).toBeVisible();
+  await expect(page.locator('[data-owner-search]')).toBeVisible();
 });
 
 test('the owner approves a held entry, hides and restores a report, and blocks a user', async ({ page }, testInfo) => {
@@ -58,21 +58,21 @@ test('the owner approves a held entry, hides and restores a report, and blocks a
     });
   }, LIVE);
   await page.reload();
-  const reportRow = page.locator('.c-owner__row', { hasText: 'owner e2e report' });
+  const reportRow = page.locator('tr', { hasText: 'owner e2e report' });
   await expect(reportRow).toBeVisible();
   await reportRow.locator('[data-action="hide-report"]').click();
-  await expect(page.locator('.c-owner__row', { hasText: 'owner e2e report' }).locator('[data-action="restore-report"]')).toBeVisible();
-  await page.locator('.c-owner__row', { hasText: 'owner e2e report' }).locator('[data-action="restore-report"]').click();
-  await expect(page.locator('.c-owner__row', { hasText: 'owner e2e report' }).locator('[data-action="hide-report"]')).toBeVisible();
+  await expect(page.locator('tr', { hasText: 'owner e2e report' }).locator('[data-action="restore-report"]')).toBeVisible();
+  await page.locator('tr', { hasText: 'owner e2e report' }).locator('[data-action="restore-report"]').click();
+  await expect(page.locator('tr', { hasText: 'owner e2e report' }).locator('[data-action="hide-report"]')).toBeVisible();
 
   // Users: search, block, unblock.
-  await page.locator('.c-owner__input').fill('dev_member');
-  await page.locator('.c-owner__input').press('Enter');
-  const userRow = page.locator('.c-owner__row', { hasText: '@dev_member' });
+  await page.locator('[data-owner-query]').fill('dev_member');
+  await page.locator('[data-owner-query]').press('Enter');
+  const userRow = page.locator('tr', { hasText: '@dev_member' });
   await expect(userRow).toBeVisible();
   await userRow.locator('[data-action="block"]').click();
-  await expect(page.locator('.c-owner__row', { hasText: '@dev_member' }).locator('[data-action="unblock"]')).toBeVisible();
-  await page.locator('.c-owner__row', { hasText: '@dev_member' }).locator('[data-action="unblock"]').click();
+  await expect(page.locator('tr', { hasText: '@dev_member' }).locator('[data-action="unblock"]')).toBeVisible();
+  await page.locator('tr', { hasText: '@dev_member' }).locator('[data-action="unblock"]').click();
 
   // Leave the switch off for the other specs.
   if (await approval.isChecked()) await approval.uncheck();

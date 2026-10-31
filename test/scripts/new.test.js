@@ -47,13 +47,20 @@ function filesUnder(dir) {
     .sort();
 }
 
-test('component badge creates exactly the component and its test', () => {
+test('component badge creates exactly the component, its test and its CSS', () => {
   inTempRoot((root) => {
     const created = scaffold({ kind: 'component', name: 'badge', root });
-    assert.deepEqual(created, ['public/js/components/badge.js', 'test/components/badge.test.js']);
+    assert.deepEqual(created, [
+      'public/js/components/badge.js', 'test/components/badge.test.js', 'src/styles/components/badge.css',
+    ]);
     for (const rel of created) assert.ok(existsSync(path.join(root, rel)), rel);
     assert.match(read(root, 'public/js/components/badge.js'), /^\/\/ @ts-check/);
     assert.match(read(root, 'public/js/components/badge.js'), /html`/);
+    // Styling system Task 5 (spec "6. Enforcement"): the scaffolded CSS's
+    // first line points at STYLING.md, so a new component is never
+    // written without being told where the rules live.
+    const [firstLine] = read(root, 'src/styles/components/badge.css').split('\n');
+    assert.match(firstLine, /STYLING\.md/);
   });
 });
 

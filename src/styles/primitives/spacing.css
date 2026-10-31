@@ -1,0 +1,48 @@
+/*
+ * Spacing (Styling system Task 4): stack is a column with a gap, cluster
+ * a wrapping row with a gap. The number is the --space-n step.
+ *
+ *   <div class="stack stack--3">...</div>
+ *   <div class="cluster cluster--2">
+ *     <button class="btn btn--secondary btn--sm" type="button">Edit</button>
+ *     <button class="btn btn--danger btn--sm" type="button">Remove</button>
+ *   </div>
+ *
+ *   <div class="cluster cluster--fill" role="tablist">
+ *     <button class="chip chip--lg chip--on" type="button" role="tab" aria-selected="true">By event</button>
+ *     <button class="chip chip--lg" type="button" role="tab" aria-selected="false">All</button>
+ *   </div>
+ *
+ * Without a size, stack is --space-3 and cluster --space-2. cluster--fill
+ * keeps one row and shares its width evenly between the children, their
+ * content centred: a view switch.
+ */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.cluster--fill {
+  flex-wrap: nowrap;
+}
+
+.cluster--fill > * {
+  flex: 1;
+  justify-content: center;
+}
+
+.stack--1, .cluster--1 { gap: var(--space-1); }
+.stack--2, .cluster--2 { gap: var(--space-2); }
+.stack--3, .cluster--3 { gap: var(--space-3); }
+.stack--4, .cluster--4 { gap: var(--space-4); }
+.stack--5 { gap: var(--space-5); }
+.stack--6 { gap: var(--space-6); }

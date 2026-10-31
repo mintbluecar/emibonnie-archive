@@ -40,6 +40,30 @@ test('the header names the job and the chips count every state', () => {
   }
 });
 
+test('the rows are a table with a heading per column and every cell labelled for phones', () => {
+  const markup = String(render(state({ rows: [row()] })));
+  assert.match(markup, /<table class="table table--stack">/);
+  const heads = [...markup.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1]);
+  assert.deepEqual(heads, ['import.col.state', 'import.col.translator', 'import.col.text', 'import.col.event', 'import.col.actions'].map((key) => t(key)));
+  assert.deepEqual(heads, ['state', 'translator', 'text', 'event', 'actions']);
+  const cells = [...markup.matchAll(/<td[^>]*>/g)].map((m) => m[0]);
+  assert.equal(cells.length, 5);
+  cells.forEach((cell, i) => assert.match(cell, new RegExp(`data-label="${heads[i]}"`), cell));
+});
+
+test('the filter chips, search and load more are primitives', () => {
+  const markup = String(render(state({ state: 'failed', hasMore: true })));
+  assert.match(markup, /<button class="chip chip--on" type="button"\s+data-action="filter" data-state="failed" aria-pressed="true">/);
+  assert.match(markup, /<button class="chip" type="button"\s+data-action="filter" data-state="" aria-pressed="false">/);
+  assert.match(markup, /<form class="field" data-import-search>/);
+  assert.match(markup, /<button class="btn btn--secondary" type="button" data-action="more">/);
+});
+
+test('a row\'s links are small secondary buttons', () => {
+  const markup = String(render(state({ rows: [row({ state: 'published' })] })));
+  assert.match(markup, /<a class="btn btn--secondary btn--sm" href="\/t\/111">/);
+});
+
 test('a row renders its state, translator, text, event and legal actions', () => {
   const published = String(render(state({ rows: [row({ state: 'published' })] })));
   assert.match(published, /a translated line/);
@@ -59,7 +83,7 @@ test('a row renders its state, translator, text, event and legal actions', () =>
 
 test('every icon-only row action has a title and an accessible name', () => {
   const markup = String(render(state({ rows: [row({ state: 'check' }), row({ id: 12, state: 'failed', entryUrl: null, editUrl: null })] })));
-  const icons = [...markup.matchAll(/<button[^>]*class="c-import__icon"[^>]*>/g)].map((m) => m[0]);
+  const icons = [...markup.matchAll(/<button[^>]*class="btn btn--secondary btn--sm btn--icon"[^>]*>/g)].map((m) => m[0]);
   assert.ok(icons.length >= 3);
   for (const tag of icons) {
     assert.match(tag, /title="[^"]+"/, tag);
@@ -78,8 +102,8 @@ test('the filter chips and the search call back with the new filter', async () =
 
     /** @type {any} */ (root.querySelector('[data-state="failed"]')).click();
     assert.equal(st.state, 'failed');
-    const form = /** @type {any} */ (root.querySelector('.c-import__search'));
-    /** @type {any} */ (root.querySelector('.c-import__input')).value = 'hello';
+    const form = /** @type {any} */ (root.querySelector('[data-import-search]'));
+    /** @type {any} */ (root.querySelector('input[type="search"]')).value = 'hello';
     form.dispatchEvent({ type: 'submit', target: form, preventDefault: () => {} });
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.deepEqual(calls, ['failed|', 'failed|hello']);

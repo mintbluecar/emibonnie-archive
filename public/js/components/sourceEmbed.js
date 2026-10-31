@@ -69,15 +69,15 @@ export function render({ text, author, source, sourceLanguage }) {
   const body = html`<p class="c-embed__text">${thaiSpans(text, sourceLanguage)}</p>`;
   if (source.status !== 'live') {
     return box(html`
-      <blockquote class="c-embed c-embed--gone">
-        ${body}<p class="c-embed__by">${byline(author)}</p>
-        <p class="c-embed__gone">${t('item.sourceGoneEmbed')}</p>
+      <blockquote class="c-embed" data-embed-gone>
+        ${body}<p class="meta">${byline(author)}</p>
+        <p class="meta c-embed__gone">${t('item.sourceGoneEmbed')}</p>
       </blockquote>
     `);
   }
   return box(html`
     <blockquote class="twitter-tweet c-embed" data-dnt="true" data-cards="hidden" data-conversation="none">
-      ${body}<p class="c-embed__by">${byline(author)} <a class="c-embed__link" href="${source.url}">${t('item.originalTweet')}</a></p>
+      ${body}<p class="meta" data-embed-by>${byline(author)} <a class="tap-link tap-link--sm c-embed__link" href="${source.url}">${t('item.originalTweet')}</a></p>
     </blockquote>
   `);
 }
@@ -93,9 +93,9 @@ export function render({ text, author, source, sourceLanguage }) {
 function box(content) {
   return html`
     <section class="c-embed-box">
-      <h2 class="c-embed-box__label">${t('item.embedHeading')}</h2>
-      <div class="c-embed-box__clip"><div class="c-embed-box__inner">${content}</div></div>
-      <button class="c-embed-box__more" type="button" aria-expanded="false" title="${t('item.embedMore')}" aria-label="${t('item.embedMore')}"
+      <h2 class="label c-embed-box__label">${t('item.embedHeading')}</h2>
+      <div class="c-embed-box__clip"><div data-embed-inner>${content}</div></div>
+      <button class="btn btn--quiet btn--icon c-embed-box__more" type="button" aria-expanded="false" title="${t('item.embedMore')}" aria-label="${t('item.embedMore')}"
         data-label-more="${t('item.embedMore')}" data-label-less="${t('item.embedLess')}" hidden>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
       </button>

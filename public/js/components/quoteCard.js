@@ -20,7 +20,7 @@ import * as carousel from './carousel.js';
 function authorLine(quote) {
   if (!quote.authorName && !quote.authorHandle) return html``;
   return html`
-    <p class="c-quote__author">
+    <p class="meta c-quote__author">
       ${quote.authorName ?? ''}${quote.authorHandle ? html` @${quote.authorHandle}` : ''}
       ${quote.postedAt ? html` · ${dayLabel(quote.postedAt.slice(0, 10))}` : ''}
     </p>

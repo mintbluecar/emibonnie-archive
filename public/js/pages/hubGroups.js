@@ -10,7 +10,7 @@
  * so this file never names a kind -- the same discipline `event.js`
  * already follows for its own sections; it only adds the group *label*
  * (an event's name, "shared story", or "posts") around what `KIND_UI`
- * itself renders, and its own `.c-hub__more` button around a section
+ * itself renders, and its own "more" button around a section
  * that `hasMore` (the same "wrap KIND_UI's own render" pattern
  * `event.js`'s `sectionBlock` already uses for its own "more" button).
  * Both views ask each kind for compact entries (`ctx.compact`, Task 9b).
@@ -20,7 +20,6 @@ import { mount, on } from '../core/dom.js';
 import { getJson } from '../core/api.js';
 import { t } from '../core/site.js';
 import { dayLabel } from '../core/format.js';
-import * as chips from '../components/chips.js';
 import { KIND_UI, renderSections } from '../kinds/_registry.js';
 
 /** @typedef {import('../../../src/http/contracts.js').DatedSection} DatedSection */
@@ -83,7 +82,7 @@ const sectionOf = (sections, kind) => sections.find((s) => s.kind === kind);
 
 /** @param {string} kind @returns {import('../core/html.js').SafeHtml} */
 function moreButton(kind) {
-  return html`<button type="button" class="c-hub__more" data-kind="${kind}">${t('event.more')}</button>`;
+  return html`<button type="button" class="btn btn--quiet btn--block" data-action="more" data-kind="${kind}">${t('event.more')}</button>`;
 }
 
 /**
@@ -107,7 +106,7 @@ function renderInOrder(sections, ctx) {
  * section, with its items rendered through `renderSections` (as that
  * group's own one-kind `Section`) -- real `hasMore`/`total` on the
  * trailing group of each kind (review round 1, I1: no more forcing
- * `hasMore: false`), with that kind's own `.c-hub__more` button right
+ * `hasMore: false`), with that kind's own "more" button right
  * after it when there's really more to fetch.
  * @param {DatedSection[]} sections @param {any} ctx
  * @returns {import('../core/html.js').SafeHtml}
@@ -120,18 +119,20 @@ export function byEventView(sections, ctx) {
   });
   const rendered = renderInOrder(synthetic, ctx);
   return html`${groups.map((group, i) => html`
-    <section class="c-hub-group" data-kind="${group.kind}">
-      <h2 class="c-hub-group__label">${group.label}</h2>
-      ${rendered[i] ?? ''}
+    <section data-hub-group data-kind="${group.kind}">
+      <h2 class="label label--section">${group.label}</h2>
+      <div class="stack stack--2">
+        ${rendered[i] ?? ''}
+        ${isLastOfKind(groups, i) && synthetic[i].hasMore ? moreButton(group.kind) : ''}
+      </div>
     </section>
-    ${isLastOfKind(groups, i) && synthetic[i].hasMore ? moreButton(group.kind) : ''}
   `)}`;
 }
 
 /** The "all, newest" segment: each kind's section, as-is (already newest first), through `renderSections`, with its own "more" button when `hasMore`. @param {DatedSection[]} sections @param {any} ctx @returns {import('../core/html.js').SafeHtml} */
 export function flatView(sections, ctx) {
   const rendered = renderInOrder(sections, ctx);
-  return html`${sections.map((section, i) => html`${rendered[i] ?? ''}${section.hasMore ? moreButton(section.kind) : ''}`)}`;
+  return html`${sections.map((section, i) => html`<div class="stack stack--2">${rendered[i] ?? ''}${section.hasMore ? moreButton(section.kind) : ''}</div>`)}`;
 }
 
 /** Renders `sections` for the currently active segment (`'with'` has no view of its own: it only opens the picker). @param {SegKey} active @param {DatedSection[]} sections @param {any} ctx @returns {import('../core/html.js').SafeHtml} */
@@ -149,12 +150,21 @@ export function bindSections(root, sections) {
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function segmentedControl(active, withPicker) {
-  const items = [
-    { label: t('person.byEvent'), value: 'byEvent', active: active === 'byEvent' },
-    { label: t('person.allNewest'), value: 'all', active: active === 'all' },
-    ...(withPicker ? [{ label: t('person.with'), value: 'with' }] : []),
-  ];
-  return html`<div class="c-hub__seg">${chips.render({ items })}</div>`;
+  /** @param {SegKey} value @param {string} label */
+  const option = (value, label) => html`<button type="button" class="segmented__option"
+    aria-pressed="${value === active ? 'true' : 'false'}" data-value="${value}">${label}</button>`;
+  return html`<div class="segmented c-hub__seg" role="group" aria-label="${t('person.viewLabel')}">
+    ${option('byEvent', t('person.byEvent'))}${option('all', t('person.allNewest'))}${withPicker ? option('with', t('person.with')) : ''}
+  </div>`;
+}
+
+/**
+ * Shows `value` as the segmented control's chosen view: that option on,
+ * every other off.
+ * @param {Element} segEl @param {SegKey} value @returns {void}
+ */
+export function selectSegment(segEl, value) {
+  for (const option of segEl.querySelectorAll('[data-value]')) option.setAttribute('aria-pressed', String(option.getAttribute('data-value') === value));
 }
 
 /**
@@ -173,11 +183,11 @@ export function mergedWithMore(sections, kind, page) {
 
 /** @typedef {{ root: Element, apiPath: string, data: { sections: DatedSection[] }, ctx: HubCtx }} MoreOpts */
 
-/** Applies a freshly fetched `kind` page: merges it in, updates the kind's own offset, and re-renders `.c-hub__content` for whichever segment is active. @param {MoreOpts} opts @param {string} kind @param {{ sections: DatedSection[] }} page @returns {void} */
+/** Applies a freshly fetched `kind` page: merges it in, updates the kind's own offset, and re-renders `[data-hub-content]` for whichever segment is active. @param {MoreOpts} opts @param {string} kind @param {{ sections: DatedSection[] }} page @returns {void} */
 function applyMorePage(opts, kind, page) {
   opts.data.sections = mergedWithMore(opts.data.sections, kind, page);
   opts.ctx.offset[kind] = sectionOf(opts.data.sections, kind)?.items.length ?? opts.ctx.offset[kind];
-  const contentEl = opts.root.querySelector('.c-hub__content');
+  const contentEl = opts.root.querySelector('[data-hub-content]');
   if (!contentEl) return;
   mount(contentEl, activeView(opts.ctx.seg, opts.data.sections, {}));
   bindSections(contentEl, opts.data.sections);
@@ -210,9 +220,9 @@ async function loadMore(opts, button) {
 }
 
 /**
- * Wires every `.c-hub__more` button inside `root` once, delegated (so a
- * re-render of `.c-hub__content` never stacks a duplicate listener --
- * the same discipline `components/inlineSearch.js`'s own `.c-search__more` already
+ * Wires every "more" button (`[data-action="more"]`) inside `root` once, delegated (so a
+ * re-render of `[data-hub-content]` never stacks a duplicate listener --
+ * the same discipline `components/inlineSearch.js`'s own "more" already
  * follows, and the exact bug review round 1, I2 found in this page's
  * own "with…" picker).
  * @param {Element} root @param {string} apiPath @param {{ sections: DatedSection[] }} data @param {HubCtx} ctx
@@ -220,5 +230,5 @@ async function loadMore(opts, button) {
  */
 export function bindMore(root, apiPath, data, ctx) {
   const opts = { root, apiPath, data, ctx };
-  on(root, '.c-hub__more', 'click', (_e, button) => { loadMore(opts, button); });
+  on(root, '[data-action="more"]', 'click', (_e, button) => { loadMore(opts, button); });
 }

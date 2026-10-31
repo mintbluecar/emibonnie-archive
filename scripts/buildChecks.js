@@ -44,6 +44,41 @@ export function findDefinedCssTokens(cssText) {
 }
 
 /**
+ * Every font-family name quoted inside a custom-property declaration's
+ * value, across `cssTexts` -- `--font-heading: 'A', 'B', sans-serif;`
+ * yields `{A, B}`, and so does a declaration with no trailing `;`
+ * because it's the last one before the block's closing `}`
+ * (`--font-heading: 'A' }`). Shared by `buildAssets.js`'s
+ * `buildFontsCss` (which site fonts a token actually points at, spec
+ * "2b. Fonts a site can choose": "a site family that's never pointed at
+ * by a token isn't shipped") and the theme test (a font token may only
+ * name a family the engine ships or the site declares in `site.json`).
+ * @param {string[]} cssTexts
+ * @returns {Set<string>}
+ */
+export function findFontFamilyReferences(cssTexts) {
+  const names = new Set();
+  for (const cssText of cssTexts) {
+    for (const declaration of cssText.matchAll(/--[a-zA-Z0-9-]+\s*:\s*([^;}]+)[;}]/g)) {
+      for (const quoted of declaration[1].matchAll(/['"]([^'"]+)['"]/g)) names.add(quoted[1]);
+    }
+  }
+  return names;
+}
+
+/**
+ * Font family names `findFontFamilyReferences` finds in `cssTexts` that
+ * aren't in `allowedFamilies` (case-insensitive).
+ * @param {string[]} cssTexts
+ * @param {string[]} allowedFamilies
+ * @returns {string[]}
+ */
+export function findUndeclaredFontFamilies(cssTexts, allowedFamilies) {
+  const allowed = new Set(allowedFamilies.map((family) => family.toLowerCase()));
+  return [...findFontFamilyReferences(cssTexts)].filter((name) => !allowed.has(name.toLowerCase()));
+}
+
+/**
  * Every `var(--x)` used across `cssSources` that `tokensCss` doesn't define.
  * @param {{ path: string, text: string }[]} cssSources
  * @param {string} tokensCss

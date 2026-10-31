@@ -1,6 +1,9 @@
 // @ts-check
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { createServer } from '../scripts/dev.js';
 
 /**
@@ -195,4 +198,48 @@ test('redirectOf (Task 10d): 307 when not permanent, an explicit statusCode wins
   assert.deepEqual(redirectOf([{ source: '/old', destination: '/new', permanent: false }], url), { location: '/new?q=1', status: 307 });
   assert.deepEqual(redirectOf([{ source: '/old', destination: '/new?a=b', statusCode: 301 }], url), { location: '/new?a=b&q=1', status: 301 });
   assert.equal(redirectOf([{ source: '/other', destination: '/' }], url), null);
+});
+
+test('dev server (Styling system Task 3): GET /dev/styleguide serves the generated file straight from disk, 404 (never root/404.html) without it', async () => {
+  const handle = async (req) => Response.json({ path: new URL(req.url).pathname });
+  const dir = mkdtempSync(path.join(tmpdir(), 'fan-archive-styleguide-'));
+  try {
+    const missing = createServer({ root: 'test/fixtures/static', rewrites: [], handle, devStyleguidePath: path.join(dir, 'index.html') });
+    const base1 = await listen(missing);
+    const res1 = await fetch(base1 + '/dev/styleguide');
+    assert.equal(res1.status, 404);
+    assert.equal(await res1.text(), 'Not Found');
+    missing.close();
+
+    writeFileSync(path.join(dir, 'index.html'), '<p>STYLE GUIDE PAGE</p>');
+    const present = createServer({ root: 'test/fixtures/static', rewrites: [], handle, devStyleguidePath: path.join(dir, 'index.html') });
+    const base2 = await listen(present);
+    const res2 = await fetch(base2 + '/dev/styleguide');
+    assert.equal(res2.status, 200);
+    assert.equal(res2.headers.get('content-type'), 'text/html; charset=utf-8');
+    assert.match(await res2.text(), /STYLE GUIDE PAGE/);
+    present.close();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('dev server (DEV_AS): a page load with no session goes to the dev sign-in first; API calls, assets and marked browsers do not', async () => {
+  const handle = async () => new Response('ok');
+  const srv = createServer({ root: 'test/fixtures/static', rewrites: REWRITES, handle, devAs: 'owner' });
+  const base = await listen(srv);
+  const html = { accept: 'text/html,application/xhtml+xml' };
+  const page = await fetch(base + '/p/x?y=1', { headers: html, redirect: 'manual' });
+  assert.equal(page.status, 302);
+  assert.equal(page.headers.get('location'), `/api/auth/dev?as=owner&returnTo=${encodeURIComponent('/p/x?y=1')}`);
+  assert.equal((await fetch(base + '/api/home', { headers: html, redirect: 'manual' })).status, 200, 'never the API itself');
+  assert.equal((await fetch(base + '/p/x', { redirect: 'manual' })).status, 200, 'a fetch() that does not ask for HTML');
+  for (const cookie of ['sid=abc', 'dev_as=guest']) {
+    assert.equal((await fetch(base + '/p/x', { headers: { ...html, cookie }, redirect: 'manual' })).status, 200, cookie);
+  }
+  const off = createServer({ root: 'test/fixtures/static', rewrites: REWRITES, handle });
+  const base2 = await listen(off);
+  assert.equal((await fetch(base2 + '/p/x', { headers: html, redirect: 'manual' })).status, 200, 'without DEV_AS nothing changes');
+  srv.close();
+  off.close();
 });

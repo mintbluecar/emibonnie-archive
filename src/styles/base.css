@@ -22,7 +22,7 @@ html {
 body {
   background: var(--color-bg);
   color: var(--color-ink);
-  font-family: var(--font-latin);
+  font-family: var(--font-body);
   font-size: var(--text-16);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -37,6 +37,20 @@ h1, h2, h3, h4, p, figure {
   margin: 0;
 }
 
+/* Headings default to the body font (Styling system Task 2, spec "2b.
+   Fonts a site can choose"): nothing changes until a site points
+   --font-heading at something else in theme.css. */
+h1, h2, h3 {
+  font-family: var(--font-heading);
+}
+
+/* The hidden attribute always hides, even on an element whose class
+   sets its own display (a chip, a cluster): script toggles it to
+   filter and show/hide. */
+[hidden] {
+  display: none !important;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -47,13 +61,114 @@ img, video {
   display: block;
 }
 
+/*
+ * Styling system Task 3 (spec "3. On-brand element defaults"): an
+ * unclassed button, text field, select, textarea, checkbox, radio, table
+ * and the keyboard focus ring all look on-brand instead of falling back
+ * to the browser -- or, for button, to bare text, as this file did until
+ * now. A component sits in a higher cascade layer, so any property it
+ * sets of its own still wins; these are only what's left to the browser
+ * when a component doesn't.
+ */
+
+/* A bare button reads as a secondary button: on the card surface, bordered,
+   never plain text. font-family only (never the `font` shorthand, and
+   never a literal font-size -- every font-size in src/styles must be a
+   --text-* token, test/core/bundling.test.js): the shorthand also sets
+   line-height, which would nudge text in an already-styled control that
+   sets its own font-size/colour but never its own line-height -- a
+   visual change this task must not make. */
 button {
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: 0;
-  padding: 0;
+  font-family: inherit;
+  color: var(--color-ink);
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
   cursor: pointer;
+}
+
+/* Every text-like field (not checkbox/radio, which get their own rule
+   below) shares one box, on the page background. */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  font-family: inherit;
+  color: var(--color-ink);
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+}
+
+textarea {
+  resize: vertical;
+}
+
+/* The native arrow can't be positioned or recoloured, so it's hidden and
+   replaced by an open "v" chevron -- the look the old .c-select wrapper
+   drew with a rotated bordered box -- here as two diagonal strokes, one
+   gradient per half (never an image: the CSP's img-src stays
+   untouched). The left half's stripe runs top-left to bottom-right, the
+   right half's bottom-left to top-right. Each stroke sits on the inner
+   side of its diagonal (as the old border did inside its box), so the
+   halves meet in a sharp point; a half-pixel soft edge anti-aliases it.
+   Each half's box is taller than wide: an angled gradient's diagonal
+   always runs through the box's centre, so the extra height only gives
+   the strokes' top ends room instead of clipping them. Inset from the
+   right edge like the old wrapper's arrow, and vertically centred. This
+   is every select's only chevron (Styling system Task 4, fix round 1). */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: calc(var(--space-6) + var(--space-2));
+  background-image:
+    linear-gradient(45deg, transparent calc(50% - 0.5px), var(--color-ink-muted) 50%, var(--color-ink-muted) calc(50% + 1.5px), transparent calc(50% + 2px)),
+    linear-gradient(-45deg, transparent calc(50% - 0.5px), var(--color-ink-muted) 50%, var(--color-ink-muted) calc(50% + 1.5px), transparent calc(50% + 2px));
+  background-position: right 21.5px top calc(50% + 1px), right 16.5px top calc(50% + 1px);
+  background-size: 5px 8px, 5px 8px;
+  background-repeat: no-repeat;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  /* No visible text of their own, but still a control: the body font
+     throughout (Review Focus, style guide e2e), same as every other
+     bare control. */
+  font-family: inherit;
+  width: var(--space-5);
+  height: var(--space-5);
+  accent-color: var(--color-label);
+}
+
+/* A modal dialog dims the page behind it (Styling system Task 11): one
+   scrim for every dialog that doesn't draw its own. */
+dialog::backdrop {
+  background: var(--color-scrim);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+  font-weight: var(--weight-bold);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1.5px solid var(--color-card-shadow);
+}
+
+td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-card-shadow);
+}
+
+/* Keyboard focus, every interactive primitive, light and dark (Review
+   Focus 4): a ring from the focus tokens, never the browser's own. */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 @media (prefers-reduced-motion: reduce) {

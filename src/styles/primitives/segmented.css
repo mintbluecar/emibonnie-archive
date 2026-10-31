@@ -1,0 +1,49 @@
+/*
+ * Segmented control (Styling system Task 12, fix round 1): a view switch
+ * drawn as one pill track, the chosen option tinted with the label
+ * colour, the others muted text (mockups/people-me-v1.html). Each option
+ * is a button that says it is chosen with aria-pressed="true" (or, for a
+ * link, aria-current="page"); its target is at least --target-min tall.
+ *
+ *   <div class="segmented" role="group" aria-label="View">
+ *     <button class="segmented__option" type="button" aria-pressed="true">By event</button>
+ *     <button class="segmented__option" type="button" aria-pressed="false">All, newest</button>
+ *   </div>
+ *
+ * The options share the track's width evenly.
+ */
+
+.segmented {
+  display: flex;
+  gap: calc(var(--space-1) / 2);
+  padding: calc(var(--space-1) / 2);
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: var(--radius-pill);
+}
+
+.segmented__option {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--target-min);
+  padding: var(--chip-pad-y) var(--chip-pad-x);
+  font-family: inherit;
+  font-size: var(--text-11-5);
+  font-weight: var(--weight-regular);
+  line-height: 1.25;
+  text-decoration: none;
+  color: var(--color-ink-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.segmented__option[aria-pressed="true"],
+.segmented__option[aria-current="page"] {
+  font-weight: var(--weight-heavy);
+  color: var(--color-label-on-tint);
+  background: var(--color-label-tint);
+}

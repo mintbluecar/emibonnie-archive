@@ -43,6 +43,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # test/site/themeTokens.test.js renders the built CSS in Chromium to check the real cascade.
+      - run: npx playwright install --with-deps chromium
       - run: '[ -d site ] || npm run init-site'
       - run: npm run build
       - run: npm run check

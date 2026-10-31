@@ -3,37 +3,25 @@
  * docs/superpowers/plans/2026-10-21-1b-pages-and-launch.md, "Additional
  * constraints" → Layout breakpoint). The phone layout is the default;
  * `min-width: 860px` is the only place "web" styling turns on. Page-
- * specific layout (Tasks 3-6) builds on these.
+ * specific layout (Tasks 3-6) builds on these. Vertical and wrapping
+ * groups are the stack and cluster primitives (primitives/spacing.css).
  */
 
 .container {
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
-  padding: 0 16px;
-}
-
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  padding: 0 var(--space-4);
 }
 
 @media (min-width: 860px) {
   .container {
     max-width: 960px;
   }
+}
 
-  .cols {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 24px;
-    align-items: start;
-  }
+/* A page that needs the room, such as the import review's table
+   (pageShell's wide option). After the media query, so it wins there too. */
+.container--wide {
+  max-width: 1200px;
 }

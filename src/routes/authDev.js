@@ -5,11 +5,25 @@
  * is a 404 (so the endpoint doesn't exist in production). `as:
  * 'translator'` signs in as the first credited X account, so the browser
  * can reach a real translator's own pages.
+ *
+ * `GET /api/auth/dev?as=<role>[&handle=<x handle>][&returnTo=<path>]`: the
+ * same sign-in for a browser, then a redirect back. `as=guest` signs out
+ * instead. Either way it sets a `dev_as` cookie, which tells the dev
+ * server (`DEV_AS`, scripts/dev.js) not to sign the browser in again.
+ * Note this GET changes state (a session, cookies) -- acceptable only
+ * because the route is dev-only and never exists when deployed.
  */
 import { NO_STORE } from '../http/handler.js';
 import { NotFound } from '../http/errors.js';
-import { jsonWithCookies } from '../http/cookies.js';
-import { signInUser } from '../services/session.js';
+import { jsonWithCookies, redirectWithCookies, serializeCookie } from '../http/cookies.js';
+import { signInUser, signedOutCookies } from '../services/session.js';
+import { safeReturnTo } from '../services/oauthState.js';
+
+/** The roles `as` accepts; `guest` (signed out) only on the GET. */
+export const DEV_ROLES = Object.freeze(['owner', 'translator', 'member', 'google', 'guest']);
+
+/** The cookie that marks a browser as already handled by `DEV_AS`. */
+export const DEV_AS_COOKIE = 'dev_as';
 
 /** @param {Record<string, string|undefined>} [env] */
 function devEnabled(env = {}) {
@@ -21,6 +35,46 @@ function devEnabled(env = {}) {
   return env.DEV_SIGN_IN === '1' && !env.VERCEL;
 }
 
+/**
+ * The first X account with a visible credited entry (or the one with
+ * `handle`): the way into a real translator's own pages without knowing a
+ * numeric id.
+ * @param {any} deps @param {string|undefined} handle
+ */
+async function translatorAccount(deps, handle) {
+  const { rows } = await deps.db.query(
+    `select a.external_id, a.handle from accounts a
+     where a.platform = 'x' and a.external_id is not null and a.deleted_at is null and a.opted_out_at is null
+       and ($1::text is null or lower(a.handle) = lower($1))
+       and exists (select 1 from items i where i.credited_account_id = a.id
+         and i.deleted_at is null and i.review_state = 'published')
+     order by a.id limit 1`,
+    [handle ?? null],
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * Signs in as `as`: every cookie the sign-in sets (`signInUser`'s
+ * `cookies`: the session and the `signed_in` hint) and, for a translator,
+ * the handle; `null` when no translator matches; `undefined` for an
+ * unknown role.
+ * @param {any} deps @param {unknown} as @param {string} [handle]
+ * @returns {Promise<{ cookies: string[], handle?: string }|null|undefined>}
+ */
+async function signInAs(deps, as, handle) {
+  if (as === 'owner') return signInUser(deps, { via: 'x', subject: deps.site.ownerXUserId, handle: 'owner' });
+  if (as === 'member') return signInUser(deps, { via: 'x', subject: '999999', handle: 'dev_member' });
+  if (as === 'google') return signInUser(deps, { via: 'google', subject: 'dev-google', handle: null });
+  if (as === 'translator') {
+    const account = await translatorAccount(deps, handle);
+    if (!account) return null;
+    const signedIn = await signInUser(deps, { via: 'x', subject: account.external_id, handle: account.handle });
+    return { cookies: signedIn.cookies, handle: account.handle };
+  }
+  return undefined;
+}
+
 export const route = {
   method: 'POST',
   path: '/api/auth/dev',
@@ -29,32 +83,29 @@ export const route = {
   run: async (input, deps) => {
     if (!devEnabled(deps.env)) throw new NotFound();
     const as = (/** @type {any} */ (input.body))?.as;
-    if (as === 'owner') {
-      const signedIn = await signInUser(deps, { via: 'x', subject: deps.site.ownerXUserId, handle: 'owner' });
-      return jsonWithCookies({ ok: true }, signedIn.cookies);
-    }
-    if (as === 'member') {
-      const signedIn = await signInUser(deps, { via: 'x', subject: '999999', handle: 'dev_member' });
-      return jsonWithCookies({ ok: true }, signedIn.cookies);
-    }
-    if (as === 'translator') {
-      // The first X account with a visible credited entry: the e2e's way into
-      // a real translator's own pages without knowing a fixture's numeric id.
-      const { rows } = await deps.db.query(
-        `select a.external_id, a.handle from accounts a
-         where a.platform = 'x' and a.external_id is not null and a.deleted_at is null and a.opted_out_at is null
-           and exists (select 1 from items i where i.credited_account_id = a.id
-             and i.deleted_at is null and i.review_state = 'published')
-         order by a.id limit 1`,
-      );
-      if (!rows[0]) return jsonWithCookies({ error: 'not_found' }, [], 404);
-      const signedIn = await signInUser(deps, { via: 'x', subject: rows[0].external_id, handle: rows[0].handle });
-      return jsonWithCookies({ ok: true, handle: rows[0].handle }, signedIn.cookies);
-    }
-    if (as === 'google') {
-      const signedIn = await signInUser(deps, { via: 'google', subject: 'dev-google', handle: null });
-      return jsonWithCookies({ ok: true }, signedIn.cookies);
-    }
-    return jsonWithCookies({ error: 'bad_request', message: 'unknown as' }, [], 400);
+    const signedIn = await signInAs(deps, as);
+    if (signedIn === undefined) return jsonWithCookies({ error: 'bad_request', message: 'unknown as' }, [], 400);
+    if (signedIn === null) return jsonWithCookies({ error: 'not_found' }, [], 404);
+    return jsonWithCookies(as === 'translator' ? { ok: true, handle: signedIn.handle } : { ok: true }, signedIn.cookies);
+  },
+};
+
+export const getRoute = {
+  method: 'GET',
+  path: '/api/auth/dev',
+  cache: NO_STORE,
+  query: ['as', 'handle', 'returnTo'],
+  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  run: async (input, deps) => {
+    if (!devEnabled(deps.env)) throw new NotFound();
+    const as = String(input.query.as ?? '');
+    const handle = input.query.handle === undefined ? undefined : String(input.query.handle);
+    const returnTo = safeReturnTo(String(input.query.returnTo ?? '/'));
+    const marker = serializeCookie(DEV_AS_COOKIE, as, { maxAge: 60 * 60 * 24 * 30 });
+    if (as === 'guest') return redirectWithCookies(returnTo, [marker, ...signedOutCookies()]);
+    const signedIn = await signInAs(deps, as, handle);
+    if (signedIn === undefined) return jsonWithCookies({ error: 'bad_request', message: `as must be one of ${DEV_ROLES.join(', ')}` }, [], 400);
+    if (signedIn === null) return jsonWithCookies({ error: 'not_found', message: 'no translator with a published entry matches' }, [], 404);
+    return redirectWithCookies(returnTo, [marker, ...signedIn.cookies]);
   },
 };

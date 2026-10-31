@@ -34,7 +34,7 @@ export function updateFilterBadge(root, n) {
 }
 
 /**
- * Opens the sheet onto a *fresh* `.c-search__sheet` node every time: the
+ * Opens the sheet onto a *fresh* `[data-search-sheet]` node every time: the
  * old one (and its `filterSheet.bind()` listeners) is swapped out first,
  * rather than re-bound in place, so closing without applying and
  * reopening never stacks a second set of listeners on the same node.
@@ -50,7 +50,7 @@ export function updateFilterBadge(root, n) {
 export async function openSheet(root, ctx, onChange) {
   const opener = /** @type {any} */ (root.querySelector('.c-header__filter-btn'));
   await ctx.optionsReady;
-  const old = root.querySelector('.c-search__sheet');
+  const old = root.querySelector('[data-search-sheet]');
   if (!old) return;
   /** @type {number} */
   let count = ctx.data.count;
@@ -60,7 +60,7 @@ export async function openSheet(root, ctx, onChange) {
     // best-effort: fall back to the last known count rather than blocking the sheet from opening
   }
   const sheetContainer = document.createElement('div');
-  sheetContainer.className = 'c-search__sheet';
+  sheetContainer.setAttribute('data-search-sheet', '');
   old.replaceWith(sheetContainer);
   mount(sheetContainer, filterSheet.render({ state: ctx.state, options: ctx.options, count }));
   filterSheet.bind(sheetContainer, {

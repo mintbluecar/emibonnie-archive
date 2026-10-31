@@ -5,7 +5,7 @@
  * `SafeHtml` ever reaches `innerHTML`) and event delegation are each done
  * in exactly one place.
  */
-import { SafeHtml } from './html.js';
+import { SafeHtml, ShellHtml } from './html.js';
 import { bindThemeToggles } from './theme.js';
 
 /**
@@ -31,11 +31,20 @@ export function mount(el, safeHtml) {
  * lives in this one shared place rather than in every page (review
  * round 2, C1). Never used for a page's later, partial re-renders
  * (e.g. item.js's body-only reload) -- those stay plain `mount()`.
+ *
+ * Requires `ShellHtml` -- the type only `pageShell.render()` returns
+ * (public/js/components/pageShell.js) -- so a page can never mount
+ * without the shell (spec "5. The shell is not optional"). Any other
+ * `SafeHtml`, including a plain `html`\`…\` with the shell's own
+ * markup pasted in by hand, is refused.
  * @param {Element} root
- * @param {SafeHtml} safeHtml
+ * @param {ShellHtml} safeHtml
  * @returns {void}
  */
 export function mountPage(root, safeHtml) {
+  if (!(safeHtml instanceof ShellHtml)) {
+    throw new TypeError('mountPage() expects pageShell.render(...)');
+  }
   mount(root, safeHtml);
   bindThemeToggles();
   root.setAttribute('data-ready', '');

@@ -106,8 +106,8 @@ test('the edit page shows the held banner and save & publish only for a held ent
   mockApi({ reviewState: 'pending' });
   await withPage(async () => {
     await start();
-    assert.ok(app().querySelector('.c-item__held'), 'the held banner');
-    assert.match(allText(app().querySelector('.c-item__held')), /only you can see this/);
+    assert.ok(app().querySelector('[data-held]'), 'the held banner');
+    assert.match(allText(app().querySelector('[data-held]')), /only you can see this/);
     assert.ok(app().querySelector('[data-action="save-publish"]'), 'save & publish');
     assert.match(allText(app().querySelector('[data-action="save-publish"]')), copyRe(t('edit.saveAndPublish')));
   });
@@ -117,7 +117,7 @@ test('a published entry\'s edit page has neither the banner nor save & publish',
   mockApi({ reviewState: 'published' });
   await withPage(async () => {
     await start();
-    assert.equal(app().querySelector('.c-item__held'), null);
+    assert.equal(app().querySelector('[data-held]'), null);
     assert.equal(app().querySelector('[data-action="save-publish"]'), null);
   });
 });
@@ -138,7 +138,7 @@ test('save & publish saves the pending change, publishes, and drops the banner',
     assert.deepEqual(posts[0].body, { changes: { placement: 'post' } });
     assert.deepEqual(posts[1].body, { state: 'published' });
 
-    assert.equal(app().querySelector('.c-item__held'), null, 'the banner is gone');
+    assert.equal(app().querySelector('[data-held]'), null, 'the banner is gone');
     assert.match(allText(app()), copyRe(t('edit.published')), 'the publication is reported');
   });
 });
@@ -152,6 +152,6 @@ test('a failed publish keeps the entry held and says so', async () => {
 
     assert.ok(calls.some((call) => call.url.endsWith('/review')), 'it tried to publish');
     assert.match(allText(app()), copyRe(t('edit.publishFailed')), 'the failure is reported');
-    assert.ok(app().querySelector('.c-item__held'), 'still held');
+    assert.ok(app().querySelector('[data-held]'), 'still held');
   });
 });

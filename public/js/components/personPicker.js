@@ -26,10 +26,10 @@ function personOption(person, current) {
   const on = current !== null && 'person' in current && current.person === person.id;
   const search = `${person.displayName} ${person.igHandle ?? ''}`.toLowerCase();
   return html`
-    <button type="button" class="c-person-picker__option${on ? ' c-person-picker__option--on' : ''}"
+    <button type="button" class="chip chip--lg${on ? ' chip--on' : ''}"
       data-pick-person="${person.id}" data-search="${search}" aria-pressed="${on ? 'true' : 'false'}">
-      <span class="c-person-picker__emoji" aria-hidden="true">${person.emoji}</span>
-      <span class="c-person-picker__name">${person.displayName}</span>
+      <span aria-hidden="true">${person.emoji}</span>
+      <span>${person.displayName}</span>
       ${person.igHandle ? html`<small class="c-person-picker__handle">@${person.igHandle}</small>` : ''}
     </button>
   `;
@@ -44,32 +44,38 @@ function personOption(person, current) {
 export function render({ options, current = null, idPrefix }) {
   const searchId = `${idPrefix}-search`;
   return html`
-    <div class="c-person-picker">
-      <p class="c-person-picker__group">${t('add.knownPeople')}</p>
-      <div class="c-person-picker__list">
+    <div class="stack stack--2 c-person-picker">
+      <p class="label">${t('add.knownPeople')}</p>
+      <div class="cluster cluster--2">
         ${options.people.map((person) => personOption(person, current))}
       </div>
-      <label class="c-person-picker__search-label" for="${searchId}">${t('add.searchPeople')}</label>
-      <input class="c-person-picker__search" id="${searchId}" type="search" autocomplete="off" data-picker-search
-        placeholder="${t('add.searchPeople')}">
-      <p class="c-person-picker__group">${t('add.notListed')}</p>
-      <form class="c-person-picker__new" data-new-person>
-        <p class="c-person-picker__new-title">${t('add.newPerson')}</p>
-        <label class="c-person-picker__new-label" for="${idPrefix}-name">${t('add.newPersonName')}</label>
-        <input class="c-person-picker__new-input" id="${idPrefix}-name" name="name" type="text" maxlength="30" required autocomplete="off" data-new-name>
-        <label class="c-person-picker__new-label" for="${idPrefix}-handle">${t('add.newPersonHandle')}</label>
-        <input class="c-person-picker__new-input" id="${idPrefix}-handle" name="handle" type="text" maxlength="31" required autocomplete="off" data-new-handle>
-        <button class="c-person-picker__add" type="submit">${t('add.addPerson')}</button>
+      <div class="field">
+        <label class="label" for="${searchId}">${t('add.searchPeople')}</label>
+        <input id="${searchId}" type="search" autocomplete="off" data-picker-search
+          placeholder="${t('add.searchPeople')}">
+      </div>
+      <p class="label">${t('add.notListed')}</p>
+      <form class="stack stack--2 c-person-picker__new" data-new-person>
+        <p class="label">${t('add.newPerson')}</p>
+        <div class="field">
+          <label class="label" for="${idPrefix}-name">${t('add.newPersonName')}</label>
+          <input id="${idPrefix}-name" name="name" type="text" maxlength="30" required autocomplete="off" data-new-name>
+        </div>
+        <div class="field">
+          <label class="label" for="${idPrefix}-handle">${t('add.newPersonHandle')}</label>
+          <input id="${idPrefix}-handle" name="handle" type="text" maxlength="31" required autocomplete="off" data-new-handle>
+        </div>
+        <button class="btn btn--secondary btn--sm c-person-picker__add" type="submit">${t('add.addPerson')}</button>
       </form>
-      <p class="c-person-picker__group">${t('add.generic')}</p>
-      <div class="c-person-picker__roles">
+      <p class="label">${t('add.generic')}</p>
+      <div class="cluster cluster--2">
         ${options.roles.map((role) => {
           const onRole = current !== null && 'role' in current && current.role === role;
-          return html`<button type="button" class="c-person-picker__option${onRole ? ' c-person-picker__option--on' : ''}"
+          return html`<button type="button" class="chip chip--lg${onRole ? ' chip--on' : ''}"
             data-pick-role="${role}" aria-pressed="${onRole ? 'true' : 'false'}">${t(`add.role.${role}`)}</button>`;
         })}
       </div>
-      <p class="c-person-picker__error" role="alert" data-new-error hidden>${t('add.personFailed')}</p>
+      <p class="field__error" role="alert" data-new-error hidden>${t('add.personFailed')}</p>
     </div>
   `;
 }

@@ -29,8 +29,8 @@ const APP_SELECTOR = 'app';
  */
 function monthGroup(group, before) {
   return html`
-    <section class="c-home-month">
-      <h2 class="c-home-month__label">${monthLabel(group.month)}</h2>
+    <section>
+      <h2 class="label label--section c-home-month__label">${monthLabel(group.month)}</h2>
       <div class="c-home-month__grid">${group.events.map((event, i) => eventCard.render({ event, eager: before + i < EAGER_COUNT }))}</div>
     </section>
   `;

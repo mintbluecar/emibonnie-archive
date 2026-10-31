@@ -1,26 +1,13 @@
-/* public/js/components/footer.js */
+/* public/js/components/footer.js: its links and note are the meta primitive; this lays them out. */
 
 .c-footer {
-  padding: 24px 16px 32px;
+  padding: var(--space-6) var(--space-4) var(--space-8);
   text-align: center;
 }
 
 .c-footer__links {
   display: flex;
   justify-content: center;
-  gap: 16px;
-  margin-bottom: 8px;
-}
-
-.c-footer__link {
-  font-size: var(--text-12);
-  color: var(--color-ink-muted);
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-}
-
-.c-footer__note {
-  font-size: var(--text-11);
-  color: var(--color-ink-muted);
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
 }

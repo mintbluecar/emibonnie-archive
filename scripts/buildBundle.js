@@ -157,6 +157,19 @@ function resolveAssetToken(token, manifest) {
 }
 
 /**
+ * Resolves every `{{asset:...}}` placeholder in `text` against `manifest`
+ * (`resolveAssetToken`) -- the one place a page template's placeholders
+ * become real `/build/...` URLs, shared by every page `writeHtmlPages`
+ * writes and, Styling system Task 3, `scripts/styleguide.js`'s dev-only
+ * style guide page.
+ * @param {string} text @param {Manifest} manifest
+ * @returns {string}
+ */
+export function resolveAssetPlaceholders(text, manifest) {
+  return text.replace(ASSET_PLACEHOLDER, (_whole, token) => resolveAssetToken(token, manifest));
+}
+
+/**
  * Writes every page template (`src/html/*.html`, tracked, with
  * `{{asset:...}}` placeholders) to `public/<name>.html` (generated,
  * gitignored) with its placeholders resolved to the manifest's hashed
@@ -174,7 +187,7 @@ function writeHtmlPages(htmlDir, publicDir, manifest) {
   for (const entry of readdirSync(htmlDir, { withFileTypes: true })) {
     if (!entry.isFile() || !entry.name.endsWith('.html')) continue;
     const text = readFileSync(path.join(htmlDir, entry.name), 'utf8');
-    writeFileSync(path.join(publicDir, entry.name), text.replace(ASSET_PLACEHOLDER, (_whole, token) => resolveAssetToken(token, manifest)));
+    writeFileSync(path.join(publicDir, entry.name), resolveAssetPlaceholders(text, manifest));
   }
 }
 
@@ -184,17 +197,21 @@ function writeHtmlPages(htmlDir, publicDir, manifest) {
  * put in the site module), `manifest.json`, then the built HTML pages. `engineRoot` is
  * where `node_modules` (esbuild, @fontsource) actually lives; `repoRoot`
  * is where output goes (the same checkout in production, a temp dir in
- * tests).
- * @param {{ repoRoot: string, engineRoot: string, siteThemePath: string|null, faviconPath?: string|null, logoPath?: string|null }} options
+ * tests). `logoPath` is the site's logo source. `siteDir`/`fonts` (Styling system Task 14, spec "2b. Fonts a
+ * site can choose") are the site's own folder and its validated
+ * `site.json` `fonts` list, so `buildFontsCss` can self-host whichever
+ * of them a token actually points at.
+ * @param {{ repoRoot: string, engineRoot: string, siteThemePath: string|null, faviconPath?: string|null, logoPath?: string|null,
+ *   siteDir?: string, fonts?: import('../src/site/schema.js').SiteFont[] }} options
  * @returns {Promise<Manifest>}
  */
-export async function runBundling({ repoRoot, engineRoot, siteThemePath, faviconPath = null, logoPath = null }) {
+export async function runBundling({ repoRoot, engineRoot, siteThemePath, faviconPath = null, logoPath = null, siteDir, fonts }) {
   const outDir = path.join(repoRoot, 'public/build');
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
 
   const appCss = buildAppCss(repoRoot, outDir, siteThemePath);
-  const fontsCss = buildFontsCss(engineRoot, outDir);
+  const fontsCss = buildFontsCss(engineRoot, outDir, { siteDir, fonts });
   const pages = await bundlePages(repoRoot, outDir);
   const boot = await bundleBoot(repoRoot, outDir);
   if (logoPath) copyHashed(logoPath, outDir, 'logo');

@@ -25,7 +25,7 @@ import * as bubbles from '../../components/bubbles.js';
  */
 function creditsLine(credits) {
   return html`
-    <p class="k-translation-detail__credits">
+    <p class="meta k-translation-detail__credits">
       ${credits.account ? html`${t('item.translatedBy')} <a class="k-translation-detail__credit-link" href="${credits.account.url}" target="_blank" rel="noopener noreferrer">@${credits.account.handle}</a>` : ''}
       ${credits.clipBy ? html` · ${t('item.clipBy')} <b>@${credits.clipBy}</b>` : ''}
       · ${dayLabel(credits.occurredOn)}
@@ -64,8 +64,8 @@ export function render(detail, extra = {}) {
       ${extra.afterCredits ?? ''}
       ${cast.render({ cast: detail.cast })}
       ${bubbles.render({ bubbles: detail.bubbles })}
-      <details class="k-translation-detail__original">
-        <summary class="k-translation-detail__original-toggle">${t('item.showOriginal')}</summary>
+      <details>
+        <summary class="meta tap-link k-translation-detail__original-toggle">${t('item.showOriginal')}</summary>
         ${originalText(detail.original)}
       </details>
     </div>

@@ -1,133 +1,39 @@
 /*
- * public/js/components/filterSheet.js: a native <dialog>, so
- * showModal()/close() give focus-trapping and an inert backdrop for
- * free -- this only has to lay the sheet's own content out. Bottom
- * sheet on phone; a centred modal from the shared 860px breakpoint.
+ * public/js/components/filterSheet.js: the in-place search's filters, in
+ * a sheet (sheet.css): a bottom sheet on a phone, a centred modal on
+ * desktop. The close and apply buttons, the title, the
+ * chips and the fields are primitives; this file lays the sheet's own
+ * content out.
  */
-
-.c-filter-sheet {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  top: auto;
-  width: 100%;
-  max-width: none;
-  max-height: 85vh;
-  margin: 0;
-  border: 0;
-  border-radius: 20px 20px 0 0;
-  padding: 16px 16px 24px;
-  background: var(--color-bg);
-  color: var(--color-ink);
-  overflow-y: auto;
-}
-
-.c-filter-sheet::backdrop {
-  background: rgba(0, 0, 0, 0.45);
-}
-
-.c-filter-sheet__close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: var(--color-card);
-  color: var(--color-ink);
-}
-
-.c-filter-sheet__title {
-  font-size: var(--text-14);
-  font-weight: 800;
-  margin: 0 0 12px;
-}
 
 .c-filter-sheet__section {
   border: 0;
   padding: 0;
-  margin: 0 0 14px;
+  margin: 0 0 var(--space-3);
 }
 
-.c-filter-sheet__section legend {
-  font-size: var(--text-11);
-  font-weight: 700;
-  color: var(--color-ink-muted);
-  margin-bottom: 4px;
+.c-filter-sheet__legend {
+  margin-bottom: var(--space-1);
   padding: 0;
 }
 
 .c-filter-sheet__mode {
-  margin-bottom: 6px;
+  margin-bottom: var(--space-2);
 }
 
 .c-filter-sheet__selects {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
-.c-filter-sheet__field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: var(--text-11);
-  font-weight: 700;
-  color: var(--color-ink-muted);
+/* The sheet is on the page background, so its fields sit on the card
+   colour to stand out from it (background-color, never the shorthand,
+   which would also reset base.css's select chevron). */
+.c-filter-sheet__selects select,
+.c-filter-sheet__selects input {
+  background-color: var(--color-card);
 }
 
-.c-filter-sheet__field select,
-.c-filter-sheet__field input {
-  min-height: 44px;
-  background: var(--color-card);
-  border: 1.5px solid var(--color-card-shadow);
-  border-radius: 14px;
-  padding: 0 10px;
-  font-family: inherit;
-  font-size: var(--text-13);
-  color: var(--color-ink);
-}
-
+/* The apply button keeps its taller target. */
 .c-filter-sheet__apply {
-  display: block;
-  width: 100%;
-  min-height: 48px;
-  border-radius: 14px;
-  font-size: var(--text-14);
-  font-weight: 800;
-  color: var(--color-accent-text);
-  /* Review round 2, fix round 2 item 3: same light-mode-only darkened start stop as header.css's .c-header__filter-count. */
-  background: linear-gradient(90deg, color-mix(in srgb, var(--gradient-from) 75%, #000), var(--gradient-to));
-}
-
-/* Dark mode's --color-accent-text is black, which already passes against the raw --gradient-from -- reverted here (device dark unless forced light, or forced dark: Task 10c). */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .c-filter-sheet__apply {
-    background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
-  }
-}
-
-:root[data-theme="dark"] .c-filter-sheet__apply {
-  background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
-}
-
-@media (min-width: 860px) {
-  .c-filter-sheet {
-    position: fixed;
-    inset: 0;
-    margin: auto;
-    top: 50%;
-    left: 50%;
-    bottom: auto;
-    right: auto;
-    transform: translate(-50%, -50%);
-    width: 420px;
-    max-height: 80vh;
-    border-radius: var(--radius-card);
-  }
+  min-height: calc(var(--tap-target) + var(--space-1));
 }

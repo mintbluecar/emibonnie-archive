@@ -67,9 +67,11 @@ function markerItem({ entry, index, speakers, memory, chosen, options, open }) {
     <details class="c-speaker-step__marker" data-marker="${entry.marker}"${open === entry.marker ? ' open' : ''}>
       <summary class="c-speaker-step__summary">
         <span class="c-speaker-step__src" aria-hidden="true">${entry.marker}</span>
-        <span class="c-speaker-step__arrow" aria-hidden="true">→</span>
-        <span class="c-speaker-step__pick${label ? '' : ' c-speaker-step__pick--need'}">${label ?? t('add.choose')}</span>
-        ${remembered ? html`<span class="c-speaker-step__rem">${t('add.remembered')}</span>` : ''}
+        <span aria-hidden="true">→</span>
+        ${label
+          ? html`<span class="c-speaker-step__pick">${label}</span>`
+          : html`<span class="c-speaker-step__pick c-speaker-step__pick--need">${t('add.choose')}</span>`}
+        ${remembered ? html`<span class="label c-speaker-step__rem">${t('add.remembered')}</span>` : ''}
       </summary>
       ${personPicker.render({ options, current, idPrefix: `marker-${index}` })}
     </details>
@@ -85,10 +87,10 @@ function lineItem({ line, speakers, options, lineFixes }) {
   const who = lineWho(line, speakers, options);
   const fixed = Boolean(fixOf(lineFixes, line.part, line.line));
   return html`
-    <button type="button" class="c-speaker-step__line${fixed ? ' c-speaker-step__line--fixed' : ''}"
+    <button type="button" class="c-speaker-step__line"${fixed ? ' data-fixed' : ''}
       data-part="${line.part}" data-line="${line.line}">
       ${who ? html`<span class="c-speaker-step__who">${who}</span>` : ''}
-      <span class="c-speaker-step__text">${line.text}</span>
+      <span>${line.text}</span>
     </button>
   `;
 }
@@ -101,11 +103,11 @@ function lineItem({ line, speakers, options, lineFixes }) {
  */
 function actionBar({ unmapped, showSave }) {
   return html`
-    <div class="c-add__actions">
+    <div class="cluster cluster--3 c-add__actions">
       ${unmapped.length > 0
-        ? html`<p class="c-add__note">${tCount('add.unmappedNote', unmapped.length, { n: unmapped.length })}</p>`
+        ? html`<p class="meta c-add__note">${tCount('add.unmappedNote', unmapped.length, { n: unmapped.length })}</p>`
         : ''}
-      ${showSave ? html`<button class="c-add__save" type="button" data-action="save">${t('add.save')}</button>` : ''}
+      ${showSave ? html`<button class="btn btn--primary" type="button" data-action="save">${t('add.save')}</button>` : ''}
     </div>
   `;
 }
@@ -124,18 +126,18 @@ export function render({ draft, options, chosen, open = null, lineFixes = [], sh
   const speakers = { ...draft.speakers, ...chosen };
   const markers = draft.markers ?? [];
   return html`
-    <section class="c-speaker-step">
-      <h2 class="c-add__heading">${t('add.speakersTitle')}</h2>
-      <p class="c-speaker-step__intro">${markers.length > 0
+    <section class="card c-speaker-step">
+      <h2 class="heading heading--sm c-add__heading">${t('add.speakersTitle')}</h2>
+      <p class="meta c-speaker-step__intro">${markers.length > 0
         ? tCount('add.markers', markers.length, { n: markers.length })
         : t('add.markersNone')}</p>
-      <div class="c-speaker-step__markers">
+      <div class="stack stack--2">
         ${markers.map((/** @type {any} */ entry, /** @type {number} */ index) => markerItem({
           entry, index, speakers, memory: draft.memory, chosen, options, open,
         }))}
       </div>
-      <h3 class="c-speaker-step__lines-title">${t('add.linesTitle')}</h3>
-      <div class="c-speaker-step__lines">
+      <h3 class="label c-speaker-step__lines-title">${t('add.linesTitle')}</h3>
+      <div class="stack stack--1">
         ${(draft.lines ?? []).map((/** @type {any} */ line) => lineItem({ line, speakers, options, lineFixes }))}
       </div>
       ${actionBar({ unmapped: draft.unmapped ?? [], showSave })}

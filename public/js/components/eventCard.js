@@ -17,15 +17,15 @@ export function render(props) {
   const { event, eager = false } = props;
   const total = Object.values(event.counts).reduce((sum, n) => sum + n, 0);
   return html`
-    <a class="c-event-card${event.thumb ? ' c-event-card--thumb' : ''}" href="${eventHref(event.slug)}">
-      ${thumb.render(event.thumb, { eager })}
+    <a class="card card--flush c-event-card" href="${eventHref(event.slug)}">
+      ${thumb.render(event.thumb, { cover: true, eager })}
       <div class="c-event-card__body">
         <div class="c-event-card__text">
           <strong class="c-event-card__name">${event.name}</strong>
-          <small class="c-event-card__meta">${dayLabel(event.occurredOn)}</small>
-          ${event.hashtag ? html`<small class="c-event-card__tag" title="#${event.hashtag}">#${event.hashtag}</small>` : ''}
+          <small class="meta c-event-card__meta">${dayLabel(event.occurredOn)}</small>
+          ${event.hashtag ? html`<small class="meta c-event-card__tag" title="#${event.hashtag}">#${event.hashtag}</small>` : ''}
         </div>
-        <span class="c-event-card__count">${total}</span>
+        <span class="badge badge--accent c-event-card__count">${total}</span>
       </div>
     </a>
   `;

@@ -13,6 +13,7 @@ import {
 } from './buildOutputs.js';
 import { runBundling } from './buildBundle.js';
 import { hashedNameOf } from './buildAssets.js';
+import { buildStyleguide } from './styleguide.js';
 import { unnamedSource } from '../src/http/router.js';
 import { siteDirOf } from './cli.js';
 
@@ -20,8 +21,10 @@ const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 /**
  * Engine CSS that must only reference tokens `src/styles/tokens.css`
- * defines: today, just that file itself, plus `public/css/**` once Plan 1b
- * adds it.
+ * defines: everything under `src/styles` -- `tokens.css`, `base.css`,
+ * `layout.css`, `src/styles/primitives/*.css` and
+ * `src/styles/components/*.css` alike, `walkFiles` recurses into every
+ * subfolder -- plus `public/css/**` once Plan 1b adds it.
  * @param {string} repoRoot
  * @returns {{ path: string, text: string }[]}
  */
@@ -207,8 +210,21 @@ export async function runBuild(options = {}) {
 
   const siteThemePath = path.join(publicSiteDir, 'theme.css');
   await runBundling({
-    repoRoot, engineRoot: REPO_ROOT, siteThemePath: existsSync(siteThemePath) ? siteThemePath : null,
-    faviconPath: faviconSourceOf(siteDir, site, logoSrc), logoPath: logoSrc,
+    repoRoot,
+    engineRoot: REPO_ROOT,
+    siteThemePath: existsSync(siteThemePath) ? siteThemePath : null,
+    faviconPath: faviconSourceOf(siteDir, site, logoSrc),
+    logoPath: logoSrc,
+    siteDir,
+    fonts: site.fonts,
+  });
+
+  // Styling system Task 3: the dev-only style guide, never deployed (dev/
+  // sits outside public/) -- built after bundling so it gets this build's
+  // real, hashed app.css/fonts.css like every other page.
+  buildStyleguide({
+    manifestPath: path.join(repoRoot, 'public/build/manifest.json'),
+    outPath: path.join(repoRoot, 'dev/styleguide/index.html'),
   });
 
   const routeRewrites = await readRouteRewrites();

@@ -1,0 +1,60 @@
+/*
+ * A sheet: a native <dialog> (opened with showModal(), so focus is
+ * trapped and the page behind is inert; base.css dims it) on the page
+ * background, scrolling when its content is taller than the screen --
+ * docked to the bottom on a phone, a centred modal from the 860px
+ * breakpoint. Shared by the search's filter sheet (filterSheet.js) and
+ * the person page's "with..." picker (pages/person.js).
+ *
+ *   <dialog class="c-sheet" aria-label="Filters">
+ *     <button class="btn btn--secondary btn--icon btn--round c-sheet__close" type="button" aria-label="Close">x</button>
+ *     <h2 class="heading heading--sm c-sheet__title">Filters</h2>
+ *     ...
+ *   </dialog>
+ */
+
+.c-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  width: 100%;
+  max-width: none;
+  max-height: 85vh;
+  margin: 0;
+  border: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: var(--space-4) var(--space-4) var(--space-6);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  overflow-y: auto;
+}
+
+/* The round close button, in the sheet's top corner. */
+.c-sheet__close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+}
+
+/* Clear of the close button in the corner. */
+.c-sheet__title {
+  margin: 0 0 var(--space-3);
+  padding-right: calc(var(--tap-target) + var(--space-2));
+}
+
+@media (min-width: 860px) {
+  .c-sheet {
+    inset: 0;
+    margin: auto;
+    top: 50%;
+    left: 50%;
+    bottom: auto;
+    right: auto;
+    transform: translate(-50%, -50%);
+    width: 420px;
+    max-height: 80vh;
+    border-radius: var(--radius-card);
+  }
+}

@@ -35,7 +35,7 @@ const REPORT = {
 
 test('the approval switch reflects its state and is a labelled checkbox', () => {
   const on = String(render(owner({ approvalRequired: true })));
-  assert.match(on, /<input class="c-owner__checkbox" type="checkbox" data-action="approval" checked>/);
+  assert.match(on, /<label class="check[^"]*">\s*<input type="checkbox" data-action="approval" checked>/);
   assert.match(on, copyRe(t('owner.approval')));
 });
 
@@ -70,7 +70,7 @@ test('users: the search box is labelled, matches get block/unblock, blocked is m
     ],
     query: 'block',
   })));
-  assert.match(markup, /<label class="c-owner__label" for="c-owner-users">/);
+  assert.match(markup, /<label class="field__label" for="c-owner-users">/);
   assert.match(markup, /data-action="block"/);
   assert.match(markup, /data-action="unblock"/);
   assert.match(markup, copyRe(t('owner.blocked')));
@@ -89,7 +89,7 @@ test('every icon-only control carries both a title and an accessible name', () =
     signInFailedAt: '2026-10-28T09:30:00.000Z', waiting: [WAITING], reports: [REPORT],
     users: [{ id: 'x:1', handle: 'blockable', displayName: null, blocked: false, isTranslator: false, addedCount: 0 }],
   })));
-  const icons = [...markup.matchAll(/<button[^>]*class="c-owner__icon"[^>]*>/g)].map((m) => m[0]);
+  const icons = [...markup.matchAll(/<button[^>]*class="[^"]*\bbtn--icon\b[^"]*"[^>]*>/g)].map((m) => m[0]);
   assert.ok(icons.length >= 6);
   for (const tag of icons) {
     assert.match(tag, /title="[^"]+"/, tag);

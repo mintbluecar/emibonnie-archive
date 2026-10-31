@@ -311,6 +311,18 @@ test('runBuild: fails end to end when engine CSS uses var(--missing)', async () 
   }
 });
 
+test('runBuild: the undefined-token check also scans src/styles/primitives/, like src/styles/components/', async () => {
+  const { repoRoot, siteDir } = makeBuildRepoRoot();
+  try {
+    mkdirSync(path.join(repoRoot, 'src/styles/primitives'), { recursive: true });
+    writeFileSync(path.join(repoRoot, 'src/styles/primitives/broken.css'), '.btn { color: var(--missing-primitive); }');
+
+    await assert.rejects(() => runBuild({ repoRoot, siteDir }), /undefined token\(s\): --missing-primitive/);
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
 test("runBuild: fails end to end when code uses t('nope.key')", async () => {
   const { repoRoot, siteDir } = makeBuildRepoRoot();
   try {

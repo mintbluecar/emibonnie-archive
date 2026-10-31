@@ -12,17 +12,17 @@
 .c-bubbles {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--space-1);
 }
 
 .c-bubbles__msg {
   display: flex;
-  gap: 7px;
+  gap: var(--space-2);
   align-items: flex-start;
 }
 
 .c-bubbles__msg:not(.c-bubbles__msg--cont) {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .c-bubbles__avatar {
@@ -43,7 +43,7 @@
  * still draw a little above their em box's centre, so --emoji-nudge-y
  * (tokens.css) moves it down by a fraction of its own size. The same
  * class centres the cast's, chips', compact lines' and person header's
- * emoji.
+ * emoji: a shared helper, kept here with the bubbles that introduced it.
  */
 .c-emoji {
   display: inline-block;
@@ -69,7 +69,7 @@
 .c-bubbles__avatars {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
   flex: none;
 }
 
@@ -82,8 +82,8 @@
 .c-bubbles__bub {
   min-width: 0;
   overflow-wrap: anywhere;
-  padding: 6px 10px;
-  border-radius: 4px 14px 14px 14px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-xs) var(--radius-md) var(--radius-md) var(--radius-md);
   font-size: var(--text-13);
   line-height: 1.45;
   max-width: 320px;
@@ -91,7 +91,7 @@
 }
 
 .c-bubbles__msg--cont .c-bubbles__bub {
-  border-radius: 14px;
+  border-radius: var(--radius-md);
 }
 
 /*
@@ -106,14 +106,14 @@
  */
 .c-bubbles__name {
   font-size: var(--text-10);
-  font-weight: 800;
+  font-weight: var(--weight-heavy);
   color: var(--c-text, color-mix(in srgb, var(--c) 60%, var(--color-ink)));
-  margin-bottom: 1px;
 }
 
 .c-bubbles__crowd {
   overflow-wrap: anywhere;
-  margin: 7px 0 7px 35px;
+  /* In line with the bubbles: past the 28px avatar and the message gap. */
+  margin: var(--space-2) 0 var(--space-2) calc(var(--space-6) + var(--space-1) + var(--space-2));
   font-size: var(--text-12);
   color: var(--color-ink-muted);
   font-style: italic;
@@ -126,9 +126,9 @@
 }
 
 .c-bubbles__notes {
-  margin-top: 12px;
+  margin-top: var(--space-3);
   border-top: 1px solid var(--color-card-shadow);
-  padding-top: 8px;
+  padding-top: var(--space-2);
 }
 
 .c-bubbles__note {
@@ -150,7 +150,7 @@
   overflow-wrap: anywhere;
 }
 
-.c-bubbles-compact__who--name {
-  font-weight: 700;
+.c-bubbles-compact__name {
+  font-weight: var(--weight-bold);
   color: var(--color-ink-muted);
 }

@@ -34,11 +34,11 @@ export function markerKey(group, marker) {
  * @param {{ attr: string, value: string, label: string, extra?: string }} field
  */
 function speakerSelect(catalogue, { attr, value, label, extra = '' }) {
-  return html`<select class="c-import-speakers__select" ${attr}="${value}" aria-label="${label}" ${extra}>
+  return html`<div class="field c-import-speakers__pick"><span class="field__select"><select ${attr}="${value}" aria-label="${label}" ${extra}>
     <option value="">${t('import.marker.choose')}</option>
     ${catalogue.people.map((person) => html`<option value="person:${person.id}">${person.displayName}</option>`)}
     ${catalogue.roles.map((role) => html`<option value="role:${role}">${role}</option>`)}
-  </select>`;
+  </select></span></div>`;
 }
 
 /**
@@ -55,10 +55,10 @@ function entryRow(group, marker, entry, catalogue) {
         label: `${marker.marker} ${entry.sourceId}`,
         extra: `data-marker="${marker.marker}" data-account="${group.accountId}"`,
       })}
-      <button class="c-import__icon" type="button" data-action="save-entry" data-item="${entry.itemId}"
+      <button class="btn btn--secondary btn--sm btn--icon" type="button" data-action="save-entry" data-item="${entry.itemId}"
         data-marker="${marker.marker}" data-account="${group.accountId}"
         title="${t('import.marker.save')}" aria-label="${t('import.marker.save')}">✓</button>
-      <span class="c-import-speakers__text">${entry.text}</span>
+      <span class="meta c-import-speakers__text">${entry.text}</span>
     </li>
   `;
 }
@@ -81,14 +81,16 @@ function markerRow(group, marker, catalogue, view) {
     <li class="c-import-speakers__marker" data-marker="${marker.marker}" data-account="${group.accountId}">
       <span class="c-import-speakers__glyph" aria-hidden="true">${marker.marker}</span>
       <span class="c-import-speakers__uses">${marker.count}</span>
-      <span class="c-import-speakers__example">${marker.example}</span>
+      <span class="meta c-import-speakers__text">${marker.example}</span>
       ${speakerSelect(catalogue, {
         attr: 'data-marker-select', value: marker.marker, label: t('import.marker.select', { marker: marker.marker }),
       })}
-      <button class="c-import-speakers__save" type="button" data-action="save-marker"
-        data-marker="${marker.marker}" data-account="${group.accountId}">${t('import.marker.save')}</button>
-      <button class="c-import-speakers__review" type="button" data-action="review"
-        data-marker="${marker.marker}" data-account="${group.accountId}" aria-expanded="${open}">${t('import.marker.review', { n: marker.entries.length })}</button>
+      <div class="cluster cluster--2 c-import-speakers__actions">
+        <button class="btn btn--secondary btn--sm" type="button" data-action="save-marker"
+          data-marker="${marker.marker}" data-account="${group.accountId}">${t('import.marker.save')}</button>
+        <button class="btn btn--secondary btn--sm" type="button" data-action="review"
+          data-marker="${marker.marker}" data-account="${group.accountId}" aria-expanded="${String(open)}">${t('import.marker.review', { n: marker.entries.length })}</button>
+      </div>
       ${check}
       ${open ? entries : ''}
     </li>
@@ -107,15 +109,15 @@ function entryCountOf(group) {
  */
 function card(group, catalogue, view) {
   return html`
-    <article class="c-import-speakers__card" data-account="${group.accountId}">
+    <article class="card card--compact stack stack--2" data-account="${group.accountId}" data-speaker-card>
       <header class="c-import-speakers__head">
-        <h3 class="c-import-speakers__handle">${group.handle ? `@${group.handle}` : t('import.speakers.none')}</h3>
-        <span class="c-import-speakers__count">${t('import.speakers.entries', { n: entryCountOf(group) })}</span>
+        <h3 class="heading heading--sm">${group.handle ? `@${group.handle}` : t('import.speakers.none')}</h3>
+        <span class="meta">${t('import.speakers.entries', { n: entryCountOf(group) })}</span>
       </header>
       <ul class="c-import-speakers__markers">
         ${group.markers.map((marker) => markerRow(group, marker, catalogue, view))}
       </ul>
-      <label class="c-import-speakers__remember">
+      <label class="check meta c-import-speakers__remember">
         <input type="checkbox" data-remember ${view.remember ? 'checked' : ''}> ${t('import.marker.remember')}
       </label>
     </article>
@@ -131,17 +133,17 @@ export function render({ markers, people, roles, expanded, remember }) {
   const view = { expanded, remember };
   const cards = markers.length > 0
     ? markers.map((group) => card(group, catalogue, view))
-    : html`<p class="c-import-speakers__empty">${t('import.speakers.empty')}</p>`;
+    : html`<p class="meta">${t('import.speakers.empty')}</p>`;
   return html`
-    <section class="c-import-speakers">
-      <h2 class="c-import-speakers__title">${t('import.speakers.title')}</h2>
+    <section class="c-import-speakers stack stack--3">
+      <h2 class="heading heading--md">${t('import.speakers.title')}</h2>
       ${cards}
-      <div class="c-import-speakers__bar">
-        <button class="c-import__chip" type="button" data-action="publish-ready">${t('import.publish.ready')}</button>
-        <button class="c-import__chip" type="button" data-action="publish-all">${t('import.publish.all')}</button>
-        <button class="c-import__chip" type="button" data-action="retry-import">${t('import.retry')}</button>
+      <div class="cluster cluster--2">
+        <button class="btn btn--secondary btn--sm" type="button" data-action="publish-ready">${t('import.publish.ready')}</button>
+        <button class="btn btn--secondary btn--sm" type="button" data-action="publish-all">${t('import.publish.all')}</button>
+        <button class="btn btn--secondary btn--sm" type="button" data-action="retry-import">${t('import.retry')}</button>
       </div>
-      <p class="c-import__status" role="status" data-import-speakers-status></p>
+      <p class="meta" role="status" data-import-speakers-status></p>
     </section>
   `;
 }

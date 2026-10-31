@@ -24,7 +24,7 @@ import { route as video } from './video.js';
 import { route as authXStart, callbackRoute as authXCallback } from './authX.js';
 import { route as authGoogleStart, callbackRoute as authGoogleCallback } from './authGoogle.js';
 import { meRoute, addedRoute, translationsRoute, removeEntriesRoute, restoreEntriesRoute, optOutRoute, optInRoute, welcomedRoute, setNameRoute, signOutRoute, signOutAllRoute, deleteAccountRoute } from './me.js';
-import { route as authDev } from './authDev.js';
+import { route as authDev, getRoute as authDevGet } from './authDev.js';
 import { optionsRoute, previewRoute, addRoute, addPersonRoute } from './add.js';
 import { editRoute, applyRoute, revertRoute, followUpsRoute } from './edit.js';
 import { metaRoutes } from './meta.js';
@@ -42,7 +42,7 @@ export const routes = [
   authXStart, authXCallback,
   authGoogleStart, authGoogleCallback,
   meRoute, addedRoute, translationsRoute, removeEntriesRoute, restoreEntriesRoute, optOutRoute, optInRoute, welcomedRoute, setNameRoute, signOutRoute, signOutAllRoute, deleteAccountRoute,
-  authDev,
+  authDev, authDevGet,
   optionsRoute, previewRoute, addRoute, addPersonRoute,
   editRoute, applyRoute, revertRoute, followUpsRoute,
   reportsRoute,

@@ -12,7 +12,7 @@ test('eventCard: links to the event, shows the date and the total count across k
   assert.match(markup, /href="\/e\/starfest-night"/);
   assert.match(markup, /14 Oct 2026/);
   assert.match(markup, /#SolLunaStarfest/);
-  assert.match(markup, /<span class="c-event-card__count">12<\/span>/);
+  assert.match(markup, /<span class="badge badge--accent c-event-card__count">12<\/span>/);
 });
 
 test('eventCard: no hashtag means no hashtag text, and counts across kinds sum', () => {
@@ -30,7 +30,7 @@ test('eventCard: a representative picture leads the card when the event has one'
     thumb: { url: 'https://pbs.twimg.com/media/x.jpg', width: 1080, height: 1920, video: true },
   };
   const markup = String(render({ event }));
-  assert.match(markup, /c-event-card--thumb/);
+  assert.match(markup, /<span class="c-thumb" data-cover>/, 'the card\'s full-width cover picture');
   assert.match(markup, /<img class="c-thumb__img" src="https:\/\/pbs\.twimg\.com\/media\/x\.jpg"/);
   assert.ok(markup.indexOf('c-thumb') < markup.indexOf('c-event-card__name'), 'picture before the name');
 });
@@ -39,7 +39,7 @@ test('eventCard: no picture, no image', () => {
   const event = { slug: 's', name: 'N', occurredOn: '2026-10-14', hashtag: null, counts: {}, thumb: null };
   const markup = String(render({ event }));
   assert.doesNotMatch(markup, /<img/);
-  assert.doesNotMatch(markup, /c-event-card--thumb/);
+  assert.doesNotMatch(markup, /c-thumb/);
 });
 
 test('eventCard (Task 11): eager passes through to the picture; lazy otherwise', () => {

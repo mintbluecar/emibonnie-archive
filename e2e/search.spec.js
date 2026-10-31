@@ -33,7 +33,7 @@ async function typeQuery(page, q) {
 for (const [name, path] of [['home, searching', `/?q=${Q}`], ['event, searching', `${EVENT}?q=${Q}`], ['person, scope removed', `/p/solsunny?q=${Q}&scope=all`], ['translator, searching', `/tl/tl_alpha?q=${Q}`]]) {
   test(`${name}: 200, no console errors, no horizontal scroll, no serious a11y violations (both themes)`, async ({ page }) => {
     await checkPage(page, path);
-    await expect(page.locator('.c-search .c-result-card').first()).toBeVisible();
+    await expect(page.locator('.c-search [data-result-card]').first()).toBeVisible();
   });
 }
 
@@ -43,7 +43,7 @@ test('home: typing shows results in place, with no navigation; clearing the box 
   /** @type {string[]} */
   const navigations = [];
   page.on('request', (req) => { if (req.isNavigationRequest()) navigations.push(req.url()); });
-  const list = page.locator('.c-search__list');
+  const list = page.locator('[data-search-list]');
   await expect(list).toBeVisible();
   await expect(page.locator('.c-search')).toBeHidden();
   await typeQuery(page, Q);
@@ -62,7 +62,7 @@ test('a URL with ?q= opens straight into its results, and a reload keeps them', 
   await gotoReady(page, `/?q=${Q}&people=1`);
   await expect(countLine(page)).toHaveText('4 translations · best match first');
   await expect(page.locator('.c-header__search-box')).toHaveValue(Q);
-  await expect(page.locator('.c-search__active-chip')).toHaveCount(1);
+  await expect(page.locator('[data-action="remove-filter"]')).toHaveCount(1);
   await page.reload();
   await page.waitForSelector('#app[data-ready]', { state: 'attached' });
   await expect(countLine(page)).toHaveText('4 translations · best match first');
@@ -73,12 +73,12 @@ test('event page: the box searches within the event, preset as a removable chip;
   await gotoReady(page, EVENT);
   const box = page.locator('.c-header__search-box');
   await expect(box).toHaveAttribute('placeholder', 'search this event…');
-  const chip = page.locator('.c-search__active-chip[data-field="event"]');
+  const chip = page.locator('[data-action="remove-filter"][data-field="event"]');
   await expect(chip).toBeVisible();
   await typeQuery(page, Q);
   await expect(countLine(page)).toHaveText('1 translation · best match first');
-  await expect(page.locator('.c-event__name')).toBeVisible();
-  await expect(page.locator('.c-event-sections')).toBeHidden();
+  await expect(page.locator('.c-event__head h1')).toBeVisible();
+  await expect(page.locator('[data-event-sections]')).toBeHidden();
   expect(new URL(page.url()).pathname).toBe(EVENT);
   expect(new URL(page.url()).search).toBe(`?q=${Q}`);
   const widened = page.waitForResponse((res) => res.url().includes('/api/search') && !res.url().includes('eventSlug'));
@@ -95,9 +95,9 @@ test('event page: the box searches within the event, preset as a removable chip;
   // page searches the whole archive now, so its own list isn't shown; "clear all" brings both back.
   await box.fill('');
   await expect(page.locator('.c-search__hint')).toHaveText('type to search everything');
-  await expect(page.locator('.c-event-sections')).toBeHidden();
-  await page.locator('.c-search__clear-all').click();
-  await expect(page.locator('.c-event-sections')).toBeVisible();
+  await expect(page.locator('[data-event-sections]')).toBeHidden();
+  await page.locator('[data-action="clear-filters"]').click();
+  await expect(page.locator('[data-event-sections]')).toBeVisible();
   await expect(chip).toBeVisible();
 });
 
@@ -122,7 +122,7 @@ test('fix round 1, I1: clearing and typing again never flashes the old results, 
   });
   const box = page.locator('.c-header__search-box');
   await box.fill('');
-  await expect(page.locator('.c-search__list')).toBeVisible();
+  await expect(page.locator('[data-search-list]')).toBeVisible();
   await box.fill('today');
   await expect(page.locator('.c-search')).toHaveAttribute('aria-busy', 'true');
   await expect(countLine(page)).toHaveText('4 translations · best match first');
@@ -136,12 +136,12 @@ test('person page: preset person chip; removing it widens the results; "clear al
   await gotoReady(page, `/p/solsunny?q=${Q}`);
   await expect(page.locator('.c-header__search-box')).toHaveAttribute('placeholder', 'search sol…');
   await expect(countLine(page)).toHaveText('4 translations · best match first');
-  await page.locator('.c-search__active-chip[data-field="people"]').click();
+  await page.locator('[data-action="remove-filter"][data-field="people"]').click();
   await expect(countLine(page)).toHaveText('7 translations · best match first');
   expect(new URL(page.url()).search).toBe(`?q=${Q}&scope=all`);
-  await page.locator('.c-search__clear-all').click();
+  await page.locator('[data-action="clear-filters"]').click();
   await expect(countLine(page)).toHaveText('4 translations · best match first');
-  await expect(page.locator('.c-search__active-chip[data-field="people"]')).toBeVisible();
+  await expect(page.locator('[data-action="remove-filter"][data-field="people"]')).toBeVisible();
 });
 
 test('/search?q=x redirects to /?q=x (308), straight into the results', async ({ page, request }, testInfo) => {
@@ -159,9 +159,9 @@ test('the filter sheet: opens from the icon, keeps focus inside, Escape closes i
   await gotoReady(page, EVENT);
   const filterBtn = page.locator('.c-header__filter-btn');
   await filterBtn.click();
-  const dialog = page.locator('.c-filter-sheet');
+  const dialog = page.locator('[data-filter-sheet]');
   await expect(dialog).toBeVisible();
-  await expect(dialog.locator('.c-filter-sheet__event')).toHaveValue('solluna-at-starfest-2026-10-18');
+  await expect(dialog.locator('[data-filter="event"]')).toHaveValue('solluna-at-starfest-2026-10-18');
   // showModal() makes the rest of the page inert: Tab only ever reaches the sheet's own
   // controls (or the browser's own UI, which leaves document.body active), never the page behind.
   let inside = 0;
@@ -170,7 +170,7 @@ test('the filter sheet: opens from the icon, keeps focus inside, Escape closes i
     const where = await page.evaluate(() => {
       const el = document.activeElement;
       if (!el || el === document.body) return 'none';
-      return el.closest('.c-filter-sheet') ? 'sheet' : 'page';
+      return el.closest('[data-filter-sheet]') ? 'sheet' : 'page';
     });
     expect(where, `tab ${i + 1}`).not.toBe('page');
     if (where === 'sheet') inside += 1;
@@ -185,13 +185,13 @@ test('filters work with an empty box: applying a person from the sheet shows res
   test.skip(DARK_PROJECTS.includes(testInfo.project.name), LIGHT_ONLY);
   await gotoReady(page, '/');
   await page.locator('.c-header__filter-btn').click();
-  await page.locator('.c-filter-sheet__people .c-chips__chip').first().click();
+  await page.locator('[data-filter-group="people"] .c-chips__chip').first().click();
   await page.locator('.c-filter-sheet__apply').click();
-  await expect(page.locator('.c-search__list')).toBeHidden();
+  await expect(page.locator('[data-search-list]')).toBeHidden();
   await expect(countLine(page)).toContainText('newest first');
   await expect(page.locator('.c-header__filter-count')).toHaveText('1');
-  await page.locator('.c-search__clear-all').click();
-  await expect(page.locator('.c-search__list')).toBeVisible();
+  await page.locator('[data-action="clear-filters"]').click();
+  await expect(page.locator('[data-search-list]')).toBeVisible();
 });
 
 const NO_FOCUS_PATHS = ['/', `/?q=${Q}`, EVENT, `${EVENT}?q=${Q}`, '/p/solsunny', '/tl/tl_alpha', '/t/1900000000000000001', '/about'];

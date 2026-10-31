@@ -23,7 +23,7 @@ const flush = () => new Promise((resolve) => { setTimeout(resolve, 0); });
 
 test('composeAccount: the handle, an "open profile" link, and totals', () => {
   const markup = String(composeAccount(ACCOUNT));
-  assert.match(markup, /<h1 class="c-account__handle">@tl_alpha<\/h1>/);
+  assert.match(markup, /<h1 class="heading heading--md" data-handle>@tl_alpha<\/h1>/);
   assert.match(markup, /<a class="c-account__open-profile" href="https:\/\/x\.com\/tl_alpha"[^>]*>open profile ↗<\/a>/);
   assert.match(markup, /4 translations/);
 });
@@ -46,8 +46,8 @@ test('composeAccount: grouped by event, a shared story, and a post', () => {
   const markup = String(composeAccount(ACCOUNT));
   assert.match(markup, /SOLLUNA AT STARFEST · 18 Oct 2026/);
   assert.match(markup, /luna tiktok live · 12 Feb 2026/);
-  assert.match(markup, /<h2 class="c-hub-group__label">shared story · 2 Mar 2026<\/h2>/);
-  assert.match(markup, /<h2 class="c-hub-group__label">posts<\/h2>/);
+  assert.match(markup, /<h2 class="label label--section">shared story · 2 Mar 2026<\/h2>/);
+  assert.match(markup, /<h2 class="label label--section">posts<\/h2>/);
 });
 
 test('composeOptedOut: only account.optedOut, and nothing else from the page', () => {
@@ -55,12 +55,12 @@ test('composeOptedOut: only account.optedOut, and nothing else from the page', (
   assert.match(markup, /this translator has opted out/);
   assert.ok(!markup.includes('c-hub__seg'), 'no segmented control');
   assert.ok(!markup.includes('c-hub-group'), 'no groups');
-  assert.ok(!markup.includes('c-account__handle'), 'not even the handle');
+  assert.ok(!markup.includes('data-handle'), 'not even the handle');
 });
 
 test('composeOptedOut: still the page shell (header/tab bar/footer), just with the opted-out message as its only content', () => {
   const markup = String(composeOptedOut());
-  assert.match(markup, /c-header--compact/);
+  assert.match(markup, /<header class="c-header" data-compact>/);
   assert.match(markup, /c-tabbar/);
   assert.match(markup, /c-empty-state__message">this translator has opted out/);
 });
@@ -70,10 +70,10 @@ test('bind: switching to "all, newest" re-renders flat, without a group label', 
   mount(root, composeAccount(ACCOUNT));
   globalThis.document = fakeDocument();
   bind(root, ACCOUNT, 'tl_alpha');
-  const allChip = /** @type {any} */ (root.querySelector('.c-hub__seg .c-chips__chip[data-value="all"]'));
+  const allChip = /** @type {any} */ (root.querySelector('.c-hub__seg [data-value="all"]'));
   allChip.click();
-  const content = /** @type {any} */ (root.querySelector('.c-hub__content'));
-  assert.equal(content.querySelectorAll('.c-hub-group__label').length, 0, 'flat view has no group labels');
+  const content = /** @type {any} */ (root.querySelector('[data-hub-content]'));
+  assert.equal(content.querySelectorAll('[data-hub-group] h2').length, 0, 'flat view has no group labels');
   assert.ok(content.querySelector('a[href="/t/1900000000000000005"]'), 'the shared-story entry is still there, just ungrouped');
   delete (/** @type {any} */ (globalThis)).document;
 });
@@ -98,13 +98,13 @@ test('bind: "more" fetches the kind\'s next page with the right offset, appends,
       calls.push(String(url));
       return new Response(JSON.stringify(nextPage), { status: 200 });
     });
-    const more = /** @type {any} */ (root.querySelector('.c-hub__more'));
+    const more = /** @type {any} */ (root.querySelector('[data-action="more"]'));
     assert.ok(more, 'a "more" button is rendered when a section hasMore');
     more.click();
     await flush();
     assert.match(calls[0], /\/api\/account\/tl_alpha\?offset=4/, `expected offset=4 (the 4 items already loaded), got ${calls[0]}`);
     assert.ok(root.querySelector('a[href="/t/NEW_ITEM"]'), 'the newly fetched item is now rendered');
-    assert.ok(!root.querySelector('.c-hub__more'), 'no more button once hasMore is false');
+    assert.ok(!root.querySelector('[data-action="more"]'), 'no more button once hasMore is false');
   } finally {
     cleanup();
   }
@@ -133,7 +133,7 @@ test('start: an opted-out account\'s title and DOM contain no handle (review rou
     await start();
     assert.ok(!globalThis.document.title.includes('tl_gamma'), `title leaked the handle: ${globalThis.document.title}`);
     assert.ok(!allText(root).includes('tl_gamma'), 'no handle anywhere in the rendered DOM');
-    assert.ok(!root.querySelector('.c-account__handle'), 'not even the handle element');
+    assert.ok(!root.querySelector('[data-handle]'), 'not even the handle element');
     assert.match(root.querySelector('.c-empty-state__message')?.children?.[0]?.textContent ?? '', /this translator has opted out/);
   } finally {
     cleanup();
@@ -179,7 +179,7 @@ test('start: redirectTo replaces the page at accountHref(redirectTo)', async () 
 
 test('composeAccount (Task 9b): entries are compact previews, not full bubbles', () => {
   const markup = String(composeAccount(ACCOUNT));
-  assert.match(markup, /c-preview-card--compact/);
+  assert.match(markup, /data-compact/);
   assert.ok(!markup.includes('c-bubbles__bub'));
 });
 
@@ -188,6 +188,6 @@ test('composeAccount (Task 10d): searches within this translator -- the box name
   const handle = ACCOUNT.account.handle;
   assert.ok(markup.includes(`placeholder="search @${handle}…"`));
   assert.ok(markup.includes(`data-field="account" data-value="${handle}"`));
-  assert.match(markup, /<div class="c-search__list">[\s\S]*c-hub__seg/);
+  assert.match(markup, /<div data-search-list>[\s\S]*c-hub__seg/);
   assert.ok(!String(composeOptedOut()).includes('c-header__search-box'));
 });

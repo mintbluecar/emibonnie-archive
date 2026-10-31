@@ -86,7 +86,7 @@ function app() {
 async function toSpeakersStep() {
   await start();
   const form = app().querySelector('[data-add-form]');
-  const input = app().querySelector('.c-add__url');
+  const input = app().querySelector('[id="c-add-url"]');
   input.value = 'https://example.com/post/1';
   form.dispatchEvent({ type: 'submit', target: form, preventDefault: () => {} });
   await flush();

@@ -1,0 +1,34 @@
+/*
+ * Step 1 of the add flow (Plan 2a Task 13; on primitives since the
+ * styling system's Task 9): the paste form's card and the screen an
+ * ingest outcome lands on. The card, field, buttons and texts are
+ * primitives; this is their spacing and the two lines with a look of
+ * their own. See STYLING.md.
+ */
+
+.c-add-link__intro {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-14);
+}
+
+.c-add-link__as {
+  margin-bottom: var(--space-3);
+}
+
+.c-add-link__note {
+  margin-top: var(--space-3);
+  white-space: pre-line;
+}
+
+.c-add-link__status {
+  font-size: var(--text-14);
+  font-weight: var(--weight-bold);
+}
+
+.c-add-link__pending {
+  margin-top: var(--space-2);
+}
+
+.c-add-link__actions {
+  margin-top: var(--space-4);
+}

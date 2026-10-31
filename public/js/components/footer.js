@@ -9,11 +9,11 @@ export function render() {
   return html`
     <footer class="c-footer">
       <nav class="c-footer__links">
-        <a class="c-footer__link" href="${ABOUT_PATH}">${t('footer.about')}</a>
-        <a class="c-footer__link" href="${PRIVACY_PATH}">${t('footer.privacy')}</a>
-        <a class="c-footer__link" href="${TAKEDOWN_PATH}">${t('footer.takedown')}</a>
+        <a class="meta tap-link" href="${ABOUT_PATH}">${t('footer.about')}</a>
+        <a class="meta tap-link" href="${PRIVACY_PATH}">${t('footer.privacy')}</a>
+        <a class="meta tap-link" href="${TAKEDOWN_PATH}">${t('footer.takedown')}</a>
       </nav>
-      <p class="c-footer__note">${t('footer.unofficial')}</p>
+      <p class="meta">${t('footer.unofficial')}</p>
     </footer>
   `;
 }

@@ -1,58 +1,25 @@
 /*
  * public/js/components/eventCard.js. Home shows each month's events as a
- * grid of cards (owner, 2026-10-23): the event's representative picture on
- * top in a portrait frame, then the name, date, hashtag and count. Cards
- * without a picture are text only.
+ * grid of cards (owner, 2026-10-23; the grid is homeMonth.css): the
+ * event's representative picture on top in a portrait frame (thumb.js's
+ * cover picture), then the name, date, hashtag and count. Cards without
+ * a picture are text only. The card, the muted lines and the count badge
+ * are primitives; this file lays the card's body out.
  */
-
-.c-home-month__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px;
-}
-
-@media (min-width: 860px) {
-  .c-home-month__grid {
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-    gap: 12px;
-  }
-}
 
 .c-event-card {
   display: flex;
   flex-direction: column;
-  background: var(--color-card);
-  border-radius: var(--radius-card);
-  box-shadow: 0 2px 0 var(--color-card-shadow);
   overflow: hidden;
   min-width: 0;
-}
-
-.c-event-card .c-thumb {
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  border-radius: 0;
-  align-self: stretch;
-}
-
-.c-event-card .c-thumb__img {
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  min-width: 0;
-  object-fit: cover;
-}
-
-.c-event-card .c-thumb__play {
-  font-size: var(--text-22);
 }
 
 .c-event-card__body {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 8px;
-  padding: 10px 12px 12px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-3);
 }
 
 .c-event-card__text {
@@ -67,30 +34,17 @@
 
 .c-event-card__meta {
   display: block;
-  font-size: var(--text-11);
-  color: var(--color-ink-muted);
   overflow-wrap: anywhere;
 }
 
 .c-event-card__count {
   flex: none;
-  font-size: var(--text-11);
-  font-weight: 700;
-  border-radius: 999px;
-  padding: 2px 8px;
-  white-space: nowrap;
-  /* The mockups' lavender badge, from the site's own label colour (Task 9b). */
-  background: var(--color-label-tint);
-  border: 1.5px solid color-mix(in srgb, var(--color-label) 30%, var(--color-card));
-  color: var(--color-label-on-tint);
 }
 
 /* The hashtag gets its own line and never breaks mid-word: one line,
    cut with an ellipsis; the full tag is in the tooltip. */
 .c-event-card__tag {
   display: block;
-  font-size: var(--text-11);
-  color: var(--color-ink-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
