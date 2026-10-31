@@ -7,14 +7,18 @@
  * must not depend on which worker wrote first.
  */
 import { test, expect } from '@playwright/test';
-import { checkPage, signInAs } from './helpers.js';
+import { checkPage, signInAs, gotoReady } from './helpers.js';
 
 test('me as a translator: the badge, the two tabs and an accessible page', async ({ page }) => {
   await signInAs(page, 'translator');
+  // A selectable checkbox is on screen, so checkPage's 24px target check
+  // really measures its label rather than passing with none to measure.
+  await gotoReady(page, '/me');
+  await expect(page.locator('[data-action="select"]').first()).toBeVisible();
   await checkPage(page, '/me');
-  await expect(page.locator('.c-me__who .c-me__badge')).toContainText('translator');
+  await expect(page.locator('.c-me__who [data-translator-badge]')).toContainText('translator');
   await expect(page.locator('[data-action="tab"]')).toHaveCount(2);
-  await expect(page.locator('.c-me__translations')).toBeVisible();
+  await expect(page.locator('[data-translations]')).toBeVisible();
   await expect(page.locator('[data-action="opt-out"]')).toBeVisible();
 });
 
@@ -28,11 +32,11 @@ test('a translator removes, restores and opts out from me', async ({ page }, tes
   await expect(checkbox).toBeVisible();
   await checkbox.check();
   await page.locator('[data-action="remove"]').click();
-  await expect(page.locator('.c-me__entry--faded').first()).toBeVisible();
+  await expect(page.locator('.c-me__entry[data-faded]').first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'restore' }).first()).toBeVisible();
 
   // Restore it.
-  const removed = page.locator('.c-me__entry--faded').first();
+  const removed = page.locator('.c-me__entry[data-faded]').first();
   await removed.getByRole('button', { name: 'restore' }).click();
   await expect(page.locator('[data-action="opt-out"]')).toBeVisible();
 

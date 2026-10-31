@@ -1,0 +1,63 @@
+/*
+ * Card (Styling system Task 4): the raised surface results, forms and
+ * panels sit on.
+ *
+ *   <div class="card">Default padding</div>
+ *   <div class="card card--compact">A dense list row</div>
+ *   <section class="card card--roomy">A form or a welcome panel</section>
+ *   <article class="card card--flush">A picture to the edges, then text with its own padding</article>
+ *
+ *   <article class="card card--flush">
+ *     <a class="card__link" href="/item/1">The whole card is this link</a>
+ *     <p>By <a class="c-card-credit__link" href="...">@tl_gamma</a></p>
+ *   </article>
+ *
+ * card--flush has no padding of its own: for a card whose picture runs
+ * to its edges, or whose stretched link carries the padding.
+ *
+ * card__link is the card's main link, stretched over the whole card by
+ * an overlay, so the card is one click target and its focus ring goes
+ * round the whole card; a second link inside it (a credit line) stays
+ * clickable by lifting itself above the overlay (position: relative and
+ * a z-index of its own).
+ */
+
+.card {
+  padding: var(--space-4);
+  background: var(--color-card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.card--compact {
+  padding: var(--space-3);
+}
+
+.card--roomy {
+  padding: var(--space-5);
+}
+
+.card--flush {
+  padding: 0;
+}
+
+.card:has(> .card__link) {
+  position: relative;
+}
+
+.card__link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.card__link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.card__link:focus-visible::after {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}

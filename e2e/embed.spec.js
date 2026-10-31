@@ -106,7 +106,7 @@ test('embedSources off (the example site, as served): one "original tweet" link,
   await expect(page.locator('.c-item__footer a[href^="https://x.com/"]')).toHaveCount(1);
   await expect(page.locator('.c-item__footer a[href^="https://x.com/"]')).toHaveText('original tweet');
   await expect(page.locator('blockquote.twitter-tweet')).toHaveCount(0);
-  await expect(page.locator('.c-item__copy-link')).toBeVisible();
+  await expect(page.locator('[data-action="copy-link"]')).toBeVisible();
   expect(asked).toEqual([]);
   expect(errors).toEqual([]);
 });
@@ -126,12 +126,12 @@ test('embedSources on, X blocked: the blockquote fallback shows our text, author
   if (DARK_PROJECTS.includes(testInfo.project.name)) await expect(quote).toHaveAttribute('data-theme', 'dark');
   else await expect(quote).not.toHaveAttribute('data-theme');
   await expect(quote.locator('.c-embed__text')).toContainText(item.original.split('\n')[0]);
-  await expect(quote.locator('.c-embed__by')).toContainText(`(@${item.credits.account.handle})`);
+  await expect(quote.locator('[data-embed-by]')).toContainText(`(@${item.credits.account.handle})`);
   const primary = item.sources.find((/** @type {any} */ s) => s.role === 'primary');
   expect(primary.url).toMatch(/^https:\/\/x\.com\/\w+\/status\/\d+$/);
   await expect(quote.locator('a.c-embed__link')).toHaveAttribute('href', primary.url);
   await expect(page.locator('.c-item__footer > a.c-item__footer-link[href^="https://x.com/"]')).toHaveCount(0);
-  await expect(page.locator('.c-item__copy-link')).toBeVisible();
+  await expect(page.locator('[data-action="copy-link"]')).toBeVisible();
   await expect(page.locator('.c-item__footer [data-action="report"]')).toBeVisible();
 
   await expect.poll(() => asked.length).toBe(1);
@@ -144,11 +144,11 @@ test('embedSources on, X blocked: the blockquote fallback shows our text, author
 
 test('embedSources on: the privacy page shows the X embed notice, linking X\'s privacy policy; off, it doesn\'t', async ({ page }) => {
   await gotoReady(page, '/privacy');
-  await expect(page.locator('.c-static__embed-notice')).toHaveCount(0);
+  await expect(page.locator('[data-embed-notice]')).toHaveCount(0);
   const on = await turnEmbedSourcesOn(page, '/privacy');
   await gotoReady(page, '/privacy');
   expect(on.flipped).toBeGreaterThan(0);
-  const notice = page.locator('.c-static__embed-notice');
+  const notice = page.locator('[data-embed-notice]');
   await expect(notice).toBeVisible();
   await expect(notice.locator('a')).toHaveAttribute('href', 'https://x.com/en/privacy');
   await assertNoSeriousA11yViolations(page);
@@ -187,7 +187,7 @@ test('embedSources on, X blocked (Task 10c l, q; 10d extra): the embed\'s attrib
   // A synthetic long post: more text in the fallback than the cap holds.
   await quote.locator('.c-embed__text').evaluate((el) => { el.append('\nline of a very long translated post'.repeat(40)); });
   await expect(more).toBeVisible();
-  await expect(box).toHaveClass(/c-embed-box--tall/);
+  await expect(box).toHaveAttribute('data-tall', '');
   const clip = page.locator('.c-embed-box__clip');
   expect(await clip.evaluate((el) => el.getBoundingClientRect().height)).toBeLessThanOrEqual(321);
   await expect(more).toHaveAttribute('aria-expanded', 'false');

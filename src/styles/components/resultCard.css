@@ -1,42 +1,19 @@
 /*
  * public/js/components/resultCard.js. The card root is a non-link
- * `<article>` (owner, 2026-10-23): its main link (`.c-result-card__link`)
- * stretches over the whole card via a `::after` overlay, same trick as
- * previewCard.css, so the translator credit line's own link
- * (cardCredit.css) stays independently clickable above it.
+ * `<article>` (owner, 2026-10-23), a `card card--flush`: its main link
+ * is the card's `card__link` (stretched over the whole card, card.css),
+ * carrying the padding here, same as previewCard.css, so the translator
+ * credit line's own link (cardCredit.css) stays independently clickable
+ * above it. The event line is the label primitive and the people line
+ * is meta.
  */
 
-.c-result-card {
-  position: relative;
-  display: block;
-  background: var(--color-card);
-  border-radius: var(--radius-card);
-  box-shadow: 0 2px 0 var(--color-card-shadow);
-}
-
 .c-result-card__link {
-  display: block;
-  padding: 10px 12px;
-  color: inherit;
-  text-decoration: none;
-}
-
-.c-result-card__link::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-}
-
-.c-result-card__link:focus-visible::after {
-  outline: 2px solid var(--color-ink);
-  outline-offset: 2px;
+  padding: var(--space-3);
 }
 
 .c-result-card__event {
-  font-size: var(--text-10-5);
-  font-weight: 800;
-  color: var(--color-label);
-  margin-bottom: 3px;
+  margin-bottom: var(--space-1);
 }
 
 .c-result-card__line {
@@ -47,21 +24,19 @@
 
 .c-result-card__text mark {
   background: var(--color-highlight);
-  border-radius: 3px;
-  padding: 0 2px;
+  border-radius: var(--radius-xs);
+  padding: 0 calc(var(--space-1) / 2);
   color: inherit;
 }
 
 .c-result-card__meta {
-  font-size: var(--text-10-5);
-  color: var(--color-ink-muted);
-  margin-top: 5px;
+  margin-top: var(--space-1);
 }
 
 /* Task 10c: with a thumbnail (thumb.js), text left, picture right. */
-.c-result-card--thumb .c-result-card__link {
+.c-result-card__link[data-thumb] {
   display: flex;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .c-result-card__body {

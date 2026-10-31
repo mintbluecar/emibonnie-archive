@@ -118,7 +118,7 @@ test('LONG: after scrolling 2000px the pinned header and the sticky media area a
 
   // Review round 2, C3: the stub clip must actually decode, not just avoid a 404.
   await expect.poll(() => page.locator('.c-video__el').evaluate((el) => /** @type {HTMLVideoElement} */ (el).readyState)).toBeGreaterThanOrEqual(1);
-  await expect(page.locator('.c-video__gone')).toHaveCount(0);
+  await expect(page.locator('[data-media-gone]')).toHaveCount(0);
 });
 
 test('PHOTO: shows 2 images in the capped area; tapping opens the zoom dialog, Escape closes it', async ({ page }, testInfo) => {
@@ -160,7 +160,7 @@ test('LIVE (vertical clip) at phone width: the media box is capped at 40% of vie
 
   // Review round 2, C3: the stub clip must actually decode, not just avoid a 404.
   await expect.poll(() => page.locator('.c-video__el').evaluate((el) => /** @type {HTMLVideoElement} */ (el).readyState)).toBeGreaterThanOrEqual(1);
-  await expect(page.locator('.c-video__gone')).toHaveCount(0);
+  await expect(page.locator('[data-media-gone]')).toHaveCount(0);
 });
 
 test('LONG real playback (requires E2E_REAL_VIDEO_URL -- see this file\'s header)', async ({ page }, testInfo) => {

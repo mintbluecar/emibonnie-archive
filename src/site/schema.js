@@ -13,6 +13,7 @@ import {
   checkOneMarker,
   checkOneLivePattern,
 } from './fieldValidators.js';
+import { checkOneFont } from './fontValidators.js';
 
 export { contrastRatio, DEFAULT_CARD_COLOUR, DARK_CARD_COLOUR } from './contrast.js';
 export { ALLOWED_REGIONS } from './regions.js';
@@ -23,15 +24,40 @@ export { ALLOWED_REGIONS } from './regions.js';
  *   otherAccounts: OtherAccount[] }} FeaturedPerson
  */
 /** @typedef {{ code: string, platformCode: string, pattern: string }} LivePattern */
+/** @typedef {{ path: string, weight: number, style?: 'normal'|'italic', unicodeRange?: string }} SiteFontFile */
+/**
+ * A site's own self-hosted font (spec "2b. Fonts a site can choose"):
+ * a family and weights, shipped either from an `@fontsource/*` package
+ * (`subsets` picked the same way the engine's own `FONT_SPECS` are) or
+ * from the site's own `site/fonts/*.woff2` files (`path` relative to
+ * `site/fonts/`). Only shipped by the build if some token in
+ * `tokens.css` or the site's `theme.css` actually names the family.
+ * `style` is optional on input (default `'normal'`); normalised, it is
+ * always one of the two literals.
+ * @typedef {{ family: string, style?: 'normal'|'italic', weights: number[] } & (
+ *   { package: string, subsets: string[] } | { files: SiteFontFile[] }
+ * )} SiteFont
+ */
 /**
  * @typedef {{ name: string, wordmark: { accent: string, rest: string }, tagline: string, ownerXUserId: string,
  *   sourceLanguage: string, timezone: string, region: string, lowercaseNames: boolean, featuredPeople: FeaturedPerson[],
  *   defaultMarkers: Record<string, { personHandle: string } | { role: string }>, ignoredHashtags: string[],
  *   categories: string[], extraLivePatterns: LivePattern[], contactUrl: string, embedSources: boolean,
- *   roleEmoji: Record<string, string>, favicon: string|null }} Site
+ *   roleEmoji: Record<string, string>, favicon: string|null, fonts: SiteFont[] }} Site
  */
 
 const DEFAULT_CATEGORIES = ['show / interview', 'fan meet / fan day', 'live'];
+
+/**
+ * The plain required-string fields with no normalisation of their own.
+ * @param {string[]} errors
+ * @param {any} input
+ */
+function checkRequiredStrings(errors, input) {
+  requireString(errors, 'name', input.name);
+  requireString(errors, 'tagline', input.tagline);
+  requireString(errors, 'sourceLanguage', input.sourceLanguage);
+}
 
 /**
  * @param {{ errors: string[], warnings: string[] }} report
@@ -132,6 +158,26 @@ function checkFavicon(errors, raw) {
 }
 
 /**
+ * `fonts` (optional, default `[]`; spec "2b. Fonts a site can choose"):
+ * the site's own self-hosted font families. Which of them the build
+ * actually ships -- only the ones some token in `tokens.css` or
+ * `theme.css` names -- is decided at build time
+ * (`scripts/buildAssets.js`'s `buildFontsCss`), not here.
+ * @param {string[]} errors
+ * @param {any} raw
+ * @returns {SiteFont[]}
+ */
+function checkFonts(errors, raw) {
+  const value = raw.fonts;
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    errors.push('fonts: must be an array');
+    return [];
+  }
+  return value.map((font, index) => checkOneFont(errors, font, index));
+}
+
+/**
  * Validates and normalises a site's raw `site.json`. Every error names the
  * field path it came from. `warnings` (e.g. a featured colour that's a bit
  * low-contrast against a card -- review round 2, fix round 2, item 2: the
@@ -151,11 +197,9 @@ export function validateSite(raw) {
   const report = { errors: [], warnings: [] };
   const { errors, warnings } = report;
 
-  requireString(errors, 'name', input.name);
+  checkRequiredStrings(errors, input);
   const wordmark = checkWordmark(errors, input);
-  requireString(errors, 'tagline', input.tagline);
   const ownerXUserId = checkOwnerXUserId(errors, input);
-  requireString(errors, 'sourceLanguage', input.sourceLanguage);
   const timezone = checkTimezone(errors, input);
   const region = checkRegion(errors, input);
   const lowercaseNames = checkLowercaseNames(errors, input);
@@ -168,6 +212,7 @@ export function validateSite(raw) {
   const embedSources = checkOptionalBoolean(errors, input, 'embedSources');
   const roleEmoji = checkRoleEmoji(errors, input);
   const favicon = checkFavicon(errors, input);
+  const fonts = checkFonts(errors, input);
 
   if (errors.length > 0) return { ok: false, errors, warnings };
 
@@ -192,6 +237,7 @@ export function validateSite(raw) {
       embedSources,
       roleEmoji,
       favicon,
+      fonts,
     },
   };
 }

@@ -41,12 +41,11 @@ function detailVm(overrides = {}) {
 
 test('translation detail: renders credits, cast, bubbles, and a native <details> "show original"', () => {
   const markup = String(detail.render(detailVm()));
-  assert.match(markup, /<p class="k-translation-detail__credits">\s*translated by: <a class="k-translation-detail__credit-link" href="https:\/\/x\.com\/tl_alpha" target="_blank" rel="noopener noreferrer">@tl_alpha<\/a>/);
+  assert.match(markup, /<p class="meta k-translation-detail__credits">\s*translated by: <a class="k-translation-detail__credit-link" href="https:\/\/x\.com\/tl_alpha" target="_blank" rel="noopener noreferrer">@tl_alpha<\/a>/);
   assert.ok(!markup.includes('c-icon--translator'), 'the translate icon is gone (owner, 2026-10-23)');
   assert.match(markup, /c-cast__chip/);
   assert.match(markup, /c-bubbles__bub/);
-  assert.match(markup, /<details class="k-translation-detail__original">/);
-  assert.match(markup, /<summary class="k-translation-detail__original-toggle">show original text<\/summary>/);
+  assert.match(markup, /<details>\s*<summary class="meta tap-link k-translation-detail__original-toggle">show original text<\/summary>/);
   assert.match(markup, /first paragraph/);
 });
 
@@ -90,8 +89,8 @@ test('translation detail bind: wires cast/bubbles colours and adds no listener o
 
 test('translation section (Task 9b): ctx.compact renders compact preview cards (the person and translator pages ask for it)', () => {
   const sectionVm = { kind: 'translation', total: 1, hasMore: false, items: [preview()] };
-  assert.match(String(section.render(sectionVm, { compact: true })), /c-preview-card--compact/);
-  assert.ok(!String(section.render(sectionVm, {})).includes('c-preview-card--compact'));
+  assert.match(String(section.render(sectionVm, { compact: true })), /data-compact/);
+  assert.ok(!String(section.render(sectionVm, {})).includes('data-compact'));
 });
 
 test('translation detail (Task 10b): "show original" is one escaped element, with the class that keeps line breaks (pre-wrap), the stored newlines and blank lines intact, no <br>', async () => {

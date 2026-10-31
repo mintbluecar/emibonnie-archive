@@ -64,7 +64,7 @@ export function composeSignedOut({ failed = false } = {}) {
     active: 'me',
     compact: true,
     content: html`
-      <h1 class="c-me__title">${t('me.title')}</h1>
+      <h1 class="heading heading--lg c-me__title">${t('me.title')}</h1>
       ${signIn.render({ returnTo: ME_PATH, failed })}
     `,
   });
@@ -79,14 +79,18 @@ function whoOf(user) {
 /** @returns {import('../core/html.js').SafeHtml} */
 function deleteDialog() {
   return html`
-    <dialog class="c-me__dialog" aria-labelledby="c-me-delete-title">
-      <h2 class="c-me__dialog-title" id="c-me-delete-title">${t('me.deleteTitle')}</h2>
-      <p class="c-me__dialog-body">${t('me.deleteBody')}</p>
-      <label class="c-me__dialog-label" for="c-me-delete-input">${t('me.deleteConfirmLabel')}</label>
-      <input class="c-me__delete-input" id="c-me-delete-input" type="text" autocomplete="off">
-      <div class="c-me__dialog-actions">
-        <button class="c-me__cancel" type="button" data-action="cancel-delete">${t('me.cancel')}</button>
-        <button class="c-me__confirm" type="button" data-action="confirm-delete" disabled>${t('me.deleteConfirm')}</button>
+    <dialog class="card card--roomy c-me__dialog" aria-labelledby="c-me-delete-title">
+      <div class="stack stack--3">
+        <h2 class="heading heading--md" id="c-me-delete-title">${t('me.deleteTitle')}</h2>
+        <p class="meta c-me__dialog-body">${t('me.deleteBody')}</p>
+        <div class="field">
+          <label class="field__label" for="c-me-delete-input">${t('me.deleteConfirmLabel')}</label>
+          <input id="c-me-delete-input" type="text" autocomplete="off" data-delete-input>
+        </div>
+        <div class="cluster cluster--2 c-me__dialog-actions">
+          <button class="btn btn--secondary" type="button" data-action="cancel-delete">${t('me.cancel')}</button>
+          <button class="btn btn--danger" type="button" data-action="confirm-delete" disabled>${t('me.deleteConfirm')}</button>
+        </div>
       </div>
     </dialog>
   `;
@@ -116,18 +120,18 @@ function panelsOf(state) {
 export function composeSignedIn(state) {
   const { user, name } = state;
   const nameStep = (name || user.needsName) ? nameForm.render(name ?? {}) : '';
-  const badge = user.isTranslator ? html` <span class="c-me__badge">${t('me.translatorBadge')}</span>` : '';
+  const badge = user.isTranslator ? html` <span class="badge badge--accent" data-translator-badge>${t('me.translatorBadge')}</span>` : '';
   return pageShell.render({
     active: 'me',
     compact: true,
     content: html`
-      <h1 class="c-me__title">${t('me.title')}</h1>
-      <div class="c-me__head">
+      <h1 class="heading heading--lg c-me__title">${t('me.title')}</h1>
+      <div class="card card--compact c-me__head">
         <p class="c-me__who">${whoOf(user)}${badge}</p>
-        <div class="c-me__controls">
-          <button class="c-me__icon" type="button" data-action="signout"
+        <div class="cluster cluster--2 c-me__controls">
+          <button class="btn btn--secondary btn--icon" type="button" data-action="signout"
             title="${t('me.signOut')}" aria-label="${t('me.signOut')}">${signOutIcon()}</button>
-          <button class="c-me__icon" type="button" data-action="signout-all"
+          <button class="btn btn--secondary btn--icon" type="button" data-action="signout-all"
             title="${t('me.signOutAll')}" aria-label="${t('me.signOutAll')}">${signOutAllIcon()}</button>
         </div>
       </div>
@@ -135,7 +139,7 @@ export function composeSignedIn(state) {
       ${user.isOwner && !user.needsName ? ownerSection.render(state.owner) : ''}
       ${nameStep}
       <section class="c-me__danger">
-        <button class="c-me__delete" type="button" data-action="open-delete">${t('me.deleteAccount')}</button>
+        <button class="btn btn--danger btn--block" type="button" data-action="open-delete">${t('me.deleteAccount')}</button>
       </section>
       ${deleteDialog()}
     `,

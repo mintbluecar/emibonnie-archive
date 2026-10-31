@@ -1,26 +1,29 @@
-/* public/js/components/quoteCard.js */
+/*
+ * public/js/components/quoteCard.js: the quoted post, set into the page
+ * background. The author line is meta, bold. See STYLING.md.
+ */
 
 .c-quote {
   background: var(--color-bg);
   border-radius: var(--radius-card);
-  padding: 10px 12px;
+  padding: var(--space-3);
 }
 
 .c-quote__author {
-  font-size: var(--text-11);
-  font-weight: 700;
-  color: var(--color-ink-muted);
-  margin-bottom: 4px;
+  font-weight: var(--weight-bold);
+  margin-bottom: var(--space-1);
 }
 
 .c-quote__text {
   overflow-wrap: anywhere;
   font-size: var(--text-13);
   line-height: 1.45;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
+/* A picture or clip inside the quote: its corners follow the quote's,
+   one step in. */
 .c-quote .c-video,
 .c-quote .c-carousel {
-  border-radius: calc(var(--radius-card) - 4px);
+  border-radius: var(--radius-md);
 }

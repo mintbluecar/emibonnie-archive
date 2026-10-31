@@ -25,8 +25,8 @@ const contactLink = (labelKey) => html`<p class="c-static__contact"><a href="${s
 /** @returns {import('../core/html.js').SafeHtml} */
 function aboutContent() {
   return html`
-    <h1 class="c-static__title">${t('about.title')}</h1>
-    <p class="c-static__badge">${t('badge.fanMade')}</p>
+    <h1 class="heading heading--lg c-static__title">${t('about.title')}</h1>
+    <p class="c-static__badge"><span class="badge">${t('badge.fanMade')}</span></p>
     <p class="c-static__p">${t('about.whatIsThis')}</p>
     <p class="c-static__p">${t('about.credits')}</p>
     <p class="c-static__p">${t('footer.unofficial')}</p>
@@ -45,7 +45,7 @@ const X_PRIVACY_URL = 'https://x.com/en/privacy';
 function embedNotice() {
   if (!site.embedSources) return html``;
   return html`
-    <p class="c-static__p c-static__embed-notice">${t('privacy.embedNotice')}
+    <p class="c-static__p" data-embed-notice>${t('privacy.embedNotice')}
       <a href="${X_PRIVACY_URL}" rel="noopener">${t('privacy.embedPolicyLinkLabel')}</a></p>
   `;
 }
@@ -59,9 +59,9 @@ function privacyContent() {
     site.embedSources ? 'privacy.noSaleNoAdsEmbed' : 'privacy.noSaleNoAds',
   ];
   return html`
-    <h1 class="c-static__title">${t('privacy.title')}</h1>
+    <h1 class="heading heading--lg c-static__title">${t('privacy.title')}</h1>
     ${keys.map((key) => html`<p class="c-static__p">${t(key)}</p>${key === 'privacy.thirdParties' ? embedNotice() : ''}`)}
-    <h2 class="c-static__subtitle">${t('privacy.contactLabel')}</h2>
+    <h2 class="heading heading--sm c-static__subtitle">${t('privacy.contactLabel')}</h2>
     ${contactLink('privacy.contactLinkLabel')}
   `;
 }
@@ -69,7 +69,7 @@ function privacyContent() {
 /** @returns {import('../core/html.js').SafeHtml} */
 function takedownContent() {
   return html`
-    <h1 class="c-static__title">${t('takedown.title')}</h1>
+    <h1 class="heading heading--lg c-static__title">${t('takedown.title')}</h1>
     <p class="c-static__p">${t('takedown.whoCanAsk')}</p>
     <p class="c-static__p">${t('takedown.whatToSend')}</p>
     <p class="c-static__p">${t('takedown.response')}</p>

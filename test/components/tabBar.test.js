@@ -17,12 +17,12 @@ test('tabBar (Task 10d): shows home, + add and me, each linking to its route -- 
 test('tabBar: marks only the active tab', () => {
   const markup = String(render({ active: 'me' }));
   const items = markup.split('<a').slice(1);
-  const on = items.filter((item) => item.includes('c-tabbar__item--on'));
+  const on = items.filter((item) => item.includes('aria-current="page"'));
   assert.equal(on.length, 1);
   assert.match(on[0], /href="\/me"/);
 });
 
 test('tabBar: with no active tab, nothing is marked on', () => {
   const markup = String(render());
-  assert.ok(!markup.includes('c-tabbar__item--on'));
+  assert.ok(!markup.includes('aria-current="page"'));
 });

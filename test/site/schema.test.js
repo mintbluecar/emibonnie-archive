@@ -172,3 +172,146 @@ test('validateSite (Task 10c j): favicon is an optional relative .png/.svg path 
     if (!result.ok) assert.ok(result.errors.some((e) => e.startsWith('favicon:')), String(bad));
   }
 });
+
+test('validateSite (Task 14): fonts defaults to [] when left out', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  const result = validateSite(raw);
+  assert.ok(result.ok);
+  if (result.ok) assert.deepEqual(result.site.fonts, []);
+});
+
+test('validateSite (Task 14): a package-shape font is accepted and normalised', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  raw.fonts = [{ family: 'Some Display', package: '@fontsource/some-display', subsets: ['latin'], weights: [400, 700] }];
+  const result = validateSite(raw);
+  assert.ok(result.ok, !result.ok && result.errors.join('\n'));
+  if (!result.ok) return;
+  assert.deepEqual(result.site.fonts, [
+    { family: 'Some Display', style: 'normal', package: '@fontsource/some-display', subsets: ['latin'], weights: [400, 700] },
+  ]);
+});
+
+test('validateSite (Task 14): a files-shape font is accepted, and its top-level weights is derived from its files', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  raw.fonts = [
+    {
+      family: 'Our Own Font',
+      files: [
+        { path: 'our-own-font-regular.woff2', weight: 400 },
+        { path: 'our-own-font-bold.woff2', weight: 700, style: 'normal', unicodeRange: 'U+0000-00FF' },
+      ],
+    },
+  ];
+  const result = validateSite(raw);
+  assert.ok(result.ok, !result.ok && result.errors.join('\n'));
+  if (!result.ok) return;
+  assert.deepEqual(result.site.fonts, [
+    {
+      family: 'Our Own Font',
+      style: 'normal',
+      weights: [400, 700],
+      files: [
+        { path: 'our-own-font-regular.woff2', weight: 400, style: 'normal' },
+        { path: 'our-own-font-bold.woff2', weight: 700, style: 'normal', unicodeRange: 'U+0000-00FF' },
+      ],
+    },
+  ]);
+});
+
+test('validateSite (Task 14): a font missing family is an error', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  raw.fonts = [{ package: '@fontsource/some-display', subsets: ['latin'], weights: [400] }];
+  const result = validateSite(raw);
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.ok(result.errors.some((e) => e.startsWith('fonts[0].family:')), result.errors.join('\n'));
+});
+
+test('validateSite (Task 14): a files entry naming a non-woff2 file is an error', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  raw.fonts = [{ family: 'Our Own Font', files: [{ path: 'our-own-font.ttf', weight: 400 }] }];
+  const result = validateSite(raw);
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.ok(result.errors.some((e) => e.startsWith('fonts[0].files[0].path:')), result.errors.join('\n'));
+});
+
+test('validateSite (Task 14): a weight outside 100-900 is an error, for both shapes', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  raw.fonts = [
+    { family: 'Package Font', package: '@fontsource/package-font', subsets: ['latin'], weights: [950] },
+    { family: 'File Font', files: [{ path: 'file-font.woff2', weight: 50 }] },
+  ];
+  const result = validateSite(raw);
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.ok(result.errors.some((e) => e.startsWith('fonts[0].weights[0]:')), result.errors.join('\n'));
+  assert.ok(result.errors.some((e) => e.startsWith('fonts[1].files[0].weight:')), result.errors.join('\n'));
+});
+
+test('validateSite (Task 14): a font naming neither package nor files (or both) is an error', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  raw.fonts = [{ family: 'Neither' }];
+  const neither = validateSite(raw);
+  assert.equal(neither.ok, false);
+  if (!neither.ok) assert.ok(neither.errors.some((e) => e.startsWith('fonts[0]:')), neither.errors.join('\n'));
+
+  raw.fonts = [{ family: 'Both', package: '@fontsource/both', subsets: ['latin'], weights: [400], files: [{ path: 'x.woff2', weight: 400 }] }];
+  const both = validateSite(raw);
+  assert.equal(both.ok, false);
+  if (!both.ok) assert.ok(both.errors.some((e) => e.startsWith('fonts[0]:')), both.errors.join('\n'));
+});
+
+test(
+  'validateSite (Task 14, fix round 1): package must be a valid npm package name -- a traversal, an absolute path or an escaped scope all fail',
+  () => {
+    const raw = readFixture('examples/solluna/site.json');
+    for (const bad of ['../../etc', '/abs', '@scope/../x', '@scope\\..\\x']) {
+      raw.fonts = [{ family: 'Bad Package', package: bad, subsets: ['latin'], weights: [400] }];
+      const result = validateSite(raw);
+      assert.equal(result.ok, false, bad);
+      if (result.ok) continue;
+      assert.ok(result.errors.some((e) => e.startsWith('fonts[0].package:')), `${bad}: ${result.errors.join('\n')}`);
+    }
+  },
+);
+
+test('validateSite (Task 14, fix round 1): a valid scoped or unscoped package name is accepted', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  for (const good of ['@fontsource/some-display', 'some-display']) {
+    raw.fonts = [{ family: 'Good Package', package: good, subsets: ['latin'], weights: [400] }];
+    const result = validateSite(raw);
+    assert.ok(result.ok, `${good}: ${!result.ok && result.errors.join('\n')}`);
+    if (result.ok) assert.equal(result.site.fonts[0].package, good);
+  }
+});
+
+test('validateSite (final review M5): a font family with a quote, semicolon, brace, backslash or newline is an error -- it goes into fonts.css raw', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  for (const bad of ["Evil'; } body { x: y", 'Evil"Font', 'Semi;colon', 'Brace{', 'Brace}', 'Back\\slash', 'New\nline']) {
+    raw.fonts = [{ family: bad, files: [{ path: 'x.woff2', weight: 400 }] }];
+    const result = validateSite(raw);
+    assert.equal(result.ok, false, JSON.stringify(bad));
+    if (result.ok) continue;
+    assert.ok(result.errors.some((e) => e.startsWith('fonts[0].family:')), `${JSON.stringify(bad)}: ${result.errors.join('\n')}`);
+  }
+  raw.fonts = [{ family: 'IBM Plex Sans-Thai 2', files: [{ path: 'x.woff2', weight: 400 }] }];
+  const ok = validateSite(raw);
+  assert.ok(ok.ok, !ok.ok && ok.errors.join('\n'));
+});
+
+test('validateSite (final review M5): a files entry unicodeRange must be U+ ranges only', () => {
+  const raw = readFixture('examples/solluna/site.json');
+  for (const bad of ['U+0000-00FF; } body { x: y', 'latin', 'U+0000-00FF,', 'U+GGGG', '', 42]) {
+    raw.fonts = [{ family: 'Ranged', files: [{ path: 'x.woff2', weight: 400, unicodeRange: bad }] }];
+    const result = validateSite(raw);
+    assert.equal(result.ok, false, JSON.stringify(bad));
+    if (result.ok) continue;
+    assert.ok(result.errors.some((e) => e.startsWith('fonts[0].files[0].unicodeRange:')), `${JSON.stringify(bad)}: ${result.errors.join('\n')}`);
+  }
+  for (const good of ['U+0000-00FF', 'U+0E01-0E5B, U+200C-200D,U+25CC', 'u+4??']) {
+    raw.fonts = [{ family: 'Ranged', files: [{ path: 'x.woff2', weight: 400, unicodeRange: good }] }];
+    const result = validateSite(raw);
+    assert.ok(result.ok, `${good}: ${!result.ok && result.errors.join('\n')}`);
+  }
+});

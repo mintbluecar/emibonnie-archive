@@ -39,7 +39,7 @@ import * as cardCredit from './cardCredit.js';
  */
 function metaRow(preview) {
   return html`
-    <div class="c-preview-card__meta">
+    <div class="meta c-preview-card__meta">
       ${preview.people.map((person) => html`<span aria-hidden="true">${person.emoji}</span>`)}
       ${preview.hasVideo && !preview.thumb ? html` · <span role="img" aria-label="${t('item.hasVideo')}">🎬</span>` : ''}
       ${preview.followsOnFrom ? html` · ${t('item.followsOn')} ↑` : ''}
@@ -56,16 +56,17 @@ export function render(props) {
   const personIds = result.people.map((person) => person.id).join(',');
   return html`
     <article
-      class="c-preview-card${compact ? ' c-preview-card--compact' : ''}${result.thumb ? ' c-preview-card--thumb' : ''}"
+      class="card card--flush c-preview-card"${compact ? html` data-compact` : ''}${result.thumb ? html` data-thumb` : ''}
       data-person-ids="${personIds}"
       ${result.accountHandle ? html`data-account="${result.accountHandle}"` : ''}
     >
-      <a class="c-preview-card__link" href="${result.url}">
+      <a class="card__link c-preview-card__link" href="${result.url}">
+        ${compact ? thumb.render(result.thumb, { cover: true }) : ''}
         <div class="c-preview-card__body">
           ${compact ? bubbles.renderCompact({ bubbles: result.lines }) : bubbles.render({ bubbles: result.lines })}
           ${metaRow(result)}
         </div>
-        ${thumb.render(result.thumb)}
+        ${compact ? '' : thumb.render(result.thumb)}
       </a>
       ${cardCredit.render(result)}
     </article>

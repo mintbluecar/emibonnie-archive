@@ -46,7 +46,7 @@ export function pickVariant(variants, isSmall) {
 /** @returns {import('../core/html.js').SafeHtml} */
 function fullScreenButton() {
   return html`
-    <button type="button" class="c-video__full" title="${t('item.fullScreen')}" aria-label="${t('item.fullScreen')}">
+    <button type="button" class="btn btn--overlay btn--icon btn--md c-video__full" title="${t('item.fullScreen')}" aria-label="${t('item.fullScreen')}">
       <span aria-hidden="true">⤢</span>
     </button>
   `;
@@ -55,7 +55,7 @@ function fullScreenButton() {
 /** @returns {import('../core/html.js').SafeHtml} */
 function playButton() {
   return html`
-    <button type="button" class="c-video__play" title="${t('item.play')}" aria-label="${t('item.play')}">
+    <button type="button" class="btn btn--overlay btn--icon btn--round c-video__play" title="${t('item.play')}" aria-label="${t('item.play')}">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"></path></svg>
     </button>
   `;
@@ -82,9 +82,14 @@ export function render({ variants, width, height, poster = null }) {
   `;
 }
 
-/** @returns {import('../core/html.js').SafeHtml} */
-function goneMarkup() {
-  return html`<p class="c-video__gone">${t('item.sourceGone')}</p>`;
+/**
+ * The `sourceGone` note that stands in for a clip that can't be played
+ * any more -- and, through `mediaBox.js`, for a post whose media is gone
+ * altogether: one quiet notice for both (`data-media-gone` is the hook).
+ * @returns {import('../core/html.js').SafeHtml}
+ */
+export function goneMarkup() {
+  return html`<p class="notice notice--quiet" data-media-gone>${t('item.sourceGone')}</p>`;
 }
 
 /**

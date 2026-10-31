@@ -25,8 +25,8 @@ const flush = () => new Promise((resolve) => { setTimeout(resolve, 0); });
 
 test('composeEvent: back link, name, and the translation section with its entries', () => {
   const markup = String(composeEvent(EVENT));
-  assert.match(markup, /c-event__back/);
-  assert.match(markup, /<h1 class="c-event__name">SOLLUNA HAPPY DAY<\/h1>/);
+  assert.match(markup, /<a class="meta tap-link" href="\/" data-slug=/);
+  assert.match(markup, /<h1 class="heading heading--md">SOLLUNA HAPPY DAY<\/h1>/);
   assert.match(markup, /data-kind="translation"/);
   assert.match(markup, /href="\/t\/1900000000000000002"/);
   assert.match(markup, /href="\/t\/1900000000000000003"/);
@@ -45,20 +45,20 @@ test('composeEvent: hashtag pills, and no type/client pill when the event has no
 
 test('composeEvent: no "more" button when a section has no further page', () => {
   const markup = String(composeEvent(EVENT));
-  assert.ok(!markup.includes('c-event-section__more'));
+  assert.ok(!markup.includes('data-action="more"'));
 });
 
 test('composeEvent: a "more" button with the right data-kind/data-offset when a section has hasMore', () => {
   const markup = String(composeEvent(EVENT_PAGED));
   assert.match(markup, /data-offset="1"/);
-  assert.match(markup, /<button type="button" class="c-event-section__more" data-kind="translation">more<\/button>/);
+  assert.match(markup, /<button type="button" class="btn btn--quiet btn--block" data-action="more" data-kind="translation">more<\/button>/);
 });
 
 test('composeEvent: the newest-first toggle and the report link', () => {
   const markup = String(composeEvent(EVENT));
-  assert.match(markup, /<button type="button" class="c-event__newest-toggle" aria-pressed="false">newest first<\/button>/);
-  assert.match(markup, /<button class="c-event__report" type="button" data-action="report">report<\/button>/);
-  assert.match(markup, /class="c-report"/);
+  assert.match(markup, /<button type="button" class="btn btn--quiet c-event__newest-toggle" aria-pressed="false" data-action="newest-first">newest first<\/button>/);
+  assert.match(markup, /<button class="btn btn--quiet c-event__report" type="button" data-action="report">report<\/button>/);
+  assert.match(markup, /<dialog[^>]*aria-labelledby="c-report-title"/);
 });
 
 test('composeEvent (Task 10d): searches within the event -- its box says so, its entries are the in-place list, and there is no separate search icon', async () => {
@@ -67,8 +67,8 @@ test('composeEvent (Task 10d): searches within the event -- its box says so, its
   assert.match(markup, /placeholder="search this event…"/);
   assert.ok(!markup.includes('c-event__search'), 'no icon to a search page');
   assert.ok(!markup.includes('/search'));
-  assert.match(markup, /<div class="c-search__list">[\s\S]*c-event-sections/, 'the list is the entries and their own controls');
-  assert.ok(markup.indexOf('c-event__name') < markup.indexOf('c-search__list'), 'the event\'s head stays above the results');
+  assert.match(markup, /<div data-search-list>[\s\S]*data-event-sections/, 'the list is the entries and their own controls');
+  assert.ok(markup.indexOf('SOLLUNA HAPPY DAY</h1>') < markup.indexOf('data-search-list'), 'the event\'s head stays above the results');
   const search = eventSearch(EVENT.event, 'q=hug');
   assert.equal(search.state.event, EVENT.event.slug, 'the event is preset');
   assert.match(String(composeEvent(EVENT, search)), /data-field="event"[^>]*aria-label="remove SOLLUNA HAPPY DAY/);
@@ -76,7 +76,7 @@ test('composeEvent (Task 10d): searches within the event -- its box says so, its
 
 test('composeEvent: includes the page shell\'s compact header, so the wide top bar shows the logo/wordmark too (review #3)', () => {
   const markup = String(composeEvent(EVENT));
-  assert.match(markup, /c-header--compact/);
+  assert.match(markup, /<header class="c-header" data-compact>/);
   assert.match(markup, /c-header__wordmark/);
   assert.match(markup, /c-tabbar/);
   assert.match(markup, /c-footer__links/);
@@ -96,7 +96,7 @@ test('bind: the newest-first toggle re-fetches order=desc and reorders the real 
   try {
     bind(root, EVENT, EVENT.event.slug);
     const before = root.querySelectorAll('.c-preview-card__link').map((c) => c.getAttribute('href'));
-    const toggle = /** @type {any} */ (root.querySelector('.c-event__newest-toggle'));
+    const toggle = /** @type {any} */ (root.querySelector('[data-action="newest-first"]'));
     assert.ok(toggle);
     toggle.click();
     await flush();
@@ -104,7 +104,7 @@ test('bind: the newest-first toggle re-fetches order=desc and reorders the real 
     const after = root.querySelectorAll('.c-preview-card__link').map((c) => c.getAttribute('href'));
     assert.deepEqual(after, [...before].reverse(), 'the real DOM order changed, not just a CSS class');
     assert.equal(toggle.getAttribute('aria-pressed'), 'true');
-    assert.ok(!(root.querySelector('.c-event-sections')?.getAttribute('class') ?? '').includes('is-newest-first'), 'no leftover CSS-flip class');
+    assert.ok(!(root.querySelector('[data-event-sections]')?.getAttribute('class') ?? '').includes('is-newest-first'), 'no leftover CSS-flip class');
   } finally {
     mock.restoreAll();
     delete (/** @type {any} */ (globalThis)).document;
@@ -133,6 +133,6 @@ test('composeEvent (fix round 1, I2): entries are compact previews -- opening li
   mount(root, composeEvent(EVENT));
   const cards = root.querySelectorAll('.c-preview-card');
   assert.ok(cards.length > 0);
-  assert.ok(cards.every((c) => c.getAttribute('class')?.includes('c-preview-card--compact')));
+  assert.ok(cards.every((c) => c.getAttribute('data-compact') !== null));
   assert.equal(root.querySelectorAll('.c-bubbles__msg').length, 0);
 });

@@ -22,12 +22,12 @@ export function render(event) {
     <dl class="c-event-tags">
       ${keywords.length > 0 ? html`
         <div class="c-event-tags__row">
-          <dt class="c-event-tags__label">${tCount('event.keywordLabel', keywords.length)}</dt>
+          <dt class="meta">${tCount('event.keywordLabel', keywords.length)}</dt>
           <dd class="c-event-tags__values">${keywords.map((k) => html`<span class="c-event-tags__value">${k}</span>`)}</dd>
         </div>` : ''}
       ${hashtags.length > 0 ? html`
         <div class="c-event-tags__row">
-          <dt class="c-event-tags__label">${tCount('event.hashtagLabel', hashtags.length)}</dt>
+          <dt class="meta">${tCount('event.hashtagLabel', hashtags.length)}</dt>
           <dd class="c-event-tags__values">${hashtags.map((tag) => html`<a class="c-event-tags__value c-event-tags__link" href="${hashtagHref(tag)}" target="_blank" rel="noopener noreferrer" title="${t('chips.searchOnX')}">#${tag}</a>`)}</dd>
         </div>` : ''}
     </dl>

@@ -26,9 +26,9 @@ test('nameForm: maps every server reason to copy, with a fallback', () => {
 
 test('nameForm: a labelled text box, the hint, and a save button; never prefilled with a handle', () => {
   const markup = String(render());
-  assert.match(markup, /<label class="c-name-form__label" for="c-name-form-input">/);
-  const input = markup.match(/<input[^>]*class="c-name-form__input"[^>]*>/)?.[0] ?? '';
-  assert.match(input, /id="c-name-form-input"/);
+  assert.match(markup, /<label class="field__label" for="c-name-form-input">/);
+  const input = markup.match(/<input[^>]*id="c-name-form-input"[^>]*>/)?.[0] ?? '';
+  assert.ok(input, 'the labelled input');
   assert.match(input, /type="text"/);
   assert.ok(markup.includes('autocomplete="off"'), 'no browser autofill of a real name');
   assert.match(markup, copyRe(t('me.nameHint')));
@@ -43,4 +43,6 @@ test('nameForm: the error is announced, and the hint stays associated with the i
   const markup = String(render({ reason: 'empty' }));
   assert.match(markup, /role="alert"/);
   assert.match(markup, /aria-describedby="c-name-form-hint c-name-form-error"/);
+  assert.match(markup, /aria-invalid="true"/);
+  assert.ok(!String(render()).includes('aria-invalid'), 'no error, not invalid');
 });

@@ -6,6 +6,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { parseCookies } from '../src/domain/cookies.js';
+import { DEV_ROLES } from '../src/routes/authDev.js';
+import { DEV_STYLEGUIDE_PATH, serveDevStyleguide } from './devStyleguide.js';
 
 /**
  * The dev stand-in for Vercel's request context, which `waitUntil` from
@@ -242,6 +245,33 @@ export function redirectOf(redirects, url) {
 }
 
 /**
+ * `DEV_AS` (local only): where a browser page load goes first to be signed
+ * in as that role, or `null`. Only a page navigation (GET asking for HTML,
+ * outside `/api/`) from a browser with neither a session nor the `dev_as`
+ * marker is sent; once the dev sign-in sets the marker, signing out (or
+ * `/api/auth/dev?as=<role>`) is left alone, as in production.
+ * @param {string|undefined} devAs
+ * @param {import('node:http').IncomingMessage} req
+ * @param {URL} url
+ * @returns {string|null}
+ */
+export function devSignInRedirect(devAs, req, url) {
+  if (!devAs || req.method !== 'GET' || url.pathname.startsWith('/api/')) return null;
+  if (!String(req.headers.accept ?? '').includes('text/html')) return null;
+  const cookies = parseCookies(req.headers.cookie ?? '');
+  if (cookies.sid || cookies.dev_as) return null;
+  return `/api/auth/dev?as=${encodeURIComponent(devAs)}&returnTo=${encodeURIComponent(url.pathname + url.search)}`;
+}
+
+/**
+ * The incoming request's URL. The Host header keeps the port, so the
+ * result's origin is the browser's own (the Origin check).
+ * @param {import('node:http').IncomingMessage} req
+ * @returns {URL}
+ */
+const requestUrl = (req) => new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+
+/**
  * Creates a dev HTTP server that mirrors Vercel's routing for the
  * generated `vercel.json`: a redirect answers first (Vercel runs
  * `redirects` before `rewrites`); then the first matching rewrite wins; one whose
@@ -251,27 +281,37 @@ export function redirectOf(redirects, url) {
  * serves its destination file; no match serves the path as a static
  * file. Used both for local development and, through the same contract,
  * by tests exercising the Vercel function's behaviour without Vercel.
- * @param {{ root: string, routes?: unknown[], rewrites?: Rewrite[], redirects?: Redirect[], headers?: HeaderRule[], handle: ApiHandler }} options
+ * `devAs` signs a browser in first (`devSignInRedirect`). `/dev/styleguide`
+ * (Styling system Task 3) is served from `devStyleguidePath` before any
+ * rewrite is even considered -- it isn't a production route at all, so it
+ * can't be reached through `vercel.json`'s rewrites.
+ * @param {{ root: string, routes?: unknown[], rewrites?: Rewrite[], redirects?: Redirect[], headers?: HeaderRule[], handle: ApiHandler, devAs?: string, devStyleguidePath?: string }} options
  * @returns {import('node:http').Server}
  */
-export function createServer({ root, rewrites = [], redirects = [], headers = [], handle }) {
+export function createServer({ root, rewrites = [], redirects = [], headers = [], handle, devAs, devStyleguidePath = DEV_STYLEGUIDE_PATH }) {
   installRequestContext();
   assertUnnamedSources(rewrites);
   /** @type {import('node:http').Server} */
   const server = http.createServer(async (req, res) => {
     try {
-      // The Host header keeps the port, so the request URL's origin is the browser's (the Origin check).
-      const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+      const url = requestUrl(req);
       // Matched against the incoming path, not the rewritten one -- same as Vercel's own
       // `headers` config (review round 2, "also, small"): a `source` names what the browser
       // actually requested, regardless of which file or function answers it.
       applyHeaderRules(headers, url.pathname, res);
+      const signIn = devSignInRedirect(devAs, req, url);
+      if (signIn) {
+        res.writeHead(302, { Location: signIn });
+        res.end();
+        return;
+      }
       const redirect = redirectOf(redirects, url);
       if (redirect) {
         res.writeHead(redirect.status, { Location: redirect.location });
         res.end();
         return;
       }
+      if (url.pathname === '/dev/styleguide') { await serveDevStyleguide(devStyleguidePath, res); return; }
       const file = staticTargetOf(rewrites, url.pathname);
       if (file === null) {
         await serveApi(handle, toWebRequest(req, url), res).then((results) => server.emit('waitUntilSettled', results));
@@ -327,11 +367,22 @@ async function main() {
     process.exitCode = 1;
     return;
   }
+  const devAs = process.env.DEV_AS || undefined;
+  if (devAs) {
+    if (!DEV_ROLES.includes(devAs)) {
+      console.error(`dev: DEV_AS must be one of ${DEV_ROLES.join(', ')}`);
+      process.exitCode = 1;
+      return;
+    }
+    // The dev sign-in route only exists with DEV_SIGN_IN (src/routes/authDev.js); the API reads env per request.
+    process.env.DEV_SIGN_IN = '1';
+  }
   const { default: api } = await import('../api/index.js');
   const vercel = JSON.parse(await readFile('vercel.json', 'utf8'));
-  const srv = createServer({ root: 'public', rewrites: vercel.rewrites ?? [], redirects: vercel.redirects ?? [], headers: vercel.headers ?? [], handle: (request) => api.fetch(request) });
+  const srv = createServer({ root: 'public', rewrites: vercel.rewrites ?? [], redirects: vercel.redirects ?? [], headers: vercel.headers ?? [], handle: (request) => api.fetch(request), devAs });
   srv.listen(port, () => {
     console.log(`dev server listening on http://localhost:${port}`);
+    if (devAs) console.log(`signed in as ${devAs} on first visit; switch with /api/auth/dev?as=<${DEV_ROLES.join('|')}>`);
   });
 }
 

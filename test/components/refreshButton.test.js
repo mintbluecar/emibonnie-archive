@@ -21,7 +21,7 @@ function fakeStorage() {
 }
 
 test('render: shown only while editOpenUntil is in the future', () => {
-  assert.match(String(render({ editOpenUntil: '2026-10-19T09:00:00.000Z', now: NOW })), /c-refresh__btn/);
+  assert.match(String(render({ editOpenUntil: '2026-10-19T09:00:00.000Z', now: NOW })), /data-action="check-update"/);
   assert.equal(String(render({ editOpenUntil: '2026-10-19T07:00:00.000Z', now: NOW })), '');
   assert.equal(String(render({ editOpenUntil: null, now: NOW })), '');
 });
@@ -53,7 +53,7 @@ test('bind: a press POSTs to the refresh endpoint and calls onUpdated when updat
   const updates = [];
   try {
     bind(root, { kind: 'translation', sourceId: '1900000000000000011' }, (r) => updates.push(r));
-    const btn = /** @type {any} */ (root.querySelector('.c-refresh__btn'));
+    const btn = /** @type {any} */ (root.querySelector('[data-action="check-update"]'));
     btn.click();
     await flush();
     assert.deepEqual(fetchCalls, ['POST /api/item/translation/1900000000000000011/refresh']);
@@ -71,7 +71,7 @@ test('bind: the button locks after a press and disables itself', async () => {
   mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ updated: 0, editOpenUntil: null, throttled: true }), { status: 200 }));
   try {
     bind(root, { kind: 'translation', sourceId: '1900000000000000012' }, () => {});
-    const btn = /** @type {any} */ (root.querySelector('.c-refresh__btn'));
+    const btn = /** @type {any} */ (root.querySelector('[data-action="check-update"]'));
     assert.equal(btn.disabled, false);
     btn.click();
     assert.equal(btn.disabled, true, 'locks immediately, before the fetch even resolves');
@@ -90,7 +90,7 @@ test('bind: a disabled (locked) button ignores further clicks', async () => {
   mock.method(globalThis, 'fetch', async () => { fetchCount += 1; return new Response(JSON.stringify({ updated: 0, editOpenUntil: null }), { status: 200 }); });
   try {
     bind(root, { kind: 'translation', sourceId: '1900000000000000013' }, () => {});
-    const btn = /** @type {any} */ (root.querySelector('.c-refresh__btn'));
+    const btn = /** @type {any} */ (root.querySelector('[data-action="check-update"]'));
     btn.click();
     await flush();
     btn.click();
@@ -109,7 +109,7 @@ test('bind: a 409 removes the button', async () => {
   mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ error: 'edit_window_closed' }), { status: 409 }));
   try {
     bind(root, { kind: 'translation', sourceId: '1900000000000000014' }, () => {});
-    const btn = /** @type {any} */ (root.querySelector('.c-refresh__btn'));
+    const btn = /** @type {any} */ (root.querySelector('[data-action="check-update"]'));
     btn.click();
     await flush();
     assert.equal(root.querySelector('.c-refresh'), null);
@@ -129,7 +129,7 @@ test('bind: a 409 removes the button even when bind() was called directly on the
   mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ error: 'edit_window_closed' }), { status: 409 }));
   try {
     bind(refreshEl, { kind: 'translation', sourceId: '1900000000000000016' }, () => {});
-    const btn = /** @type {any} */ (refreshEl.querySelector('.c-refresh__btn'));
+    const btn = /** @type {any} */ (refreshEl.querySelector('[data-action="check-update"]'));
     btn.click();
     await flush();
     assert.equal(root.querySelector('.c-refresh'), null, 'the .c-refresh element removed itself');
@@ -146,7 +146,7 @@ test('bind: a network failure (fetch rejects) keeps the lock and shows the gentl
   mock.method(globalThis, 'fetch', async () => { throw new TypeError('network error'); });
   try {
     bind(root, { kind: 'translation', sourceId: '1900000000000000017' }, () => {});
-    const btn = /** @type {any} */ (root.querySelector('.c-refresh__btn'));
+    const btn = /** @type {any} */ (root.querySelector('[data-action="check-update"]'));
     btn.click();
     assert.equal(btn.disabled, true, 'the lock still applies even though the request will fail');
     await flush();
@@ -168,14 +168,14 @@ test('syncLock: re-applies a standing lock to a freshly rendered button, without
     globalThis.document = fakeDocument();
     mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ updated: 0, editOpenUntil: '2026-10-19T09:00:00.000Z' }), { status: 200 }));
     bind(first, target, () => {});
-    /** @type {any} */ (first.querySelector('.c-refresh__btn')).click();
+    /** @type {any} */ (first.querySelector('[data-action="check-update"]')).click();
     await flush();
     mock.restoreAll();
 
     // A freshly rendered button (as if the body had just been re-rendered), resynced.
     const fresh = new MiniElement('div');
     mount(fresh, render({ editOpenUntil: '2026-10-19T09:00:00.000Z', now: NOW }));
-    const freshBtn = /** @type {any} */ (fresh.querySelector('.c-refresh__btn'));
+    const freshBtn = /** @type {any} */ (fresh.querySelector('[data-action="check-update"]'));
     assert.equal(freshBtn.disabled, false, 'a brand new render knows nothing about the lock by itself');
     syncLock(fresh, target);
     assert.equal(freshBtn.disabled, true, 'syncLock re-applied the standing lock');
@@ -195,7 +195,7 @@ test('bind: localStorage throwing falls back to in-memory state without crashing
   mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ updated: 0, editOpenUntil: null }), { status: 200 }));
   try {
     bind(root, { kind: 'translation', sourceId: '1900000000000000015' }, () => {});
-    const btn = /** @type {any} */ (root.querySelector('.c-refresh__btn'));
+    const btn = /** @type {any} */ (root.querySelector('[data-action="check-update"]'));
     assert.doesNotThrow(() => btn.click());
     await flush();
   } finally {

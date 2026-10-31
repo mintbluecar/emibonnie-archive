@@ -41,7 +41,15 @@ test('mediaBox: a quote with an inner clip renders the video player inside the c
   assert.match(markup, /c-video/);
 });
 
-test('mediaBox: null renders the sourceGone copy', () => {
+test('mediaBox: null renders the sourceGone copy, as the same quiet notice a clip that can\'t play shows (styling system Task 13)', () => {
   const markup = String(render({ media: null }));
-  assert.match(markup, /Original tweet is no longer available/);
+  assert.match(markup, /<p class="notice notice--quiet" data-media-gone>Original tweet is no longer available/);
+});
+
+test('mediaBox: the carousel arrows are round 36px overlay buttons (styling system Task 13)', () => {
+  /** @type {import('../../src/http/contracts.js').MediaVM} */
+  const media = { type: 'images', images: [{ url: 'https://pbs.twimg.com/a.jpg', width: 100, height: 100 }, { url: 'https://pbs.twimg.com/b.jpg', width: 200, height: 100 }] };
+  const markup = String(render({ media }));
+  assert.match(markup, /class="btn btn--overlay btn--icon btn--md btn--round c-carousel__prev"/);
+  assert.match(markup, /class="btn btn--overlay btn--icon btn--md btn--round c-carousel__next"/);
 });

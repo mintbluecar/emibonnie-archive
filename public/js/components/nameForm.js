@@ -35,14 +35,16 @@ export function reasonCopy(reason) {
 export function render({ value = '', reason } = {}) {
   const describedBy = reason ? 'c-name-form-hint c-name-form-error' : 'c-name-form-hint';
   return html`
-    <form class="c-name-form">
-      <h2 class="c-name-form__title">${t('me.nameTitle')}</h2>
-      <label class="c-name-form__label" for="c-name-form-input">${t('me.nameLabel')}</label>
-      <input class="c-name-form__input" id="c-name-form-input" name="name" type="text" maxlength="30"
-        autocomplete="off" value="${value}" aria-describedby="${describedBy}">
-      <p class="c-name-form__hint" id="c-name-form-hint">${t('me.nameHint')}</p>
-      ${reason ? html`<p class="c-name-form__error" id="c-name-form-error" role="alert">${reasonCopy(reason)}</p>` : ''}
-      <button class="c-name-form__save" type="submit">${t('me.nameSave')}</button>
+    <form class="card stack stack--3 c-name-form">
+      <h2 class="heading heading--md">${t('me.nameTitle')}</h2>
+      <div class="field">
+        <label class="field__label" for="c-name-form-input">${t('me.nameLabel')}</label>
+        <input id="c-name-form-input" name="name" type="text" maxlength="30" data-name-input
+          autocomplete="off" value="${value}" aria-describedby="${describedBy}"${reason ? html` aria-invalid="true"` : ''}>
+        <p class="field__hint" id="c-name-form-hint">${t('me.nameHint')}</p>
+        ${reason ? html`<p class="field__error" id="c-name-form-error" role="alert">${reasonCopy(reason)}</p>` : ''}
+      </div>
+      <button class="btn btn--primary c-name-form__save" type="submit">${t('me.nameSave')}</button>
     </form>
   `;
 }

@@ -23,7 +23,7 @@ const SITE = 'https://site.invalid';
  * @param {string} returnTo
  * @returns {string}
  */
-function safeReturnTo(returnTo) {
+export function safeReturnTo(returnTo) {
   try {
     const url = new URL(returnTo, SITE);
     if (url.origin !== SITE) return '/me';

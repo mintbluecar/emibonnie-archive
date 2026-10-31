@@ -52,7 +52,7 @@ function searchRow({ placeholder, filterCount }) {
         ${searchIcon()}
         <input class="c-header__search-box" type="search" placeholder="${placeholder}">
       </span>
-      <button class="c-header__filter-btn" type="button" title="${filterLabel(filterCount)}" aria-label="${filterLabel(filterCount)}">
+      <button class="btn btn--secondary btn--icon c-header__filter-btn" type="button" title="${filterLabel(filterCount)}" aria-label="${filterLabel(filterCount)}">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
           <path d="M4 6h16M7 12h10M10 18h4" />
         </svg>
@@ -69,7 +69,7 @@ function searchRow({ placeholder, filterCount }) {
  */
 function findLink() {
   return html`
-    <a class="c-header__find" href="${HOME_PATH}" title="${t('nav.search')}" aria-label="${t('nav.search')}">
+    <a class="btn btn--quiet btn--icon c-header__icon c-header__find" href="${HOME_PATH}" title="${t('nav.search')}" aria-label="${t('nav.search')}">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="11" cy="11" r="7"></circle>
         <path d="M21 21l-4.3-4.3"></path>
@@ -81,9 +81,9 @@ function findLink() {
 /** @param {'bar'|'below'} where @returns {import('../core/html.js').SafeHtml} */
 function tagline(where) {
   return html`
-    <p class="c-header__tagline c-header__tagline--${where}">
+    <p class="meta c-header__tagline c-header__tagline--${where}">
       ${site.tagline}
-      <span class="c-header__badge">${t('badge.fanMade')}</span>
+      <span class="badge c-header__badge">${t('badge.fanMade')}</span>
     </p>
   `;
 }
@@ -131,7 +131,7 @@ function below(compact, search) {
 export function render(props = {}) {
   const { compact = false, search, nav } = props;
   return html`
-    <header class="c-header${compact ? ' c-header--compact' : ''}">
+    <header class="c-header"${compact ? html` data-compact` : ''}>
       <div class="c-header__bar">
         <div class="c-header__inner">
           ${brand(compact)}

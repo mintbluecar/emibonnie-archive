@@ -25,7 +25,7 @@ import * as inlineSearch from '../components/inlineSearch.js';
 import { filtersSlot, headerProps, region } from '../components/inlineSearchView.js';
 import { presetState } from '../state/searchScope.js';
 import { igFromPersonPath, personHref } from '../core/routes.js';
-import { activeView, bindMore, bindSections, segmentedControl } from './hubGroups.js';
+import { activeView, bindMore, bindSections, segmentedControl, selectSegment } from './hubGroups.js';
 import { mountLoadError } from './pageError.js';
 
 const APP_SELECTOR = 'app';
@@ -35,9 +35,9 @@ const APP_SELECTOR = 'app';
 /** @typedef {import('./hubGroups.js').HubCtx & { options: FilterOptions|null, selected: Set<number>, search: SearchCtx }} Ctx */
 
 /** @param {PersonView['counts']} counts @returns {import('../core/html.js').SafeHtml} */
-const countsLine = (counts) => html`<p class="c-hub__counts">${t('person.countsLine', {
+const countsLine = (counts) => html`${t('person.countsLine', {
   translations: tCount('person.translations', counts.items), events: tCount('person.events', counts.events), shared: tCount('person.sharedStories', counts.sharedStories),
-})}</p>`;
+})}`;
 
 /** The person's card: their header, with the counts line inside it (Task 9b). @param {PersonView} data @returns {import('../core/html.js').SafeHtml} */
 function headRow(data) {
@@ -58,19 +58,19 @@ export function personSearch(person, query = '') {
 function pickerMarkup(selfId, people) {
   const items = people.filter((p) => p.id !== selfId).map((p) => ({ emoji: p.emoji, label: p.name, colour: p.colour, value: p.id }));
   return html`
-    <button type="button" class="c-hub__picker-close" title="${t('person.closePicker')}" aria-label="${t('person.closePicker')}">✕</button>
-    <h2 class="c-hub__picker-title">${t('person.withTitle')}</h2>
+    <button type="button" class="btn btn--secondary btn--icon btn--round c-sheet__close" data-action="close-picker" title="${t('person.closePicker')}" aria-label="${t('person.closePicker')}">✕</button>
+    <h2 class="heading heading--sm c-sheet__title">${t('person.withTitle')}</h2>
     ${chips.render({ items })}
-    <button type="button" class="c-hub__picker-apply">${t('person.withApply')}</button>
+    <button type="button" class="btn btn--primary btn--block c-hub__picker-apply">${t('person.withApply')}</button>
   `;
 }
 
 /** The picker's error body (review round 1, M3): `/api/filters` failed, but the dialog still opens, with a way to close it. @returns {import('../core/html.js').SafeHtml} */
 function pickerErrorMarkup() {
   return html`
-    <button type="button" class="c-hub__picker-close" title="${t('person.closePicker')}" aria-label="${t('person.closePicker')}">✕</button>
-    <h2 class="c-hub__picker-title">${t('person.withTitle')}</h2>
-    <p class="c-hub__picker-error">${t('search.error')}</p>
+    <button type="button" class="btn btn--secondary btn--icon btn--round c-sheet__close" data-action="close-picker" title="${t('person.closePicker')}" aria-label="${t('person.closePicker')}">✕</button>
+    <h2 class="heading heading--sm c-sheet__title">${t('person.withTitle')}</h2>
+    <p class="meta">${t('search.error')}</p>
   `;
 }
 
@@ -78,13 +78,13 @@ function pickerErrorMarkup() {
 export function composePerson(data, search = personSearch(data.person)) {
   const list = html`
     ${segmentedControl('byEvent', true)}
-    <div class="c-hub__content">${activeView('byEvent', data.sections, {})}</div>
+    <div data-hub-content>${activeView('byEvent', data.sections, {})}</div>
   `;
   const content = html`
     ${filtersSlot(search)}
     ${headRow(data)}
     ${region(search, list)}
-    <dialog class="c-hub__picker" aria-label="${t('person.withTitle')}"></dialog>
+    <dialog class="c-sheet" data-person-picker aria-label="${t('person.withTitle')}"></dialog>
   `;
   return pageShell.render({ active: 'home', compact: true, headerProps: headerProps(search), content });
 }
@@ -133,10 +133,9 @@ function bindPicker(root, dialog, data, ctx) {
     const id = Number(chip.getAttribute('data-value'));
     const already = ctx.selected.has(id);
     if (already) ctx.selected.delete(id); else ctx.selected.add(id);
-    chip.classList.toggle('c-chips__chip--on', !already);
-    chip.setAttribute('aria-pressed', String(!already));
+    chips.setOn(chip, !already);
   });
-  on(dialog, '.c-hub__picker-close', 'click', () => { /** @type {any} */ (dialog).close?.(); });
+  on(dialog, '[data-action="close-picker"]', 'click', () => { /** @type {any} */ (dialog).close?.(); });
   on(dialog, '.c-hub__picker-apply', 'click', () => {
     const people = [data.person.id, ...ctx.selected];
     /** @type {any} */ (dialog).close?.();
@@ -148,17 +147,13 @@ function bindPicker(root, dialog, data, ctx) {
 function bindSegment(root, dialog, data, ctx) {
   const segEl = root.querySelector('.c-hub__seg');
   if (!segEl) return;
-  const contentEl = root.querySelector('.c-hub__content');
-  on(segEl, '.c-chips__chip', 'click', (_e, chip) => {
+  const contentEl = root.querySelector('[data-hub-content]');
+  on(segEl, '[data-value]', 'click', (_e, chip) => {
     const value = chip.getAttribute('data-value');
     if (value === 'with') { openPicker(dialog, data, ctx); return; }
     if (value !== 'byEvent' && value !== 'all') return;
     ctx.seg = value;
-    for (const c of segEl.querySelectorAll('.c-chips__chip')) {
-      const isOn = c.getAttribute('data-value') === value;
-      c.classList.toggle('c-chips__chip--on', isOn);
-      c.setAttribute('aria-pressed', String(isOn));
-    }
+    selectSegment(segEl, value);
     if (contentEl) { mount(contentEl, activeView(ctx.seg, data.sections, {})); bindSections(contentEl, data.sections); }
   });
 }
@@ -171,7 +166,7 @@ function bindSegment(root, dialog, data, ctx) {
 export function bind(root, data, ig, search = personSearch(data.person)) {
   chips.bind(root);
   bindSections(root, data.sections);
-  const dialog = root.querySelector('.c-hub__picker');
+  const dialog = root.querySelector('[data-person-picker]');
   /** @type {Ctx} */
   const ctx = { seg: 'byEvent', options: null, seq: 0, offset: {}, selected: new Set(), search };
   if (dialog) {

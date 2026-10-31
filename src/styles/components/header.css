@@ -15,6 +15,10 @@
  * aligned with the centred `.container` column -- with the search row,
  * where there is one, at the top of the content column below it, as in
  * mockups/screens-v2.html's web screen. Nothing animates in or out.
+ *
+ * The icon buttons, the filter button, the tagline and the fan-made badge
+ * are primitives (btn, meta, badge); this file keeps the bar's layout,
+ * the wordmark, the search box's inset icon and the filter count.
  */
 
 .c-header {
@@ -31,11 +35,11 @@
 
 .c-header__inner {
   height: 100%;
-  padding: var(--header-pad-y) 16px;
+  padding: var(--header-pad-y) var(--space-4);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .c-header__brand {
@@ -50,24 +54,15 @@
   margin-left: auto;
 }
 
+/* The bar's icons are drawn in ink, like the wordmark beside them. */
+.c-header__icon {
+  color: var(--color-ink);
+}
+
 /*
  * The theme switch (Task 10c, f; themeToggle.js): one of its three icons
  * shows, the one for the current choice.
  */
-.c-theme-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--tap-target);
-  height: var(--tap-target);
-  flex: none;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--color-ink);
-  cursor: pointer;
-}
-
 .c-theme-toggle__icon {
   display: none;
 }
@@ -78,20 +73,14 @@
   display: block;
 }
 
-/* The phone bar's search icon (header.js `findLink`). */
+/* The phone bar's search icon (header.js `findLink`), pulled toward the
+   gutter so its glyph lines up with the content's edge. */
 .c-header__find {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--tap-target);
-  height: var(--tap-target);
-  flex: none;
-  margin-right: -10px;
-  color: var(--color-ink);
+  margin-right: calc(-1 * var(--space-2));
 }
 
 .c-header__below {
-  padding: 8px 16px;
+  padding: var(--space-2) var(--space-4);
 }
 
 /* The tagline's row, then the search row: one gap between them, not two. */
@@ -112,7 +101,7 @@
 }
 
 :root:has(.c-header__below--live) {
-  scroll-padding-top: calc(var(--sticky-top) + var(--tap-target) + 16px);
+  scroll-padding-top: calc(var(--sticky-top) + var(--tap-target) + var(--space-4));
 }
 
 /* One tagline shows per layout: below the bar on a phone, in it on desktop. */
@@ -123,16 +112,16 @@
 .c-header__row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
 }
 
 .c-header__logo {
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .c-header__wordmark {
-  font-weight: 800;
+  font-weight: var(--weight-heavy);
   font-size: var(--text-19);
   white-space: nowrap;
   overflow: hidden;
@@ -146,32 +135,21 @@
   color: transparent;
 }
 
-.c-header--compact .c-header__wordmark {
+.c-header[data-compact] .c-header__wordmark {
   font-size: var(--text-16);
 }
 
 .c-header__tagline {
-  font-size: var(--text-12);
-  color: var(--color-ink-muted);
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
 }
 
 .c-header__badge {
-  display: inline-block;
-  font-size: var(--text-10);
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  border: 1.5px solid var(--color-card-shadow);
-  border-radius: 999px;
-  padding: 1px 7px;
-  margin-left: 4px;
-  background: var(--color-card);
-  color: var(--color-ink-muted);
+  margin-left: var(--space-1);
 }
 
 .c-header__search {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .c-header__search-field {
@@ -181,77 +159,52 @@
   display: flex;
 }
 
-/* The mockup's 🔍, drawn as the same line icon as the other header icons. */
+/* The mockup's magnifier, drawn as the same line icon as the other header icons. */
 .c-header__search-icon {
   position: absolute;
-  left: 12px;
+  left: var(--space-3);
   top: 50%;
   transform: translateY(-50%);
   color: var(--color-ink-muted);
   pointer-events: none;
 }
 
+/* base.css's text box, on the card colour so it stands out from the
+   page, with room on the left for the magnifier. */
 .c-header__search-box {
   flex: 1;
   min-width: 0;
-  background: var(--color-card);
-  border: 1.5px solid var(--color-card-shadow);
-  border-radius: 14px;
-  padding: 10px 12px 10px 34px;
-  font-family: inherit;
-  font-size: var(--text-13);
-  color: var(--color-ink);
   min-height: var(--tap-target);
+  padding-left: var(--space-8);
+  background-color: var(--color-card);
+  font-size: var(--text-13);
 }
 
+/* The filter count sits on the button's corner. */
 .c-header__filter-btn {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--tap-target);
-  height: var(--tap-target);
-  flex: none;
-  background: var(--color-card);
-  border: 1.5px solid var(--color-card-shadow);
-  border-radius: 14px;
-  color: var(--color-ink);
 }
 
+/* The active-filter count: a small gradient dot on the filter button's
+   corner, white text on the darkened start stop in light mode
+   (--gradient-from-strong, 4.79:1; dark mode's black text passes on the
+   raw stop, which that token already is there). */
 .c-header__filter-count {
   position: absolute;
-  top: -4px;
-  right: -4px;
+  top: calc(-1 * var(--space-1));
+  right: calc(-1 * var(--space-1));
   min-width: 16px;
   height: 16px;
-  padding: 0 3px;
+  padding: 0 var(--space-1);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: var(--text-10);
-  font-weight: 800;
+  font-weight: var(--weight-heavy);
   line-height: 1;
-  border-radius: 999px;
-  /*
-   * Review round 2, fix round 2 item 3: white text on the raw
-   * --gradient-from start stop is only 2.86:1 in light mode. Darkened
-   * just this start stop (light mode only -- dark mode's own
-   * --color-accent-text is black, which already passes against the raw
-   * stop) toward black: 4.79:1 (the reviewer measured 4.80:1).
-   */
-  background: linear-gradient(90deg, color-mix(in srgb, var(--gradient-from) 75%, #000), var(--gradient-to));
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--gradient-from-strong), var(--gradient-to));
   color: var(--color-accent-text);
-}
-
-/* Dark mode's --color-accent-text is black, which already passes against the raw --gradient-from (7.35:1) -- the light-mode-only darkening above is reverted here (device dark unless forced light, or forced dark: Task 10c). */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .c-header__filter-count {
-    background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
-  }
-}
-
-:root[data-theme="dark"] .c-header__filter-count {
-  background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
 }
 
 @media (min-width: 860px) {
@@ -264,13 +217,13 @@
   .c-header__inner {
     max-width: 960px;
     margin: 0 auto;
-    gap: 16px;
+    gap: var(--space-4);
   }
 
   .c-header__brand {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-2);
   }
 
   .c-header__logo {
@@ -279,7 +232,7 @@
   }
 
   .c-header__wordmark,
-  .c-header--compact .c-header__wordmark {
+  .c-header[data-compact] .c-header__wordmark {
     font-size: var(--text-16);
   }
 
@@ -319,7 +272,7 @@
   .c-header__below--live .c-header__search {
     display: flex;
     max-width: 960px;
-    margin: 16px auto 12px;
-    padding: 0 16px;
+    margin: var(--space-4) auto var(--space-3);
+    padding: 0 var(--space-4);
   }
 }

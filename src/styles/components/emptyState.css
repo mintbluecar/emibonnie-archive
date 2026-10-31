@@ -2,14 +2,14 @@
 
 .c-empty-state {
   text-align: center;
-  padding: 48px 16px;
+  padding: calc(var(--space-8) + var(--space-4)) var(--space-4);
   color: var(--color-ink-muted);
 }
 
 .c-empty-state__icon {
   display: block;
   font-size: var(--text-28);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .c-empty-state__message {

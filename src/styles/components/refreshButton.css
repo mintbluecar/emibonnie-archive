@@ -1,23 +1,5 @@
-/* public/js/components/refreshButton.js */
+/* public/js/components/refreshButton.js: its button is btn btn--secondary; this places it. */
 
 .c-refresh {
-  margin: 8px 0;
-}
-
-.c-refresh__btn {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 14px;
-  font-size: var(--text-12);
-  font-weight: 700;
-  color: var(--color-ink);
-  background: var(--color-card);
-  border: 1.5px solid var(--color-card-shadow);
-  border-radius: 14px;
-}
-
-.c-refresh__btn:disabled {
-  color: var(--color-ink-muted);
-  font-weight: 400;
+  margin: var(--space-2) 0;
 }

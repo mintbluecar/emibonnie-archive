@@ -19,7 +19,7 @@ import * as nameForm from './nameForm.js';
 /** @param {any} state @returns {import('../core/html.js').SafeHtml} */
 function steps(state) {
   const at = state.preview ? (state.step === 'speakers' ? 2 : 1) : 0;
-  return html`<div class="c-add__steps" aria-hidden="true">${[0, 1, 2].map((i) => html`<span class="${i <= at ? 'on' : ''}"></span>`)}</div>`;
+  return html`<div class="c-add__steps" aria-hidden="true">${[0, 1, 2].map((i) => html`<span${i <= at ? ' data-on' : ''}></span>`)}</div>`;
 }
 
 /**
@@ -79,7 +79,7 @@ function bodyOf(state, { addingAs, isOwner, options }) {
     ${state.step === 'speakers' ? speakerStep.render({
       draft, options, chosen: state.chosen, open: state.open, lineFixes: state.lineFixes,
     }) : ''}
-    ${state.notice ? html`<p class="c-add__notice" role="alert">${state.notice}</p>` : ''}
+    ${state.notice ? html`<p class="notice notice--error c-add__notice" role="alert">${state.notice}</p>` : ''}
     ${state.fix ? lineFixSheet.render({ line: state.fix, options, fixes: state.lineFixes }) : ''}
   `;
 }

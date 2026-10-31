@@ -1,0 +1,43 @@
+{
+  "rules": {
+    "color-no-hex": true,
+    "function-disallowed-list": ["rgb", "rgba", "hsl", "hsla"],
+    "declaration-property-unit-disallowed-list": {
+      "/^padding/": ["px"],
+      "/^margin/": ["px"],
+      "gap": ["px"],
+      "border-radius": ["px"],
+      "min-height": ["px"]
+    },
+    "declaration-property-value-disallowed-list": {
+      "/^border(-(top|right|bottom|left))?(-width)?$/": [
+        "/(?<![\\d.])(?!1px\\b)(?!1\\.5px\\b)(?!2px\\b)\\d+(?:\\.\\d+)?px\\b/"
+      ]
+    },
+    "media-feature-name-value-allowed-list": {
+      "min-width": ["860px"],
+      "max-width": ["859.98px"]
+    },
+    "no-duplicate-selectors": true,
+    "at-rule-disallowed-list": ["layer"]
+  },
+  "overrides": [
+    {
+      "files": ["src/styles/tokens.css", "examples/*/theme.css"],
+      "rules": {
+        "color-no-hex": null,
+        "function-disallowed-list": null
+      }
+    },
+    {
+      "files": ["src/styles/components/*.css"],
+      "plugins": ["./scripts/stylelint/no-rebuilt-primitive.js"],
+      "rules": {
+        "selector-disallowed-list": [
+          "/\\.(btn|field|check|card|table|chip|badge|notice|segmented|meta|label|heading|tap-link|stack|cluster)(?=$|__|--|[^\\w-])/"
+        ],
+        "local/no-rebuilt-primitive": true
+      }
+    }
+  ]
+}

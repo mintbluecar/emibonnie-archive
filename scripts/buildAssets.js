@@ -1,27 +1,32 @@
 // @ts-check
 /**
  * The non-JS half of the bundling step: the shared `app.css` (tokens,
- * base, layout, components, the site's theme), the self-hosted font
- * files + their `@font-face` CSS, and the content hashing both share.
- * `scripts/buildBundle.js` adds esbuild's page JS and ties this together
- * with `manifest.json` and the HTML placeholder rewrite.
+ * base, primitives, layout, components -- each in its own cascade layer,
+ * with the site's theme in the tokens layer right after `tokens.css`; see
+ * `LAYER_ORDER`/`layerOf` below), the self-hosted
+ * font files + their `@font-face` CSS, and the content hashing both
+ * share. `scripts/buildBundle.js` adds esbuild's page JS and ties this
+ * together with `manifest.json` and the HTML placeholder rewrite.
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import * as esbuild from 'esbuild';
+import { findFontFamilyReferences } from './buildChecks.js';
 
 /** @typedef {{ family: string, pkg: string, fileStem: string, subsets: string[], weights: number[] }} FontSpec */
-/** @typedef {{ family: string, weight: number, fileName: string, unicodeRange: string|null }} FontFace */
+/** @typedef {{ family: string, weight: number, style: 'normal'|'italic', fileName: string, unicodeRange: string|null }} FontFace */
 
 /**
  * Fonts this engine self-hosts (`@fontsource/*`, dev dependencies), one
  * per CSS font-stack token. A family only gets the weights it actually
  * ships at (IBM Plex Sans Thai has no 800); nothing here forces a
- * missing weight to exist.
+ * missing weight to exist. Exported so the theme test (spec "2b. Fonts
+ * a site can choose") can build its allowed-families list without
+ * duplicating the names.
  * @type {FontSpec[]}
  */
-const FONT_SPECS = [
+export const FONT_SPECS = [
   { family: 'Nunito', pkg: '@fontsource/nunito', fileStem: 'nunito', subsets: ['latin'], weights: [400, 600, 700, 800] },
   {
     family: 'IBM Plex Sans Thai',
@@ -62,33 +67,107 @@ export function writeHashedAsset(outDir, name, ext, content) {
 }
 
 /**
- * The engine CSS sources that make up `app.css`, in load order: tokens,
- * base, layout, then any `src/styles/components/*.css` (Task 2), then
- * the site's own `theme.css` last (so it can only override, never add,
- * per `src/styles/tokens.css`'s own doc comment).
+ * `app.css`'s cascade layers, declared once, in this order (the spec,
+ * "1. Layers, applied by the build"). The site's `theme.css` has no
+ * layer of its own: it goes in `tokens`, right after `tokens.css`.
+ * Cascade layers are compared before specificity (CSS Cascade 5,
+ * "Cascade Layers"), so a separate, later theme layer -- or no layer at
+ * all -- would let a site's light values on a plain `:root` (0,1,0)
+ * beat the engine's dark blocks (`:root:not([data-theme="light"])`/
+ * `:root[data-theme="dark"]`, 0,2,0), forcing light colours into dark
+ * mode. Inside the same layer, specificity and then source order decide,
+ * exactly as before layers: the engine's dark blocks beat a theme's
+ * plain `:root`, and a theme's own dark blocks (same specificity, later)
+ * beat the engine's. Exported so tests can assert on it without
+ * duplicating the literal list.
+ * @type {string[]}
+ */
+export const LAYER_ORDER = ['tokens', 'base', 'primitives', 'layout', 'components'];
+
+/**
+ * The cascade layer a build CSS source belongs to, decided from its path
+ * alone (so authors never write `@layer` themselves): `tokens.css` ->
+ * tokens, `base.css` -> base, `layout.css` -> layout, anything named
+ * `theme.css` (the site's own, copied in by `scripts/build.js`) ->
+ * tokens too (see `LAYER_ORDER`), anything under a `primitives/` folder -> primitives, anything
+ * under a `components/` folder -> components.
+ * @param {string} filePath
+ * @returns {string}
+ */
+export function layerOf(filePath) {
+  const segments = filePath.split(path.sep);
+  const base = segments[segments.length - 1];
+  const dir = segments[segments.length - 2];
+  if (base === 'tokens.css') return 'tokens';
+  if (base === 'base.css') return 'base';
+  if (base === 'layout.css') return 'layout';
+  if (base === 'theme.css') return 'tokens';
+  if (dir === 'primitives') return 'primitives';
+  if (dir === 'components') return 'components';
+  throw new Error(`build failed: ${filePath} doesn't match any known cascade layer`);
+}
+
+/**
+ * The CSS sources that make up `app.css`, in this order: tokens, the
+ * site's own `theme.css` (if any) right after it, base, any
+ * `src/styles/primitives/*.css` (sorted), layout, then any
+ * `src/styles/components/*.css` (sorted, Task 2). The build wraps each
+ * of these in its `@layer` by path (`buildAppCss`), so between layers
+ * the order declared once, up front, decides the cascade; within the
+ * tokens layer this order matters -- the theme comes after `tokens.css`
+ * so its overrides win on equal specificity (it can only override,
+ * never add, per `src/styles/tokens.css`'s own doc comment).
  * @param {string} repoRoot @param {string|null} siteThemePath
  * @returns {string[]}
  */
 function collectAppCssSources(repoRoot, siteThemePath) {
   const stylesDir = path.join(repoRoot, 'src/styles');
-  const files = ['tokens.css', 'base.css', 'layout.css'].map((name) => path.join(stylesDir, name));
+  const files = [path.join(stylesDir, 'tokens.css')];
+  if (siteThemePath && existsSync(siteThemePath)) files.push(siteThemePath);
+  files.push(path.join(stylesDir, 'base.css'));
+  const primitivesDir = path.join(stylesDir, 'primitives');
+  if (existsSync(primitivesDir)) {
+    const sorted = readdirSync(primitivesDir).filter((f) => f.endsWith('.css')).sort();
+    files.push(...sorted.map((f) => path.join(primitivesDir, f)));
+  }
+  files.push(path.join(stylesDir, 'layout.css'));
   const componentsDir = path.join(stylesDir, 'components');
   if (existsSync(componentsDir)) {
     const sorted = readdirSync(componentsDir).filter((f) => f.endsWith('.css')).sort();
     files.push(...sorted.map((f) => path.join(componentsDir, f)));
   }
-  if (siteThemePath && existsSync(siteThemePath)) files.push(siteThemePath);
   return files.filter(existsSync);
 }
 
 /**
- * Builds the one shared, minified, content-hashed `app-<hash>.css`.
+ * Wraps one source file's text in its cascade layer, failing loudly (and
+ * naming the file) if the source already declares `@layer` itself --
+ * layers are assigned by folder, by the build, never by hand (globals.md:
+ * "nobody writes `@layer` by hand"). Comments are stripped before the
+ * check, so a comment that merely mentions the at-rule never fails it.
+ * @param {string} file @param {string} text
+ * @returns {string}
+ */
+function wrapInLayer(file, text) {
+  if (/@layer\b/.test(text.replace(/\/\*[\s\S]*?\*\//g, ''))) {
+    throw new Error(`build failed: ${file} declares @layer itself; cascade layers are assigned by folder, by the build`);
+  }
+  return `@layer ${layerOf(file)} {\n${text}\n}`;
+}
+
+/**
+ * Builds the one shared, minified, content-hashed `app-<hash>.css`,
+ * assembled in cascade layers: the layer order declared once, first,
+ * then each source wrapped in its layer by `wrapInLayer`. esbuild's CSS
+ * minifier keeps `@layer` statements and blocks intact.
  * @param {string} repoRoot @param {string} outDir @param {string|null} siteThemePath
  * @returns {string} the filename written under `outDir`
  */
 export function buildAppCss(repoRoot, outDir, siteThemePath) {
   const sources = collectAppCssSources(repoRoot, siteThemePath);
-  const concatenated = sources.map((file) => readFileSync(file, 'utf8')).join('\n');
+  const layerStatement = `@layer ${LAYER_ORDER.join(', ')};`;
+  const layered = sources.map((file) => wrapInLayer(file, readFileSync(file, 'utf8')));
+  const concatenated = [layerStatement, ...layered].join('\n');
   const { code } = esbuild.transformSync(concatenated, { loader: 'css', minify: true });
   return writeHashedAsset(outDir, 'app', 'css', code);
 }
@@ -105,11 +184,41 @@ function fontFilePath(engineRoot, spec, subset, weight) {
 }
 
 /**
- * Copies every weight/subset a font spec ships into `fontsDir`, each
- * renamed to `<original-stem>-<hash>.woff2` -- `/build/*` is cached
- * `immutable` for a year, so a same-named `@fontsource` update (a new
- * version shipping different bytes under the same filename) must still
- * reach visitors as a new URL, the same as `app.css`/`fonts.css`.
+ * `srcPath` is (or isn't) inside `dir` -- used as defence in depth
+ * before reading a path built from a site's own `font.package`
+ * (`src/site/fontValidators.js` already rejects a `..`/`/`-laden
+ * package name at the schema level; this catches it again here, in
+ * case that validation is ever bypassed or weakened).
+ * @param {string} srcPath @param {string} dir
+ * @returns {boolean}
+ */
+function isInsideDir(srcPath, dir) {
+  const rel = path.relative(dir, srcPath);
+  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
+/**
+ * Reads `srcPath`'s bytes, writes them into `fontsDir` renamed to
+ * `<original-stem>-<hash>.woff2`, and returns that filename -- the one
+ * read-hash-write step every self-hosted font file goes through,
+ * whether it's one of the engine's own `@fontsource` files, a site's
+ * own `@fontsource/*` package, or a site's own `site/fonts/*.woff2`
+ * file. `/build/*` is cached `immutable` for a year, so a same-named
+ * source update (a new version shipping different bytes under the same
+ * filename) must still reach visitors as a new URL, the same as
+ * `app.css`/`fonts.css`.
+ * @param {string} fontsDir @param {string} srcPath
+ * @returns {string}
+ */
+function copyFontFile(fontsDir, srcPath) {
+  const bytes = readFileSync(srcPath);
+  const fileName = `${path.basename(srcPath, '.woff2')}-${contentHash(bytes)}.woff2`;
+  writeFileSync(path.join(fontsDir, fileName), bytes);
+  return fileName;
+}
+
+/**
+ * Copies every weight/subset a font spec ships into `fontsDir`.
  * @param {string} engineRoot @param {string} fontsDir @param {FontSpec} spec
  * @returns {FontFace[]}
  */
@@ -120,10 +229,8 @@ function copyOneFontSpec(engineRoot, fontsDir, spec) {
     for (const subset of spec.subsets) {
       const src = fontFilePath(engineRoot, spec, subset, weight);
       if (!src) continue;
-      const bytes = readFileSync(src);
-      const fileName = `${path.basename(src, '.woff2')}-${contentHash(bytes)}.woff2`;
-      writeFileSync(path.join(fontsDir, fileName), bytes);
-      faces.push({ family: spec.family, weight, fileName, unicodeRange: spec.subsets.length > 1 ? UNICODE_RANGES[subset] : null });
+      const fileName = copyFontFile(fontsDir, src);
+      faces.push({ family: spec.family, weight, style: 'normal', fileName, unicodeRange: spec.subsets.length > 1 ? UNICODE_RANGES[subset] : null });
     }
   }
   return faces;
@@ -133,21 +240,117 @@ function copyOneFontSpec(engineRoot, fontsDir, spec) {
 function fontFaceRule(face) {
   const range = face.unicodeRange ? `\n  unicode-range: ${face.unicodeRange};` : '';
   return (
-    `@font-face {\n  font-family: '${face.family}';\n  font-style: normal;\n  font-weight: ${face.weight};` +
+    `@font-face {\n  font-family: '${face.family}';\n  font-style: ${face.style};\n  font-weight: ${face.weight};` +
     `\n  font-display: swap;\n  src: url('./fonts/${face.fileName}') format('woff2');${range}\n}`
   );
 }
 
 /**
- * Copies the self-hosted font files into `outDir/fonts/` and builds the
- * content-hashed `fonts-<hash>.css` of `@font-face` rules for them.
+ * The absolute path of one site font's `files[]` entry, under
+ * `site/fonts/`. Fails loudly, naming the font and the missing file,
+ * rather than silently shipping fewer faces than declared.
+ * @param {string} siteDir @param {string} family @param {{ path: string }} file
+ * @returns {string}
+ */
+function siteFontFilePath(siteDir, family, file) {
+  const absPath = path.join(siteDir, 'fonts', file.path);
+  if (!existsSync(absPath)) {
+    throw new Error(`build failed: site font '${family}' names file '${file.path}', which isn't in site/fonts/`);
+  }
+  return absPath;
+}
+
+/**
+ * `FontFace[]` for one site font shipped from its own `site/fonts/*.woff2`
+ * files (docs/site-settings.md, "Fonts"), each copied in and content-hashed
+ * the same way the engine's own fonts are.
+ * @param {string} siteDir @param {string} fontsDir @param {import('../src/site/schema.js').SiteFont} font
+ * @returns {FontFace[]}
+ */
+function siteFontFacesFromFiles(siteDir, fontsDir, font) {
+  if (!('files' in font)) return [];
+  return font.files.map((file) => {
+    const fileName = copyFontFile(fontsDir, siteFontFilePath(siteDir, font.family, file));
+    return { family: font.family, weight: file.weight, style: file.style ?? 'normal', fileName, unicodeRange: file.unicodeRange ?? null };
+  });
+}
+
+/**
+ * `FontFace[]` for one site font shipped from an `@fontsource/*` package
+ * the site installed as its own dev dependency. Fails loudly, naming the
+ * font, the package and the missing weight, if the package doesn't ship
+ * one of the requested weights at any of the requested subsets.
+ * `src/site/fontValidators.js` already rejects a `font.package` that
+ * isn't a valid npm package name (no `..`, no leading `/`); `isInsideDir`
+ * checks the path it resolves to again here, in case that validation is
+ * ever bypassed.
+ * @param {string} engineRoot @param {string} fontsDir @param {import('../src/site/schema.js').SiteFont} font
+ * @returns {FontFace[]}
+ */
+function siteFontFacesFromPackage(engineRoot, fontsDir, font) {
+  if (!('package' in font)) return [];
+  const fileStem = font.package.replace(/^@fontsource\//, '');
+  const nodeModulesDir = path.join(engineRoot, 'node_modules');
+  const style = font.style ?? 'normal';
+  /** @type {FontFace[]} */
+  const faces = [];
+  for (const weight of font.weights) {
+    const shippedBefore = faces.length;
+    for (const subset of font.subsets) {
+      const file = path.join(nodeModulesDir, font.package, 'files', `${fileStem}-${subset}-${weight}-${style}.woff2`);
+      if (!isInsideDir(file, nodeModulesDir)) {
+        throw new Error(`build failed: site font '${font.family}' names a package ('${font.package}') that resolves outside node_modules`);
+      }
+      if (!existsSync(file)) continue;
+      const fileName = copyFontFile(fontsDir, file);
+      faces.push({ family: font.family, weight, style, fileName, unicodeRange: font.subsets.length > 1 ? (UNICODE_RANGES[subset] ?? null) : null });
+    }
+    if (faces.length === shippedBefore) {
+      throw new Error(`build failed: site font '${font.family}' (${font.package}) doesn't ship weight ${weight}`);
+    }
+  }
+  return faces;
+}
+
+/**
+ * The site fonts (spec "2b. Fonts a site can choose") that some custom
+ * property in `tokensCss` or the site's own `theme.css` actually names
+ * -- "a site family that's never pointed at by a token isn't shipped".
+ * @param {import('../src/site/schema.js').SiteFont[]} fonts @param {string} tokensCss @param {string} themeCss
+ * @returns {import('../src/site/schema.js').SiteFont[]}
+ */
+function fontsPointedAtBy(fonts, tokensCss, themeCss) {
+  const referenced = [...findFontFamilyReferences([tokensCss, themeCss])].map((name) => name.toLowerCase());
+  return fonts.filter((font) => referenced.includes(font.family.toLowerCase()));
+}
+
+/**
+ * Copies the engine's self-hosted font files into `outDir/fonts/`, plus
+ * any of the site's own `site.json` `fonts` (`options.fonts`) that some
+ * token in `tokens.css` or the site's `theme.css` (under
+ * `options.siteDir`) actually names, and builds the content-hashed
+ * `fonts-<hash>.css` of `@font-face` rules for all of them. A site with
+ * no `fonts` (or a `fonts` entry no token ever points at) ships only
+ * the engine's own families (Review Focus 5).
  * @param {string} engineRoot @param {string} outDir
+ * @param {{ siteDir?: string, fonts?: import('../src/site/schema.js').SiteFont[] }} [options]
  * @returns {string} the filename written under `outDir`
  */
-export function buildFontsCss(engineRoot, outDir) {
+export function buildFontsCss(engineRoot, outDir, { siteDir, fonts = [] } = {}) {
   const fontsDir = path.join(outDir, 'fonts');
   mkdirSync(fontsDir, { recursive: true });
   const faces = FONT_SPECS.flatMap((spec) => copyOneFontSpec(engineRoot, fontsDir, spec));
+
+  if (fonts.length > 0 && siteDir) {
+    const tokensCss = readFileSync(path.join(engineRoot, 'src/styles/tokens.css'), 'utf8');
+    const themeCssPath = path.join(siteDir, 'theme.css');
+    const themeCss = existsSync(themeCssPath) ? readFileSync(themeCssPath, 'utf8') : '';
+    for (const font of fontsPointedAtBy(fonts, tokensCss, themeCss)) {
+      faces.push(...siteFontFacesFromFiles(siteDir, fontsDir, font));
+      faces.push(...siteFontFacesFromPackage(engineRoot, fontsDir, font));
+    }
+  }
+
   const css = `${faces.map(fontFaceRule).join('\n\n')}\n`;
   return writeHashedAsset(outDir, 'fonts', 'css', css);
 }

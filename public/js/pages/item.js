@@ -37,8 +37,8 @@ function prevNextNav(data) {
   if (!data.prev && !data.next) return html``;
   return html`
     <nav class="c-item__prevnext">
-      ${data.prev ? html`<a class="c-item__prev" href="${data.prev.url}">${t('item.prev')}</a>` : ''}
-      ${data.next ? html`<a class="c-item__next" href="${data.next.url}">${t('item.next')}</a>` : ''}
+      ${data.prev ? html`<a class="meta tap-link" href="${data.prev.url}">${t('item.prev')}</a>` : ''}
+      ${data.next ? html`<a class="meta tap-link" href="${data.next.url}">${t('item.next')}</a>` : ''}
     </nav>
   `;
 }
@@ -55,7 +55,7 @@ function prevNextNav(data) {
  */
 function backRow(data) {
   if (!data.event) return html``;
-  return html`<a class="c-item__back" href="${eventHref(data.event.slug)}">${t('item.backToEvent', { name: data.event.name })}</a>`;
+  return html`<a class="meta c-item__back" href="${eventHref(data.event.slug)}">${t('item.backToEvent', { name: data.event.name })}</a>`;
 }
 
 /**
@@ -83,7 +83,7 @@ function bodyContent(data) {
  */
 function heldBanner(data) {
   if (/** @type {any} */ (data).reviewState !== 'pending') return html``;
-  return html`<p class="c-item__held" role="status">${t('item.held')}</p>`;
+  return html`<p class="notice notice--strong c-item__held" role="status">${t('item.held')}</p>`;
 }
 
 /**
@@ -198,7 +198,7 @@ function bindFollowUps(root, target) {
 
 /** @param {Element} root @param {string} path @returns {void} */
 function bindCopyLink(root, path) {
-  const button = root.querySelector('.c-item__copy-link');
+  const button = root.querySelector('[data-action="copy-link"]');
   button?.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(`${window.location.origin}${path}`);
