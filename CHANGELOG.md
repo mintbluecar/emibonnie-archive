@@ -2,6 +2,37 @@
 
 All notable changes to this project are documented here. Versions are semver tags (`vX.Y.Z`). Each release lists its **upgrade steps**; to take one, see `docs/start-your-own.md`, step 10.
 
+## 0.5.1
+
+Fixes from a whole-codebase review: two data bugs in import, cache behaviour that made signed-in readers (the owner above all) pay a full database trip on every item page, lighter first screens, and shared building blocks that replace logic copied across routes, services and scripts. The test suite also runs about a third faster with no test removed.
+
+**Upgrade steps:**
+
+1. `git fetch upstream --tags && git merge v0.5.1`.
+2. **No migrations.**
+3. **No new environment variables.**
+4. **Copy keys.** None added or removed.
+5. **Breaking for site code** (only if your site has its own routes, scripts or handler wiring):
+   - `createHandler` now calls `makeDeps(env)` with the handler's own `env`; a custom `makeDeps` must take and use that argument. `Deps` (`src/http/deps.js`) has no index signature any more, so a dependency your site adds must be added to the typedef.
+   - A site route that reads a session should be built with `defineRoute({ method, path, auth, limit?, body?, cache?, run })` (`src/http/defineRoute.js`), which owns sign-in checks, rate limits, body parsing and cache defaults.
+   - `signOut`/`deleteAccount` return a list of cookies (the session cookie and the new hint), not one string.
+   - `oauthState`'s `issueState`/`takeState` take `deps` (for `deps.now()`), not `env`.
+   - CLIs use `runCli` (`scripts/cli.js`); `migrateTargetOf` is gone (`dbTargetOf` replaces it).
+6. **Cache headers changed.** A publicly cached answer now carries its CDN policy in `Vercel-CDN-Cache-Control` and tells browsers `public, max-age=0, must-revalidate` (Vercel's documented precedence; production browsers already got that value). Private and no-store answers are unchanged.
+7. **The item answer is the same for everyone.** `/api/item/:kind/:sourceId` is now always the cached public view; a signed-in reader's edit buttons, edit window and (for the owner) held entries come from the new private `GET /api/item/:kind/:sourceId/viewer`. A readable, non-secret `signed_in=1` cookie (set with the session, cleared with it) tells the page to ask. **After deploying, existing sessions get the hint on their next signed-in page (`/me`, add, edit, import); until then item pages show no editor buttons — signing out and in once also does it.**
+8. **The edit route answers 404 for an unknown kind** (it was 400).
+9. `npm run build`, then redeploy. On the first deploy, check that a public API answer reaches the browser with `max-age=0, must-revalidate` and that a repeat request is a CDN hit.
+
+- **Imported entries now reach person pages and people search.** Mapping speakers on the import page went through raw SQL that never updated `item_people`; it now uses the kind's own `remapSpeakers`, under the owner's name in the audit log, and purges a public parent's page.
+- **Retry walks each failed row once per pass** (an `afterId` cursor) instead of re-picking the first ten forever and looping to its 200-request cap.
+- **"Publish ready" no longer publishes other rows' held replies**; a whole-entry publish leaves parts of still-`attached` rows held, so a later skip stays truthful.
+- **One write path for item state.** `write(deps, actor, fn)` runs purges only after commit, and `itemLifecycle` (publish/reject/remove) is shared by owner review and import, with the row update in the same transaction. An edit, refresh or follow-up check hard-deletes the item's own cached page so you see your change at once.
+- **Lighter first screens.** Thumbnails use X's `name=small` size (a sample photo went from 98 KB to 38 KB); only a page's first four cards load eagerly; the site logo is hashed into `/build/` and cached; X's embed script loads only when an embed nears the viewport; home, item and event pages preload their API answer alongside their script.
+- **Shared pieces.** `defineRoute` (every owner route now has a refusal test driven by the route table), a typed `Deps` with one clock (`deps.now()`) and one guarded kind lookup (`kindNamed`), `runCli` for every CLI (no CLI silently uses an in-memory database), one tolerant status-link parser (links in brackets, quotes, comma lists or with trailing punctuation are no longer dropped).
+- **Add saves once per click** (two components bound the same save button).
+- **CI works in a site repo** (`init-site` runs only when `site/` is missing) and runs a site's own `site/test/`.
+- **Tests:** one PGlite instance per test process with a schema per test, and the slowest file split; `npm test` dropped from about 100 s to about 65 s on the same machine. Several tests that could never fail were replaced with ones that do.
+
 ## 0.5.0
 
 A styling system: one shared design layer, enforced. Tokens and primitives replace the per-screen CSS that was carrying 701 px literals, 29 raw hex colours and nine ways to build a primary button; an unclassed control now looks on-brand instead of broken; the page shell is no longer optional; and stylelint joins `npm run check` so a mistake fails a check instead of shipping. See `STYLING.md` for the full reference.

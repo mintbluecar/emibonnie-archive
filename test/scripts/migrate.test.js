@@ -60,17 +60,6 @@ test('the CLI refuses to run with no target: no DATABASE_URL and no PGLITE_DIR e
   assert.doesNotMatch(res.stdout, /migrated/, 'nothing ran against a throwaway database');
 });
 
-test('migrateTargetOf: a DATABASE_URL or a PGLITE_DIR is a target; neither throws', async () => {
-  const { migrateTargetOf } = await import('../../scripts/migrate.js');
-  assert.deepEqual(migrateTargetOf({ DATABASE_URL: 'postgres://x' }), { url: 'postgres://x', dir: undefined });
-  assert.deepEqual(migrateTargetOf({ PGLITE_DIR: '.devdb' }), { url: undefined, dir: '.devdb' });
-  assert.throws(() => migrateTargetOf({ DATABASE_URL: '', PGLITE_DIR: '' }), /DATABASE_URL is not set \(set PGLITE_DIR/);
-});
-
-test('errorText: the message, else the code, else a generic line -- never a connection string', async () => {
-  const { errorText } = await import('../../scripts/migrate.js');
-  assert.equal(errorText(new Error('relation "x" does not exist')), 'relation "x" does not exist');
-  assert.equal(errorText(Object.assign(new Error(''), { code: 'ECONNREFUSED' })), 'ECONNREFUSED');
-  assert.equal(errorText({}), 'database connection failed');
-  assert.equal(errorText(null), 'database connection failed');
-});
+// `migrateTargetOf` and `errorText` moved to `scripts/cli.js` (as
+// `dbTargetOf`/`errorText`, shared by every CLI script's `runCli`) --
+// see test/scripts/cli.test.js.

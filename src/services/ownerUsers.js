@@ -6,9 +6,10 @@
  * both under the lint line limit.
  */
 import { Conflict, NotFound } from '../domain/errors.js';
-import { restoreItem, softDeleteItem } from '../repo/itemState.js';
+import { restoreItem } from '../repo/itemState.js';
 import { set as settingsSet } from '../repo/settings.js';
-import { purgeItem } from './cache.js';
+import { write } from './write.js';
+import { remove } from './itemLifecycle.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
 /** @typedef {import('./session.js').SessionUser} SessionUser */
@@ -53,6 +54,16 @@ export async function searchUsers(deps, q) {
 }
 
 /**
+ * Restores one item a block hid (never an owner hide).
+ * @param {import('./write.js').Write} w @param {number} itemId @returns {Promise<boolean>}
+ */
+async function restoreOne(w, itemId) {
+  const restored = await restoreItem(w.tx, { itemId, reason: 'blocked_submitter' });
+  if (restored) w.purge.item(itemId);
+  return restored;
+}
+
+/**
  * Blocks or unblocks a submitter. Blocking hides every live submission
  * they added (`blocked_submitter`) and their session's writes 403 through
  * `requireUser`; unblocking restores exactly those, never an owner hide.
@@ -71,20 +82,15 @@ export async function setBlocked(deps, { userId, blocked, actor }) {
     "select id from items where created_by = $1 and (deleted_reason is null or deleted_reason <> 'erased')",
     [userId],
   );
-  const changed = await deps.db.transaction(async (tx) => {
-    await tx.query('update users set blocked_at = case when $2 then now() else null end where id = $1', [userId, wanting]);
-    /** @type {number[]} */
-    const ids = [];
+  const changed = await write(deps, actor.id, async (w) => {
+    await w.tx.query('update users set blocked_at = case when $2 then now() else null end where id = $1', [userId, wanting]);
+    let n = 0;
     for (const row of owned) {
-      const ok = wanting
-        ? await softDeleteItem(tx, { itemId: row.id, reason: 'blocked_submitter', actor: actor.id })
-        : await restoreItem(tx, { itemId: row.id, reason: 'blocked_submitter' });
-      if (ok) ids.push(row.id);
+      if (await (wanting ? remove(w, { itemId: row.id, reason: 'blocked_submitter' }) : restoreOne(w, row.id))) n += 1;
     }
-    return ids;
-  }, { actor: actor.id });
-  for (const id of changed) await purgeItem(deps, id, { hard: wanting });
-  return wanting ? { hidden: changed.length, restored: 0 } : { hidden: 0, restored: changed.length };
+    return n;
+  });
+  return wanting ? { hidden: changed, restored: 0 } : { hidden: 0, restored: changed };
 }
 
 /**

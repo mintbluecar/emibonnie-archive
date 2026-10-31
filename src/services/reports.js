@@ -9,7 +9,7 @@
 import { BadRequest, NotFound } from '../domain/errors.js';
 import { findVisibleItemId } from '../repo/cards.js';
 import { getVisibleEventBySlug } from '../repo/events.js';
-import { kindsOf } from './cards.js';
+import { kindNamed } from './cards.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
 /** @typedef {import('./session.js').SessionUser} SessionUser */
@@ -23,8 +23,7 @@ const MAX_REASON = 2000;
  * @returns {Promise<{ table: 'items', id: number }>}
  */
 async function itemTarget(deps, target) {
-  const kinds = kindsOf(deps);
-  const kind = Object.hasOwn(kinds, String(target?.kind ?? '')) ? kinds[target.kind] : undefined;
+  const kind = kindNamed(deps, String(target?.kind ?? ''));
   if (!kind || typeof target.sourceId !== 'string') throw new BadRequest('unknown target');
   const id = await findVisibleItemId(deps.db, { kind: kind.name, platform: kind.platform, externalId: target.sourceId });
   if (id === null) throw new NotFound();
@@ -58,7 +57,7 @@ async function resolveTarget(deps, target) {
  * Stores one report. `reporter` is recorded when signed in; a signed-out
  * report has no creator.
  * @param {ViewDeps} deps
- * @param {{ target: ReportTarget, reason: unknown, reporter: SessionUser|null }} input
+ * @param {{ target: unknown, reason: unknown, reporter: SessionUser|null }} input `target` is checked here (a `ReportTarget`)
  * @returns {Promise<{ id: number }>}
  */
 export async function createReport(deps, { target, reason, reporter }) {

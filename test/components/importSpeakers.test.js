@@ -7,6 +7,7 @@ import { MiniElement } from '../helpers/miniDom.js';
 import { mount } from '../../public/js/core/dom.js';
 import { postJson } from '../../public/js/core/api.js';
 import { copyRe } from '../helpers/copyMarkup.js';
+import { withGlobals } from '../helpers/globals.js';
 const { render, bind } = await import('../../public/js/components/importSpeakers.js');
 const { t } = await import('../../public/js/core/site.js');
 
@@ -116,28 +117,31 @@ test('an empty marker table says so', () => {
 test('saving a marker posts the account, marker, speaker and remember, then reloads', async () => {
   /** @type {{ url: string, body: any }[]} */
   const calls = [];
-  globalThis.fetch = /** @type {any} */ (async (url, init) => {
-    calls.push({ url: String(url), body: JSON.parse(String(init?.body ?? '{}')) });
-    return Response.json({ updated: 2 });
-  });
-  const st = state({ markers: [group()], remember: false });
-  const root = new MiniElement('div');
-  mount(root, render({ markers: st.markers, people: PEOPLE, roles: ROLES, expanded: new Set(), remember: st.remember }));
-  let reloads = 0;
-  bind(/** @type {any} */ (root), {
-    state: st,
-    map: (body) => postJson(`/api/owner/imports/${st.jobId}/map`, body),
-    reload: async () => { reloads += 1; },
-  });
+  await withGlobals({
+    fetch: /** @type {any} */ (async (url, init) => {
+      calls.push({ url: String(url), body: JSON.parse(String(init?.body ?? '{}')) });
+      return Response.json({ updated: 2 });
+    }),
+  }, async () => {
+    const st = state({ markers: [group()], remember: false });
+    const root = new MiniElement('div');
+    mount(root, render({ markers: st.markers, people: PEOPLE, roles: ROLES, expanded: new Set(), remember: st.remember }));
+    let reloads = 0;
+    bind(/** @type {any} */ (root), {
+      state: st,
+      map: (body) => postJson(`/api/owner/imports/${st.jobId}/map`, body),
+      reload: async () => { reloads += 1; },
+    });
 
-  /** @type {any} */ (root.querySelector('[data-marker-select]')).value = 'person:6';
-  /** @type {any} */ (root.querySelector('[data-action="save-marker"]')).click();
-  await new Promise((resolve) => setTimeout(resolve, 10));
+    /** @type {any} */ (root.querySelector('[data-marker-select]')).value = 'person:6';
+    /** @type {any} */ (root.querySelector('[data-action="save-marker"]')).click();
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, '/api/owner/imports/7/map');
-  assert.deepEqual(calls[0].body, { accountId: 3, marker: '☀️', speaker: { person: 6 }, remember: false });
-  assert.equal(reloads, 1);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, '/api/owner/imports/7/map');
+    assert.deepEqual(calls[0].body, { accountId: 3, marker: '☀️', speaker: { person: 6 }, remember: false });
+    assert.equal(reloads, 1);
+  });
 });
 
 test('review toggles the marker open and closed and remembers the choice', async () => {
@@ -167,48 +171,55 @@ test('remember toggles the state the next save sends', async () => {
 test('publish ready and all post their scope and reload', async () => {
   /** @type {{ url: string, body: any }[]} */
   const calls = [];
-  globalThis.fetch = /** @type {any} */ (async (url, init) => {
-    calls.push({ url: String(url), body: JSON.parse(String(init?.body ?? '{}')) });
-    return Response.json({ published: 1 });
+  await withGlobals({
+    fetch: /** @type {any} */ (async (url, init) => {
+      calls.push({ url: String(url), body: JSON.parse(String(init?.body ?? '{}')) });
+      return Response.json({ published: 1 });
+    }),
+  }, async () => {
+    const st = state();
+    const root = new MiniElement('div');
+    mount(root, render({ markers: [], people: PEOPLE, roles: ROLES, expanded: new Set(), remember: true }));
+    let reloads = 0;
+    bind(/** @type {any} */ (root), { state: st, map: async () => ({}), reload: async () => { reloads += 1; } });
+
+    /** @type {any} */ (root.querySelector('[data-action="publish-ready"]')).click();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    /** @type {any} */ (root.querySelector('[data-action="publish-all"]')).click();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    assert.deepEqual(calls.map((call) => call.url), [
+      '/api/owner/imports/7/publish',
+      '/api/owner/imports/7/publish',
+    ]);
+    assert.deepEqual(calls.map((call) => call.body.scope), ['ready', 'all']);
+    assert.equal(reloads, 2);
   });
-  const st = state();
-  const root = new MiniElement('div');
-  mount(root, render({ markers: [], people: PEOPLE, roles: ROLES, expanded: new Set(), remember: true }));
-  let reloads = 0;
-  bind(/** @type {any} */ (root), { state: st, map: async () => ({}), reload: async () => { reloads += 1; } });
-
-  /** @type {any} */ (root.querySelector('[data-action="publish-ready"]')).click();
-  await new Promise((resolve) => setTimeout(resolve, 10));
-  /** @type {any} */ (root.querySelector('[data-action="publish-all"]')).click();
-  await new Promise((resolve) => setTimeout(resolve, 10));
-
-  assert.deepEqual(calls.map((call) => call.url), [
-    '/api/owner/imports/7/publish',
-    '/api/owner/imports/7/publish',
-  ]);
-  assert.deepEqual(calls.map((call) => call.body.scope), ['ready', 'all']);
-  assert.equal(reloads, 2);
 });
 
-test('the retry loop keeps posting until remaining is 0 and reports the processed count', async () => {
-  const replies = [{ processed: 4, remaining: 3 }, { processed: 3, remaining: 0 }];
-  /** @type {string[]} */
+test('retryJob sends the cursor back and stops at remaining 0', async () => {
+  const replies = [{ processed: 4, remaining: 3, lastId: 44 }, { processed: 3, remaining: 0, lastId: 77 }];
+  /** @type {{ url: string, body: any }[]} */
   const calls = [];
-  globalThis.fetch = /** @type {any} */ (async (url) => {
-    calls.push(String(url));
-    return Response.json(replies.shift());
+  await withGlobals({
+    fetch: /** @type {any} */ (async (url, init) => {
+      calls.push({ url: String(url), body: JSON.parse(String(init?.body ?? '{}')) });
+      return Response.json(replies.shift());
+    }),
+  }, async () => {
+    const st = state();
+    const root = new MiniElement('div');
+    mount(root, render({ markers: [], people: PEOPLE, roles: ROLES, expanded: new Set(), remember: true }));
+    let reloads = 0;
+    bind(/** @type {any} */ (root), { state: st, map: async () => ({}), reload: async () => { reloads += 1; } });
+
+    /** @type {any} */ (root.querySelector('[data-action="retry-import"]')).click();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    assert.deepEqual(calls.map((c) => c.url), ['/api/owner/imports/7/retry', '/api/owner/imports/7/retry']);
+    assert.deepEqual(calls.map((c) => c.body), [{ afterId: 0 }, { afterId: 44 }], 'the second call carries the first reply\'s cursor');
+    const status = /** @type {any} */ (root.querySelector('[data-import-speakers-status]'));
+    assert.match(String(status?.textContent), /7/, 'the total processed count');
+    assert.equal(reloads, 1, 'stops once remaining is 0, instead of looping to the 200-attempt cap');
   });
-  const st = state();
-  const root = new MiniElement('div');
-  mount(root, render({ markers: [], people: PEOPLE, roles: ROLES, expanded: new Set(), remember: true }));
-  let reloads = 0;
-  bind(/** @type {any} */ (root), { state: st, map: async () => ({}), reload: async () => { reloads += 1; } });
-
-  /** @type {any} */ (root.querySelector('[data-action="retry-import"]')).click();
-  await new Promise((resolve) => setTimeout(resolve, 20));
-
-  assert.deepEqual(calls, ['/api/owner/imports/7/retry', '/api/owner/imports/7/retry']);
-  const status = /** @type {any} */ (root.querySelector('[data-import-speakers-status]'));
-  assert.match(String(status?.textContent), /7/, 'the total processed count');
-  assert.equal(reloads, 1);
 });

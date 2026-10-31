@@ -26,7 +26,7 @@ async function sidFor(subject, handle) {
 
 before(async () => {
   deps = await ingestDeps();
-  api = apiFor({ ...deps, env: { DEV_SIGN_IN: '1' } }, { env: { DEV_SIGN_IN: '1' } });
+  api = apiFor(deps, { env: { DEV_SIGN_IN: '1' } });
   owner = await sidFor(deps.site.ownerXUserId, 'the_owner');
   member = await sidFor('660001', 'a_member');
   const seeded = await api.call('POST', '/api/dev/import', {
@@ -76,6 +76,18 @@ test('mapping is owner-only and refuses a bad speaker', async () => {
   assert.ok(JSON.parse(ok.text).updated >= 1);
 });
 
+test('a mapping is audited as the signed-in owner', async () => {
+  const view = JSON.parse((await api.call('GET', `/api/owner/imports/${jobId}`, { cookies: owner })).text);
+  const group = view.markers[0];
+  assert.ok(group, 'a marker to map');
+  const { rows: [{ last }] } = await deps.db.query('select coalesce(max(id), 0) as last from audit_log');
+  const body = { accountId: group.accountId, marker: group.markers[0].marker, speaker: { role: 'fan' } };
+  const res = await api.call('POST', `/api/owner/imports/${jobId}/map`, { cookies: owner, body });
+  assert.equal(res.status, 200, res.text);
+  const { rows } = await deps.db.query("select distinct actor from audit_log where id > $1 and table_name = 'translation_speakers'", [last]);
+  assert.deepEqual(rows.map((row) => row.actor), [`x:${deps.site.ownerXUserId}`]);
+});
+
 test('the owner publishes, skips, retries; a member may not', async () => {
   const seeded = await api.call('POST', '/api/dev/import', {
     cookies: owner, body: { urls: [`https://x.com/a/status/${IDS.POST}`] },
@@ -95,6 +107,10 @@ test('the owner publishes, skips, retries; a member may not', async () => {
   const retry = await api.call('POST', `/api/owner/imports/${secondId}/retry`, { cookies: owner });
   assert.equal(retry.status, 200, retry.text);
   assert.equal(JSON.parse(retry.text).processed, 0);
+  const retriedAgain = await api.call('POST', `/api/owner/imports/${secondId}/retry`, { cookies: owner, body: { afterId: JSON.parse(retry.text).lastId } });
+  assert.equal(retriedAgain.status, 200, retriedAgain.text);
+  const badCursor = await api.call('POST', `/api/owner/imports/${secondId}/retry`, { cookies: owner, body: { afterId: -1 } });
+  assert.equal(badCursor.status, 400, badCursor.text);
 });
 
 test('an unknown job is 404', async () => {
@@ -106,4 +122,11 @@ test('the dev seed is a 404 without DEV_SIGN_IN', async () => {
   const off = apiFor(deps, { env: {} });
   const res = await off.call('POST', '/api/dev/import', { cookies: owner, body: { urls: [`https://x.com/a/status/${IDS.POST}`] } });
   assert.equal(res.status, 404);
+});
+
+test('on Vercel the dev seed is a 404 before its body is read', async () => {
+  const deployed = apiFor(deps, { env: { DEV_SIGN_IN: '1', VERCEL: '1' } });
+  // `String(url)` would throw on this object: only the gate may answer.
+  const res = await deployed.call('POST', '/api/dev/import', { body: { urls: [{ toString: 1 }] } });
+  assert.equal(res.status, 404, res.text);
 });

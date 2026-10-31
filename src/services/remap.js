@@ -8,7 +8,7 @@
  * hidden or removed. A pending (not yet published) item is allowed: the
  * owner may fix its speakers before approving it.
  */
-import { kindsOf } from './cards.js';
+import { kindNamed } from './cards.js';
 import { loadContext } from './ingestContext.js';
 import { resolveSpeakerRefs } from './intakeRefs.js';
 import { findSourceOwner } from '../repo/itemSources.js';
@@ -22,7 +22,7 @@ import { BadRequest } from '../domain/errors.js';
  * @param {string} kindName
  */
 function remappableKind(deps, kindName) {
-  const kind = kindsOf(deps)[kindName];
+  const kind = kindNamed(deps, kindName);
   if (!kind) throw new BadRequest(`unknown kind: ${kindName}`);
   const remap = kind.remapSpeakers;
   if (typeof remap !== 'function') throw new BadRequest(`kind ${kindName} has no speakers to remap`);

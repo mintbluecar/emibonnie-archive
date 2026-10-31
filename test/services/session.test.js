@@ -100,8 +100,20 @@ test('sign out ends the session and clears the cookie', async () => {
   const { cookie } = await signInUser(deps(), { via: 'x', subject: '500', handle: 'h5' });
   const token = cookie.replace(/^sid=/, '').split(';')[0];
   const clear = await signOut(deps(), input({ sid: token }));
-  assert.match(clear, /Max-Age=0/);
+  assert.ok(clear.some((c) => c.startsWith('sid=') && /Max-Age=0/.test(c)), 'clears the session cookie');
   assert.equal(await currentUser(deps(), input({ sid: token })), null);
+});
+
+test('sign-in sets the readable signed_in hint for the session\'s lifetime; sign-out clears it', async () => {
+  const { cookie, cookies } = await signInUser(deps(), { via: 'x', subject: '510', handle: 'h51' });
+  assert.equal(cookies[0], cookie, 'the session cookie comes first');
+  const hint = cookies.find((c) => c.startsWith('signed_in='));
+  assert.equal(hint, 'signed_in=1; Max-Age=604800; Secure; SameSite=Lax; Path=/');
+  assert.ok(!/HttpOnly/i.test(hint ?? ''), 'the page can read the hint');
+  assert.match(cookie, /Max-Age=604800; HttpOnly/, 'the session cookie stays HttpOnly, with the same lifetime');
+  const token = cookie.replace(/^sid=/, '').split(';')[0];
+  const clear = await signOut(deps(), input({ sid: token }));
+  assert.ok(clear.includes('signed_in=; Max-Age=0; Secure; SameSite=Lax; Path=/'), 'sign-out clears the hint');
 });
 
 test('sign out everywhere ends every session of that user only', async () => {

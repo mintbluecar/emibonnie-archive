@@ -319,3 +319,150 @@ test('composeItem (Task 10c r): the item page has no search row or box at any wi
   assert.ok(!markup.includes('c-header__below'), 'nothing under the bar');
   assert.match(markup, /<a class="btn btn--quiet btn--icon c-header__icon c-header__find" href="\/"/);
 });
+
+/**
+ * Drives `start()` on `/t/<id>` against a mocked `fetch`: `answer(url)` gives
+ * each request's Response. Returns the page root and the URLs asked for.
+ * @param {{ cookie: string, answer: (url: string) => Response|Promise<Response> }} setup
+ */
+async function startPage({ cookie, answer }) {
+  const root = new MiniElement('div');
+  const doc = /** @type {any} */ ({
+    createElement: (/** @type {any} */ tag) => new MiniElement(tag), getElementById: (/** @type {string} */ id) => (id === 'app' ? root : null),
+    title: '', cookie,
+  });
+  globalThis.document = doc;
+  globalThis.window = /** @type {any} */ ({ location: { pathname: '/t/1900000000000000004', href: 'http://localhost/t/1900000000000000004', origin: 'http://localhost' } });
+  /** @type {Map<string, string>} */
+  const store = new Map();
+  globalThis.localStorage = /** @type {any} */ ({ getItem: (/** @type {string} */ k) => store.get(k) ?? null, setItem: (/** @type {string} */ k, /** @type {string} */ v) => store.set(k, v) });
+  /** @type {string[]} */
+  const asked = [];
+  mock.method(globalThis, 'fetch', async (/** @type {string} */ url) => { asked.push(String(url)); return answer(String(url)); });
+  return { root, asked, doc };
+}
+
+function endPage() {
+  mock.restoreAll();
+  delete (/** @type {any} */ (globalThis)).document;
+  delete (/** @type {any} */ (globalThis)).window;
+  delete (/** @type {any} */ (globalThis)).localStorage;
+}
+
+const PUBLIC_URL = '/api/item/translation/1900000000000000004';
+const json = (/** @type {unknown} */ body, status = 200) => new Response(JSON.stringify(body), { status });
+
+test('start: with the hint, editor buttons appear once viewer answers', async () => {
+  /** @type {(r: Response) => void} */
+  let answerViewer = () => {};
+  const viewerAnswered = new Promise((resolve) => { answerViewer = resolve; });
+  const { root, asked } = await startPage({
+    cookie: 'theme=dark; signed_in=1',
+    answer: (url) => (url.endsWith('/viewer') ? /** @type {Promise<Response>} */ (viewerAnswered) : json(itemVm())),
+  });
+  try {
+    const started = start();
+    await flush(); await flush();
+    assert.ok(root.querySelector('.c-item'), 'the public view shows without waiting for viewer');
+    assert.equal(root.querySelectorAll('.c-item__owner .btn--icon').length, 0, 'no editor buttons before viewer answers');
+    answerViewer(json({ canEdit: true, canCheckFollowUps: true, editOpenUntil: null, held: null }));
+    await started;
+    assert.equal(root.querySelectorAll('.c-item__owner .btn--icon').length, 2, 'edit and follow-ups');
+    assert.equal(root.querySelector('.c-item__owner')?.getAttribute('hidden'), null);
+    assert.deepEqual(asked.sort(), [PUBLIC_URL, `${PUBLIC_URL}/viewer`], 'the public view under the preloaded URL, plus viewer');
+
+    // The follow-ups button is live.
+    /** @type {any} */ (root.querySelector('[data-action="follow-ups"]')).click();
+    await flush();
+    assert.ok(asked.includes(`${PUBLIC_URL}/follow-ups`));
+  } finally {
+    endPage();
+  }
+});
+
+test('start: without the hint, the page asks only for the public view', async () => {
+  const { root, asked } = await startPage({ cookie: 'theme=dark', answer: () => json(itemVm()) });
+  try {
+    await start();
+    assert.ok(root.querySelector('.c-item'));
+    assert.deepEqual(asked, [PUBLIC_URL]);
+    assert.equal(root.querySelectorAll('.c-item__owner .btn--icon').length, 0);
+  } finally {
+    endPage();
+  }
+});
+
+test('start: a 404 public view plus viewer.held renders the held entry', async () => {
+  const held = itemVm({ reviewState: 'pending' });
+  const { root } = await startPage({
+    cookie: 'signed_in=1',
+    answer: (url) => (url.endsWith('/viewer')
+      ? json({ canEdit: true, canCheckFollowUps: false, editOpenUntil: null, held })
+      : json({ error: 'not_found' }, 404)),
+  });
+  try {
+    await start();
+    assert.ok(root.querySelector('.c-item__held'), 'the owner\'s held banner');
+    assert.ok(root.querySelector('.c-item'), 'the entry itself');
+    assert.equal(root.querySelectorAll('.c-item__owner .btn--icon').length, 1, 'the edit link');
+    assert.equal(root.querySelector('.c-empty-state'), null, 'not the "not found" page');
+  } finally {
+    endPage();
+  }
+});
+
+test('start: a held page reloads its body from …/viewer (its held view), never the public URL that 404s for it', async () => {
+  const held = itemVm({ reviewState: 'pending' });
+  const { root, asked } = await startPage({
+    cookie: 'signed_in=1',
+    answer: (url) => {
+      if (url.endsWith('/viewer')) return json({ canEdit: true, canCheckFollowUps: true, editOpenUntil: null, held });
+      if (url.endsWith('/follow-ups')) return json({ added: 1, pending: false });
+      return json({ error: 'not_found' }, 404);
+    },
+  });
+  try {
+    await start();
+    assert.ok(root.querySelector('.c-item__held'));
+    /** @type {any} */ (root.querySelector('[data-action="follow-ups"]')).click();
+    for (let i = 0; i < 6; i += 1) await flush();
+    assert.deepEqual(asked, [`${PUBLIC_URL}/viewer`, PUBLIC_URL, `${PUBLIC_URL}/follow-ups`, `${PUBLIC_URL}/viewer`],
+      'the reload asks viewer again, not the public URL');
+    assert.ok(root.querySelector('.c-item__body'), 'the body is still there');
+    assert.notEqual(root.querySelector('[data-follow-ups-status]')?.textContent, t('item.followUpsFailed'));
+  } finally {
+    endPage();
+  }
+});
+
+test('start: a 404 public view with no held entry is "not found"', async () => {
+  const { root } = await startPage({
+    cookie: 'signed_in=1',
+    answer: (url) => (url.endsWith('/viewer')
+      ? json({ canEdit: false, canCheckFollowUps: false, editOpenUntil: null, held: null })
+      : json({ error: 'not_found' }, 404)),
+  });
+  try {
+    await start();
+    assert.ok(root.querySelector('.c-empty-state'));
+    assert.equal(root.querySelector('.c-item'), null);
+  } finally {
+    endPage();
+  }
+});
+
+test('start: a 401 viewer answer leaves a plain reader\'s page', async () => {
+  const { root, doc } = await startPage({
+    cookie: 'signed_in=1',
+    answer: (url) => (url.endsWith('/viewer') ? json({ error: 'unauthorized' }, 401) : json(itemVm())),
+  });
+  try {
+    await start();
+    assert.ok(root.querySelector('.c-item'), 'the public view');
+    assert.equal(root.querySelectorAll('.c-item__owner .btn--icon').length, 0, 'no editor buttons');
+    assert.ok(root.querySelector('.c-item__owner')?.getAttribute('hidden') !== null, 'the controls stay hidden');
+    assert.match(doc.cookie, /^signed_in=; Max-Age=0/, 'the stale hint is dropped');
+  } finally {
+    endPage();
+  }
+});

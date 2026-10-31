@@ -218,7 +218,7 @@ function bind(root) {
   const next = () => { c.state.step = 'speakers'; paint(); };
   addDetails.bind(el, { onChange: changeField, onNext: next, onSave: save });
   if (c.state.step !== 'speakers') return;
-  speakerStep.bind(el, { onPick: pickMarker, onLine: openFix, onSave: save, onNewPerson: addPerson });
+  speakerStep.bind(el, { onPick: pickMarker, onLine: openFix, onNewPerson: addPerson });
   if (c.state.fix) {
     lineFixSheet.bind(el, { line: c.state.fix, onFix: applyFix, onCancel: closeFix, onNewPerson: addPerson });
   }

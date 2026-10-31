@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadSite, SiteConfigError } from '../src/site/loadSite.js';
+import { siteDirOf } from './cli.js';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -155,7 +156,7 @@ function checkUpstreamVersion(repoRoot) {
  */
 export function runDoctor(options = {}) {
   const repoRoot = options.repoRoot ?? REPO_ROOT;
-  const siteDirName = options.siteDir ?? process.env.SITE_DIR ?? 'site';
+  const siteDirName = options.siteDir ?? siteDirOf(process.env);
   const siteDirPath = path.isAbsolute(siteDirName) ? siteDirName : path.join(repoRoot, siteDirName);
   const env = options.env ?? process.env;
   const siteExists = existsSync(siteDirPath);

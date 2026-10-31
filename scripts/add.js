@@ -9,12 +9,12 @@
  */
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { createDb, dbOptionsFromEnv } from '../src/db/client.js';
 import { loadSite } from '../src/site/loadSite.js';
 import { ingestItem } from '../src/services/ingest.js';
 import { createPeople, eventIdBySlug, resolveSpeakerRefs } from '../src/services/intakeRefs.js';
 import { loadCopy } from '../src/site/copy.js';
 import { BARE_MARKER } from '../src/domain/lines.js';
+import { runCli } from './cli.js';
 
 const SYSTEM = { actor: 'system' };
 const OPTIONS = /** @type {const} */ ({
@@ -90,19 +90,14 @@ export async function runAdd({ args, deps, log = console.log }) {
   return report(result, log);
 }
 
-async function main() {
-  const site = loadSite(process.env.SITE_DIR ?? 'site');
-  const db = createDb(dbOptionsFromEnv(process.env));
-  try {
-    process.exitCode = await runAdd({ args: process.argv.slice(2), deps: { db, site, fetchImpl: fetch } });
-  } finally {
-    await db.end();
-  }
+function main() {
+  return runCli(async ({ db, siteDir, log }) => {
+    const site = loadSite(siteDir);
+    const deps = { db: /** @type {import('../src/db/common.js').Db} */ (db), site, fetchImpl: fetch };
+    process.exitCode = await runAdd({ args: process.argv.slice(2), deps, log });
+  }, { db: 'required' });
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((/** @type {any} */ err) => {
-    console.error(err.message ?? String(err));
-    process.exitCode = 1;
-  });
+  main();
 }

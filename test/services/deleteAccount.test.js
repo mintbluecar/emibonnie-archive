@@ -21,10 +21,11 @@ test('delete removes sessions and name; past items show a fan', async () => {
   // They added an item.
   await ingest(deps, IDS.EVENT_B, { actor: 'x:55' });
 
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
   const res = await api.call('POST', '/api/me/delete', { cookies: { sid }, body: { confirm: 'delete' } });
   assert.equal(res.status, 200, res.text);
   assert.ok(res.setCookies.some((c) => c.startsWith('sid=') && c.includes('Max-Age=0')), 'clears the session cookie');
+  assert.ok(res.setCookies.some((c) => c.startsWith('signed_in=;') && c.includes('Max-Age=0')), 'clears the signed_in hint');
 
   // Sessions are gone, the user is soft-deleted with no name.
   assert.equal(await count(deps.db, 'select count(*)::int as n from sessions where user_id = $1', ['x:55']), 0);
@@ -40,7 +41,7 @@ test('delete removes sessions and name; past items show a fan', async () => {
 test('without confirm it is 400', async () => {
   const { cookie } = await signInUser({ db: deps.db, site: deps.site, now: () => new Date() }, { via: 'x', subject: '56', handle: 'keep' });
   const sid = cookie.replace(/^sid=/, '').split(';')[0];
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
   const res = await api.call('POST', '/api/me/delete', { cookies: { sid }, body: { confirm: 'no' } });
   assert.equal(res.status, 400);
   const [user] = await rows(deps.db, "select deleted_at from users where id = 'x:56'");
@@ -56,7 +57,7 @@ test('a translator who deletes their account keeps credit on their translations'
     // Link tl_beta's account (the credited account) to a user, then delete that user.
     const { cookie } = await signInUser({ db: own.db, site: own.site, now: () => new Date() }, { via: 'x', subject: '9002', handle: 'tl_beta' });
     const sid = cookie.replace(/^sid=/, '').split(';')[0];
-    const api = apiFor({ ...own, env: ENV }, { env: ENV });
+    const api = apiFor(own, { env: ENV });
     const res = await api.call('POST', '/api/me/delete', { cookies: { sid }, body: { confirm: 'delete' } });
     assert.equal(res.status, 200);
 

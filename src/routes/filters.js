@@ -9,6 +9,6 @@ export const route = {
   method: 'GET',
   path: '/api/filters',
   cache: PUBLIC_CACHE,
-  /** @param {import('../http/handler.js').RouteInput} _input @param {any} deps */
+  /** @param {import('../http/handler.js').RouteInput} _input @param {import('../http/deps.js').Deps} deps */
   run: async (_input, deps) => withCacheTags(jsonWithCache(await filterOptions(deps), PUBLIC_CACHE), [HOME_TAG, SEARCH_TAG]),
 };

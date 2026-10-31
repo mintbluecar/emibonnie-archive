@@ -12,6 +12,7 @@ import assert from 'node:assert/strict';
 import { test, mock } from 'node:test';
 import { MiniElement } from '../helpers/miniDom.js';
 import { copyRe } from '../helpers/copyMarkup.js';
+import { withGlobals } from '../helpers/globals.js';
 const { start } = await import('../../public/js/pages/edit.js');
 const { t } = await import('../../public/js/core/site.js');
 
@@ -45,18 +46,8 @@ function allText(el) {
   return (el.children ?? []).map(allText).join(' ');
 }
 
-/** A page root and the globals `start()` needs. @returns {MiniElement} */
-function pageRoot() {
-  const root = new MiniElement('div');
-  globalThis.document = /** @type {any} */ ({
-    createElement: (/** @type {any} */ tag) => new MiniElement(tag),
-    getElementById: (/** @type {string} */ id) => (id === 'app' ? root : null),
-    title: '',
-  });
-  globalThis.window = /** @type {any} */ ({ location: { pathname: `/edit/translation/${SOURCE}`, href: `http://localhost/edit/translation/${SOURCE}`, search: '' } });
-  globalThis.localStorage = /** @type {any} */ ({ getItem: () => null, setItem: () => {}, removeItem: () => {} });
-  return root;
-}
+/** The `fetch` the next `withPage` runs with, set by `mockApi`. @type {typeof fetch} */
+let currentFetch = /** @type {any} */ (async () => Response.json({}, { status: 404 }));
 
 /**
  * The page's three endpoints. `publishStatus` lets a test fail the review
@@ -68,7 +59,7 @@ function mockApi(overrides = {}) {
   const calls = [];
   let reviewState = overrides.reviewState ?? 'pending';
   const publishStatus = overrides.publishStatus ?? 200;
-  globalThis.fetch = /** @type {any} */ (async (/** @type {string} */ url, /** @type {any} */ init) => {
+  currentFetch = /** @type {any} */ (async (/** @type {string} */ url, /** @type {any} */ init) => {
     const method = init?.method ?? 'GET';
     calls.push({ url: String(url), method, body: init?.body ? JSON.parse(String(init.body)) : null });
     if (String(url) === '/api/me') return Response.json({ user: { via: 'x', handle: 'owner', isOwner: true, isTranslator: false, needsName: false } });
@@ -85,17 +76,25 @@ function mockApi(overrides = {}) {
   return calls;
 }
 
-/** Runs `body` with the page globals set, then cleans up. @param {() => Promise<void>} body */
+/** Runs `body` with the page globals (including the `fetch` `mockApi` set) in place, then restores them. @param {() => Promise<void>} body */
 async function withPage(body) {
-  pageRoot();
-  try {
-    await body();
-  } finally {
-    mock.restoreAll();
-    delete (/** @type {any} */ (globalThis)).document;
-    delete (/** @type {any} */ (globalThis)).window;
-    delete (/** @type {any} */ (globalThis)).localStorage;
-  }
+  const root = new MiniElement('div');
+  await withGlobals({
+    document: /** @type {any} */ ({
+      createElement: (/** @type {any} */ tag) => new MiniElement(tag),
+      getElementById: (/** @type {string} */ id) => (id === 'app' ? root : null),
+      title: '',
+    }),
+    window: /** @type {any} */ ({ location: { pathname: `/edit/translation/${SOURCE}`, href: `http://localhost/edit/translation/${SOURCE}`, search: '' } }),
+    localStorage: /** @type {any} */ ({ getItem: () => null, setItem: () => {}, removeItem: () => {} }),
+    fetch: currentFetch,
+  }, async () => {
+    try {
+      await body();
+    } finally {
+      mock.restoreAll();
+    }
+  });
 }
 
 /** @returns {any} */

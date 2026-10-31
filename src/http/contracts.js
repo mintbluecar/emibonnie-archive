@@ -130,6 +130,15 @@
  *   out). `category`: its type's name. `addedBy`: null for the engine's
  *   own writes (seeds, imports run as `system`).
  *
+ * @typedef {{ canEdit: boolean, canCheckFollowUps: boolean, editOpenUntil: string|null,
+ *   held: (ItemView & { editOpenUntil: string|null, reviewState?: string })|null }} ItemViewerVM
+ *   `GET /api/item/:kind/:sourceId/viewer` (signed in, `private, no-store`):
+ *   the caller's own fields on an item page, which the cached public
+ *   `ItemView` never carries. `editOpenUntil` is fresh (the public answer
+ *   may be a few minutes old). `held` is filled only for the owner, on an
+ *   entry the public can't see (a held one: its `reviewState` is
+ *   `pending`); everyone else gets null, and all-false for such an entry.
+ *
  * @typedef {{ slug: string, name: string, occurredOn: string, hashtag: string|null, counts: Record<string, number>, thumb: ThumbVM|null }} HomeEvent
  *   `counts`: visible items per kind (kinds with none are left out).
  * @typedef {{ months: { month: string, events: HomeEvent[] }[] }} HomeView

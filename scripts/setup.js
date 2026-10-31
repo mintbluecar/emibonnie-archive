@@ -11,7 +11,8 @@ import { loadSite } from '../src/site/loadSite.js';
 import { seedFromSite } from '../src/services/seedFromSite.js';
 import { listItemKindCodes } from '../src/repo/kinds.js';
 import { kindsRegistry } from '../src/kinds/_registry.js';
-import { errorText, migrateTargetOf, runMigrate } from './migrate.js';
+import { runMigrate } from './migrate.js';
+import { dbTargetOf, runCli, siteDirOf } from './cli.js';
 
 /**
  * The registry codes that have no matching `item_kinds` row.
@@ -47,12 +48,12 @@ async function assertKindsMatchDb(db, registryCodes) {
  * @returns {Promise<void>}
  */
 export async function runSetup(options = {}) {
-  const siteDir = options.siteDir ?? process.env.SITE_DIR ?? 'site';
+  const siteDir = options.siteDir ?? siteDirOf(process.env);
   const site = options.site ?? loadSite(siteDir);
   const log = options.log ?? console.log;
   const ownDb = !options.db;
   // Like `npm run migrate`: no DATABASE_URL and no PGLITE_DIR is refused, never a throwaway in-memory database.
-  const db = options.db ?? createDb(migrateTargetOf(process.env));
+  const db = options.db ?? createDb(dbTargetOf(process.env));
 
   try {
     await runMigrate({ db, siteDir, log });
@@ -66,13 +67,8 @@ export async function runSetup(options = {}) {
   }
 }
 
-async function main() {
-  try {
-    await runSetup();
-  } catch (/** @type {any} */ err) {
-    console.error(errorText(err));
-    process.exitCode = 1;
-  }
+function main() {
+  return runCli(({ db, siteDir, log }) => runSetup({ db, siteDir, log }), { db: 'required' });
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

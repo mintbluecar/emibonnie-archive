@@ -16,7 +16,7 @@
 import { NO_STORE } from '../http/handler.js';
 import { NotFound } from '../http/errors.js';
 import { jsonWithCookies, redirectWithCookies, serializeCookie } from '../http/cookies.js';
-import { signInUser } from '../services/session.js';
+import { signInUser, signedOutCookies } from '../services/session.js';
 import { safeReturnTo } from '../services/oauthState.js';
 
 /** The roles `as` accepts; `guest` (signed out) only on the GET. */
@@ -55,10 +55,12 @@ async function translatorAccount(deps, handle) {
 }
 
 /**
- * Signs in as `as`: the cookie and, for a translator, the handle; `null`
- * when no translator matches; `undefined` for an unknown role.
+ * Signs in as `as`: every cookie the sign-in sets (`signInUser`'s
+ * `cookies`: the session and the `signed_in` hint) and, for a translator,
+ * the handle; `null` when no translator matches; `undefined` for an
+ * unknown role.
  * @param {any} deps @param {unknown} as @param {string} [handle]
- * @returns {Promise<{ cookie: string, handle?: string }|null|undefined>}
+ * @returns {Promise<{ cookies: string[], handle?: string }|null|undefined>}
  */
 async function signInAs(deps, as, handle) {
   if (as === 'owner') return signInUser(deps, { via: 'x', subject: deps.site.ownerXUserId, handle: 'owner' });
@@ -68,7 +70,7 @@ async function signInAs(deps, as, handle) {
     const account = await translatorAccount(deps, handle);
     if (!account) return null;
     const signedIn = await signInUser(deps, { via: 'x', subject: account.external_id, handle: account.handle });
-    return { cookie: signedIn.cookie, handle: account.handle };
+    return { cookies: signedIn.cookies, handle: account.handle };
   }
   return undefined;
 }
@@ -84,7 +86,7 @@ export const route = {
     const signedIn = await signInAs(deps, as);
     if (signedIn === undefined) return jsonWithCookies({ error: 'bad_request', message: 'unknown as' }, [], 400);
     if (signedIn === null) return jsonWithCookies({ error: 'not_found' }, [], 404);
-    return jsonWithCookies(as === 'translator' ? { ok: true, handle: signedIn.handle } : { ok: true }, [signedIn.cookie]);
+    return jsonWithCookies(as === 'translator' ? { ok: true, handle: signedIn.handle } : { ok: true }, signedIn.cookies);
   },
 };
 
@@ -100,10 +102,10 @@ export const getRoute = {
     const handle = input.query.handle === undefined ? undefined : String(input.query.handle);
     const returnTo = safeReturnTo(String(input.query.returnTo ?? '/'));
     const marker = serializeCookie(DEV_AS_COOKIE, as, { maxAge: 60 * 60 * 24 * 30 });
-    if (as === 'guest') return redirectWithCookies(returnTo, [marker, serializeCookie('sid', '', { maxAge: 0 })]);
+    if (as === 'guest') return redirectWithCookies(returnTo, [marker, ...signedOutCookies()]);
     const signedIn = await signInAs(deps, as, handle);
     if (signedIn === undefined) return jsonWithCookies({ error: 'bad_request', message: `as must be one of ${DEV_ROLES.join(', ')}` }, [], 400);
     if (signedIn === null) return jsonWithCookies({ error: 'not_found', message: 'no translator with a published entry matches' }, [], 404);
-    return redirectWithCookies(returnTo, [marker, signedIn.cookie]);
+    return redirectWithCookies(returnTo, [marker, ...signedIn.cookies]);
   },
 };

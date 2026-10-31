@@ -15,7 +15,6 @@
  *   5. redraft with the account's speaker memory: needs_speakers, needs_date;
  *   6. write everything in one transaction: added, or pending.
  */
-import { kindsRegistry } from '../kinds/_registry.js';
 import { BadRequest } from '../domain/errors.js';
 import { findSourceOwner } from '../repo/itemSources.js';
 import { accountState } from '../repo/accounts.js';
@@ -24,6 +23,7 @@ import { loadContext, occurredOnOf } from './ingestContext.js';
 import { resolvePeopleRefs } from './intakeRefs.js';
 import { writeItem, reviewStateOf } from './ingestWrite.js';
 import { findLookup } from '../repo/lookups.js';
+import { kindNamed } from './cards.js';
 
 /** @typedef {import('../kinds/defineKind.js').Kind} Kind */
 /** @typedef {import('../kinds/defineKind.js').Draft} Draft */
@@ -52,13 +52,6 @@ import { findLookup } from '../repo/lookups.js';
 
 /** @type {Record<'visible'|'removed'|'pending', IngestResult['status']>} */
 const STATE_STATUS = { visible: 'duplicate', removed: 'removed', pending: 'pending' };
-
-/** @param {IngestDeps} deps @param {string} name */
-function kindNamed(deps, name) {
-  const kind = (deps.kinds ?? kindsRegistry)[name];
-  if (!kind) throw new BadRequest(`unknown kind: ${name}`);
-  return kind;
-}
 
 /**
  * Step 1 (and 3's re-check): what's already archived under `ref`, read in
@@ -244,6 +237,7 @@ async function ingestNew(run) {
  */
 export async function ingestItem(deps, request) {
   const kind = kindNamed(deps, request.kind);
+  if (!kind) throw new BadRequest(`unknown kind: ${request.kind}`);
   const sourceId = kind.matchesUrl(request.input);
   if (!sourceId) throw new BadRequest(`not a ${kind.name} source: ${request.input}`);
   // The submitter's "already subbed" tick and line fixes ride in overrides,

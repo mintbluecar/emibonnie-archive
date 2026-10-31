@@ -7,6 +7,16 @@
  * generic meta, so a preview never reveals that it exists. Every injected
  * value is attribute-escaped. Never names a kind: item pages are found by
  * their kind's `urlPrefix`.
+ *
+ * Each page also gets `<link rel="preload" as="fetch" href="<its API path>"
+ * crossorigin>` (Task 11), so the API request starts alongside the page's
+ * JS instead of after it. `as="fetch"` needs `crossorigin` to match the
+ * page's own `fetch()` (MDN, rel=preload: "Cross-origin fetches",
+ * https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/rel/preload),
+ * and the path is built exactly as the page JS builds it
+ * (`public/js/pages/item.js`, `event.js`). Only for a visible target: the
+ * generic page of a hidden or missing one must answer exactly alike and
+ * carry nothing of the URL (test/privacy.test.js), so it goes without.
  */
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -46,11 +56,12 @@ function clip(text, max) {
 /**
  * Puts `meta` into `html` (null: the built-in shell): removes the page's
  * own `<title>`, `og:*`, `twitter:*` and `description` tags, then adds
- * the new ones before `</head>`. Replacement callbacks
+ * the new ones (and the API preload, when given) before `</head>`. Replacement callbacks
  * keep `$&`-style patterns in the page or the values inert.
- * @param {string|null} html @param {Meta} meta @returns {string}
+ * @param {string|null} html @param {Meta} meta @param {string|null} [preload] the API path the page fetches first
+ * @returns {string}
  */
-export function injectMeta(html, meta) {
+export function injectMeta(html, meta, preload = null) {
   const page = html ?? SHELL;
   const title = escapeAttr(meta.title);
   const tags = [
@@ -60,6 +71,7 @@ export function injectMeta(html, meta) {
     '<meta property="og:type" content="website">',
     '<meta name="twitter:card" content="summary">',
     `<meta name="description" content="${escapeAttr(meta.description)}">`,
+    ...(preload ? [`<link rel="preload" as="fetch" href="${escapeAttr(preload)}" crossorigin>`] : []),
   ].join('\n');
   const bare = page.replace(OWN_TITLE, '').replace(OWN_META, '');
   return bare.replace(/<\/head>/i, () => `<title>${title}</title>\n${tags}\n</head>`);
@@ -94,7 +106,8 @@ export async function itemMetaPage(deps, { prefix, sourceId, origin }) {
   const id = kind ? await findVisibleItemId(deps.db, { kind: kind.name, platform: kind.platform, externalId: sourceId }) : null;
   const [entry] = id === null ? [] : await previewsFor(deps, [id], await presenterContext(deps));
   const html = await readPage(deps, 'item.html');
-  if (!entry) return { html: injectMeta(html, metaOf(deps, origin, deps.site.name)), found: false, tags: [] };
+  if (!entry || !kind) return { html: injectMeta(html, metaOf(deps, origin, deps.site.name)), found: false, tags: [] };
+  const preload = `/api/item/${encodeURIComponent(kind.name)}/${encodeURIComponent(sourceId)}`;
   const line = entry.preview.lines.find((l) => 'text' in l && l.text.trim() !== '');
   const title = entry.card.event ? titled(deps, entry.card.event.name) : deps.site.name;
   const tags = [
@@ -103,7 +116,7 @@ export async function itemMetaPage(deps, { prefix, sourceId, origin }) {
     ...entry.card.people.map((person) => personTag(person.personId)),
     ...(entry.card.account ? [accountTag(entry.card.account.handle)] : []),
   ];
-  return { html: injectMeta(html, metaOf(deps, origin, title, line && 'text' in line ? line.text : undefined)), found: true, tags };
+  return { html: injectMeta(html, metaOf(deps, origin, title, line && 'text' in line ? line.text : undefined), preload), found: true, tags };
 }
 
 /**
@@ -115,6 +128,7 @@ export async function eventMetaPage(deps, { slug, origin }) {
   const event = await getVisibleEventBySlug(deps.db, slug);
   const html = await readPage(deps, 'event.html');
   if (!event) return { html: injectMeta(html, metaOf(deps, origin, deps.site.name)), found: false, tags: [] };
+  const preload = `/api/event/${encodeURIComponent(slug)}`;
   const description = [event.occurredOn, ...(event.hashtags[0] ? [`#${event.hashtags[0]}`] : [])].join(' · ');
-  return { html: injectMeta(html, metaOf(deps, origin, titled(deps, event.name), description)), found: true, tags: [eventTag(event.slug)] };
+  return { html: injectMeta(html, metaOf(deps, origin, titled(deps, event.name), description), preload), found: true, tags: [eventTag(event.slug)] };
 }

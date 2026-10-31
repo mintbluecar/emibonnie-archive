@@ -10,15 +10,15 @@ import { test } from 'node:test';
 import { MiniElement } from '../helpers/miniDom.js';
 import { mount } from '../../public/js/core/dom.js';
 import { pattern } from '../helpers/copyMarkup.js';
+import { withGlobals } from '../helpers/globals.js';
 const { render, bind, MAX_REASON } = await import('../../public/js/components/reportForm.js');
 const { t } = await import('../../public/js/core/site.js');
 const { footerBlock } = await import('../../public/js/pages/itemFooter.js');
 
 const TARGET = { type: /** @type {const} */ ('item'), kind: 'translation', sourceId: '1900000000000000001' };
 
-/** @param {typeof fetch} [fetchImpl] */
-function mounted(fetchImpl) {
-  if (fetchImpl) globalThis.fetch = fetchImpl;
+/** @returns {MiniElement} */
+function mounted() {
   const root = new MiniElement('div');
   mount(root, render());
   bind(/** @type {any} */ (root), TARGET);
@@ -47,34 +47,44 @@ test('the dialog is labelled, caps the reason and has submit and cancel', () => 
 test('submitting posts the page\'s target and the trimmed reason', async () => {
   /** @type {any[]} */
   const calls = [];
-  const root = mounted(/** @type {any} */ (async (url, init) => {
-    calls.push({ url, body: JSON.parse(init.body) });
-    return Response.json({ id: 1 });
-  }));
-  await submit(root, '  wrong credit  ');
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, '/api/reports');
-  assert.deepEqual(calls[0].body, { target: TARGET, reason: 'wrong credit' });
+  await withGlobals({
+    fetch: /** @type {any} */ (async (url, init) => {
+      calls.push({ url, body: JSON.parse(init.body) });
+      return Response.json({ id: 1 });
+    }),
+  }, async () => {
+    const root = mounted();
+    await submit(root, '  wrong credit  ');
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, '/api/reports');
+    assert.deepEqual(calls[0].body, { target: TARGET, reason: 'wrong credit' });
+  });
 });
 
 test('success announces the thank-you; a failure keeps the dialog and says so', async () => {
-  const ok = mounted(/** @type {any} */ (async () => Response.json({ id: 1 })));
-  await submit(ok, 'wrong credit');
-  assert.equal(ok.querySelector('[data-report-status]')?.textContent, t('report.done'));
-  assert.equal(/** @type {any} */ (ok.querySelector('[data-report-reason]')).value, '');
+  await withGlobals({ fetch: /** @type {any} */ (async () => Response.json({ id: 1 })) }, async () => {
+    const ok = mounted();
+    await submit(ok, 'wrong credit');
+    assert.equal(ok.querySelector('[data-report-status]')?.textContent, t('report.done'));
+    assert.equal(/** @type {any} */ (ok.querySelector('[data-report-reason]')).value, '');
+  });
 
-  const bad = mounted(/** @type {any} */ (async () => Response.json({ error: 'x' }, { status: 500 })));
-  await submit(bad, 'wrong credit');
-  assert.equal(bad.querySelector('[data-report-status]')?.textContent, t('report.failed'));
-  assert.equal(/** @type {any} */ (bad.querySelector('[data-report-submit]')).disabled, false);
+  await withGlobals({ fetch: /** @type {any} */ (async () => Response.json({ error: 'x' }, { status: 500 })) }, async () => {
+    const bad = mounted();
+    await submit(bad, 'wrong credit');
+    assert.equal(bad.querySelector('[data-report-status]')?.textContent, t('report.failed'));
+    assert.equal(/** @type {any} */ (bad.querySelector('[data-report-submit]')).disabled, false);
+  });
 });
 
 test('an empty reason is refused without a request', async () => {
   let calls = 0;
-  const root = mounted(/** @type {any} */ (async () => { calls += 1; return Response.json({}); }));
-  await submit(root, '   ');
-  assert.equal(calls, 0);
-  assert.equal(root.querySelector('[data-report-status]')?.textContent, t('report.tooLong'));
+  await withGlobals({ fetch: /** @type {any} */ (async () => { calls += 1; return Response.json({}); }) }, async () => {
+    const root = mounted();
+    await submit(root, '   ');
+    assert.equal(calls, 0);
+    assert.equal(root.querySelector('[data-report-status]')?.textContent, t('report.tooLong'));
+  });
 });
 
 test('the item footer renders a report trigger and the dialog, not a takedown link', () => {

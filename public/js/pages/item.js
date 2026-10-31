@@ -20,7 +20,8 @@ import * as mediaBox from '../components/mediaBox.js';
 import * as refreshButton from '../components/refreshButton.js';
 import * as sourceEmbed from '../components/sourceEmbed.js';
 import { KIND_UI } from '../kinds/_registry.js';
-import { footerBlock } from './itemFooter.js';
+import { footerBlock, mountOwnerControls } from './itemFooter.js';
+import { fetchViewer } from './itemViewer.js';
 import * as reportForm from '../components/reportForm.js';
 import { mountLoadError } from './pageError.js';
 
@@ -127,15 +128,31 @@ function bindBody(root, bodyEl, data) {
 }
 
 /**
+ * Where a page's body reloads from: the public view, or, for a page shown
+ * from the owner's `viewer.held` (a non-public entry, which the public URL
+ * answers 404), that held view again.
+ * @param {{ kind: string, sourceId: string, held?: boolean }} target
+ * @returns {Promise<PageData>}
+ */
+async function reloadData(target) {
+  const url = `/api/item/${encodeURIComponent(target.kind)}/${encodeURIComponent(target.sourceId)}`;
+  if (!target.held) return getJson(url);
+  /** @type {ItemViewerVM} */
+  const mine = await getJson(`${url}/viewer`);
+  if (!mine.held) return getJson(url);
+  return { ...mine.held, canEdit: mine.canEdit, canCheckFollowUps: mine.canCheckFollowUps };
+}
+
+/**
  * Re-fetches and replaces only `.c-item__body` -- satisfies "re-renders
  * the bubbles if `updated > 0`" (task-4 brief) without re-rendering the
  * pinned media (which must not restart) or re-registering any listener
  * bound once on `root` (review round 1, IMPORTANT #2).
- * @param {Element} root @param {{ kind: string, sourceId: string }} target
+ * @param {Element} root @param {{ kind: string, sourceId: string, held?: boolean }} target
  * @returns {Promise<void>}
  */
 async function reloadBody(root, target) {
-  const data = await getJson(`/api/item/${encodeURIComponent(target.kind)}/${encodeURIComponent(target.sourceId)}`);
+  const data = await reloadData(target);
   const bodyEl = root.querySelector('.c-item__body');
   if (!bodyEl) return;
   mount(bodyEl, bodyContent(data));
@@ -148,17 +165,20 @@ async function reloadBody(root, target) {
  * re-registers its click listener), the copy-link button, the
  * follow-ups check, and the body's own content, and X's embed when the
  * footer has one (Task 10b).
+ * `held`: the page shows the owner's held view (`viewer.held`), so its
+ * reloads ask `…/viewer`, not the public URL.
  * @param {Element} root
  * @param {import('../../../src/http/contracts.js').ItemView & { editOpenUntil: string|null }} data
+ * @param {{ held?: boolean }} [options]
  * @returns {void}
  */
-export function bind(root, data) {
+export function bind(root, data, { held = false } = {}) {
   const bodyEl = root.querySelector('.c-item__body') ?? root;
   bindBody(root, bodyEl, data);
   const mediaEl = root.querySelector('.c-item__media') ?? root;
   mediaBox.bind(mediaEl, { media: data.media, kind: data.kind, sourceId: data.sourceId });
-  const target = { kind: data.kind, sourceId: data.sourceId };
-  refreshButton.bind(root, target, () => reloadBody(root, target));
+  const target = { kind: data.kind, sourceId: data.sourceId, held };
+  refreshButton.bind(root, { kind: data.kind, sourceId: data.sourceId }, () => reloadBody(root, target));
   bindCopyLink(root, data.url);
   bindFollowUps(root, target);
   sourceEmbed.bind(root);
@@ -171,7 +191,7 @@ export function bind(root, data) {
  * `role="status"` line -- none, how many landed, or that review is
  * holding them. A body reload follows only when new parts really landed
  * and are visible, so the bubbles pick them up.
- * @param {Element} root @param {{ kind: string, sourceId: string }} target
+ * @param {Element} root @param {{ kind: string, sourceId: string, held?: boolean }} target
  * @returns {void}
  */
 function bindFollowUps(root, target) {
@@ -223,26 +243,74 @@ function mountNotFound(root) {
   mountPage(root, pageShell.render({ compact: true, content: emptyState.render({ message: t('item.notFound') }) }));
 }
 
-/** @returns {Promise<void>} */
+/** @typedef {import('../../../src/http/contracts.js').ItemView & { editOpenUntil: string|null, canEdit?: boolean, canCheckFollowUps?: boolean }} PageData */
+/** @typedef {import('../../../src/http/contracts.js').ItemViewerVM} ItemViewerVM */
+
+/** @param {Element} root @param {PageData} data @param {{ held?: boolean }} [options] @returns {void} */
+function show(root, data, options = {}) {
+  document.title = `${site.name}`;
+  mountPage(root, composeItem(data));
+  bind(root, data, options);
+}
+
+/**
+ * Adds the caller's own fields to the page already showing the public
+ * view: their editor controls, and the body again when the fresh
+ * `editOpenUntil` differs from the cached one. The media is never touched.
+ * @param {Element} root @param {PageData} data @param {ItemViewerVM} viewer
+ * @returns {void}
+ */
+function applyViewer(root, data, viewer) {
+  const mine = { ...data, canEdit: viewer.canEdit, canCheckFollowUps: viewer.canCheckFollowUps, editOpenUntil: viewer.editOpenUntil };
+  const bodyEl = root.querySelector('.c-item__body');
+  if (bodyEl && mine.editOpenUntil !== data.editOpenUntil) {
+    mount(bodyEl, bodyContent(mine));
+    bindBody(root, bodyEl, mine);
+  }
+  if (mountOwnerControls(root, mine)) bindFollowUps(root, { kind: data.kind, sourceId: data.sourceId });
+}
+
+/**
+ * A public view that failed: a 404 is the owner's held entry when
+ * `…/viewer` says so, else "not found"; anything else is the load error.
+ * @param {Element} root @param {unknown} err @param {Promise<ItemViewerVM|null>} viewer
+ * @returns {Promise<void>}
+ */
+async function showMissing(root, err, viewer) {
+  if (!(err instanceof ApiError && err.status === 404)) {
+    mountLoadError(root);
+    return;
+  }
+  const mine = await viewer;
+  if (!mine?.held) {
+    mountNotFound(root);
+    return;
+  }
+  show(root, { ...mine.held, canEdit: mine.canEdit, canCheckFollowUps: mine.canCheckFollowUps }, { held: true });
+}
+
+/**
+ * Loads the public view (the same cached answer for everyone, preloaded
+ * by the meta page under exactly this URL) and, alongside it when the
+ * sign-in hint is present, the caller's own fields.
+ * @returns {Promise<void>}
+ */
 export async function start() {
   const root = document.getElementById(APP_SELECTOR);
   const target = root && kindFromPath(window.location.pathname);
   if (!root || !target) return;
-  /** @type {import('../../../src/http/contracts.js').ItemView & { editOpenUntil: string|null }} */
+  const viewer = fetchViewer(target);
+  /** @type {PageData} */
   let data;
   try {
     data = await getJson(`/api/item/${encodeURIComponent(target.kind)}/${encodeURIComponent(target.sourceId)}`);
   } catch (err) {
-    if (err instanceof ApiError && err.status === 404) {
-      mountNotFound(root);
-      return;
-    }
-    mountLoadError(root);
+    await showMissing(root, err, viewer);
     return;
   }
-  document.title = `${site.name}`;
-  mountPage(root, composeItem(data));
-  bind(root, data);
+  show(root, data);
+  const mine = await viewer;
+  if (mine) applyViewer(root, data, mine);
 }
 
 if (typeof document !== 'undefined') start();

@@ -114,3 +114,14 @@ test('kindTranslation.css (Task 10b): the original-text class keeps line breaks 
   assert.match(rule, /white-space:\s*pre-wrap/);
   assert.match(rule, /overflow-wrap:\s*anywhere/);
 });
+
+test('translation section (Task 11, R25): the page\'s first four cards load eagerly -- counting the cards above the section; with no count (a "more" page), all lazy', () => {
+  const thumb = { url: 'https://pbs.twimg.com/media/x?format=jpg&name=small', width: 4, height: 5, video: false };
+  const items = Array.from({ length: 6 }, () => ({ ...preview(), thumb }));
+  /** @param {any} ctx */
+  const eager = (ctx) => (String(section.render({ kind: 'translation', total: 6, hasMore: false, items }, ctx)).match(/loading="eager"/g) ?? []).length;
+  assert.equal(eager({ compact: true, cardsBefore: 0 }), 4);
+  assert.equal(eager({ compact: true, cardsBefore: 3 }), 1);
+  assert.equal(eager({ compact: true, cardsBefore: 4 }), 0);
+  assert.equal(eager({ compact: true }), 0);
+});

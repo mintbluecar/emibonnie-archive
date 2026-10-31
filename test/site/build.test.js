@@ -181,13 +181,13 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
     assert.ok(existsSync(path.join(repoRoot, 'src/kinds/_registry.js')));
     assert.ok(existsSync(path.join(repoRoot, 'public/js/kinds/_registry.js')));
     assert.ok(existsSync(path.join(repoRoot, 'public/site/site.js')));
-    assert.ok(
-      readFileSync(path.join(repoRoot, 'public/site/site.js'), 'utf8').includes('"logo": "/site/logo.svg"'),
-      'the public site module carries the copied logo path too, not just src/site/generated.js',
-    );
+    // Task 11: the logo is copied content-hashed into /build/ (cached immutable), not to /site/ (max-age=0).
+    const logo = /"logo": "([^"]*)"/.exec(readFileSync(path.join(repoRoot, 'public/site/site.js'), 'utf8'))?.[1] ?? '';
+    assert.match(logo, /^\/build\/logo-[0-9a-f]{10}\.(png|svg)$/, 'the public site module carries the built logo path');
+    assert.equal(readFileSync(path.join(repoRoot, 'public', logo), 'utf8'), readFileSync('examples/solluna/logo.svg', 'utf8'));
+    assert.ok(!existsSync(path.join(repoRoot, 'public/site/logo.svg')), 'no second, uncached copy');
     assert.ok(existsSync(path.join(repoRoot, 'public/site/tokens.css')));
     assert.ok(existsSync(path.join(repoRoot, 'public/site/theme.css')));
-    assert.ok(existsSync(path.join(repoRoot, 'public/site/logo.svg')));
     assert.equal(readFileSync(path.join(repoRoot, 'public/robots.txt'), 'utf8'), readFileSync('robots.txt', 'utf8'), 'robots.txt is served from public/');
     // Task 9a item 8: every page is built from its tracked src/html/ template into gitignored public/.
     for (const page of readdirSync('src/html').filter((f) => f.endsWith('.html'))) {
@@ -200,8 +200,9 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
       assert.ok(boot, `${page}: has the boot script in <head>`);
       assert.ok(head.indexOf(boot[0]) < head.indexOf('rel="stylesheet"'), `${page}: boot script before the stylesheet`);
       assert.ok(existsSync(path.join(repoRoot, 'public', boot[1])), `${page}: ${boot[1]} was built`);
-      // Task 10c (j): both icon links, to the logo copied content-hashed into /build/.
-      const icon = /<link rel="icon" type="image\/svg\+xml" href="(\/build\/favicon-[0-9a-f]+\.svg)">/.exec(head);
+      // Task 10c (j): both icon links, to the logo copied content-hashed into /build/ -- Task 11: the same file the header shows.
+      const icon = /<link rel="icon" type="image\/svg\+xml" href="(\/build\/logo-[0-9a-f]+\.svg)">/.exec(head);
+      assert.equal(icon?.[1], logo, `${page}: the icon is the header's logo file`);
       assert.ok(icon, `${page}: has <link rel="icon">`);
       assert.ok(head.includes(`<link rel="apple-touch-icon" href="${icon[1]}">`), `${page}: has <link rel="apple-touch-icon">`);
       assert.equal(readFileSync(path.join(repoRoot, 'public', icon[1]), 'utf8'), readFileSync('examples/solluna/logo.svg', 'utf8'), `${page}: the icon is the logo`);
@@ -242,7 +243,7 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
     const generated = readFileSync(path.join(repoRoot, 'src/site/generated.js'), 'utf8');
     assert.ok(generated.includes('export const site ='));
     assert.ok(generated.includes('export const copy ='));
-    assert.ok(generated.includes('export const assets = {"logo":"/site/logo.svg"}'));
+    assert.ok(generated.includes(`export const assets = {"logo":"${logo}"}`), 'link-preview meta gets the same built path');
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }

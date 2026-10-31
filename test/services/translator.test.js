@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { seededDeps } from '../helpers/ingest.js';
-import { insertAccount, insertItem } from '../helpers/seed.js';
+import { insertAccount, insertItem, insertUser } from '../helpers/seed.js';
 import { translatorList, markWelcomed, TRANSLATOR_PAGE_SIZE } from '../../src/services/translator.js';
 import { translatorTotals } from '../../src/repo/itemState.js';
 import { accountState, linkXAccountToUser, xAccountIdsOfUser } from '../../src/repo/accounts.js';
@@ -97,11 +97,20 @@ test('totals count only visible items and their events', async () => {
 test('markWelcomed is idempotent and flips the session flag', async () => {
   const { rows: before } = await deps.db.query('select meta from users where id = $1', [userId]);
   assert.equal(before[0].meta.translatorWelcomedAt, undefined);
-  await markWelcomed({ db: deps.db }, userId);
-  await markWelcomed({ db: deps.db }, userId);
+  await markWelcomed(deps, userId);
+  await markWelcomed(deps, userId);
   const { rows: after } = await deps.db.query('select meta from users where id = $1', [userId]);
   assert.ok(after[0].meta.translatorWelcomedAt);
   assert.ok(!Number.isNaN(Date.parse(after[0].meta.translatorWelcomedAt)));
+});
+
+test('markWelcomed stamps translatorWelcomedAt from deps.now(), not the real clock', async () => {
+  const fresh = 'x:welcome-clock-test';
+  await deps.db.transaction((tx) => insertUser(tx, { id: fresh }), { actor: 'system' });
+  const fixed = new Date('2026-03-03T03:03:03.000Z');
+  await markWelcomed({ db: deps.db, now: () => fixed }, fresh);
+  const { rows } = await deps.db.query('select meta from users where id = $1', [fresh]);
+  assert.equal(rows[0].meta.translatorWelcomedAt, fixed.toISOString());
 });
 
 test('linkXAccountToUser is the sign-in path the recognition uses', async () => {
@@ -228,10 +237,10 @@ test('only an account credited on an item counts as a translator account', async
 });
 
 test('markWelcomed never rewrites the first time', async () => {
-  await markWelcomed({ db: deps.db }, userId);
+  await markWelcomed(deps, userId);
   const { rows: first } = await deps.db.query('select meta from users where id = $1', [userId]);
   await new Promise((resolve) => setTimeout(resolve, 5));
-  await markWelcomed({ db: deps.db }, userId);
+  await markWelcomed(deps, userId);
   const { rows: second } = await deps.db.query('select meta from users where id = $1', [userId]);
   assert.equal(second[0].meta.translatorWelcomedAt, first[0].meta.translatorWelcomedAt);
 });

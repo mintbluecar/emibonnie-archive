@@ -48,11 +48,11 @@ function metaRow(preview) {
 }
 
 /**
- * @param {{ result: import('../../../src/http/contracts.js').Preview, compact?: boolean }} props
+ * @param {{ result: import('../../../src/http/contracts.js').Preview, compact?: boolean, eager?: boolean }} props `eager`: one of the first cards on screen (thumb.js)
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function render(props) {
-  const { result, compact = false } = props;
+  const { result, compact = false, eager = false } = props;
   const personIds = result.people.map((person) => person.id).join(',');
   return html`
     <article
@@ -61,12 +61,12 @@ export function render(props) {
       ${result.accountHandle ? html`data-account="${result.accountHandle}"` : ''}
     >
       <a class="card__link c-preview-card__link" href="${result.url}">
-        ${compact ? thumb.render(result.thumb, { cover: true }) : ''}
+        ${compact ? thumb.render(result.thumb, { cover: true, eager }) : ''}
         <div class="c-preview-card__body">
           ${compact ? bubbles.renderCompact({ bubbles: result.lines }) : bubbles.render({ bubbles: result.lines })}
           ${metaRow(result)}
         </div>
-        ${compact ? '' : thumb.render(result.thumb)}
+        ${compact ? '' : thumb.render(result.thumb, { eager })}
       </a>
       ${cardCredit.render(result)}
     </article>

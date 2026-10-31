@@ -23,6 +23,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { siteDirOf } from './cli.js';
 
 export const DEBOUNCE_MS = 150;
 const IGNORED = /(^|[\\/])_registry\.js$/;
@@ -132,7 +133,7 @@ export function createServerSupervisor(start = node) {
  *   first), so serve that build instead of building it again.
  */
 export async function main({ skipFirstBuild = false } = {}) {
-  const siteDir = process.env.SITE_DIR ?? 'site';
+  const siteDir = siteDirOf(process.env);
   const supervisor = createServerSupervisor();
   const rebuilder = createRebuilder({ build: () => buildOnce(), onBuilt: supervisor.restart });
   for (const dir of watchedDirs(siteDir)) {

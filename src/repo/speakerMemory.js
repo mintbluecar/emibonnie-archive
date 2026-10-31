@@ -8,7 +8,7 @@
  * schema comment on `speaker_memory`.
  */
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 /** @typedef {import('../domain/speakers.js').SpeakerMap} SpeakerMap */
 
 /**

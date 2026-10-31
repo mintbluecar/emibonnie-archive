@@ -5,14 +5,15 @@
  * me page reads `ownerView`; every route behind it is owner-only.
  */
 import { BadRequest, Conflict, NotFound } from '../domain/errors.js';
-import { pendingItemIds, findItemIdBySource, restoreItem, setReviewState, softDeleteItem } from '../repo/itemState.js';
+import { pendingItemIds, findItemIdBySource, restoreItem } from '../repo/itemState.js';
 import { importHeldItemIdSet } from '../repo/imports.js';
 import { listVisibleItemIds } from '../repo/items.js';
 import { hideEvent } from '../repo/events.js';
 import { get as settingsGet, set as settingsSet } from '../repo/settings.js';
 import { eventTag, HOME_TAG, SEARCH_TAG } from '../domain/cacheTags.js';
-import { kindsOf, presenterContext, previewsForAny } from './cards.js';
-import { purgeItem, purgeTags } from './cache.js';
+import { kindNamed, kindsOf, presenterContext, previewsForAny } from './cards.js';
+import { write } from './write.js';
+import { publish, reject, remove } from './itemLifecycle.js';
 
 /** @typedef {import('./cards.js').ViewDeps} ViewDeps */
 /** @typedef {import('./session.js').SessionUser} SessionUser */
@@ -85,17 +86,13 @@ export async function setApproval(deps, required, actor) {
  */
 export async function reviewItem(deps, { kind: kindName, sourceId, state, actor }) {
   if (state !== 'published' && state !== 'rejected') throw new BadRequest('state must be published or rejected');
-  const kinds = kindsOf(deps);
-  const kind = Object.hasOwn(kinds, kindName) ? kinds[kindName] : undefined;
+  const kind = kindNamed(deps, kindName);
   if (!kind) throw new BadRequest(`unknown kind: ${kindName}`);
   const id = await findItemIdBySource(deps.db, { kind: kind.name, platform: kind.platform, externalId: sourceId });
   if (id === null) throw new BadRequest(`unknown item: ${sourceId}`);
-  await deps.db.transaction(async (tx) => {
-    await setReviewState(tx, { itemId: id, state });
-    // A held follow-up part is reviewed by the same approve/reject.
-    if (typeof kind.reviewHeld === 'function') await kind.reviewHeld(tx, { itemId: id, approve: state === 'published' });
-  }, { actor: actor.id });
-  await purgeItem(deps, id, { hard: state === 'rejected' });
+  // A held follow-up part is reviewed by the same approve/reject.
+  const change = state === 'published' ? publish : reject;
+  await write(deps, actor.id, (w) => change(w, { itemId: id, kindName: kind.name }));
   return { state };
 }
 
@@ -214,17 +211,18 @@ async function openReportOf(db, reportId) {
 export async function hideReportTarget(deps, { reportId, actor }) {
   const report = await openReportOf(deps.db, reportId);
   if (report.target_table === 'items') {
-    await deps.db.transaction((tx) => softDeleteItem(tx, { itemId: Number(report.target_id), reason: 'hidden_by_owner', actor: actor.id }), { actor: actor.id });
-    await purgeItem(deps, Number(report.target_id), { hard: true });
+    await write(deps, actor.id, (w) => remove(w, { itemId: Number(report.target_id), reason: 'hidden_by_owner' }));
     return { hidden: true };
   }
   const eventId = Number(report.target_id);
   const itemIds = (await listVisibleItemIds(deps.db, { eventId })).map((item) => item.id);
   const { rows } = await deps.db.query('select slug from events where id = $1', [eventId]);
   // Hide the event only: its items keep their placement and come back with it.
-  await deps.db.transaction((tx) => hideEvent(tx, eventId), { actor: actor.id });
-  if (rows[0]) await purgeTags(deps, [HOME_TAG, SEARCH_TAG, eventTag(rows[0].slug)]);
-  for (const itemId of itemIds) await purgeItem(deps, itemId, { hard: true });
+  await write(deps, actor.id, async (w) => {
+    await hideEvent(w.tx, eventId);
+    if (rows[0]) w.purge.tags([HOME_TAG, SEARCH_TAG, eventTag(rows[0].slug)]);
+    for (const itemId of itemIds) w.purge.itemRemoved(itemId);
+  });
   return { hidden: true };
 }
 
@@ -238,22 +236,21 @@ export async function restoreReportTarget(deps, { reportId, actor }) {
   const report = await openReportOf(deps.db, reportId);
   if (report.target_table === 'items') {
     const itemId = Number(report.target_id);
-    const restored = await deps.db.transaction(
-      (tx) => restoreItem(tx, { itemId, reason: 'hidden_by_owner' }),
-      { actor: actor.id },
-    );
-    if (!restored) throw new Conflict('not_hidden');
-    await purgeItem(deps, itemId);
+    await write(deps, actor.id, async (w) => {
+      if (!(await restoreItem(w.tx, { itemId, reason: 'hidden_by_owner' }))) throw new Conflict('not_hidden');
+      w.purge.item(itemId);
+    });
     return { restored: true };
   }
   const eventId = Number(report.target_id);
-  const { rowCount } = await deps.db.transaction(
-    (tx) => tx.query('update events set deleted_at = null where id = $1 and deleted_at is not null', [eventId]),
-    { actor: actor.id },
-  );
-  if (!rowCount) throw new Conflict('not_hidden');
-  const { rows } = await deps.db.query('select slug from events where id = $1', [eventId]);
-  if (rows[0]) await purgeTags(deps, [HOME_TAG, SEARCH_TAG, eventTag(rows[0].slug)]);
+  await write(deps, actor.id, async (w) => {
+    const { rows } = await w.tx.query(
+      'update events set deleted_at = null where id = $1 and deleted_at is not null returning slug',
+      [eventId],
+    );
+    if (!rows[0]) throw new Conflict('not_hidden');
+    w.purge.tags([HOME_TAG, SEARCH_TAG, eventTag(rows[0].slug)]);
+  });
   return { restored: true };
 }
 

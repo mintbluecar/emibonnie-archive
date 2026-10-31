@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import { MiniElement } from '../helpers/miniDom.js';
 import { mount } from '../../public/js/core/dom.js';
 import { copyRe } from '../helpers/copyMarkup.js';
+import { withGlobals } from '../helpers/globals.js';
 const { render, bind } = await import('../../public/js/components/importRows.js');
 const { t } = await import('../../public/js/core/site.js');
 
@@ -91,36 +92,40 @@ test('every icon-only row action has a title and an accessible name', () => {
 });
 
 test('the filter chips and the search call back with the new filter', async () => {
-  const st = state({ rows: [row()] });
-  const root = new MiniElement('div');
-  mount(root, render(st));
-  /** @type {string[]} */
-  const calls = [];
-  globalThis.fetch = /** @type {any} */ (async () => Response.json({}));
-  bind(/** @type {any} */ (root), { state: st, reload: async () => { calls.push(`${st.state}|${st.q}`); } });
+  await withGlobals({ fetch: /** @type {any} */ (async () => Response.json({})) }, async () => {
+    const st = state({ rows: [row()] });
+    const root = new MiniElement('div');
+    mount(root, render(st));
+    /** @type {string[]} */
+    const calls = [];
+    bind(/** @type {any} */ (root), { state: st, reload: async () => { calls.push(`${st.state}|${st.q}`); } });
 
-  /** @type {any} */ (root.querySelector('[data-state="failed"]')).click();
-  assert.equal(st.state, 'failed');
-  const form = /** @type {any} */ (root.querySelector('[data-import-search]'));
-  /** @type {any} */ (root.querySelector('input[type="search"]')).value = 'hello';
-  form.dispatchEvent({ type: 'submit', target: form, preventDefault: () => {} });
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  assert.deepEqual(calls, ['failed|', 'failed|hello']);
+    /** @type {any} */ (root.querySelector('[data-state="failed"]')).click();
+    assert.equal(st.state, 'failed');
+    const form = /** @type {any} */ (root.querySelector('[data-import-search]'));
+    /** @type {any} */ (root.querySelector('input[type="search"]')).value = 'hello';
+    form.dispatchEvent({ type: 'submit', target: form, preventDefault: () => {} });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.deepEqual(calls, ['failed|', 'failed|hello']);
+  });
 });
 
 test('skipping posts the row action and reloads', async () => {
   const st = state({ rows: [row({ state: 'check' })] });
   /** @type {any[]} */
   const calls = [];
-  globalThis.fetch = /** @type {any} */ (async (url) => { calls.push(url); return Response.json({ skipped: true }); });
-  const root = new MiniElement('div');
-  mount(root, render(st));
-  let reloads = 0;
-  bind(/** @type {any} */ (root), { state: st, reload: async () => { reloads += 1; } });
-  /** @type {any} */ (root.querySelector('[data-action="skip"]')).click();
-  await new Promise((resolve) => setTimeout(resolve, 10));
-  assert.deepEqual(calls, ['/api/owner/imports/7/rows/11/skip']);
-  assert.equal(reloads, 1);
-  assert.ok(String(render(st)).includes(t('import.state.check')));
-  void copyRe;
+  await withGlobals({
+    fetch: /** @type {any} */ (async (url) => { calls.push(url); return Response.json({ skipped: true }); }),
+  }, async () => {
+    const root = new MiniElement('div');
+    mount(root, render(st));
+    let reloads = 0;
+    bind(/** @type {any} */ (root), { state: st, reload: async () => { reloads += 1; } });
+    /** @type {any} */ (root.querySelector('[data-action="skip"]')).click();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.deepEqual(calls, ['/api/owner/imports/7/rows/11/skip']);
+    assert.equal(reloads, 1);
+    assert.ok(String(render(st)).includes(t('import.state.check')));
+    void copyRe;
+  });
 });

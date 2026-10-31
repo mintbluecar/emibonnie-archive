@@ -6,29 +6,27 @@
  * "added by" becomes "a fan" (the deleted row has no name).
  */
 import { deleteUserSessions } from '../repo/sessions.js';
-import { serializeCookie } from '../domain/cookies.js';
-import { purgeItem } from './cache.js';
-
-const COOKIE_NAME = 'sid';
+import { write } from './write.js';
+import { signedOutCookies } from './session.js';
 
 /**
  * @param {{ db: import('../db/common.js').Db, env?: Record<string, string|undefined>,
  *   invalidateByTag?: (tags: string[]) => Promise<void>,
  *   defer?: (task: () => Promise<unknown>) => void, log?: (line: string) => void }} deps
  * @param {string} userId
- * @returns {Promise<string>} the cleared session cookie
+ * @returns {Promise<string[]>} the cookies that clear the session and its hint
  */
 export async function deleteAccount(deps, userId) {
-  await deps.db.transaction(async (tx) => {
-    await deleteUserSessions(tx, userId);
-    await tx.query(`update users set deleted_at = now(), display_name = null, meta = '{}'::jsonb where id = $1`, [userId]);
-    await tx.query('update accounts set user_id = null where user_id = $1', [userId]);
-  }, { actor: userId });
-  // Their items stay, but "added by" now reads "a fan": purge each page.
-  const { rows } = await deps.db.query(
-    `select id from items where created_by = $1 and (deleted_reason is null or deleted_reason <> 'erased') order by id`,
-    [userId],
-  );
-  for (const row of rows) await purgeItem(deps, row.id);
-  return serializeCookie(COOKIE_NAME, '', { maxAge: 0 });
+  await write(deps, userId, async (w) => {
+    await deleteUserSessions(w.tx, userId);
+    await w.tx.query(`update users set deleted_at = now(), display_name = null, meta = '{}'::jsonb where id = $1`, [userId]);
+    await w.tx.query('update accounts set user_id = null where user_id = $1', [userId]);
+    // Their items stay, but "added by" now reads "a fan": purge each page.
+    const { rows } = await w.tx.query(
+      `select id from items where created_by = $1 and (deleted_reason is null or deleted_reason <> 'erased') order by id`,
+      [userId],
+    );
+    for (const row of rows) w.purge.item(row.id);
+  });
+  return signedOutCookies();
 }

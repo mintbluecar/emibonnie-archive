@@ -82,6 +82,12 @@
   margin-left: auto;
 }
 
+/* Until `…/viewer` says the caller has a role, the slot stays empty and
+   hidden (itemFooter.js); `.cluster`'s display would otherwise show it. */
+.c-item__owner[hidden] {
+  display: none;
+}
+
 .c-item__follow-status {
   flex: 1 1 100%;
   font-size: var(--text-11);

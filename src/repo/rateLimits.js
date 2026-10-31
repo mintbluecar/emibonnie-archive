@@ -5,7 +5,7 @@
  * window length; `hits` counts requests within it. NOT audited (churn).
  */
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[], rowCount: number }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 
 /**
  * Record one hit in `key`'s current window and return the new count.

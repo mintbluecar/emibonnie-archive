@@ -18,6 +18,9 @@ import { originAllowed } from './origin.js';
 import { assertKnownParams, parseQuery, readBody } from './query.js';
 import { parseCookies } from './cookies.js';
 
+/** @typedef {import('./deps.js').BaseDeps} BaseDeps */
+/** @typedef {import('./deps.js').Deps} Deps */
+
 /** Every public GET (Global Constraints: Caching). */
 export const PUBLIC_CACHE = 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400';
 /** Video: the stored variants change rarely. */
@@ -28,21 +31,29 @@ export const NOT_FOUND_CACHE = 'public, s-maxage=60';
 export const PRIVATE_NO_STORE = 'private, no-store';
 /** Writes and errors. */
 export const NO_STORE = 'no-store';
+/**
+ * What a browser gets for any answer the CDN caches: revalidate every time,
+ * so a reader never sees their own browser's stale copy after a write (the
+ * CDN, which writes purge, stays the one shared cache). This is also what
+ * Vercel's own docs say it returns to clients for an `s-maxage` response.
+ */
+export const BROWSER_REVALIDATE = 'public, max-age=0, must-revalidate';
 
 /**
- * @typedef {{ db: { end(): Promise<void> }, fetchImpl: typeof fetch, now: () => Date, site: any, [key: string]: unknown }} BaseDeps
- * @typedef {BaseDeps & { defer: (task: () => Promise<unknown>) => void }} Deps
  * @typedef {{ params: Record<string, string>, query: Record<string, string|string[]>, body: unknown, origin: string,
  *   cookies: Record<string, string>, ip: string|null }} RouteInput
  * @typedef {{ method: string, path: string, cache: string, query?: readonly string[]|null, lists?: readonly string[],
- *   run: (input: RouteInput, deps: any) => Promise<unknown> }} Route
+ *   readonly auth?: 'none'|'optional'|'user'|'owner', run: (input: RouteInput, deps: Deps) => Promise<unknown> }} Route
+ *   `auth`: set by `defineRoute` (src/http/defineRoute.js); a route without it counts as `'none'`.
  *   `query`: the query params a GET accepts (default none; null accepts any,
  *   for pages reached through shared links that carry tracking params --
  *   and, Task 10d, an in-place search's own state, e.g. `?people=1&people=2`:
  *   such a route's query is never parsed, so a repeated param can't 400 the page).
  *   `lists`: which of them hold lists.
- * @typedef {{ routes: Route[], makeDeps: () => BaseDeps, waitUntil: (promise: Promise<unknown>) => void,
+ * @typedef {{ routes: Route[], makeDeps: (env: Record<string, string|undefined>) => BaseDeps, waitUntil: (promise: Promise<unknown>) => void,
  *   log?: (line: string) => void, env?: Record<string, string|undefined> }} HandlerOptions
+ *   `makeDeps` takes the handler's own `env` (below), so `deps.env` is always that one env -- never a second
+ *   copy a caller closed over separately, which could disagree with it.
  */
 
 /** @param {number} status @param {unknown} body @param {string} cache */
@@ -51,9 +62,8 @@ function json(status, body, cache) {
 }
 
 /**
- * A route's own JSON response with an explicit cache header, for a route
- * whose cache depends on the request: the item page is `private, no-store`
- * for a signed-in viewer and public otherwise. `toResponse` keeps a
+ * A route's own JSON response with an explicit cache header (the item
+ * route uses it to attach cache tags to its own Response). `toResponse` keeps a
  * `PRIVATE_NO_STORE` (or `NOT_FOUND_CACHE`) header; anything else is
  * replaced by the route's declared cache, so returning the route's own
  * public cache here is harmless.
@@ -103,19 +113,51 @@ function errorResponse(err, route, { method, pathname, log }) {
 }
 
 /**
- * The route's cache header always wins, with two exceptions: a GET route's
- * own Response may shorten it to `NOT_FOUND_CACHE` (the meta pages' generic
- * meta for a hidden or missing target), or mark it `PRIVATE_NO_STORE` (the
- * item page for a signed-in viewer, so the per-user edit buttons are never
- * shared or cached).
- * @param {unknown} result @param {Route} route
+ * The cache header a route's answer ends up with. The route's cache header
+ * always wins, with two exceptions: a GET route's own Response may shorten
+ * it to `NOT_FOUND_CACHE` (the meta pages' generic meta for a hidden or
+ * missing target), or mark it `PRIVATE_NO_STORE` (an answer that must never
+ * be shared or stored).
+ * @param {Response|null} own the route's own Response, if it returned one
+ * @param {Pick<Route, 'method'|'cache'>} route
+ * @returns {string}
  */
+export function finalCache(own, route) {
+  const header = own?.headers.get('cache-control') ?? null;
+  const kept = header === NOT_FOUND_CACHE || header === PRIVATE_NO_STORE;
+  return route.method === 'GET' && kept ? /** @type {string} */ (header) : route.cache;
+}
+
+/** @param {unknown} result @param {Route} route */
 function toResponse(result, route) {
   const response = result instanceof Response ? result : json(200, result, route.cache);
-  const own = response.headers.get('cache-control');
-  const kept = own === NOT_FOUND_CACHE || own === PRIVATE_NO_STORE;
-  const cache = route.method === 'GET' && kept ? /** @type {string} */ (own) : route.cache;
-  response.headers.set('cache-control', cache);
+  response.headers.set('cache-control', finalCache(result instanceof Response ? result : null, route));
+  return response;
+}
+
+/**
+ * The one place a response's cache headers are split between the CDN and
+ * the browser. A CDN-cached answer (any `s-maxage`) moves its policy to
+ * `Vercel-CDN-Cache-Control` and tells the browser `BROWSER_REVALIDATE`;
+ * private and no-store answers keep their one header. Vercel's docs
+ * (https://vercel.com/docs/caching/cache-control-headers, "Behavior"):
+ * "`Vercel-CDN-Cache-Control` is exclusive to Vercel and has top priority
+ * ... Vercel's proxy consumes this header for all requests. After
+ * processing it, the CDN does not include it in the final HTTP response to
+ * the client." and, of `Cache-Control`: "You can still set `Cache-Control`
+ * while using the other two, and it will be forwarded to the client as is."
+ * (https://vercel.com/docs/caching/cdn-cache, "CDN-Cache-Control":
+ * "`Vercel-CDN-Cache-Control` headers are not returned to the browser or
+ * forwarded to other CDNs.") The local dev server has no CDN, so there the
+ * browser sees exactly the header it gets in production.
+ * @param {Response} response
+ * @returns {Response}
+ */
+function splitForCdn(response) {
+  const cache = response.headers.get('cache-control');
+  if (!cache || !/(?:^|[\s,])s-maxage=/.test(cache)) return response;
+  response.headers.set('vercel-cdn-cache-control', cache);
+  response.headers.set('cache-control', BROWSER_REVALIDATE);
   return response;
 }
 
@@ -123,7 +165,7 @@ function toResponse(result, route) {
  * Runs `fn` with this request's deps, closing the database in `finally` --
  * at once, or after the deferred work settles (kept alive by `waitUntil`).
  * @template T
- * @param {HandlerOptions['makeDeps']} makeDeps
+ * @param {() => BaseDeps} makeDeps already bound to this request's `env` (the handler's own, see `HandlerOptions`)
  * @param {{ waitUntil: HandlerOptions['waitUntil'], onError: (err: unknown) => void }} background
  * @param {(deps: Deps) => Promise<T>} fn
  * @returns {Promise<T>}
@@ -173,7 +215,10 @@ function withHead(handle) {
  * @returns {(request: Request) => Promise<Response>}
  */
 export function createHandler({ routes, makeDeps, waitUntil, log = console.error, env = process.env }) {
-  return withHead(async function handle(request) {
+  return withHead(async (request) => splitForCdn(await answer(request)));
+
+  /** @param {Request} request @returns {Promise<Response>} */
+  async function answer(request) {
     const url = new URL(request.url);
     const ctx = { method: request.method, pathname: url.pathname, log };
     /** @type {Route|null} */
@@ -188,10 +233,10 @@ export function createHandler({ routes, makeDeps, waitUntil, log = console.error
       const input = { params: match.params, query, body: await readBody(request), origin: url.origin,
         cookies: parseCookies(request.headers.get('cookie')), ip: ipOf(request) };
       const onError = (/** @type {unknown} */ err) => log(`[api] ${ctx.method} ${ctx.pathname} background work failed: ${describe(err)}`);
-      const result = await withDeps(makeDeps, { waitUntil, onError }, (deps) => /** @type {Route} */ (route).run(input, deps));
+      const result = await withDeps(() => makeDeps(env), { waitUntil, onError }, (deps) => /** @type {Route} */ (route).run(input, deps));
       return toResponse(result, route);
     } catch (err) {
       return errorResponse(err, route, ctx);
     }
-  });
+  }
 }

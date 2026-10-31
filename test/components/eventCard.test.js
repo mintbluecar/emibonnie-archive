@@ -41,3 +41,9 @@ test('eventCard: no picture, no image', () => {
   assert.doesNotMatch(markup, /<img/);
   assert.doesNotMatch(markup, /c-thumb/);
 });
+
+test('eventCard (Task 11): eager passes through to the picture; lazy otherwise', () => {
+  const event = { slug: 's', name: 'N', occurredOn: '2026-10-14', hashtag: null, counts: {}, thumb: { url: 'https://pbs.twimg.com/media/x?format=jpg&name=small', width: 4, height: 5, video: false } };
+  assert.match(String(render({ event, eager: true })), /loading="eager" fetchpriority="high"/);
+  assert.match(String(render({ event })), /loading="lazy"/);
+});

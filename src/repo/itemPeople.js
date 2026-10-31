@@ -6,7 +6,7 @@
  * so the audit log on `item_people` shows exactly what changed.
  */
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 /** @typedef {{ personId: number, role: string }} ItemPerson */
 
 /** @param {ItemPerson} p */

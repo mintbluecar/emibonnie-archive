@@ -24,7 +24,7 @@ function result(overrides = {}) {
   };
 }
 
-const X_USER = { via: 'x', handle: 'vacantvolcanic', displayName: null, isOwner: false, isTranslator: false, needsName: false };
+const X_USER = { via: 'x', handle: 'sample_translator', displayName: null, isOwner: false, isTranslator: false, needsName: false };
 
 /** Every icon-only control's (`btn--icon`) opening tag in `markup`. @param {string} markup */
 const iconTags = (markup) => [...markup.matchAll(/<[^>]*class="[^"]*\bbtn--icon\b[^"]*"[^>]*>/g)].map((m) => m[0]);

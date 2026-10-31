@@ -13,7 +13,7 @@ import { link } from '../../repo/itemLinks.js';
 import { remember } from '../../repo/speakerMemory.js';
 import { addParts, insertTranslation, setSpeakers, setLineFixes } from './repo.js';
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {import('../../db/common.js').Queryable} Tx */
 /** @typedef {import('./domain.js').TranslationDraft} TranslationDraft */
 /** @typedef {import('../../sources/normalize.js').Tweet} Tweet */
 /**

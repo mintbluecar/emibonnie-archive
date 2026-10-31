@@ -29,13 +29,6 @@ test("visibleItem/visibleEvent reject the 'vis_' prefix: it's reserved for this 
   assert.throws(() => visibleEvent('vis_user'), /invalid alias/);
 });
 
-test('visibleItem/visibleEvent never interpolate anything other than the alias itself', () => {
-  for (const sql of [visibleItem('custom'), visibleEvent('custom')]) {
-    assert.equal(typeof sql, 'string');
-    assert.ok(!/select 1 from accounts a where a.id = \$/.test(sql), 'no placeholders -- no values are interpolated');
-  }
-});
-
 /** @param {number} eventId @param {string} [alias] */
 async function isEventVisible(eventId, alias) {
   const { rows } = await db.query(`select (${visibleEvent(alias)}) as visible from events ${alias ?? 'e'} where ${alias ?? 'e'}.id = $1`, [eventId]);

@@ -6,9 +6,8 @@
  */
 import { NO_STORE } from '../http/handler.js';
 import { NotFound } from '../http/errors.js';
-import { requireUser } from '../services/session.js';
-import { limit } from '../services/limits.js';
-import { purgeSource } from '../services/cache.js';
+import { defineRoute, fieldsOf } from '../http/defineRoute.js';
+import { purgeReloadedItem } from '../services/cache.js';
 import { editableOf, editItem, revertEdit, resolveForEdit } from '../services/editItem.js';
 import { isApprovalRequired } from '../services/settings.js';
 import { partLines, unmappedMarkers } from '../domain/lineFixes.js';
@@ -21,7 +20,7 @@ function editLines(details) {
   return { parts, lines: partLines(parts, fixes), unmapped: unmappedMarkers(parts, fixes, speakers) };
 }
 
-/** @param {any} deps @param {number} itemId @returns {Promise<any[]>} the owner's edit history, newest first */
+/** @param {import('../http/deps.js').Deps} deps @param {number} itemId @returns {Promise<any[]>} the owner's edit history, newest first */
 async function editHistory(deps, itemId) {
   const { rows } = await deps.db.query('select id, created_at, created_by, before, reverts from item_edits where item_id = $1 order by id desc', [itemId]);
   return Promise.all(rows.map(async (/** @type {any} */ r) => {
@@ -30,15 +29,24 @@ async function editHistory(deps, itemId) {
   }));
 }
 
-export const editRoute = {
+/** @typedef {Partial<import('../services/editItem.js').EditableFields>} Changes */
+
+/**
+ * `{ changes }`: only the keys present are applied; `editItem` checks
+ * them (and refuses the translator's text).
+ * @param {unknown} raw
+ * @returns {{ changes: Changes }}
+ */
+const changesBody = (raw) => ({ changes: /** @type {Changes} */ (fieldsOf(raw).changes ?? {}) });
+
+export const editRoute = defineRoute({
   method: 'GET',
   path: '/api/item/:kind/:sourceId/edit',
+  auth: 'user',
   cache: NO_STORE,
   query: [],
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireUser(deps, input);
-    const target = await resolveForEdit(deps, input.params.kind, input.params.sourceId, user);
+  run: async ({ params, user }, deps) => {
+    const target = await resolveForEdit(deps, params.kind, params.sourceId, user);
     if (!target || !target.role) throw new NotFound();
     const fields = await editableOf(deps.db, target.kind, target.id);
     const details = /** @type {any} */ ((await target.kind.loadDetails(deps.db, [target.id], { includePending: true })).get(target.id));
@@ -48,48 +56,43 @@ export const editRoute = {
       history: target.role === 'owner' ? await editHistory(deps, target.id) : [],
     };
   },
-};
+});
 
-export const applyRoute = {
+export const applyRoute = defineRoute({
   method: 'POST',
   path: '/api/item/:kind/:sourceId/edit',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireUser(deps, input);
-    await limit(deps, 'edit', user.id);
-    const changes = /** @type {any} */ (input.body)?.changes ?? {};
-    return editItem(deps, { kind: input.params.kind, sourceId: input.params.sourceId, changes, actor: user });
-  },
-};
+  auth: 'user',
+  limit: 'edit',
+  body: changesBody,
+  run: async ({ params, body, user }, deps) => editItem(deps, { kind: params.kind, sourceId: params.sourceId, changes: body.changes, actor: user }),
+});
 
-export const revertRoute = {
+/** Owner only, but a 404 (not a 403) for anyone else, so the route isn't advertised. */
+export const revertRoute = defineRoute({
   method: 'POST',
   path: '/api/item/:kind/:sourceId/edits/:editId/revert',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireUser(deps, input);
+  auth: 'user',
+  run: async ({ params, user }, deps) => {
     if (!user.isOwner) throw new NotFound();
-    return revertEdit(deps, { kind: input.params.kind, sourceId: input.params.sourceId, editId: Number(input.params.editId), actor: user });
+    return revertEdit(deps, { kind: params.kind, sourceId: params.sourceId, editId: Number(params.editId), actor: user });
   },
-};
+});
 
-export const followUpsRoute = {
+export const followUpsRoute = defineRoute({
   method: 'POST',
   path: '/api/item/:kind/:sourceId/follow-ups',
-  cache: NO_STORE,
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
-  run: async (input, deps) => {
-    const user = await requireUser(deps, input);
-    await limit(deps, 'followUps', user.id);
-    const target = await resolveForEdit(deps, input.params.kind, input.params.sourceId, user);
+  auth: 'user',
+  limit: 'followUps',
+  run: async ({ params, user }, deps) => {
+    const target = await resolveForEdit(deps, params.kind, params.sourceId, user);
     if (!target || !target.role) throw new NotFound();
     if (typeof target.kind.checkFollowUps !== 'function') throw new NotFound();
     const pending = await isApprovalRequired(deps.db);
     const added = await target.kind.checkFollowUps(deps, target.id, { actor: user.id, pending });
     // A new public part changes the entry, its event and its translator pages.
-    if (added.added > 0 && !pending) await purgeSource(deps, input.params.kind, input.params.sourceId);
+    // The page reloads the entry next, so its own CDN copy is deleted before
+    // this response (the rest is invalidated after it).
+    if (added.added > 0 && !pending) await purgeReloadedItem(deps, target.id);
     return { ...added, pending };
   },
-};
+});

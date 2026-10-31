@@ -9,7 +9,7 @@
 import { visibleItem } from './visibility.js';
 import { EVENT_NOT_DELETED } from './items.js';
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[], rowCount?: number }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 /** @typedef {import('../domain/constants.js').ReviewState} ReviewState */
 
 /**

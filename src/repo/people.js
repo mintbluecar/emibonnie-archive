@@ -8,7 +8,7 @@ import { cleanPersonName, norm } from '../domain/text.js';
 import { camelRow } from './rows.js';
 import { getAccountByHandle } from './accounts.js';
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 /**
  * @typedef {{ id: number, displayName: string, emoji: string, colour: string,
  *   featured: boolean, igHandle: string|null, extraHashtags: string[] }} Person

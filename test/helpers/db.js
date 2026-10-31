@@ -1,8 +1,11 @@
 // @ts-check
 /**
- * Test databases. Without `TEST_DATABASE_URL`: a fresh in-memory PGlite per
- * call. With it: a fresh, uniquely named schema on that Postgres per call,
- * dropped again by `end()`, so runs never collide or leave data behind.
+ * Test databases: a fresh, uniquely named schema per `freshDb()` call,
+ * migrated there and dropped again by `end()`, so tests never see each
+ * other's data. Without `TEST_DATABASE_URL` the schemas live on one
+ * in-memory PGlite per test process (starting PGlite is most of a test
+ * database's cost); with it, on that Postgres, so runs never collide or
+ * leave data behind.
  *
  * The URL is never printed or logged here.
  */
@@ -89,24 +92,70 @@ async function ensureTrgmInPublic(admin) {
   }
 }
 
+/** PGlite's in-memory prefix with a name, so every `freshDb` in this process shares one instance. */
+const PGLITE_SHARED = 'memory://fa_test';
+
+/**
+ * How long the shared instance stays open with no `freshDb` using it.
+ * Tests in a file run one after another, so the next one's `freshDb`
+ * comes well within this and reuses the instance. It must still close at
+ * the end: after DDL an open PGlite keeps a ~10 s timer pending (measured;
+ * most likely Postgres's idle stats flush), which holds the test process
+ * open; `close()` clears it.
+ */
+const IDLE_CLOSE_MS = 100;
+
+/** @type {{ admin: Promise<import('../../src/db/client.js').Db> | undefined, users: number, idle?: NodeJS.Timeout }} */
+const pglite = { admin: undefined, users: 0 };
+
+/** Takes a hold on this process's shared PGlite, opening it (with pg_trgm in `public`) if needed. */
+function holdPglite() {
+  clearTimeout(pglite.idle);
+  pglite.users += 1;
+  pglite.admin ??= (async () => {
+    const admin = createDb({ dir: PGLITE_SHARED });
+    await ensureTrgmInPublic(admin);
+    return admin;
+  })();
+  return pglite.admin;
+}
+
+/** Drops a hold; the last one closes the instance after `IDLE_CLOSE_MS` unless a new hold comes first. */
+async function releasePglite() {
+  pglite.users -= 1;
+  if (pglite.users > 0) return;
+  const admin = pglite.admin;
+  pglite.idle = setTimeout(() => {
+    pglite.admin = undefined;
+    admin?.then((db) => db.end()).catch(() => {});
+  }, IDLE_CLOSE_MS);
+}
+
+/**
+ * The admin `Db` (no schema) that `freshDb` makes its schema with, the
+ * options for the schema's own `Db`, and how to let the admin go again.
+ * @param {string | undefined} url
+ */
+async function testServer(url) {
+  if (url) {
+    const admin = createDb({ url });
+    await sweepStale(admin);
+    await ensureTrgmInPublic(admin);
+    return { admin, options: { url }, release: () => admin.end() };
+  }
+  return { admin: await holdPglite(), options: { dir: PGLITE_SHARED }, release: releasePglite };
+}
+
 /**
  * @param {{ migrated?: boolean }} [options] `migrated: false` returns an
- *   empty database (for the migration runner's own tests).
- * @returns {Promise<import('../../src/db/client.js').Db & { schema?: string }>}
+ *   empty schema (for the migration runner's own tests).
+ * @returns {Promise<import('../../src/db/client.js').Db & { schema: string }>}
  */
 export async function freshDb({ migrated = true } = {}) {
-  const url = process.env.TEST_DATABASE_URL;
-  if (!url) {
-    const db = createDb();
-    if (migrated) await migrate(db, { dirs: [{ namespace: 'engine', dir: ENGINE_MIGRATIONS }] });
-    return db;
-  }
+  const { admin, options, release } = await testServer(process.env.TEST_DATABASE_URL);
   const schema = uniqueName('fa_test');
-  const admin = createDb({ url });
-  await sweepStale(admin);
-  await ensureTrgmInPublic(admin);
   await admin.query(`create schema "${schema}"`);
-  const db = createDb({ url, schema });
+  const db = createDb({ ...options, schema });
   if (migrated) await migrate(db, { dirs: [{ namespace: 'engine', dir: ENGINE_MIGRATIONS }] });
   return {
     ...db,
@@ -114,7 +163,7 @@ export async function freshDb({ migrated = true } = {}) {
     async end() {
       await db.end();
       await admin.query(`drop schema if exists "${schema}" cascade`);
-      await admin.end();
+      await release();
     },
   };
 }

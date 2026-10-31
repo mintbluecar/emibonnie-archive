@@ -52,3 +52,13 @@ test('composeHome (Task 10d): the event list sits in the in-place search region,
   const searching = String(composeHome(HOME, prepare({ search: 'q=hug' })));
   assert.match(searching, /<div class="c-search"><\/div>\s*<div data-search-list hidden>/, 'a ?q= link never flashes the list');
 });
+
+test('composeHome (Task 11): the first four event pictures, across months, load eagerly; the rest lazily', () => {
+  const thumb = { url: 'https://pbs.twimg.com/media/x?format=jpg&name=small', width: 4, height: 5, video: false };
+  /** @param {number} n */
+  const event = (n) => ({ slug: `e${n}`, name: `E${n}`, occurredOn: '2026-10-14', hashtag: null, counts: {}, thumb });
+  const markup = String(composeHome(/** @type {any} */ ({ months: [{ month: '2026-10', events: [event(1), event(2), event(3)] }, { month: '2026-09', events: [event(4), event(5), event(6)] }] })));
+  assert.equal((markup.match(/loading="eager"/g) ?? []).length, 4);
+  assert.equal((markup.match(/loading="lazy"/g) ?? []).length, 2);
+  assert.ok(markup.indexOf('loading="lazy"') > markup.indexOf('href="/e/e4"'), 'the lazy ones are the last two');
+});

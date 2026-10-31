@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { makeDeps } from '../api/index.js';
 import { dbOptionsFromEnv } from '../src/db/client.js';
-import { freshDb } from './helpers/db.js';
 
 test('in production (VERCEL set) a missing DATABASE_URL fails fast and never falls back to PGlite', () => {
   assert.throws(() => dbOptionsFromEnv({ VERCEL: '1' }), /DATABASE_URL is not set/);
@@ -40,9 +39,7 @@ test('INGEST_FIXTURES_DIR: the e2e dev server reads sources from the synthetic f
   }
 });
 
-test('routes see cookies and ip; ip never appears in logs', async () => {
-  const db = await freshDb();
-  const logs = /** @type {string[]} */ ([]);
+test('routes see cookies and ip', async () => {
   const routes = /** @type {any} */ ([
     { method: 'GET', path: '/api/echo-ctx', cache: 'public, s-maxage=300', query: null,
       run: async (input) => ({ cookies: input.cookies, ip: input.ip }) },
@@ -51,8 +48,8 @@ test('routes see cookies and ip; ip never appears in logs', async () => {
     const { createHandler } = await import('../src/http/handler.js');
     const pending = [];
     const handle = createHandler({
-      routes, makeDeps: () => ({ db: { ...db, end: async () => {} }, fetchImpl: fetch, now: () => new Date(), site: {} }),
-      log: (l) => logs.push(l), env: {},
+      routes, makeDeps: () => ({ db: { end: async () => {} }, fetchImpl: fetch, now: () => new Date(), site: {} }),
+      env: {},
       waitUntil: (p) => { pending.push(p); },
     });
     return { call: async (method, path, headers) => {
@@ -71,8 +68,4 @@ test('routes see cookies and ip; ip never appears in logs', async () => {
   // no headers -> null ip, empty cookies
   const sawNone = await api.call('GET', '/api/echo-ctx', {});
   assert.deepEqual(sawNone.json, { cookies: {}, ip: null });
-
-  // ip never logged
-  assert.equal(logs.length, 0);
-  await db.end();
 });

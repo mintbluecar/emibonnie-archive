@@ -1,7 +1,7 @@
 // @ts-check
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createHandler, PUBLIC_CACHE, NO_STORE, NOT_FOUND_CACHE } from '../../src/http/handler.js';
+import { createHandler, PUBLIC_CACHE, NO_STORE, NOT_FOUND_CACHE, PRIVATE_NO_STORE } from '../../src/http/handler.js';
 import { BadRequest, NotFound, Conflict, RateLimited, Unauthorized, Forbidden } from '../../src/http/errors.js';
 import { originAllowed } from '../../src/http/origin.js';
 import { parseQuery } from '../../src/http/query.js';
@@ -45,6 +45,20 @@ test('a POST with a foreign Origin, or none, is 403; same-origin and ALLOWED_ORI
   assert.equal(bad.status, 400);
 });
 
+test("deps.env is the handler's env, never a second copy a makeDeps closure carried on its own", async () => {
+  const echoEnv = { method: 'GET', path: '/api/echo-env', cache: PUBLIC_CACHE, run: async (/** @type {any} */ _input, /** @type {any} */ deps) => ({ env: deps.env }) };
+  // What a caller-side `deps` object might already carry (test/helpers/api.js's `apiFor` passes a `deps`
+  // fixture through to `makeDeps`, and that fixture sometimes has its own, unrelated `env`).
+  const staleDeps = { env: { STALE: 'yes' } };
+  const handlerEnv = { CURRENT: 'yes' };
+  const makeDeps = (/** @type {Record<string, string|undefined>} */ env) => (
+    { ...staleDeps, db: { end: async () => {} }, fetchImpl: fetch, now: () => new Date(), site: {}, env }
+  );
+  const handle = createHandler({ routes: [echoEnv], makeDeps, env: handlerEnv, waitUntil: (p) => { p.catch(() => {}); } });
+  const res = await handle(new Request(`${BASE}/api/echo-env`));
+  assert.deepEqual(await res.json(), { env: handlerEnv }, "deps.env is the handler's env, not the stale one a caller's deps literal carried");
+});
+
 test('originAllowed: exact origin match only', () => {
   const req = (/** @type {string} */ origin) => new Request(`${BASE}/api/x`, { method: 'POST', headers: { origin } });
   assert.equal(originAllowed(req(BASE), {}), true);
@@ -57,7 +71,7 @@ test('a public GET gets the route cache header, JSON, params and query, and no S
   const { handle, state } = handlerFor([echo]);
   const res = await handle(new Request(`${BASE}/api/echo/a%20b?x=1&tags=a,b&tags=c`));
   assert.equal(res.status, 200);
-  assert.equal(res.headers.get('cache-control'), 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400');
+  assert.equal(res.headers.get('vercel-cdn-cache-control'), 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400');
   assert.equal(res.headers.get('set-cookie'), null);
   assert.equal(res.headers.get('vary'), null);
   assert.match(res.headers.get('content-type') ?? '', /application\/json/);
@@ -75,8 +89,7 @@ test('errors map to 404, 400, 409, 429; unknown paths are 404; bad encodings are
   const get = async (/** @type {string} */ path) => handle(new Request(`${BASE}${path}`));
   const nf = await get('/api/nf');
   assert.equal(nf.status, 404);
-  assert.equal(nf.headers.get('cache-control'), 'public, s-maxage=60');
-  assert.equal(NOT_FOUND_CACHE, 'public, s-maxage=60');
+  assert.equal(nf.headers.get('vercel-cdn-cache-control'), 'public, s-maxage=60');
   assert.deepEqual(await nf.json(), { error: 'not_found' });
   const br = await get('/api/br');
   assert.equal(br.status, 400);
@@ -116,6 +129,16 @@ test('a thrown error is a 500 whose log line has no request headers', async () =
     assert.ok(!logged.toLowerCase().includes(banned.toLowerCase()), banned);
   }
   assert.equal(state.ended, 1);
+});
+
+test("a failing route's log line never carries the caller's ip", async () => {
+  /** @type {string[]} */
+  const lines = [];
+  const boom = { method: 'GET', path: '/api/boom-ip', cache: PUBLIC_CACHE, run: async () => { throw new Error('kaboom'); } };
+  const { handle } = handlerFor([boom], { log: (line) => lines.push(line) });
+  await handle(new Request(`${BASE}/api/boom-ip`, { headers: { 'x-forwarded-for': '203.0.113.5, 10.0.0.1' } }));
+  assert.equal(lines.length, 1);
+  assert.ok(!lines[0].includes('203.0.113.5'));
 });
 
 test('deferred work runs through waitUntil, and the database closes only after it settles', async () => {
@@ -169,7 +192,7 @@ test('HEAD runs the matching GET route and returns its headers with an empty bod
   const { handle, state } = handlerFor([echo, write]);
   const res = await handle(new Request(`${BASE}/api/echo/a?x=1`, { method: 'HEAD' }));
   assert.equal(res.status, 200);
-  assert.equal(res.headers.get('cache-control'), PUBLIC_CACHE);
+  assert.equal(res.headers.get('vercel-cdn-cache-control'), PUBLIC_CACHE);
   assert.match(res.headers.get('content-type') ?? '', /application\/json/);
   assert.equal(await res.text(), '');
   assert.equal(state.ended, 1);
@@ -224,17 +247,50 @@ test('an unknown query param on a GET route is a no-store 400; a route may accep
   assert.equal(state.ended, 3, 'refused before any deps are built');
 });
 
-test("a GET route's own Response may shorten its cache to NOT_FOUND_CACHE, and to nothing else; a write never", async () => {
+test("a GET route's own Response may shorten its cache to NOT_FOUND_CACHE or PRIVATE_NO_STORE, and nothing else; a write never", async () => {
   const own = (/** @type {string} */ method, /** @type {string} */ cache, /** @type {string} */ asked) => ({
     method, path: `/api/own/${method.toLowerCase()}/${asked.length}`, cache,
     run: async () => new Response('x', { headers: { 'cache-control': asked } }),
   });
-  const routes = [own('GET', PUBLIC_CACHE, NOT_FOUND_CACHE), own('GET', PUBLIC_CACHE, 'no-cache'), own('POST', NO_STORE, NOT_FOUND_CACHE)];
+  const routes = [
+    own('GET', PUBLIC_CACHE, NOT_FOUND_CACHE), own('GET', PUBLIC_CACHE, PRIVATE_NO_STORE),
+    own('GET', PUBLIC_CACHE, 'no-cache'), own('POST', NO_STORE, NOT_FOUND_CACHE),
+  ];
   const { handle } = handlerFor(routes);
   const call = (/** @type {any} */ r) => handle(new Request(`${BASE}${r.path}`, { method: r.method, headers: { origin: BASE } }));
-  assert.equal((await call(routes[0])).headers.get('cache-control'), NOT_FOUND_CACHE);
-  assert.equal((await call(routes[1])).headers.get('cache-control'), PUBLIC_CACHE);
-  const written = await handlerFor(routes, { env: { ALLOWED_ORIGINS: BASE } }).handle(new Request(`${BASE}${routes[2].path}`, { method: 'POST', headers: { origin: BASE } }));
+  assert.equal((await call(routes[0])).headers.get('vercel-cdn-cache-control'), NOT_FOUND_CACHE);
+  assert.equal((await call(routes[1])).headers.get('cache-control'), PRIVATE_NO_STORE);
+  assert.equal((await call(routes[2])).headers.get('vercel-cdn-cache-control'), PUBLIC_CACHE);
+  const written = await handlerFor(routes, { env: { ALLOWED_ORIGINS: BASE } }).handle(new Request(`${BASE}${routes[3].path}`, { method: 'POST', headers: { origin: BASE } }));
   assert.equal(written.status, 200);
   assert.equal(written.headers.get('cache-control'), NO_STORE);
+});
+
+test('a CDN-cached answer splits its headers: Vercel-CDN-Cache-Control keeps the policy, browsers always revalidate; private and no-store are unchanged', async () => {
+  const BROWSER = 'public, max-age=0, must-revalidate';
+  const own = (/** @type {string} */ path, /** @type {string} */ cache, /** @type {string} */ asked) => ({
+    method: 'GET', path, cache, run: async () => new Response('x', { headers: { 'cache-control': asked } }),
+  });
+  const notFound = { method: 'GET', path: '/api/gone', cache: PUBLIC_CACHE, run: async () => { throw new NotFound(); } };
+  const denied = { method: 'GET', path: '/api/denied', cache: PRIVATE_NO_STORE, run: async () => { throw new Unauthorized(); } };
+  const { handle } = handlerFor([
+    echo, write, notFound, denied,
+    own('/api/private', PUBLIC_CACHE, PRIVATE_NO_STORE), own('/api/meta-404', PUBLIC_CACHE, NOT_FOUND_CACHE),
+  ], { env: { ALLOWED_ORIGINS: BASE } });
+  const get = (/** @type {string} */ path) => handle(new Request(`${BASE}${path}`));
+  /** @type {[string, Response, string, string|null][]} */
+  const cases = [
+    ['public GET', await get('/api/echo/a'), BROWSER, PUBLIC_CACHE],
+    ['public HEAD', await handle(new Request(`${BASE}/api/echo/a`, { method: 'HEAD' })), BROWSER, PUBLIC_CACHE],
+    ['a GET 404', await get('/api/gone'), BROWSER, NOT_FOUND_CACHE],
+    ["a route's own 404 cache", await get('/api/meta-404'), BROWSER, NOT_FOUND_CACHE],
+    ['private', await get('/api/private'), PRIVATE_NO_STORE, null],
+    ['401', await get('/api/denied'), NO_STORE, null],
+    ['unknown path', await get('/api/nope'), NO_STORE, null],
+    ['write', await handle(new Request(`${BASE}/api/write`, { method: 'POST', headers: { origin: BASE } })), NO_STORE, null],
+  ];
+  for (const [name, res, browser, cdn] of cases) {
+    assert.equal(res.headers.get('cache-control'), browser, `${name}: the browser's header`);
+    assert.equal(res.headers.get('vercel-cdn-cache-control'), cdn, `${name}: the CDN's header`);
+  }
 });

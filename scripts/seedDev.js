@@ -8,12 +8,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseArgs } from 'node:util';
 import { createDb, dbOptionsFromEnv } from '../src/db/client.js';
 import { loadSite } from '../src/site/loadSite.js';
 import { offlineFetch } from '../src/sources/offlineFetch.js';
 import { seedDev } from '../src/services/seedDev.js';
 import { runSetup } from './setup.js';
+import { runCli } from './cli.js';
 
 /**
  * @param {{ siteDir: string, db?: import('../src/db/common.js').Db, log?: (line: string) => void }} options
@@ -40,14 +40,11 @@ export async function runSeedDev({ siteDir, db: given, log = console.log }) {
   }
 }
 
-async function main() {
-  const { values } = parseArgs({ options: { 'site-dir': { type: 'string' } } });
-  try {
-    await runSeedDev({ siteDir: values['site-dir'] ?? process.env.SITE_DIR ?? 'site' });
-  } catch (/** @type {any} */ err) {
-    console.error(err.message ?? String(err));
-    process.exitCode = 1;
-  }
+function main() {
+  return runCli(({ db, siteDir, values, log }) => {
+    const siteDirArg = /** @type {string | undefined} */ (values['site-dir']);
+    return runSeedDev({ siteDir: siteDirArg ?? siteDir, db, log });
+  }, { db: 'required', args: { 'site-dir': { type: 'string' } } });
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

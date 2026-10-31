@@ -17,7 +17,9 @@
  * an instance (`#queryMutex`/`#transactionMutex`, src/pglite.ts), so
  * sharing the instance is enough. `end()` releases this `Db`'s hold; the
  * last one closes the instance, and a later open waits for that close.
- * In-memory databases (no `dir`) stay one instance per `Db`.
+ * In-memory databases (no `dir`) stay one instance per `Db`; a named one
+ * (`memory://<name>`, PGlite's in-memory prefix) is shared like a directory,
+ * so the test helper can keep one instance per test process.
  */
 import path from 'node:path';
 import { PGLITE_PARSERS, assertActor } from './common.js';
@@ -43,7 +45,7 @@ async function openPglite(dir) {
 }
 
 /** @typedef {{ pg: Promise<PGlite>, users: number }} SharedInstance */
-/** @type {Map<string, SharedInstance>} open instances, by resolved data directory */
+/** @type {Map<string, SharedInstance>} open instances, by resolved data directory (or `memory://` name) */
 const shared = new Map();
 /** @type {Map<string, Promise<void>>} instances still closing, by resolved data directory */
 const closing = new Map();
@@ -101,7 +103,7 @@ function instanceFor(dir) {
       close: async () => { if (own) await (await own).close(); },
     };
   }
-  const key = path.resolve(dir);
+  const key = dir.startsWith('memory://') ? dir : path.resolve(dir);
   return {
     open: () => (held ??= acquire(key)).pg,
     close: async () => {

@@ -5,7 +5,7 @@
  * (Rule 1, Task 8 brief).
  */
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 
 /**
  * @param {Tx} db

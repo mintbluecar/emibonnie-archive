@@ -6,7 +6,7 @@
  */
 import { createHash } from 'node:crypto';
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[], rowCount: number }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 
 /** @param {string} token */
 export function hashToken(token) {

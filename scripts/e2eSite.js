@@ -10,6 +10,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { siteDirOf } from './cli.js';
 
 /**
  * Why the site checks can't run, or null when they can.
@@ -27,7 +28,7 @@ export function siteE2eBlocker(siteDir) {
 }
 
 function main() {
-  const siteDir = process.env.SITE_DIR ?? 'site';
+  const siteDir = siteDirOf(process.env);
   const blocker = siteE2eBlocker(siteDir);
   if (blocker) {
     (blocker.skip ? console.log : console.error)(blocker.message);

@@ -213,6 +213,7 @@ npm run build && npm run check && npm test
 - Use synthetic fixtures (`test/fixtures/`), never real translation text.
 - Pure `src/domain` code is unit-tested directly, with no mocking.
 - Code that needs the database, the clock, or the network takes them through `deps`, so tests can supply fakes.
+- `freshDb()` (`test/helpers/db.js`) gives each test its own schema on one in-memory PGlite per test file. `npm test` takes as long as its slowest file: time one with `time node --test <file>`, and split a file by topic (as `test/services/ingest/`) once it runs over about 40 s in the full suite.
 - Tests never write into a source tree (`src/`, `public/`, `api/`, `scripts/`, `test/`, `e2e/`, `examples/`, `docs/`, a site repo's `site/`, and the root `vercel.json`): `npm test` hashes them before and after the run and fails if any changed (`scripts/treeHashConfig.js`). Scaffold or build into a temp copy instead, as `test/kinds/scaffoldedKind.test.js` (also `npm run test:kind`) and `test/scripts/new.test.js` do.
 
 ## Browser checks

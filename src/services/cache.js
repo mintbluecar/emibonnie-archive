@@ -1,7 +1,11 @@
 // @ts-check
 /**
- * Cache purging (Plan 2b). Every write that changes a public page calls
- * `purgeItem`/`purgeAccount` after its transaction: the tags name the
+ * Cache purging (Plan 2b). A service that changes a public page queues
+ * its purge on `write()`'s `w.purge` (src/services/write.js), which calls
+ * `purgeItem`/`purgeAccount`/`purgeForTags` once the transaction has
+ * committed. (The add flow still calls them after a kind's own
+ * transaction; the refresh and follow-ups routes call `purgeReloadedItem`,
+ * which deletes the entry's own page before responding.) The tags name the
  * same strings the pages carry (src/domain/cacheTags.js), and Vercel's
  * `invalidateByTag` marks them stale (served stale once, refreshed in the
  * background). Purging runs through the request's `defer` so the write's
@@ -14,8 +18,6 @@
  * (`invalidateByTag`), read 2026-10-28.
  */
 import { HOME_TAG, SEARCH_TAG, accountTag, eventTag, itemTag, personTag } from '../domain/cacheTags.js';
-import { findItemIdBySource } from '../repo/itemState.js';
-import { kindsOf } from './cards.js';
 
 /** @typedef {import('../db/common.js').Db} Db */
 /** @typedef {{ db: Db, env?: Record<string, string|undefined>,
@@ -134,20 +136,6 @@ export async function purgeForTags(deps, tags, options = {}) {
 }
 
 /**
- * The item a kind and source id name, purged (never fails the caller).
- * @param {CacheDeps & { site?: any, kinds?: Record<string, any> }} deps
- * @param {string} kindName @param {string} sourceId @param {{ hard?: boolean }} [options]
- * @returns {Promise<void>}
- */
-export async function purgeSource(deps, kindName, sourceId, options = {}) {
-  const kinds = kindsOf(/** @type {any} */ (deps));
-  const kind = Object.hasOwn(kinds, kindName) ? kinds[kindName] : undefined;
-  if (!kind) return;
-  const id = await findItemIdBySource(deps.db, { kind: kind.name, platform: kind.platform, externalId: sourceId });
-  if (id !== null) await purgeItem(deps, id, options);
-}
-
-/**
  * @param {CacheDeps} deps @param {string[]} tags @param {{ hard?: boolean }} [options]
  * @returns {Promise<void>}
  */
@@ -162,6 +150,33 @@ async function purgeWhenPossible(deps, tags, { hard = false } = {}) {
 /** @param {CacheDeps} deps @param {number} itemId @param {{ hard?: boolean }} [options] @returns {Promise<void>} */
 export async function purgeItem(deps, itemId, options = {}) {
   await purgeWhenPossible(deps, await itemChangeTags(deps.db, itemId), options);
+}
+
+/**
+ * An edited entry: its own page (`item:<id>`) is deleted, so the next
+ * request -- often the editor reopening it, who before review Task 13 got a
+ * private uncached copy -- is fetched fresh; the pages it appears on are
+ * invalidated (served stale once while they refresh).
+ * @param {CacheDeps} deps @param {number} itemId @returns {Promise<void>}
+ */
+export async function purgeEditedItem(deps, itemId) {
+  const own = itemTag(itemId);
+  await purgeWhenPossible(deps, [own], { hard: true });
+  await purgeWhenPossible(deps, (await itemChangeTags(deps.db, itemId)).filter((tag) => tag !== own));
+}
+
+/**
+ * An entry the page reloads right after this response (the "check for
+ * update" and "check for follow-ups" buttons): its own page (`item:<id>`)
+ * is deleted *before* the response, not deferred, so the reload cannot beat
+ * the purge and get the stale copy; the pages it appears on are invalidated
+ * through `defer` as usual. Off Vercel both are no-ops.
+ * @param {CacheDeps} deps @param {number} itemId @returns {Promise<void>}
+ */
+export async function purgeReloadedItem(deps, itemId) {
+  const own = itemTag(itemId);
+  await purgeTags(deps, [own], { hard: true });
+  await purgeWhenPossible(deps, (await itemChangeTags(deps.db, itemId)).filter((tag) => tag !== own));
 }
 
 /** @param {CacheDeps} deps @param {number} accountId @param {{ hard?: boolean }} [options] @returns {Promise<void>} */

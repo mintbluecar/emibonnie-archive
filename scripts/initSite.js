@@ -2,6 +2,7 @@
 import { existsSync, mkdirSync, cpSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { siteDirOf } from './cli.js';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -41,7 +42,7 @@ export function findExampleDir(examplesDir, exampleName) {
  * @returns {{ ok: true } | { ok: false, reason: string }}
  */
 export function initSite(options = {}) {
-  const targetDir = options.targetDir ?? process.env.SITE_DIR ?? 'site';
+  const targetDir = options.targetDir ?? siteDirOf(process.env);
   if (existsSync(targetDir)) {
     return { ok: false, reason: `${targetDir} already exists -- init-site refuses to overwrite it` };
   }
@@ -69,7 +70,7 @@ function parseExampleArg(argv) {
 }
 
 function main() {
-  const targetDir = process.env.SITE_DIR ?? 'site';
+  const targetDir = siteDirOf(process.env);
   const exampleName = parseExampleArg(process.argv.slice(2));
   const result = initSite({ exampleName });
   if (!result.ok) {

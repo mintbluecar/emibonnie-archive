@@ -10,15 +10,15 @@ import { eventHref } from '../core/routes.js';
 import * as thumb from './thumb.js';
 
 /**
- * @param {{ event: import('../../../src/http/contracts.js').HomeEvent }} props
+ * @param {{ event: import('../../../src/http/contracts.js').HomeEvent, eager?: boolean }} props `eager`: one of the first cards on screen (thumb.js)
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function render(props) {
-  const { event } = props;
+  const { event, eager = false } = props;
   const total = Object.values(event.counts).reduce((sum, n) => sum + n, 0);
   return html`
     <a class="card card--flush c-event-card" href="${eventHref(event.slug)}">
-      ${thumb.render(event.thumb, { cover: true })}
+      ${thumb.render(event.thumb, { cover: true, eager })}
       <div class="c-event-card__body">
         <div class="c-event-card__text">
           <strong class="c-event-card__name">${event.name}</strong>

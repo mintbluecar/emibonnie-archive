@@ -4,6 +4,7 @@ import { after, before, test } from 'node:test';
 import { IDS } from '../../helpers/fixtures.js';
 import { seededDeps, itemIdOf, SYSTEM, ingestDeps, ingest } from '../../helpers/ingest.js';
 import { itemView } from '../../../src/services/itemView.js';
+import { itemViewer } from '../../../src/services/itemPage.js';
 import { previewsFor, presenterContext } from '../../../src/services/cards.js';
 import { addParts, loadDetails, setSpeakers } from '../../../src/kinds/translation/repo.js';
 import { resolveSpeakerRefs } from '../../../src/services/intakeRefs.js';
@@ -382,13 +383,23 @@ test('Task 10c (a): search shows a mapped bare ":" line with its role\'s default
   assert.deepEqual(translation.search.matchLines({ body: ': luna, I have news', speakers: {} }, 'news', ctx), [': luna, I have news']);
 });
 
+test('Task 11: thumbAt adds the size and keeps format (an extension becomes ?format=; a given format and other params stay)', async () => {
+  const { thumbOf } = await import('../../../src/kinds/translation/media.js');
+  /** @param {string} url */
+  const urlOf = (url) => thumbOf(/** @type {any} */ ({ type: 'images', images: [{ url, width: 1, height: 1 }] }))?.url;
+  assert.equal(urlOf('https://pbs.twimg.com/media/HUNiDS1bwAAHxlK.jpg'), 'https://pbs.twimg.com/media/HUNiDS1bwAAHxlK?format=jpg&name=small');
+  assert.equal(urlOf('https://pbs.twimg.com/media/A.png'), 'https://pbs.twimg.com/media/A?format=png&name=small');
+  assert.equal(urlOf('https://pbs.twimg.com/media/A?format=webp&name=orig'), 'https://pbs.twimg.com/media/A?format=webp&name=small');
+  assert.equal(urlOf('https://pbs.twimg.com/amplify_video_thumb/1/img/a.jpg'), 'https://pbs.twimg.com/amplify_video_thumb/1/img/a?format=jpg&name=small');
+});
+
 test('Task 10c (c): the preview thumbnail is the clip poster (video), else the first picture, else a quote\'s own; none for text only or a posterless clip', async () => {
   const { thumbOf } = await import('../../../src/kinds/translation/media.js');
   const video = { type: 'video', variants: [{ bitrate: 1, url: 'https://video.twimg.com/a.mp4' }], width: 720, height: 1280, poster: 'https://pbs.twimg.com/p.jpg' };
   const images = { type: 'images', images: [{ url: 'https://pbs.twimg.com/1.jpg', width: 4, height: 3 }, { url: 'https://pbs.twimg.com/2.jpg', width: 1, height: 1 }] };
-  assert.deepEqual(thumbOf(/** @type {any} */ (video)), { url: 'https://pbs.twimg.com/p.jpg', width: 720, height: 1280, video: true });
-  assert.deepEqual(thumbOf(/** @type {any} */ (images)), { url: 'https://pbs.twimg.com/1.jpg', width: 4, height: 3, video: false });
-  assert.deepEqual(thumbOf(/** @type {any} */ ({ type: 'quote', inner: images })), { url: 'https://pbs.twimg.com/1.jpg', width: 4, height: 3, video: false });
+  assert.deepEqual(thumbOf(/** @type {any} */ (video)), { url: 'https://pbs.twimg.com/p?format=jpg&name=small', width: 720, height: 1280, video: true });
+  assert.deepEqual(thumbOf(/** @type {any} */ (images)), { url: 'https://pbs.twimg.com/1?format=jpg&name=small', width: 4, height: 3, video: false });
+  assert.deepEqual(thumbOf(/** @type {any} */ ({ type: 'quote', inner: images })), { url: 'https://pbs.twimg.com/1?format=jpg&name=small', width: 4, height: 3, video: false });
   assert.equal(thumbOf(/** @type {any} */ ({ ...video, poster: null })), null);
   assert.equal(thumbOf(/** @type {any} */ ({ type: 'quote', inner: null })), null);
   assert.equal(thumbOf(null), null);
@@ -424,9 +435,9 @@ test('canCheckFollowUps is false for a kind with no checkFollowUps (the Kind con
     await ingest(own, IDS.THREAD);
     const viewer = /** @type {any} */ ({ id: 'x:0', isOwner: true, translatorAccountIds: [] });
     const kindWithout = { ...translation, checkFollowUps: undefined };
-    const view = await itemView({ ...own, kinds: { translation: kindWithout } }, 'translation', IDS.THREAD, viewer);
-    assert.equal(view?.canEdit, true, 'the owner may still edit');
-    assert.equal(view?.canCheckFollowUps, false, 'no button for a kind that cannot check follow-ups');
+    const view = await itemViewer({ ...own, kinds: { translation: kindWithout } }, 'translation', IDS.THREAD, viewer);
+    assert.equal(view.canEdit, true, 'the owner may still edit');
+    assert.equal(view.canCheckFollowUps, false, 'no button for a kind that cannot check follow-ups');
   } finally {
     await own.db.end();
   }

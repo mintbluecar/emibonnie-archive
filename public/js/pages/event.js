@@ -85,12 +85,16 @@ function pillsRow(event) {
   return items.length > 0 ? html`<div class="c-event__pills">${chips.render({ items })}</div>` : html``;
 }
 
+/** How many entries the sections before `sections[i]` hold. @param {{ items: unknown[] }[]} sections @param {number} i @returns {number} */
+const cardsAbove = (sections, i) => sections.slice(0, i).reduce((n, s) => n + s.items.length, 0);
+
 /**
  * @param {import('../../../src/http/contracts.js').Section} section
+ * @param {number} [cardsBefore] the cards above it on the page's first render (the first few load eagerly, Task 11); left out on a re-render
  * @returns {import('../core/html.js').SafeHtml}
  */
-function sectionBlock(section) {
-  const [rendered] = renderSections([section], SECTION_CTX);
+function sectionBlock(section, cardsBefore) {
+  const [rendered] = renderSections([section], { ...SECTION_CTX, cardsBefore });
   if (!rendered) return html``;
   return html`
     <div class="stack stack--2" data-event-section data-kind="${section.kind}" data-offset="${section.items.length}">
@@ -118,7 +122,7 @@ export function eventSearch(event, query = '') {
 export function composeEvent(data, search = eventSearch(data.event)) {
   const list = html`
     <button type="button" class="btn btn--quiet c-event__newest-toggle" aria-pressed="false" data-action="newest-first">${t('event.newestFirst')}</button>
-    <div class="stack" data-event-sections>${data.sections.map(sectionBlock)}</div>
+    <div class="stack" data-event-sections>${data.sections.map((section, i) => sectionBlock(section, cardsAbove(data.sections, i)))}</div>
   `;
   const content = html`
     ${filtersSlot(search)}
@@ -142,7 +146,7 @@ export function composeEvent(data, search = eventSearch(data.event)) {
  * @returns {void}
  */
 function renderAndBindSections(container, sections) {
-  mount(container, html`${sections.map(sectionBlock)}`);
+  mount(container, html`${sections.map((section) => sectionBlock(section))}`);
   for (const section of sections) KIND_UI[section.kind]?.section.bind?.(container);
 }
 

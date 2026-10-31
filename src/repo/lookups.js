@@ -5,7 +5,7 @@
  * new one (docs/decisions/0006-data-model-conventions.md, rule 7).
  */
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 
 /** The only table names ever interpolated into this file's SQL. */
 const LOOKUP_TABLES = new Set(['categories', 'clients']);

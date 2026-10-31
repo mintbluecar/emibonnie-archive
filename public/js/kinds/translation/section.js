@@ -8,16 +8,20 @@
  */
 import { html } from '../../core/html.js';
 import * as previewCard from '../../components/previewCard.js';
+import { EAGER_COUNT } from '../../components/thumb.js';
 
 /**
  * @param {import('../../../../src/http/contracts.js').Section} section
- * @param {{ compact?: boolean }} [ctx] `compact`: the event, person and translator
- *   pages show each entry as a compact preview (Task 9b)
+ * @param {{ compact?: boolean, cardsBefore?: number }} [ctx] `compact`: the event, person and translator
+ *   pages show each entry as a compact preview (Task 9b). `cardsBefore`: how many cards
+ *   the page shows above this section, on its first render -- the page's first
+ *   `EAGER_COUNT` cards load their picture eagerly (Task 11, R25); left out (a
+ *   "more" page, a re-render), every picture is lazy
  * @returns {import('../../core/html.js').SafeHtml}
  */
 export function render(section, ctx = {}) {
   const compact = ctx.compact === true;
-  const cards = section.items.map((result) => previewCard.render({ result, compact }));
+  const cards = section.items.map((result, i) => previewCard.render({ result, compact, eager: ctx.cardsBefore !== undefined && ctx.cardsBefore + i < EAGER_COUNT }));
   return compact
     ? html`<div class="k-translation-grid" data-kind="translation">${cards}</div>`
     : html`<div class="stack stack--2" data-kind="translation">${cards}</div>`;

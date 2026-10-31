@@ -16,7 +16,7 @@ const ENV = { DEV_SIGN_IN: '1' };
 
 before(async () => {
   deps = await seededDeps();
-  dev = apiFor({ ...deps, env: ENV }, { env: ENV });
+  dev = apiFor(deps, { env: ENV });
 });
 after(async () => { await deps.db.end(); });
 
@@ -30,7 +30,7 @@ test('is a 404 when DEV_SIGN_IN is off', async () => {
 
 test('is a 404 on Vercel even with DEV_SIGN_IN', async () => {
   const env = { DEV_SIGN_IN: '1', VERCEL: '1' };
-  const res = await apiFor({ ...deps, env }, { env }).call('GET', '/api/auth/dev?as=owner');
+  const res = await apiFor(deps, { env }).call('GET', '/api/auth/dev?as=owner');
   assert.equal(res.status, 404);
 });
 
@@ -41,6 +41,7 @@ test('as=owner signs in, marks the browser, and redirects back', async () => {
   assert.equal(cookieValue(res.setCookies, 'dev_as'), 'owner');
   const sid = cookieValue(res.setCookies, 'sid');
   assert.ok(sid);
+  assert.equal(cookieValue(res.setCookies, 'signed_in'), '1', 'the sign-in hint, like a real sign-in');
   const me = JSON.parse((await dev.call('GET', '/api/me', { cookies: { sid } })).text);
   assert.equal(me.user.isOwner, true);
 });
@@ -82,6 +83,7 @@ test('as=guest signs out and marks the browser', async () => {
   assert.equal(res.headers.get('location'), '/');
   assert.equal(cookieValue(res.setCookies, 'dev_as'), 'guest');
   assert.equal(cookieValue(res.setCookies, 'sid'), '');
+  assert.equal(cookieValue(res.setCookies, 'signed_in'), '', 'the sign-in hint is cleared too');
 });
 
 test('an unknown role is a 400', async () => {

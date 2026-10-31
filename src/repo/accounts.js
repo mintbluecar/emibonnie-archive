@@ -7,7 +7,7 @@
  */
 import { camelRow } from './rows.js';
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 /**
  * @typedef {{ id: number, platform: string, externalId: string|null, handle: string,
  *   displayName: string|null, personId: number|null, isIdentity: boolean }} Account

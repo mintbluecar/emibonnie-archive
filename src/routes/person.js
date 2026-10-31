@@ -12,7 +12,7 @@ export const route = {
   path: '/api/person/:ig',
   cache: PUBLIC_CACHE,
   query: ['limit', 'offset'],
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  /** @param {import('../http/handler.js').RouteInput} input @param {import('../http/deps.js').Deps} deps */
   run: async ({ params, query }, deps) => {
     const view = await personView(deps, params.ig, query);
     if (!view) throw new NotFound();

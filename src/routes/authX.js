@@ -13,7 +13,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { NO_STORE } from '../http/handler.js';
 import { BadRequest } from '../http/errors.js';
 import { redirectWithCookies, jsonWithCookies } from '../http/cookies.js';
-import { limit } from '../services/limits.js';
+import { defineRoute } from '../http/defineRoute.js';
 import { signInUser, recordXSignInFailure } from '../services/session.js';
 import { issueState, takeState, clearStateCookie } from '../services/oauthState.js';
 import { authorizeUrl, exchangeCode, fetchMe } from '../services/xSignIn.js';
@@ -21,40 +21,40 @@ import { authorizeUrl, exchangeCode, fetchMe } from '../services/xSignIn.js';
 /** @param {import('../http/handler.js').RouteInput} input */
 const redirectUriFor = (input) => `${input.origin}/api/auth/x/callback`;
 
-/** Record the failure for the owner and send the user back to /me. @param {any} deps */
+/** Record the failure for the owner and send the user back to /me. @param {import('../http/deps.js').Deps} deps */
 async function signInFailed(deps) {
   await recordXSignInFailure(deps);
   return redirectWithCookies('/me?signin=failed', [clearStateCookie()]);
 }
 
-export const route = {
+export const route = defineRoute({
   method: 'GET',
   path: '/api/auth/x/start',
+  auth: 'none',
+  limit: 'signIn',
   cache: NO_STORE,
   query: ['return'],
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
   run: async (input, deps) => {
-    await limit(deps, 'signIn', input.ip);
     const verifier = randomBytes(32).toString('base64url');
     const challenge = createHash('sha256').update(verifier).digest('base64url');
-    const { state, cookie } = issueState(deps.env, { verifier, returnTo: String(input.query.return ?? '/me') });
+    const { state, cookie } = issueState(deps, { verifier, returnTo: String(input.query.return ?? '/me') });
     const url = authorizeUrl({
       clientId: deps.env.X_CLIENT_ID ?? '', redirectUri: redirectUriFor(input), state, challenge,
     });
     return redirectWithCookies(url, [cookie]);
   },
-};
+});
 
 export const callbackRoute = {
   method: 'GET',
   path: '/api/auth/x/callback',
   cache: NO_STORE,
   query: ['code', 'state', 'error'],
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  /** @param {import('../http/handler.js').RouteInput} input @param {import('../http/deps.js').Deps} deps */
   run: async (input, deps) => {
     let taken;
     try {
-      taken = takeState(deps.env, input, String(input.query.state ?? ''));
+      taken = takeState(deps, input, String(input.query.state ?? ''));
     } catch (err) {
       if (err instanceof BadRequest) return jsonWithCookies({ error: 'bad_request', message: 'bad oauth state' }, [clearStateCookie()], 400);
       throw err;
@@ -66,7 +66,7 @@ export const callbackRoute = {
       const token = await exchangeCode(deps, { code: String(input.query.code ?? ''), verifier, redirectUri: redirectUriFor(input) });
       const me = await fetchMe(deps, token);
       const signedIn = await signInUser(deps, { via: 'x', subject: me.id, handle: me.username });
-      return redirectWithCookies(returnTo, [clearStateCookie(), signedIn.cookie]);
+      return redirectWithCookies(returnTo, [clearStateCookie(), ...signedIn.cookies]);
     } catch {
       return signInFailed(deps);
     }

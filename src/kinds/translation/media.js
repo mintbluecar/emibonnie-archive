@@ -97,11 +97,41 @@ export function draftMedia(tweet) {
 const THUMB_URL = /^https:\/\/pbs\.twimg\.com\//;
 
 /**
+ * The size X's image host serves a thumbnail at (`name=`): `small`, at
+ * most 680 wide, keeping the aspect ratio. Measured 2026-10-30 with
+ * `sips` on a photo (orig 1200x675 98,102 B; `small` 680x383 37,858 B)
+ * and clip posters (orig 850x466 30,209 B -> `small` 680x373 23,572 B;
+ * orig 3840x2160 1,082,012 B -> 680x383 54,938 B). Not `360x360`
+ * (360x203, 14,121 B): the event and compact preview cards cover-crop it
+ * into a full-width 4:5 frame (~166x208 CSS px on a phone), which a
+ * 203-px-tall source would fill only by a 2-3x upscale (review R24).
+ */
+const THUMB_SIZE = 'small';
+/** A file extension on the URL's path: X ignores `name=` unless it moves into `format=`. */
+const EXTENSION = /\.([a-z]+)$/i;
+
+/**
+ * `url` at `THUMB_SIZE`: `.../a.jpg` -> `.../a?format=jpg&name=small`;
+ * a given `format` (and any other parameter) stays.
+ * @param {string} url @returns {string}
+ */
+function sized(url) {
+  const sizedUrl = new URL(url);
+  const extension = EXTENSION.exec(sizedUrl.pathname);
+  if (extension) {
+    sizedUrl.pathname = sizedUrl.pathname.slice(0, -extension[0].length);
+    if (!sizedUrl.searchParams.has('format')) sizedUrl.searchParams.set('format', extension[1].toLowerCase());
+  }
+  sizedUrl.searchParams.set('name', THUMB_SIZE);
+  return sizedUrl.href;
+}
+
+/**
  * @param {string|null} url @param {{ width: number, height: number }} size @param {boolean} video
  * @returns {import('../../http/contracts.js').ThumbVM|null}
  */
 function thumbAt(url, { width, height }, video) {
-  return url && THUMB_URL.test(url) ? { url, width, height, video } : null;
+  return url && THUMB_URL.test(url) ? { url: sized(url), width, height, video } : null;
 }
 
 /**

@@ -23,7 +23,7 @@ async function sidFor(input) {
 
 test('preview returns ready with unmapped markers and writes nothing', async () => {
   const cookies = await sidFor({ via: 'x', subject: '0', handle: 'owner' });
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
   const before = await count(deps.db, 'select count(*)::int as n from items');
   const res = await api.call('POST', '/api/add/preview', { cookies, body: { url: `https://x.com/i/status/${IDS.LONG}` } });
   assert.equal(res.status, 200, res.text);
@@ -37,7 +37,7 @@ test('preview returns ready with unmapped markers and writes nothing', async () 
 
 test('add saves and returns the item url', async () => {
   const cookies = await sidFor({ via: 'x', subject: '0', handle: 'owner' });
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
   const res = await api.call('POST', '/api/add', { cookies, body: { url: `https://x.com/i/status/${IDS.EVENT_B}` } });
   assert.equal(res.status, 200, res.text);
   const json = JSON.parse(res.text);
@@ -48,7 +48,7 @@ test('add saves and returns the item url', async () => {
 
 test('opted-out, duplicate, deleted and removed outcomes pass through', async () => {
   const cookies = await sidFor({ via: 'x', subject: '0', handle: 'owner' });
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
 
   // Duplicate: add then add again.
   await api.call('POST', '/api/add', { cookies, body: { url: `https://x.com/i/status/${IDS.EVENT_A}` } });
@@ -60,7 +60,7 @@ test('opted-out, duplicate, deleted and removed outcomes pass through', async ()
 test('a blocked user gets 403 and nothing is written', async () => {
   const { sid } = await sidFor({ via: 'x', subject: '7', handle: 'member' });
   await deps.db.transaction((tx) => tx.query("update users set blocked_at = now() where id = 'x:7'"), SYSTEM);
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
   const before = await count(deps.db, 'select count(*)::int as n from items');
   const res = await api.call('POST', '/api/add', { cookies: { sid }, body: { url: `https://x.com/i/status/${IDS.EVENT_A}` } });
   assert.equal(res.status, 403);
@@ -70,7 +70,7 @@ test('a blocked user gets 403 and nothing is written', async () => {
 
 test('a google user without a name gets 409 needs_name', async () => {
   const { sid } = await sidFor({ via: 'google', subject: 'g-1', handle: null });
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
   const res = await api.call('POST', '/api/add', { cookies: { sid }, body: { url: `https://x.com/i/status/${IDS.EVENT_A}` } });
   assert.equal(res.status, 409);
   assert.deepEqual(JSON.parse(res.text), { error: 'needs_name' });
@@ -79,7 +79,7 @@ test('a google user without a name gets 409 needs_name', async () => {
 test('a member cannot create a category; the owner can', async () => {
   const member = await sidFor({ via: 'x', subject: '8', handle: 'member2' });
   const owner = await sidFor({ via: 'x', subject: '0', handle: 'owner' });
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
 
   // Member: a new category in the preview is refused (existing-only).
   const memberRes = await api.call('POST', '/api/add/preview', {
@@ -98,7 +98,7 @@ test('a member cannot create a category; the owner can', async () => {
 
 test('the 21st add in an hour is 429', async () => {
   const cookies = await sidFor({ via: 'x', subject: '0', handle: 'owner' });
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
   let last;
   for (let i = 0; i < 21; i++) {
     last = await api.call('POST', '/api/add', { cookies, body: { url: `https://x.com/i/status/${IDS.LIVE}` } });
@@ -109,7 +109,7 @@ test('the 21st add in an hour is 429', async () => {
 
 test('foreign Origin is 403', async () => {
   const cookies = await sidFor({ via: 'x', subject: '0', handle: 'owner' });
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
   const res = await api.call('POST', '/api/add', { cookies, origin: 'https://evil.example', body: { url: `https://x.com/i/status/${IDS.EVENT_A}` } });
   assert.equal(res.status, 403);
   assert.deepEqual(JSON.parse(res.text), { error: 'forbidden' });
@@ -117,7 +117,7 @@ test('foreign Origin is 403', async () => {
 
 test('GET /api/add/options lists people, roles, events, categories and clients', async () => {
   const cookies = await sidFor({ via: 'x', subject: '0', handle: 'owner' });
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
   const res = await api.call('GET', '/api/add/options', { cookies });
   assert.equal(res.status, 200, res.text);
   const json = JSON.parse(res.text);
@@ -130,7 +130,7 @@ test('GET /api/add/options lists people, roles, events, categories and clients',
 
 test('POST /api/people adds a person and returns its id (or the existing one)', async () => {
   const cookies = await sidFor({ via: 'x', subject: '0', handle: 'owner' });
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
   const first = await api.call('POST', '/api/people', { cookies, body: { displayName: 'New Person', igHandle: 'new_person' } });
   assert.equal(first.status, 200, first.text);
   const { id } = JSON.parse(first.text);
@@ -150,14 +150,14 @@ test('adding a person has its own bucket: an exhausted edit limit does not block
   for (let i = 0; i < LIMITS.edit.limit; i++) await limit(deps, 'edit', 'x:12');
   await assert.rejects(limit(deps, 'edit', 'x:12'), RateLimited, 'the edit bucket is exhausted');
 
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
   const res = await api.call('POST', '/api/people', { cookies, body: { displayName: 'Bucket Person', igHandle: 'bucket_person' } });
   assert.equal(res.status, 200, 'adding a person is not billed to the edit bucket');
 });
 
 test('the 21st person added in an hour is 429', async () => {
   const cookies = await sidFor({ via: 'x', subject: '13', handle: 'person_adder' });
-  const api = apiFor({ ...deps, env: ENV }, { env: ENV });
+  const api = apiFor(deps, { env: ENV });
   let last;
   for (let i = 0; i < 21; i++) {
     last = await api.call('POST', '/api/people', { cookies, body: { displayName: 'Limit Person', igHandle: 'limit_person' } });
@@ -170,7 +170,7 @@ test('an add on Vercel purges home, search and the new item', async () => {
   const cookies = await sidFor({ via: 'x', subject: '77', handle: 'purger' });
   const calls = /** @type {string[][]} */ ([]);
   const env = { ...ENV, VERCEL: '1' };
-  const api = apiFor({ ...deps, env, invalidateByTag: async (tags) => calls.push(tags), log: () => {} }, { env });
+  const api = apiFor({ ...deps, invalidateByTag: async (tags) => calls.push(tags), log: () => {} }, { env });
   const res = await api.call('POST', '/api/add', { cookies, body: { url: `https://x.com/i/status/${IDS.POST}` } });
   assert.equal(res.status, 200, res.text);
   const itemId = JSON.parse(res.text).itemId;

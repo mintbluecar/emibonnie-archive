@@ -13,7 +13,7 @@ export const route = {
   path: '/api/event/:slug',
   cache: PUBLIC_CACHE,
   query: ['limit', 'offset', 'order'],
-  /** @param {import('../http/handler.js').RouteInput} input @param {any} deps */
+  /** @param {import('../http/handler.js').RouteInput} input @param {import('../http/deps.js').Deps} deps */
   run: async ({ params, query }, deps) => {
     const view = await eventView(deps, params.slug, query);
     if (!view) throw new NotFound();

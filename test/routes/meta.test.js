@@ -59,7 +59,7 @@ test('a removed, unknown or opted-out item gets only the generic site meta, with
     for (const path of [`/t/${IDS.LONG}`, '/t/1', `/t/${'9'.repeat(30)}`]) {
       const res = await apiFor(deps).call('GET', path);
       assert.equal(res.status, 200, path);
-      assert.equal(res.headers.get('cache-control'), 'public, s-maxage=60', `${path}: cached like a 404`);
+      assert.equal(res.headers.get('vercel-cdn-cache-control'), 'public, s-maxage=60', `${path}: cached like a 404`);
       assert.equal(metaContent(res.text, 'og:title'), 'solluna archive', path);
       assert.equal(metaContent(res.text, 'og:description'), deps.site.tagline, path);
       assert.ok(!res.text.includes('countdown'), path);
@@ -73,16 +73,16 @@ test('a removed, unknown or opted-out item gets only the generic site meta, with
 test('/e/<slug>: the event page with the event name; a hidden or unknown event gets the generic meta', async () => {
   const res = await apiFor(deps).call('GET', `/e/${SLUG}`);
   assert.equal(res.status, 200);
-  assert.equal(res.headers.get('cache-control'), 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400');
+  assert.equal(res.headers.get('vercel-cdn-cache-control'), 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400');
   const shown = await apiFor(deps).call('GET', `/t/${IDS.LONG}`);
-  assert.equal(shown.headers.get('cache-control'), 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400', 'a visible item: the full cache');
+  assert.equal(shown.headers.get('vercel-cdn-cache-control'), 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400', 'a visible item: the full cache');
   assert.match(res.text, /<title>SOLLUNA HAPPY DAY · solluna archive<\/title>/);
   assert.match(res.text, /EVENT PAGE/);
   assert.equal(metaContent(res.text, 'og:description'), '2026-10-19 · #SLHappyDay2026');
   const missing = await apiFor(deps).call('GET', '/e/no-such-event');
   assert.equal(missing.status, 200);
-  assert.equal(missing.headers.get('cache-control'), 'public, s-maxage=60');
-  assert.equal((await apiFor(deps).call('GET', '/e/no-such-event')).headers.get('cache-control'), 'public, s-maxage=60');
+  assert.equal(missing.headers.get('vercel-cdn-cache-control'), 'public, s-maxage=60');
+  assert.equal((await apiFor(deps).call('GET', '/e/no-such-event')).headers.get('vercel-cdn-cache-control'), 'public, s-maxage=60');
   assert.equal(metaContent(missing.text, 'og:title'), 'solluna archive');
 });
 
@@ -123,4 +123,23 @@ test('metaRoutes derives the meta routes from src/pages.js and the kinds: page p
   const pageList = [{ path: '/e/:slug', file: 'event.html', meta: /** @type {const} */ ('event') }, { path: '/search', file: 'search.html' }];
   assert.deepEqual(metaRoutes(pageList, [{ urlPrefix: '/t/' }, { urlPrefix: '/zz/' }]).map((r) => r.path), ['/e/:slug', '/t/:sourceId', '/zz/:sourceId']);
   assert.throws(() => metaRoutes([{ path: '/x/:id', file: 'x.html', meta: /** @type {any} */ ('nope') }], []), /unknown meta renderer 'nope'/);
+});
+
+/** @param {string} html @returns {string[]} every `<link rel="preload">` tag in `html` */
+const preloads = (html) => html.match(/<link rel="preload"[^>]*>/g) ?? [];
+
+test('Task 11: the item and event meta pages preload their own API request (as="fetch" with crossorigin), the same URL the page JS asks for', async () => {
+  const item = (await apiFor(deps).call('GET', `/t/${IDS.LONG}`)).text;
+  assert.deepEqual(preloads(item), [`<link rel="preload" as="fetch" href="/api/item/translation/${IDS.LONG}" crossorigin>`]);
+  const event = (await apiFor(deps).call('GET', `/e/${SLUG}`)).text;
+  assert.deepEqual(preloads(event), [`<link rel="preload" as="fetch" href="/api/event/${SLUG}" crossorigin>`]);
+  // A hidden or missing target's generic page has none: it must carry nothing of the URL (test/privacy.test.js).
+  assert.deepEqual(preloads((await apiFor(deps).call('GET', '/e/no-such-event')).text), []);
+  assert.deepEqual(preloads((await apiFor(deps).call('GET', '/t/1')).text), []);
+});
+
+test('Task 11: a " in the source id is escaped in the item page\'s preload link', () => {
+  const html = injectMeta(null, { title: 't', description: 'd', image: null }, '/api/item/translation/a"b<c');
+  assert.deepEqual(preloads(html), ['<link rel="preload" as="fetch" href="/api/item/translation/a&quot;b&lt;c" crossorigin>']);
+  assert.ok(!html.includes('a"b'), 'no raw quote');
 });

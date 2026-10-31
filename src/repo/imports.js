@@ -5,7 +5,7 @@
  * row state and the job/state index. Every state change is a repo call so
  * the two writers can't drift.
  */
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[], rowCount?: number }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 /** @typedef {'queued'|'fetched'|'needs_speakers'|'check'|'published'|'skipped'|'failed'|'attached'} RowState */
 
 /** Rows whose item (or held part) is still waiting on the owner. */
@@ -207,14 +207,16 @@ export async function jobsRecent(db, { limit }) {
 }
 
 /**
- * The rows a run processes: everything not yet terminal, oldest first.
- * @param {Tx} db @param {number} jobId
+ * The rows a run processes: everything not yet terminal, with id > `afterId`,
+ * oldest first. A cursor so a run walks every row once instead of re-picking
+ * the same head of the queue when early rows keep failing.
+ * @param {Tx} db @param {number} jobId @param {{ afterId?: number }} [page]
  * @returns {Promise<ReturnType<typeof toRow>[]>}
  */
-export async function rowsForRun(db, jobId) {
+export async function rowsForRun(db, jobId, { afterId = 0 } = {}) {
   const { rows } = await db.query(
-    `select ${ROW_COLUMNS} from import_rows where job_id = $1 and state = any($2::text[]) order by id`,
-    [jobId, ['queued', 'failed']],
+    `select ${ROW_COLUMNS} from import_rows where job_id = $1 and state = any($2::text[]) and id > $3 order by id`,
+    [jobId, ['queued', 'failed'], afterId],
   );
   return rows.map(toRow);
 }

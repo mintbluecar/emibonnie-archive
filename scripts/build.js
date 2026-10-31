@@ -12,8 +12,10 @@ import {
   writeKindsRegistries,
 } from './buildOutputs.js';
 import { runBundling } from './buildBundle.js';
+import { hashedNameOf } from './buildAssets.js';
 import { buildStyleguide } from './styleguide.js';
 import { unnamedSource } from '../src/http/router.js';
+import { siteDirOf } from './cli.js';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -114,41 +116,35 @@ async function readPageRedirects(repoRoot) {
 }
 
 /**
- * `siteDir` may be relative (to `process.cwd()`, as `loadSite` resolves
- * it) or absolute; either way it's used as-is, never re-joined onto
- * `repoRoot`.
+ * Copies the site's `theme.css` into `outDir`. `siteDir` may be relative
+ * (to `process.cwd()`, as `loadSite` resolves it) or absolute; either way
+ * it's used as-is, never re-joined onto `repoRoot`.
  * @param {string} siteDir
  * @param {string} outDir
- * @returns {{ logo: string|null }} the public path of the copied logo, if any
  */
-function copySiteAssets(siteDir, outDir) {
+function copySiteTheme(siteDir, outDir) {
   const themeSrc = path.join(siteDir, 'theme.css');
   if (existsSync(themeSrc)) cpSync(themeSrc, path.join(outDir, 'theme.css'));
+}
 
-  for (const ext of ['svg', 'png']) {
-    const logoSrc = path.join(siteDir, `logo.${ext}`);
-    if (existsSync(logoSrc)) {
-      cpSync(logoSrc, path.join(outDir, `logo.${ext}`));
-      return { logo: `/site/logo.${ext}` };
-    }
-  }
-  return { logo: null };
+/** The site's `logo.svg`, else `logo.png`, else null. @param {string} siteDir @returns {string|null} */
+function logoSourceOf(siteDir) {
+  return ['svg', 'png'].map((ext) => path.join(siteDir, `logo.${ext}`)).find((p) => existsSync(p)) ?? null;
 }
 
 /**
  * The favicon's source (Task 10c, j): the site's `favicon` setting (a
  * path inside the site folder, checked by the schema), else its logo.
- * @param {string} siteDir @param {{ favicon: string|null }} site
+ * @param {string} siteDir @param {{ favicon: string|null }} site @param {string|null} logoSrc
  * @returns {string|null}
  */
-function faviconSourceOf(siteDir, site) {
+function faviconSourceOf(siteDir, site, logoSrc) {
   if (site.favicon) {
     const src = path.join(siteDir, site.favicon);
     if (!existsSync(src)) throw new Error(`build failed: favicon ${site.favicon} is not in ${siteDir}`);
     return src;
   }
-  const logo = ['svg', 'png'].map((ext) => path.join(siteDir, `logo.${ext}`)).find((p) => existsSync(p));
-  return logo ?? null;
+  return logoSrc;
 }
 
 /**
@@ -182,7 +178,7 @@ async function readRouteRewrites() {
  */
 export async function runBuild(options = {}) {
   const repoRoot = options.repoRoot ?? REPO_ROOT;
-  const siteDir = options.siteDir ?? process.env.SITE_DIR ?? 'site';
+  const siteDir = options.siteDir ?? siteDirOf(process.env);
 
   const site = loadSite(siteDir); // throws SiteConfigError on invalid site.json
   const copy = loadCopy(siteDir);
@@ -202,7 +198,10 @@ export async function runBuild(options = {}) {
 
   const publicSiteDir = path.join(repoRoot, 'public/site');
   mkdirSync(publicSiteDir, { recursive: true });
-  const assets = copySiteAssets(siteDir, publicSiteDir);
+  copySiteTheme(siteDir, publicSiteDir);
+  // Task 11: the logo goes content-hashed into /build/ (cached immutable); runBundling copies it under this name.
+  const logoSrc = logoSourceOf(siteDir);
+  const assets = { logo: logoSrc ? `/build/${hashedNameOf(logoSrc, 'logo')}` : null };
   writeFileSync(path.join(publicSiteDir, 'site.js'), buildPublicSiteModule(site, copy, assets));
   writeFileSync(path.join(publicSiteDir, 'tokens.css'), tokensCss);
   copyRobots(repoRoot);
@@ -214,7 +213,8 @@ export async function runBuild(options = {}) {
     repoRoot,
     engineRoot: REPO_ROOT,
     siteThemePath: existsSync(siteThemePath) ? siteThemePath : null,
-    faviconPath: faviconSourceOf(siteDir, site),
+    faviconPath: faviconSourceOf(siteDir, site, logoSrc),
+    logoPath: logoSrc,
     siteDir,
     fonts: site.fonts,
   });

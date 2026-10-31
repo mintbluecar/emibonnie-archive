@@ -86,3 +86,9 @@ test('previewCard (Task 10c): a clip poster thumbnail with a â–¶ replaces the ðŸ
   assert.ok(!String(render({ result: baseResult({ hasVideo: false }) })).includes('c-thumb'));
   assert.equal((clip.match(/<a[\s>]/g) ?? []).length, 2, 'the main link and the credit link');
 });
+
+test('previewCard (Task 11): eager passes through to the thumbnail; lazy otherwise', () => {
+  const thumb = { url: 'https://pbs.twimg.com/media/a?format=jpg&name=small', width: 4, height: 3, video: false };
+  assert.match(String(render({ result: baseResult({ thumb }), eager: true })), /loading="eager" fetchpriority="high"/);
+  assert.match(String(render({ result: baseResult({ thumb }) })), /loading="lazy"/);
+});

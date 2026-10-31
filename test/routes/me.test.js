@@ -55,6 +55,32 @@ test('GET /api/me signed out is { user: null }', async () => {
   assert.deepEqual(JSON.parse(res.text), { user: null });
 });
 
+test('a session from before the hint cookie gets the hint on its next private answer; never twice, never for a visitor', async () => {
+  const token = await sidFor({ via: 'x', subject: '71', handle: 'pre_hint' });
+  const api = apiFor(deps());
+  const upgraded = await api.call('GET', '/api/me', { cookies: { sid: token } });
+  assert.equal(upgraded.status, 200, upgraded.text);
+  assert.equal(upgraded.headers.get('cache-control'), 'no-store');
+  assert.deepEqual(upgraded.setCookies.filter((c) => c.startsWith('signed_in=')), [
+    'signed_in=1; Max-Age=604800; Secure; SameSite=Lax; Path=/',
+  ]);
+  assert.ok(JSON.parse(upgraded.text).user, 'the body is unchanged');
+
+  const hinted = await api.call('GET', '/api/me', { cookies: { sid: token, signed_in: '1' } });
+  assert.deepEqual(hinted.setCookies, [], 'the hint is already there');
+  const visitor = await api.call('GET', '/api/me');
+  assert.deepEqual(visitor.setCookies, [], 'no session, no hint');
+  const stale = await api.call('GET', '/api/me', { cookies: { sid: 'not-a-session' } });
+  assert.deepEqual(stale.setCookies, [], 'an unknown sid is no session');
+});
+
+test('signing out everywhere without a hint clears it, never re-adds it', async () => {
+  const token = await sidFor({ via: 'x', subject: '72', handle: 'leaving' });
+  const res = await apiFor(deps()).call('POST', '/api/auth/signout-all', { cookies: { sid: token } });
+  assert.equal(res.status, 200, res.text);
+  assert.deepEqual(res.setCookies.filter((c) => c.startsWith('signed_in=')), ['signed_in=; Max-Age=0; Secure; SameSite=Lax; Path=/']);
+});
+
 test('a google user needs a name until they set one', async () => {
   const token = await sidFor({ via: 'google', subject: 'g-1', handle: null });
   const api = apiFor(deps());
@@ -77,7 +103,7 @@ test('a google user needs a name until they set one', async () => {
 test('POST /api/me/name rejects a handle-like or invalid name', async () => {
   const token = await sidFor({ via: 'google', subject: 'g-2', handle: null });
   const api = apiFor(deps());
-  for (const name of ['@vacantvolcanic', '', 'x'.repeat(31)]) {
+  for (const name of ['@sample_translator', '', 'x'.repeat(31)]) {
     const res = await api.call('POST', '/api/me/name', { cookies: { sid: token }, body: { name } });
     assert.equal(res.status, 400, `${name}: ${res.text}`);
   }
@@ -99,10 +125,12 @@ test('sign out clears the session; sign out all ends every session', async () =>
   const all = await api.call('POST', '/api/auth/signout-all', { cookies: { sid: token } });
   assert.equal(all.status, 200, all.text);
   assert.ok(all.setCookies.some((c) => c.startsWith('sid=') && c.includes('Max-Age=0')));
+  assert.ok(all.setCookies.some((c) => c.startsWith('signed_in=;') && c.includes('Max-Age=0')), 'sign out everywhere clears the hint');
 
   // A plain signout also works (already signed out; still returns 200 + clear).
   const out = await api.call('POST', '/api/auth/signout', { cookies: { sid: token } });
   assert.equal(out.status, 200);
+  assert.ok(out.setCookies.some((c) => c.startsWith('signed_in=;') && c.includes('Max-Age=0')), 'sign out clears the hint');
 });
 
 test('dev sign-in is 404 when VERCEL is set', async () => {
@@ -116,6 +144,7 @@ test('dev sign-in works when DEV_SIGN_IN=1 and no VERCEL', async () => {
   const res = await api.call('POST', '/api/auth/dev', { body: { as: 'member' } });
   assert.equal(res.status, 200, res.text);
   assert.ok(res.setCookies.some((c) => c.startsWith('sid=')));
+  assert.ok(res.setCookies.some((c) => c.startsWith('signed_in=1')), 'dev sign-in sets the hint too');
 });
 
 test('dev sign-in still works when VERCEL is present but empty (the e2e dev server forces it empty)', async () => {

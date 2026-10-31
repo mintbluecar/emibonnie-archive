@@ -8,6 +8,8 @@ import { BadRequest } from '../../src/http/errors.js';
 const ENV = { AUTH_SECRET: 'secret' };
 /** @param {Record<string,string>} cookies */
 const input = (cookies) => ({ cookies, params: {}, query: {}, body: undefined, origin: 'https://a', ip: null });
+/** `deps` for oauthState: `env` plus the injected clock (real time by default). @param {() => Date} [now] */
+const deps = (now = () => new Date()) => ({ env: ENV, now });
 
 /** Re-sign a state cookie payload with a new exp. */
 function expire(cookie, newExp) {
@@ -21,43 +23,47 @@ function expire(cookie, newExp) {
 }
 
 test('issueState returns a signed cookie and a state that takeState accepts', () => {
-  const { state, cookie } = issueState(ENV, { verifier: 'v', returnTo: '/add' });
+  const { state, cookie } = issueState(deps(), { verifier: 'v', returnTo: '/add' });
   assert.match(cookie, /^oauth=/);
   assert.match(cookie, /HttpOnly/);
-  const taken = takeState(ENV, input(fromCookie(cookie)), state);
+  const taken = takeState(deps(), input(fromCookie(cookie)), state);
   assert.deepEqual(taken, { verifier: 'v', returnTo: '/add', nonce: null });
 });
 
 test('takeState rejects a missing, tampered, mismatched or expired state', () => {
-  const { state, cookie } = issueState(ENV, { verifier: 'v', returnTo: '/add' });
+  const { state, cookie } = issueState(deps(), { verifier: 'v', returnTo: '/add' });
   const cookieName = fromCookie(cookie);
 
   // Missing.
-  assert.throws(() => takeState(ENV, input({}), state), BadRequest);
+  assert.throws(() => takeState(deps(), input({}), state), BadRequest);
   // Tampered signature (flip the last char).
   const tampered = cookieName.oauth.slice(0, -1) + (cookieName.oauth.endsWith('a') ? 'b' : 'a');
-  assert.throws(() => takeState(ENV, input({ oauth: tampered }), state), BadRequest);
+  assert.throws(() => takeState(deps(), input({ oauth: tampered }), state), BadRequest);
   // Mismatched state.
-  assert.throws(() => takeState(ENV, input(cookieName), 'other-state'), BadRequest);
+  assert.throws(() => takeState(deps(), input(cookieName), 'other-state'), BadRequest);
   // Expired.
   const old = expire(cookieName.oauth, Date.now() - 1000);
-  assert.throws(() => takeState(ENV, input({ oauth: old.raw }), state), BadRequest);
+  assert.throws(() => takeState(deps(), input({ oauth: old.raw }), state), BadRequest);
 });
 
-test('the state expires against the caller clock', () => {
+test('an OAuth state expires 10 minutes after deps.now()', () => {
   const t0 = Date.parse('2026-01-01T00:00:00Z');
-  const { state, cookie } = issueState(ENV, { verifier: 'v', returnTo: '/add', now: t0 });
+  const { state, cookie } = issueState(deps(() => new Date(t0)), { verifier: 'v', returnTo: '/add' });
   const cookies = fromCookie(cookie);
-  assert.equal(takeState(ENV, input(cookies), state, { now: t0 + 60_000 }).returnTo, '/add');
-  assert.throws(() => takeState(ENV, input(cookies), state, { now: t0 + 11 * 60_000 }), BadRequest, 'expired after 10 minutes');
+  assert.equal(takeState(deps(() => new Date(t0 + 60_000)), input(cookies), state).returnTo, '/add');
+  assert.throws(
+    () => takeState(deps(() => new Date(t0 + 11 * 60_000)), input(cookies), state),
+    BadRequest,
+    'expired after 10 minutes',
+  );
 });
 
 test('returnTo outside the site is rewritten to /me at issue time', () => {
   // A leading backslash is a slash to browsers: '/\evil.example' resolves to
   // https://evil.example/, so it must be refused like '//evil.example'.
   for (const bad of ['//evil.example', 'https://evil.example', '/\\evil.example']) {
-    const { state, cookie } = issueState(ENV, { verifier: null, returnTo: bad });
-    const taken = takeState(ENV, input(fromCookie(cookie)), state);
+    const { state, cookie } = issueState(deps(), { verifier: null, returnTo: bad });
+    const taken = takeState(deps(), input(fromCookie(cookie)), state);
     assert.equal(taken.returnTo, '/me');
   }
 });

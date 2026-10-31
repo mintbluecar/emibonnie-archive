@@ -7,7 +7,7 @@
 import { visibleItem } from './visibility.js';
 import { EVENT_NOT_DELETED } from './items.js';
 
-/** @typedef {{ query(sql: string, params?: unknown[]): Promise<{ rows: any[] }> }} Tx */
+/** @typedef {import('../db/common.js').Queryable} Tx */
 
 const VISIBLE = `${visibleItem('i')} and ${EVENT_NOT_DELETED}`;
 

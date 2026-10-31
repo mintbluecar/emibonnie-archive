@@ -9,7 +9,7 @@ import { IDS } from '../helpers/fixtures.js';
 import { ingestDeps, ingestLong, rows, SYSTEM } from '../helpers/ingest.js';
 import { createPeople } from '../../src/services/intakeRefs.js';
 import { getPersonByHandle } from '../../src/repo/people.js';
-import { runRemap, remapRefs, remapTargetOf } from '../../scripts/remap.js';
+import { runRemap, remapRefs } from '../../scripts/remap.js';
 import { swapPeople, textMarkerFor } from '../../src/kinds/translation/remap.js';
 import { BadRequest } from '../../src/domain/errors.js';
 
@@ -79,10 +79,8 @@ test('remapRefs: person and role pairs, a leading @ dropped, the bare ":" marker
   assert.deepEqual(remapRefs(['🌧️=person:@rain_x', ':=role:fan']), { '🌧️': { person: 'rain_x' }, ':': { role: 'fan' } });
 });
 
-test('remapTargetOf: refuses with neither DATABASE_URL nor PGLITE_DIR, and its message never holds a URL', () => {
-  assert.throws(() => remapTargetOf({}), /DATABASE_URL is not set/u);
-  assert.deepEqual(remapTargetOf({ PGLITE_DIR: '.devdb' }), { url: undefined, dir: '.devdb' });
-});
+// `remapTargetOf` moved to `scripts/cli.js` (as `dbTargetOf`, shared by
+// every CLI script's `runCli`) -- see test/scripts/cli.test.js.
 
 test('swapPeople: drops only what the old speakers gave, adds what the new ones give, keeps the rest in order', () => {
   const current = [{ personId: 1, role: 'present' }, { personId: 2, role: 'present' }, { personId: 9, role: 'present' }];

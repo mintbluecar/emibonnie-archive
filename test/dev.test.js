@@ -43,6 +43,25 @@ test('dev server: rewrites, api dispatch, 404', async () => {
   srv.close();
 });
 
+test('dev server: every Set-Cookie of a response reaches the browser, not just the last (as Vercel sends them)', async () => {
+  const handle = async () => {
+    const headers = new Headers({ 'content-type': 'application/json' });
+    headers.append('set-cookie', 'sid=abc; HttpOnly; Path=/');
+    headers.append('set-cookie', 'signed_in=1; Path=/');
+    return new Response('{}', { headers });
+  };
+  const srv = createServer({ root: 'test/fixtures/static', routes: [], rewrites: REWRITES, handle });
+  const base = await listen(srv);
+  try {
+    const res = await fetch(base + '/api/auth/dev');
+    assert.deepEqual(res.headers.getSetCookie(), ['sid=abc; HttpOnly; Path=/', 'signed_in=1; Path=/']);
+    assert.equal(res.headers.get('content-type'), 'application/json');
+  } finally {
+    srv.closeAllConnections();
+    srv.close();
+  }
+});
+
 test('dev server: a rewrite to /api hands the handler the original URL, query untouched and nothing added (as Vercel does)', async () => {
   /** @type {string[]} */
   const seen = [];

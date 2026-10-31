@@ -76,7 +76,10 @@ function toWebRequest(req, url) {
  */
 async function sendWebResponse(response, res) {
   res.statusCode = response.status;
-  for (const [key, value] of response.headers) res.setHeader(key, value);
+  // Iterating Headers yields each Set-Cookie on its own, so setHeader would keep
+  // only the last; they go together as one array (Node sends one header line each).
+  for (const [key, value] of response.headers) if (key !== 'set-cookie') res.setHeader(key, value);
+  if (response.headers.has('set-cookie')) res.setHeader('set-cookie', response.headers.getSetCookie());
   const body = response.body;
   if (!body) {
     res.end();

@@ -86,7 +86,7 @@ test('a removed entry leaves every public surface and is purged', async () => {
   const env = { VERCEL: '1' };
   const capture = async (/** @type {string[]} */ tags) => { calls.push(tags); };
   const purging = apiFor({
-    ...deps, env, log: () => {},
+    ...deps, log: () => {},
     invalidateByTag: capture, dangerouslyDeleteByTag: capture,
   }, { env });
 
@@ -166,7 +166,7 @@ test('a Google user with no X account cannot opt out', async () => {
 // --- Task 11: the dev translator sign-in for e2e ---------------------------
 
 test('dev sign-in as a translator returns the handle and a working session', async () => {
-  const dev = apiFor({ ...deps, env: { DEV_SIGN_IN: '1' } }, { env: { DEV_SIGN_IN: '1' } });
+  const dev = apiFor(deps, { env: { DEV_SIGN_IN: '1' } });
   const res = await dev.call('POST', '/api/auth/dev', { body: { as: 'translator' } });
   assert.equal(res.status, 200, res.text);
   const body = JSON.parse(res.text);

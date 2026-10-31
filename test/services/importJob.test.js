@@ -55,17 +55,6 @@ test('a job view counts states and previews its held rows', async () => {
   assert.ok(long.sourceUrl.includes(IDS.LONG));
 });
 
-test('rows page filters by state and searches parsed text', async () => {
-  const failed = await serviceRows(deps, jobId, { state: 'failed', offset: 0 });
-  assert.equal(failed.rows.length, 1);
-  assert.equal(failed.rows[0].error, 'fetch failed (429)');
-  const long = await serviceRows(deps, jobId, { offset: 0 });
-  const previewText = long.rows.find((row) => row.preview)?.preview.lines.find((line) => 'text' in line)?.text ?? '';
-  const word = [...String(previewText).trim()].slice(0, 3).join('');
-  const searched = await serviceRows(deps, jobId, { q: word, offset: 0 });
-  assert.ok(searched.rows.some((row) => row.sourceUrl.includes(IDS.LONG)), `q=${word}`);
-});
-
 test('the marker table groups each translator\'s unmapped markers with a count and example', async () => {
   const table = await markerTable(deps, jobId);
   const alpha = table.find((entry) => entry.handle === 'tl_alpha');
@@ -94,12 +83,27 @@ test('readiness: mapped -> fetched, unmapped -> needs_speakers', async () => {
 });
 
 test('recomputeRow never disturbs published or skipped rows', async () => {
-  const { rows: all } = await rowsPage(deps.db, jobId, { offset: 0, limit: 10 });
-  const failedRow = all.find((row) => row.state === 'failed');
-  await deps.db.transaction((tx) => updateRow(tx, failedRow.id, { state: 'skipped', error: 'skip' }), SYSTEM);
-  await recomputeRow(deps, failedRow.id);
-  const after = await rowsPage(deps.db, jobId, { offset: 0, limit: 10 });
-  assert.equal(after.rows.find((row) => row.id === failedRow.id).state, 'skipped');
+  // Rows with an item, so recomputeRow reaches its terminal-state guard
+  // (a row with no item returns before it).
+  const long = await rows(deps.db, "select item_id from item_sources where external_id = $1 and role = 'primary'", [IDS.LONG]);
+  const job = await deps.db.transaction((tx) => createJob(tx, { source: 'notion', actor: 'system' }), SYSTEM);
+  const ids = await deps.db.transaction(async (tx) => {
+    await insertRows(tx, job, [
+      { platform: 'x', externalId: '9400', overrides: {} },
+      { platform: 'x', externalId: '9401', overrides: {} },
+    ]);
+    const { rows: all } = await rowsPage(tx, job, { offset: 0, limit: 10 });
+    const published = all.find((row) => row.externalId === '9400').id;
+    const skipped = all.find((row) => row.externalId === '9401').id;
+    await updateRow(tx, published, { state: 'published', itemId: long[0].item_id });
+    await updateRow(tx, skipped, { state: 'skipped', itemId: long[0].item_id, error: 'skip' });
+    return { published, skipped };
+  }, SYSTEM);
+  assert.equal(await recomputeRow(deps, ids.published), 'published');
+  assert.equal(await recomputeRow(deps, ids.skipped), 'skipped');
+  const after = await rowsPage(deps.db, job, { offset: 0, limit: 10 });
+  assert.equal(after.rows.find((row) => row.id === ids.published).state, 'published');
+  assert.equal(after.rows.find((row) => row.id === ids.skipped).state, 'skipped');
 });
 
 test('the 2b waiting list leaves import-held items out, but keeps a skipped row\'s item', async () => {

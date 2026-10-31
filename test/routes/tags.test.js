@@ -84,13 +84,13 @@ test('the item and event meta pages carry the same tags', async () => {
   assert.ok((event.headers.get('vercel-cache-tag') ?? '').split(',').includes(`event:${sample.slug}`));
 });
 
-test('a signed-in item view is private and carries no cache tag', async () => {
+test('a signed-in item view is the public answer, tagged like a visitor\'s', async () => {
   const { cookie } = await signInUser(deps, { via: 'x', subject: '999999', handle: 'dev_member' });
   const token = cookie.split(';')[0].split('=')[1];
   const res = await api.call('GET', `/api/item/translation/${sample.sourceId}`, { cookies: { sid: token } });
   assert.equal(res.status, 200);
-  assert.match(res.headers.get('cache-control') ?? '', /private/);
-  assert.equal(res.headers.get('vercel-cache-tag'), null);
+  assert.match(res.headers.get('vercel-cdn-cache-control') ?? '', /^public/);
+  assert.ok((res.headers.get('vercel-cache-tag') ?? '').split(',').includes(`item:${sample.id}`));
 });
 
 test('a hidden target\'s meta page carries no tags', async () => {

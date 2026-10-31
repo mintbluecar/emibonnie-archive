@@ -228,10 +228,13 @@ async function publishJob(context, scope) {
 async function retryJob(context) {
   try {
     let processed = 0;
-    // The route takes 10 rows per request; a big job needs a few.
+    let afterId = 0;
+    // The route walks ~10 rows per request, from the cursor it hands back;
+    // a big job needs a few passes, each one past the last row seen.
     for (let attempt = 0; attempt < 200; attempt += 1) {
-      const result = await postJson(`/api/owner/imports/${context.state.jobId}/retry`);
+      const result = await postJson(`/api/owner/imports/${context.state.jobId}/retry`, { afterId });
       processed += result.processed ?? 0;
+      afterId = result.lastId ?? afterId;
       context.say(t('import.retrying', { n: processed }));
       if ((result.remaining ?? 0) <= 0) break;
     }

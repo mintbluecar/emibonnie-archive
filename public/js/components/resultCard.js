@@ -61,11 +61,11 @@ function metaLine(result) {
 }
 
 /**
- * @param {{ result: import('../../../src/http/contracts.js').SearchResult, q: string }} props
+ * @param {{ result: import('../../../src/http/contracts.js').SearchResult, q: string, eager?: boolean }} props `eager`: one of the first cards on screen (thumb.js)
  * @returns {import('../core/html.js').SafeHtml}
  */
 export function render(props) {
-  const { result, q } = props;
+  const { result, q, eager = false } = props;
   const text = result.matchLines.length > 0
     ? html`<div class="c-result-card__text">${result.matchLines.map((line) => html`<div class="c-result-card__line">${highlighted(line, q)}</div>`)}</div>`
     : bubbles.renderCompact({ bubbles: result.lines.filter((b) => b.kind !== 'note').slice(0, FALLBACK_LINES) });
@@ -77,7 +77,7 @@ export function render(props) {
           ${text}
           ${metaLine(result)}
         </div>
-        ${thumb.render(result.thumb)}
+        ${thumb.render(result.thumb, { eager })}
       </a>
       ${cardCredit.render(result)}
     </article>

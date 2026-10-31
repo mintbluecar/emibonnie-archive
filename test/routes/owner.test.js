@@ -12,6 +12,7 @@ import { apiFor } from '../helpers/api.js';
 import { signInUser } from '../../src/services/session.js';
 import { LIMITS, limit } from '../../src/services/limits.js';
 import { RateLimited } from '../../src/http/errors.js';
+import { routes } from '../../src/routes/index.js';
 
 /** @type {Awaited<ReturnType<typeof ingestDeps>>} */
 let deps;
@@ -30,7 +31,7 @@ async function sidFor(input) {
 
 before(async () => {
   deps = await ingestDeps();
-  api = apiFor({ ...deps, env: { VERCEL: '1' }, invalidateByTag: async () => {}, log: () => {} }, { env: { VERCEL: '1' } });
+  api = apiFor({ ...deps, invalidateByTag: async () => {}, log: () => {} }, { env: { VERCEL: '1' } });
   owner = await sidFor({ via: 'x', subject: deps.site.ownerXUserId, handle: 'the_owner' });
   member = await sidFor({ via: 'x', subject: '8888001', handle: 'adding_fan' });
 });
@@ -47,11 +48,19 @@ function get(path, sid) {
 }
 
 test('a member and a signed-out visitor are refused on every owner route', async () => {
-  assert.equal((await api.call('GET', '/api/owner')).status, 401);
-  assert.equal((await get('/api/owner', member)).status, 403);
-  assert.deepEqual(JSON.parse((await get('/api/owner', member)).text), { error: 'forbidden' });
-  assert.equal((await post('/api/owner/approval', member, { required: true })).status, 403);
-  assert.equal((await post('/api/owner/items/translation/1/review', member, { state: 'published' })).status, 403);
+  // Chosen by path, not by `auth`, so a route that loses its owner check fails here.
+  const ownerOnly = routes.filter((r) => r.path.startsWith('/api/owner'));
+  assert.equal(ownerOnly.length, 18, 'every owner route (update when one is added)');
+  for (const r of ownerOnly) assert.equal(r.auth, 'owner', `${r.method} ${r.path}`);
+  assert.deepEqual(routes.filter((r) => r.auth === 'owner'), ownerOnly, 'no owner route outside /api/owner');
+  for (const r of ownerOnly) {
+    const path = r.path.replace(/:kind\b/, 'translation').replace(/:[A-Za-z]+/g, '1');
+    const visitor = await api.call(r.method, path);
+    assert.equal(visitor.status, 401, `${r.method} ${r.path}`);
+    const refused = await api.call(r.method, path, { cookies: { sid: member } });
+    assert.equal(refused.status, 403, `${r.method} ${r.path}`);
+    assert.deepEqual(JSON.parse(refused.text), { error: 'forbidden' }, `${r.method} ${r.path}`);
+  }
 });
 
 test('the switch round-trips through settings and the audit log', async () => {
@@ -134,11 +143,7 @@ test('the owner sees open reports and can hide, restore and dismiss through the 
   assert.ok(!JSON.parse((await get('/api/owner', owner)).text).reports.some((report) => report.id === id));
 });
 
-test('a member cannot hide, restore or dismiss; an unknown report is 404', async () => {
-  const id = await reportItem('member may not act');
-  for (const action of ['hide', 'restore', 'dismiss']) {
-    assert.equal((await post(`/api/owner/reports/${id}/${action}`, member)).status, 403);
-  }
+test('an unknown report is 404', async () => {
   assert.equal((await post('/api/owner/reports/999999/dismiss', owner)).status, 404);
 });
 
@@ -166,10 +171,4 @@ test('the owner searches users, blocks and unblocks one, and clears the alert', 
   assert.ok(JSON.parse((await get('/api/owner', owner)).text).signInFailedAt);
   assert.equal((await post('/api/owner/sign-in-alert/dismiss', owner)).status, 200);
   assert.equal(JSON.parse((await get('/api/owner', owner)).text).signInFailedAt, null);
-});
-
-test('a member cannot search users or block anyone', async () => {
-  assert.equal((await get('/api/owner/users?q=blockable', member)).status, 403);
-  assert.equal((await post('/api/owner/users/block', member, { userId: 'x:8888009' })).status, 403);
-  assert.equal((await post('/api/owner/sign-in-alert/dismiss', member)).status, 403);
 });

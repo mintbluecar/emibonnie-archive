@@ -24,10 +24,25 @@ import { ROLE_EMOJI } from '../domain/constants.js';
  * @typedef {{ db: import('../db/common.js').Db, site: import('../site/schema.js').Site,
  *   kinds?: Record<string, Readonly<Kind>> }} ViewDeps
  */
+/** @typedef {{ kinds?: Record<string, Readonly<Kind>> }} KindsDeps */
 
-/** @param {ViewDeps} deps @returns {Record<string, Readonly<Kind>>} */
+/** @param {KindsDeps} deps @returns {Record<string, Readonly<Kind>>} */
 export function kindsOf(deps) {
   return deps.kinds ?? kindsRegistry;
+}
+
+/**
+ * The kind named `name`, from the registry (or `deps.kinds`); null for any
+ * name that isn't the registry's own key -- including a name shared with
+ * `Object.prototype` (`constructor`, `toString`, `__proto__`, ...), since a
+ * kind name can come straight from a request path (`/api/item/:kind/...`).
+ * The one guarded lookup every ad-hoc `kinds[name]` used to do for itself.
+ * @param {KindsDeps} deps @param {string} name
+ * @returns {Readonly<Kind>|null}
+ */
+export function kindNamed(deps, name) {
+  const kinds = kindsOf(deps);
+  return Object.hasOwn(kinds, name) ? kinds[name] : null;
 }
 
 /** @param {Person} person @param {(name: string) => string} format @returns {PersonChip} */
@@ -47,12 +62,11 @@ export function eventRefOf(event) {
 export async function presenterContext(deps) {
   const people = new Map((await listPeople(deps.db)).map((p) => [p.id, p]));
   const format = (/** @type {string} */ name) => formatName(deps.site, name);
-  const kinds = kindsOf(deps);
   return {
     people,
     formatName: format,
     roleEmoji: { ...ROLE_EMOJI, ...deps.site.roleEmoji },
-    urlFor: (kind, sourceId) => `${kinds[kind]?.urlPrefix ?? '/'}${sourceId}`,
+    urlFor: (kind, sourceId) => `${kindNamed(deps, kind)?.urlPrefix ?? '/'}${sourceId}`,
     chips: (list) => [...new Set(list.map((p) => p.personId))]
       .map((id) => people.get(id))
       .filter((p) => p !== undefined)
@@ -70,11 +84,10 @@ export async function presenterContext(deps) {
  * @returns {Promise<Map<number, any>>}
  */
 export async function detailsFor(deps, cards, { includePending = false } = {}) {
-  const kinds = kindsOf(deps);
   /** @type {Map<number, any>} */
   const details = new Map();
   for (const name of new Set(cards.map((c) => c.kind))) {
-    const kind = kinds[name];
+    const kind = kindNamed(deps, name);
     if (!kind) continue;
     const loaded = await kind.loadDetails(deps.db, cards.filter((c) => c.kind === name).map((c) => c.id), { includePending });
     for (const [id, entry] of loaded) details.set(id, entry);
@@ -92,12 +105,12 @@ export async function detailsFor(deps, cards, { includePending = false } = {}) {
  */
 async function presentCards(deps, ordered, ctx, options = {}) {
   const details = await detailsFor(deps, ordered, options);
-  const kinds = kindsOf(deps);
   return ordered
-    .filter((card) => kinds[card.kind] && details.has(card.id))
+    .filter((card) => kindNamed(deps, card.kind) && details.has(card.id))
     .map((card) => {
       const entry = details.get(card.id);
-      const own = /** @type {KindPreview} */ (kinds[card.kind].present.preview(card, entry, ctx));
+      const kind = /** @type {Readonly<Kind>} */ (kindNamed(deps, card.kind));
+      const own = /** @type {KindPreview} */ (kind.present.preview(card, entry, ctx));
       return { card, details: entry, preview: { ...own, occurredOn: card.occurredOn, placement: card.placement } };
     });
 }
