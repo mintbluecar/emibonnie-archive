@@ -79,13 +79,18 @@ export function findUndeclaredFontFamilies(cssTexts, allowedFamilies) {
 }
 
 /**
- * Every `var(--x)` used across `cssSources` that `tokensCss` doesn't define.
+ * Every `var(--x)` used across `cssSources` that neither `tokensCss` nor
+ * `ownSettingsCss` defines. `ownSettingsCss` is the primitives' text: a
+ * primitive's settings (`grid.css`'s `--grid-min`, ...) are custom
+ * properties it defines on itself for a screen to override, never tokens
+ * (owner-approved, 2026-11-02).
  * @param {{ path: string, text: string }[]} cssSources
  * @param {string} tokensCss
+ * @param {string[]} [ownSettingsCss]
  * @returns {string[]}
  */
-export function findMissingCssTokens(cssSources, tokensCss) {
-  const defined = findDefinedCssTokens(tokensCss);
+export function findMissingCssTokens(cssSources, tokensCss, ownSettingsCss = []) {
+  const defined = findDefinedCssTokens([tokensCss, ...ownSettingsCss].join('\n'));
   const missing = new Set();
   for (const { text } of cssSources) {
     for (const token of findUsedCssTokens(text)) {

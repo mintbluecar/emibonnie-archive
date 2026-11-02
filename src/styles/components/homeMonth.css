@@ -1,22 +1,9 @@
 /*
  * public/js/pages/home.js: each month's group -- its label (the label
  * primitive, lowercase as the spec asks: "small, bold, lowercase,
- * purple") above a grid of event cards (eventCard.js).
+ * purple") above a grid of event cards (eventCard.js, in the grid primitive).
  */
 
 .c-home-month__label {
   text-transform: lowercase;
-}
-
-.c-home-month__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: var(--space-2);
-}
-
-@media (min-width: 860px) {
-  .c-home-month__grid {
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-    gap: var(--space-3);
-  }
 }

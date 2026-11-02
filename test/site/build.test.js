@@ -53,6 +53,12 @@ test('findMissingCssTokens: passes when every used token is defined', () => {
   assert.deepEqual(missing, []);
 });
 
+test('findMissingCssTokens: a setting a primitive defines on itself counts as defined', () => {
+  const sources = [{ path: 'a.css', text: '.x { width: var(--grid-min); }' }];
+  assert.deepEqual(findMissingCssTokens(sources, ':root{}', ['.grid { --grid-min: 150px; }']), []);
+  assert.deepEqual(findMissingCssTokens(sources, ':root{}'), ['--grid-min']);
+});
+
 test("findMissingCopyKeys: fails when code uses t('nope.key')", () => {
   const missing = findMissingCopyKeys(
     [{ path: 'fixture.js', text: "t('nope.key')" }],

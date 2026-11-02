@@ -184,7 +184,8 @@ export async function runBuild(options = {}) {
   const copy = loadCopy(siteDir);
 
   const tokensCss = readFileSync(path.join(repoRoot, 'src/styles/tokens.css'), 'utf8');
-  const missingTokens = findMissingCssTokens(collectEngineCssSources(repoRoot), tokensCss);
+  const primitivesCss = walkFiles(path.join(repoRoot, 'src/styles/primitives'), '.css').map((file) => file.text);
+  const missingTokens = findMissingCssTokens(collectEngineCssSources(repoRoot), tokensCss, primitivesCss);
   if (missingTokens.length > 0) {
     throw new Error(`build failed: engine CSS uses undefined token(s): ${missingTokens.join(', ')}`);
   }

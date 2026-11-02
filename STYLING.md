@@ -429,6 +429,30 @@ the `--space-<n>` step. `cluster--fill` keeps one row and shares its
 width evenly between the children, their content centred -- a view
 switch.
 
+### Grid (`grid.css`)
+
+```html
+<div class="grid">
+  <article class="card card--flush">...</article>
+  <article class="card card--flush">...</article>
+</div>
+```
+
+A grid of cards: as many columns as fit, each at least a minimum width,
+sharing the row's leftover space -- 2 across on a phone, more on wider
+screens (home's months, the event, person and translator pages).
+
+Its settings are custom properties `.grid` defines on itself -- not
+tokens, so they're never in `tokens.css`: `--grid-min`, the narrowest
+a column may get (150px), and `--grid-gap`, the gap between cards
+(`--space-2`); from the 860px breakpoint `--grid-min-wide` (190px) and
+`--grid-gap-wide` (`--space-3`) take over. A screen that needs other
+values adds its own class next to `grid` on the same element and sets
+the setting there, e.g. `--grid-min: 120px` on `.c-widget__grid`: the
+components layer comes after primitives, so the screen's value wins.
+Set on a parent instead, it would lose to the value `.grid` defines on
+itself.
+
 ### Shared: the sheet and the container
 
 Not a primitive file, but used by more than one screen so it doesn't
@@ -474,8 +498,10 @@ look rebuilt by hand. Lint enforces both halves, inside
 
 - `selector-disallowed-list` rejects a selector naming a primitive
   class (`btn`, `field`, `check`, `card`, `table`, `chip`, `badge`,
-  `notice`, `meta`, `label`, `heading`, `stack`, `cluster`) at a real
-  boundary -- a component never re-opens a primitive's own rule.
+  `notice`, `meta`, `label`, `heading`, `stack`, `cluster`, `grid`) at
+  a real boundary -- a component never re-opens a primitive's own rule
+  (setting a primitive's settings, like `grid`'s, on its own class is
+  how a screen adjusts one).
 - `local/no-rebuilt-primitive` (`scripts/stylelint/no-rebuilt-primitive.js`)
   rejects a button- or field-like selector (a `button`, `select`,
   `textarea`, a non-checkbox/radio `input`, or a class ending in
