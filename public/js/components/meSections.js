@@ -68,7 +68,7 @@ export function tabs(state) {
  */
 export function added(state) {
   const list = state.added.length > 0
-    ? html`<ul class="c-me__list">${state.added.map(entry)}</ul>`
+    ? html`<ul class="list">${state.added.map(entry)}</ul>`
     : html`<p class="meta c-me__empty">${t('me.empty')}</p>`;
   return html`
     <h2 class="label c-me__heading">${t('me.addedByMe')}</h2>

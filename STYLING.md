@@ -396,6 +396,7 @@ track's width evenly.
 <h1 class="heading heading--lg">Import review</h1>
 <h2 class="heading heading--md">Speakers</h2>
 <h3 class="heading heading--sm">Check the details</h3>
+<span class="gradient-text">fix</span>ture archive
 ```
 
 `meta` is small muted text. `label` is a small, heavy, label-coloured
@@ -405,7 +406,10 @@ labelling a list. `tap-link` is a small text link whose target is still
 is one inside a row of small controls, `--control-sm` tall like
 `btn--sm`. `heading` sets the look, never the level -- pick the element
 (`h1`/`h2`/`h3`) for the outline and the class (`heading--lg`/`--md`/
-`--sm`) for the size.
+`--sm`) for the size. `gradient-text` (styling reuse enforcement, Task
+3) paints the primary gradient across its text, clipped to the glyphs
+-- the wordmark's accent letters; the rest of the wordmark beside it
+stays plain text.
 
 ### Spacing and layout (`spacing.css`)
 
@@ -452,6 +456,19 @@ the setting there, e.g. `--grid-min: 120px` on `.c-widget__grid`: the
 components layer comes after primitives, so the screen's value wins.
 Set on a parent instead, it would lose to the value `.grid` defines on
 itself.
+
+### List (`list.css`)
+
+```html
+<ul class="list stack stack--2">...</ul>
+<ul class="list c-import-speakers__entries">...</ul>
+```
+
+A `<ul>`/`<ol>` used as a layout container rather than a bulleted list
+(styling reuse enforcement, Task 3): no browser marker, no inherited
+margin or padding. Pair it with `stack`/`cluster` for the gap between
+items, or add the block's own class next to it for the layout its
+items need (a grid, dividers between rows, ...).
 
 ### Shared: the sheet and the container
 

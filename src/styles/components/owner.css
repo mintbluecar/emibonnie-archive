@@ -34,12 +34,6 @@
   margin: var(--space-3) 0 var(--space-2);
 }
 
-.c-owner__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
 /* A waiting entry (its preview card, then approve/reject) or an import
    job, with a divider between rows. */
 .c-owner__row {

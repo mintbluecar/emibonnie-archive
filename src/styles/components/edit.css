@@ -24,12 +24,6 @@
   margin-top: var(--space-3);
 }
 
-.c-edit__edits {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
 .c-edit__edit {
   display: grid;
   grid-template-columns: 1fr auto;

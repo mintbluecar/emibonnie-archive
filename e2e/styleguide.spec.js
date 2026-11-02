@@ -145,7 +145,7 @@ function computed(page, selector, property, pseudo) {
 }
 
 /** The primitive sections (Task 4), in page order. */
-const PRIMITIVE_SECTIONS = ['#button', '#field', '#card', '#table', '#chip', '#badge', '#notice', '#segmented', '#text', '#spacing', '#grid'];
+const PRIMITIVE_SECTIONS = ['#button', '#field', '#card', '#table', '#chip', '#badge', '#notice', '#segmented', '#text', '#spacing', '#grid', '#list'];
 
 /**
  * WCAG contrast of two computed colours (opaque): `rgb(r, g, b)` with

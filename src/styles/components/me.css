@@ -36,12 +36,6 @@
   margin: var(--space-3) var(--space-1) var(--space-2);
 }
 
-.c-me__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
 .c-me__entry {
   margin-bottom: var(--space-3);
 }

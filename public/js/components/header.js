@@ -95,7 +95,7 @@ function brand(compact) {
       <div class="c-header__row">
         ${site.logo ? html`<img class="c-header__logo" src="${site.logo}" alt="" width="34" height="34">` : ''}
         <span class="c-header__wordmark">
-          <span class="c-header__accent">${site.wordmark.accent}</span>${site.wordmark.rest}
+          <span class="gradient-text">${site.wordmark.accent}</span>${site.wordmark.rest}
         </span>
       </div>
       ${compact ? '' : tagline('bar')}

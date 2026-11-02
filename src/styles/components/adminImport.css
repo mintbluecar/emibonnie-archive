@@ -56,13 +56,6 @@
   justify-content: space-between;
 }
 
-.c-import-speakers__markers,
-.c-import-speakers__entries {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
 .c-import-speakers__marker {
   display: grid;
   grid-template-columns: 28px 28px 1fr 180px auto;

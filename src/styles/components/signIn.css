@@ -32,13 +32,6 @@
   font-weight: var(--weight-heavy);
 }
 
-.c-signin__accent {
-  background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
 .c-signin__badge {
   margin-top: var(--space-1);
 }

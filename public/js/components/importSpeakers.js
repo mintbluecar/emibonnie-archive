@@ -72,7 +72,7 @@ function entryRow(group, marker, entry, catalogue) {
 function markerRow(group, marker, catalogue, view) {
   const open = view.expanded.has(markerKey(group, marker));
   const entries = marker.entries.length > 0 ? html`
-    <ul class="c-import-speakers__entries">
+    <ul class="list c-import-speakers__entries">
       ${marker.entries.map((entry) => entryRow(group, marker, entry, catalogue))}
     </ul>
   ` : '';
@@ -114,7 +114,7 @@ function card(group, catalogue, view) {
         <h3 class="heading heading--sm">${group.handle ? `@${group.handle}` : t('import.speakers.none')}</h3>
         <span class="meta">${t('import.speakers.entries', { n: entryCountOf(group) })}</span>
       </header>
-      <ul class="c-import-speakers__markers">
+      <ul class="list">
         ${group.markers.map((marker) => markerRow(group, marker, catalogue, view))}
       </ul>
       <label class="check meta c-import-speakers__remember">

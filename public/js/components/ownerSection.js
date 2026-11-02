@@ -121,7 +121,7 @@ function waitingBlock(owner) {
   `);
   return html`
     <h3 class="label c-owner__heading">${t('owner.waiting')}</h3>
-    ${rows.length > 0 ? html`<ul class="c-owner__list">${rows}</ul>` : html`<p class="meta">${t('owner.waitingEmpty')}</p>`}
+    ${rows.length > 0 ? html`<ul class="list">${rows}</ul>` : html`<p class="meta">${t('owner.waitingEmpty')}</p>`}
   `;
 }
 
@@ -142,7 +142,7 @@ function importsBlock(owner) {
   });
   return html`
     <h3 class="label c-owner__heading">${t('owner.imports')}</h3>
-    <ul class="c-owner__list">${rows}</ul>
+    <ul class="list">${rows}</ul>
   `;
 }
 
