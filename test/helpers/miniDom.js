@@ -122,11 +122,15 @@ export class MiniElement {
     for (const node of parseFragment(html)) this.appendChild(node);
   }
 
-  /** @param {string} type @param {(e: any) => void} fn */
-  addEventListener(type, fn) {
+  /** @param {string} type @param {(e: any) => void} fn @param {{ signal?: AbortSignal }} [options] */
+  addEventListener(type, fn, options = {}) {
+    if (options.signal?.aborted) return;
     const list = this.listeners.get(type) ?? [];
     list.push(fn);
     this.listeners.set(type, list);
+    options.signal?.addEventListener('abort', () => {
+      this.listeners.set(type, (this.listeners.get(type) ?? []).filter((f) => f !== fn));
+    });
   }
 
   /** @param {{ type: string, target?: MiniElement }} event */

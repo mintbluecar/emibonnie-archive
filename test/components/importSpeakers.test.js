@@ -4,7 +4,8 @@ import '../helpers/siteFixture.js';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { MiniElement } from '../helpers/miniDom.js';
-import { mount } from '../../public/js/core/dom.js';
+import { mount, mountPage } from '../../public/js/core/dom.js';
+import { ShellHtml } from '../../public/js/core/html.js';
 import { postJson } from '../../public/js/core/api.js';
 import { copyRe } from '../helpers/copyMarkup.js';
 import { withGlobals } from '../helpers/globals.js';
@@ -150,6 +151,22 @@ test('review toggles the marker open and closed and remembers the choice', async
   mount(root, render({ markers: st.markers, people: PEOPLE, roles: ROLES, expanded: st.expanded, remember: st.remember }));
   let reloads = 0;
   bind(/** @type {any} */ (root), { state: st, map: async () => ({}), reload: async () => { reloads += 1; } });
+  /** @type {any} */ (root.querySelector('[data-action="review"]')).click();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.ok(st.expanded.has('3:☀️'));
+  assert.equal(reloads, 1);
+});
+
+test('review still opens a marker after the page has repainted and bound again (the owner bug: it did nothing)', async () => {
+  const st = state({ markers: [group()] });
+  const root = new MiniElement('div');
+  let reloads = 0;
+  const paint = () => {
+    mountPage(/** @type {any} */ (root), new ShellHtml(String(render({ markers: st.markers, people: PEOPLE, roles: ROLES, expanded: st.expanded, remember: st.remember }))));
+    bind(/** @type {any} */ (root), { state: st, map: async () => ({}), reload: async () => { reloads += 1; paint(); } });
+  };
+  paint();
+  paint();
   /** @type {any} */ (root.querySelector('[data-action="review"]')).click();
   await new Promise((resolve) => setTimeout(resolve, 10));
   assert.ok(st.expanded.has('3:☀️'));
