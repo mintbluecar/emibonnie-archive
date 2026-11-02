@@ -39,3 +39,4 @@ public/js/kinds/_registry.js
 .gstack/
 /links.txt
 /import-report.csv
+/.devdb-engine/

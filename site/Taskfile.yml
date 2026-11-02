@@ -294,6 +294,37 @@ tasks:
       - npm run seed-dev
       - npm run dev:watch
 
+  dev:engine:
+    desc: "Like dev, but on ../fan-archive's engine code: engine edits show up here without a merge"
+    summary: |
+      Runs `npm run dev:watch` inside the fan-archive checkout with
+      SITE_DIR set to this repo's site/, so you edit the engine there and
+      site/ here and both rebuild. The engine is ../fan-archive next to
+      this repo, or FAN_ARCHIVE=<path>. For development only: the live
+      site still gets engine changes by merging fan-archive into this
+      repo (docs/start-your-own.md, step 10).
+      Its local data is .devdb-engine (gitignored), apart from .devdb:
+      the engine may have migrations this checkout doesn't, and an older
+      engine refuses a database it doesn't recognise. Seeded from
+      site/seed the first time and migrated on every start; delete
+      .devdb-engine to start over. The build lands in fan-archive's own
+      gitignored output folders.
+    env:
+      SITE_ROOT: '{{.TASKFILE_DIR}}/..'
+      DATABASE_URL: ''
+      VERCEL: ''
+    cmds:
+      - |
+        engine="${FAN_ARCHIVE:-$SITE_ROOT/../fan-archive}"
+        if [ ! -f "$engine/package.json" ]; then
+          echo "No engine at $engine -- clone fan-archive there, or set FAN_ARCHIVE=<path>." >&2
+          exit 1
+        fi
+        export SITE_DIR="$SITE_ROOT/site" PGLITE_DIR="$SITE_ROOT/.devdb-engine"
+        cd "$engine"
+        if [ -d "$PGLITE_DIR" ]; then npm run migrate; else npm run seed-dev; fi
+        npm run dev:watch
+
   dev:pull:
     desc: "Replace .devdb with a copy of production's data (only reads production)"
     summary: |
