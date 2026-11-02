@@ -50,6 +50,7 @@
   padding-left: var(--space-1);
 }
 
+/* not shared: a checkbox beside an entry's title; matches the chat bubble's avatar row only by being a top-aligned flex row */
 .c-me__entry-top {
   display: flex;
   align-items: flex-start;

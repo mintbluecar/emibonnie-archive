@@ -16,6 +16,7 @@
   margin-bottom: var(--space-1);
 }
 
+/* not shared: a search snippet sized for the card; the bubbles' plain line follows the speech bubbles beside it instead */
 .c-result-card__line {
   overflow-wrap: anywhere;
   font-size: var(--text-13);

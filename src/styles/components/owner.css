@@ -16,6 +16,7 @@
   margin-bottom: var(--space-3);
 }
 
+/* not shared: an error notice with its dismiss button; matches the me page's account card header only by the generic text-then-actions row */
 .c-owner__alert {
   display: flex;
   align-items: center;
