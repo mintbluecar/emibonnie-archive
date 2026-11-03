@@ -243,7 +243,7 @@ test('retryJob sends the cursor back and stops at remaining 0', async () => {
 
 test('the select offers a new person and "not a speaker" between the people and the roles', () => {
   const [select] = selectsOf(String(render({ markers: [group()], people: PEOPLE, roles: ROLES, expanded: new Set(), remember: true })));
-  assert.match(select, copyRe(t('add.newPerson')));
+  assert.match(select, copyRe(t('import.marker.newPerson')));
   assert.match(select, copyRe(t('import.marker.notSpeaker')));
   assert.ok(select.indexOf('person:6') < select.indexOf('value="new"'), 'people first');
   assert.ok(select.indexOf('value="plain"') < select.indexOf('role:fan'), 'roles last');

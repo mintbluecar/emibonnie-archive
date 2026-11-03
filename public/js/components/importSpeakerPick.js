@@ -42,7 +42,7 @@ export function speakerSelect(catalogue, { attr, value, label }) {
   return html`<div class="field c-import-speakers__pick"><span class="field__select"><select ${attr}="${value}" aria-label="${label}" data-speaker-select>
     <option value="">${t('import.marker.choose')}</option>
     ${catalogue.people.map((person) => html`<option value="person:${person.id}">${person.displayName}</option>`)}
-    <option value="${NEW_PERSON}">${t('add.newPerson')}</option>
+    <option value="${NEW_PERSON}">${t('import.marker.newPerson')}</option>
     <option value="${NOT_SPEAKER}">${t('import.marker.notSpeaker')}</option>
     ${catalogue.roles.map((role) => html`<option value="role:${role}">${role}</option>`)}
   </select></span></div>`;

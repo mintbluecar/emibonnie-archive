@@ -131,6 +131,14 @@
     grid-column: 1 / -1;
   }
 
+  /* Stacked, the new person's fields sit right under the select, before
+     the save button that sends them. */
+  .c-import-speakers__actions,
+  .c-import-speakers__check,
+  .c-import-speakers__entries {
+    order: 1;
+  }
+
   .c-import-speakers__entry {
     grid-template-columns: 1fr;
     padding-left: 0;
