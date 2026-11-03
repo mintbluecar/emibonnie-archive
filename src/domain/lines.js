@@ -13,6 +13,18 @@
 
 /** A label marker: 1-3 alphanumerics, at least one a letter (M1b: a bare number, e.g. a clock time's "10", is never a marker). */
 const LABEL_MARKER = /^(?=.*[A-Za-z])[A-Za-z0-9]{1,3}$/;
+/**
+ * A word marker: one Latin-letter name of 4-20 characters (an apostrophe
+ * or hyphen inside, as in "P'Nam" or "P’Nok"), for translators who name
+ * speakers instead of using emoji (owner request, 2026-11-02). Unlike the
+ * others it needs a space after its colon, so "https://…" stays text.
+ */
+const WORD_MARKER = /^[A-Za-z][A-Za-z'’-]{3,19}$/;
+/**
+ * Words that open a translator's own aside, never a speaker: kept as
+ * text, in any case. The real archive had "Note:" and "Update:" lines.
+ */
+const NOT_SPEAKERS = new Set(['note', 'notes', 'update', 'edit', 'translation', 'translations', 'translator', 'context', 'source', 'credit', 'credits', 'spoiler', 'spoilers', 'warning', 'reminder', 'link', 'links']);
 const FOOTNOTE_PREFIX = /^(\*{1,2})\s(.*)$/;
 /**
  * The bare-colon marker: a line opened by ':' with no marker before it
@@ -50,6 +62,15 @@ function isEmojiMarker(candidate) {
   if (graphemes.length !== 1) return false;
   const [grapheme] = graphemes;
   return /\p{Extended_Pictographic}/u.test(grapheme) || FLAG_MARKER.test(grapheme) || KEYCAP_MARKER.test(grapheme);
+}
+
+/**
+ * Whether `candidate` is a word marker (`WORD_MARKER`, not an aside
+ * word). A 1-3 character label is a `LABEL_MARKER` instead.
+ * @param {string} candidate
+ */
+export function isWordMarker(candidate) {
+  return WORD_MARKER.test(candidate) && !NOT_SPEAKERS.has(candidate.toLowerCase());
 }
 
 /** @param {string} candidate */
@@ -90,14 +111,16 @@ function markersOf(candidate) {
  * false joint marker, or cut a multi-codepoint single marker like a ZWJ
  * sequence mid-cluster). It's a marker when the whole prefix is a whole
  * emoji grapheme cluster, a short (1-3 character, at least one letter)
- * label, or 2 to `MAX_JOINT_MARKERS` such emoji run together (a joint
- * marker). `null` otherwise.
+ * label, a one-word name followed by a space (`isWordMarker`), or 2 to
+ * `MAX_JOINT_MARKERS` such emoji run together (a joint marker). `null`
+ * otherwise.
  * @param {string} line
  * @param {number} colonIndex
  * @returns {{marker: string, markers: string[]}|null}
  */
 function markerBefore(line, colonIndex) {
   const candidate = line.slice(0, colonIndex).trim();
+  if (isWordMarker(candidate)) return /\s/.test(line.charAt(colonIndex + 1)) ? { marker: candidate, markers: [candidate] } : null;
   const markers = markersOf(candidate);
   return markers ? { marker: candidate, markers } : null;
 }

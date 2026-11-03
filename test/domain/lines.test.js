@@ -87,8 +87,9 @@ test('splitLines: a flag (regional indicator pair) is a single marker', () => {
   assert.deepEqual(splitLines('🇹🇭: x'), [{ kind: 'speech', marker: '🇹🇭', markers: ['🇹🇭'], text: 'x' }]);
 });
 
-test("splitLines: a short text label (\"P'Nam:\") is unchanged (never treated as joint)", () => {
-  assert.deepEqual(splitLines("P'Nam: x"), [{ kind: 'plain', text: "P'Nam: x" }]);
+test("splitLines: a name with an apostrophe (\"P'Nam:\") is one word marker, never treated as joint", () => {
+  assert.deepEqual(splitLines("P'Nam: x"), [{ kind: 'speech', marker: "P'Nam", markers: ["P'Nam"], text: 'x' }]);
+  assert.deepEqual(splitLines('P’Nok: x'), [{ kind: 'speech', marker: 'P’Nok', markers: ['P’Nok'], text: 'x' }]);
 });
 
 test('splitLines: a joint-looking prefix with no colon is plain', () => {
@@ -142,7 +143,7 @@ test('splitLines: a number-only prefix is never a marker', () => {
   assert.deepEqual(splitLines('[10]: x'), [{ kind: 'plain', text: '[10]: x' }]);
 });
 
-test('splitLines: existing letter labels still work ("P\'Nam:" stays plain, as before; "EN:" is still a marker)', () => {
+test('splitLines: existing letter labels still work ("EN:" is still a marker)', () => {
   assert.deepEqual(splitLines('EN: hi'), [{ kind: 'speech', marker: 'EN', markers: ['EN'], text: 'hi' }]);
 });
 
@@ -172,4 +173,28 @@ test('findMarkers: a line whose only speech is a joint marker still yields both 
     { marker: '🐸', count: 1 },
     { marker: '🐱', count: 1 },
   ]);
+});
+
+test('a one-word name before ": " is a speaker (owner request: not every translator uses emoji)', () => {
+  assert.deepEqual(splitLines('Juniper: hi there'), [{ kind: 'speech', marker: 'Juniper', markers: ['Juniper'], text: 'hi there' }]);
+  assert.deepEqual(splitLines('Tomas: x'), [{ kind: 'speech', marker: 'Tomas', markers: ['Tomas'], text: 'x' }]);
+});
+
+test('a word marker needs a space after its colon, so a URL or a clock stays text', () => {
+  assert.equal(isSpeechLine('https://x.com/solluna/status/1'), false);
+  assert.equal(isSpeechLine('Juniper:hi'), false);
+  assert.equal(isSpeechLine('10:30 the show starts'), false);
+});
+
+test('annotation words ("Note:", "Update:", "Translation:" ...) stay text, in any case', () => {
+  for (const word of ['Note', 'NOTE', 'update', 'Edit', 'Translation', 'Context', 'Credits']) {
+    assert.equal(isSpeechLine(`${word}: something`), false, word);
+  }
+});
+
+test('more than one word, or a non-Latin letter, is never a word marker', () => {
+  assert.equal(isSpeechLine('Fun fact: x'), false);
+  assert.equal(isSpeechLine('Juniper Tomas: x'), false);
+  assert.equal(isSpeechLine('Café: x'), false);
+  assert.equal(isSpeechLine('Averyveryverylongname: x'), false);
 });

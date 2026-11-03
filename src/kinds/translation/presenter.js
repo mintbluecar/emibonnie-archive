@@ -4,7 +4,7 @@
  * every name, standard emoji, colour and continuation resolved here, the
  * cast, credits and the pinned media. Text stays raw; the page escapes it.
  */
-import { BARE_MARKER } from '../../domain/lines.js';
+import { BARE_MARKER, isWordMarker } from '../../domain/lines.js';
 import { parseHeader } from '../../domain/header.js';
 import { LIVE_PATTERNS, ROLE_EMOJI } from '../../domain/constants.js';
 import { resolveMedia, hasVideo, thumbOf, clipByOf, publicSources } from './media.js';
@@ -30,12 +30,12 @@ const PREVIEW_LINES = 2;
 
 /**
  * The emoji a marker shows as itself (a role's, or an unmapped marker's):
- * the marker, except the bare-colon marker, which has none -- its bubble
- * gets a blank neutral avatar (fix round 2).
+ * the marker, except the bare-colon marker and a word marker ("Juniper"),
+ * which have none -- the bubble gets a blank neutral avatar (fix round 2).
  * @param {string} marker @returns {string}
  */
 function ownEmojiOf(marker) {
-  return marker === BARE_MARKER ? '' : marker;
+  return marker === BARE_MARKER || isWordMarker(marker) ? '' : marker;
 }
 
 /**
@@ -66,7 +66,8 @@ function speakerOf(marker, speakers, ctx) {
   const person = speaker && 'person' in speaker ? ctx.people.get(speaker.person) : undefined;
   if (person) return { emoji: person.emoji, name: ctx.formatName(person.displayName), person };
   if (speaker && 'role' in speaker) return { emoji: roleEmojiOf(marker, speaker.role, ctx), name: speaker.role, person: undefined };
-  return { emoji: ownEmojiOf(marker), name: null, person: undefined };
+  // Never mapped: a word marker is at least a name; anything else, nobody yet.
+  return { emoji: ownEmojiOf(marker), name: isWordMarker(marker) ? marker : null, person: undefined };
 }
 
 /**
