@@ -89,6 +89,13 @@ test('the owner maps the marker in bulk, publishes, and the entry goes public', 
   ]);
   expect(listWidth, 'the entry list spans the marker row').toBeGreaterThanOrEqual(rowWidth - 1);
 
+  // "review" keeps toggling after the page has repainted: each repaint
+  // once stacked another click handler, so a second click undid itself.
+  await marker.locator('[data-action="review"]').click();
+  await expect(page.locator('.c-import-speakers__entries')).toHaveCount(0);
+  await marker.locator('[data-action="review"]').click();
+  await expect(page.locator('.c-import-speakers__entries').first()).toBeVisible();
+
   // Map it in bulk to a role: every entry using it is filled, and the row
   // becomes ready to publish.
   await marker.locator('[data-marker-select]').selectOption('role:fan');

@@ -32,6 +32,12 @@ export function mount(el, safeHtml) {
  * round 2, C1). Never used for a page's later, partial re-renders
  * (e.g. item.js's body-only reload) -- those stay plain `mount()`.
  *
+ * A page may mount again to repaint itself whole (me.js, adminImport.js)
+ * and bind afresh: mounting drops every `on()` listener bound on `root`
+ * before it, since the page they were bound for is gone. Without that,
+ * each repaint stacked another copy of every handler, and a toggle
+ * clicked under an even number of copies undid itself.
+ *
  * Requires `ShellHtml` -- the type only `pageShell.render()` returns
  * (public/js/components/pageShell.js) -- so a page can never mount
  * without the shell (spec "5. The shell is not optional"). Any other
@@ -46,25 +52,36 @@ export function mountPage(root, safeHtml) {
     throw new TypeError('mountPage() expects pageShell.render(...)');
   }
   mount(root, safeHtml);
+  listenersOf.get(root)?.abort();
+  listenersOf.delete(root);
   bindThemeToggles();
   root.setAttribute('data-ready', '');
 }
 
+/** Aborts, on `mountPage()`, the `on()` listeners bound on that root. @type {WeakMap<object, AbortController>} */
+const listenersOf = new WeakMap();
+
 /**
  * A delegated event listener: `fn(event, target)` runs when `event` fires
- * on, or bubbles from, a descendant of `el` matching `selector`.
- * @param {{ addEventListener: (event: string, fn: (e: any) => void) => void, contains: (node: any) => boolean }} el
+ * on, or bubbles from, a descendant of `el` matching `selector`. It lives
+ * until the next `mountPage(el, …)`.
+ * @param {{ addEventListener: (event: string, fn: (e: any) => void, options: { signal: AbortSignal }) => void, contains: (node: any) => boolean }} el
  * @param {string} selector
  * @param {string} event
  * @param {(e: any, target: any) => void} fn
  * @returns {void}
  */
 export function on(el, selector, event, fn) {
+  let controller = listenersOf.get(el);
+  if (!controller) {
+    controller = new AbortController();
+    listenersOf.set(el, controller);
+  }
   el.addEventListener(event, (e) => {
     const start = e.target;
     const target = start && typeof start.closest === 'function' ? start.closest(selector) : null;
     if (target && el.contains(target)) fn(e, target);
-  });
+  }, { signal: controller.signal });
 }
 
 /** A plain 6-digit hex colour (`#rrggbb`), the only shape `data-c` may carry. */

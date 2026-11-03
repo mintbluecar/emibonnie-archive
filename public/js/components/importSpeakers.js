@@ -9,6 +9,7 @@ import { html } from '../core/html.js';
 import { on } from '../core/dom.js';
 import { postJson } from '../core/api.js';
 import { t } from '../core/site.js';
+import { speakerSelect, newPersonFields, rowId, bindPick, answerOf } from './importSpeakerPick.js';
 
 /**
  * @typedef {{ itemId: number, kind: string, sourceId: string, text: string }} MarkerEntry
@@ -17,28 +18,18 @@ import { t } from '../core/site.js';
  * @typedef {{ id: number, displayName: string, igHandle?: string|null }} Person
  * @typedef {{ people: Person[], roles: string[] }} Catalogue
  * @typedef {{ jobId: number, expanded: Set<string>, remember: boolean }} SpeakersState
- * @typedef {{ person: number }|{ role: string }} Speaker
  * @typedef {{ root: Element, state: SpeakersState, map: (body: any) => Promise<any>,
  *   reload: () => Promise<void>, say: (text: string) => void, fail: () => void }} BindContext
  */
 
-/** The key a marker's "review" toggle stores in `expanded`. @param {MarkerGroup} group @param {Marker} marker */
-export function markerKey(group, marker) {
-  return `${group.accountId}:${marker.marker}`;
-}
-
 /**
- * A select of the known people first, then the roles, then nothing
- * selected: the value is `person:<id>`, `role:<name>` or `''`.
- * @param {Catalogue} catalogue
- * @param {{ attr: string, value: string, label: string, extra?: string }} field
+ * The key a marker's "review" toggle stores in `expanded`. The
+ * "translator unknown" card's null account is '', as its `data-account`
+ * renders, so the toggle (which reads that attribute) finds the same key.
+ * @param {MarkerGroup} group @param {Marker} marker
  */
-function speakerSelect(catalogue, { attr, value, label, extra = '' }) {
-  return html`<div class="field c-import-speakers__pick"><span class="field__select"><select ${attr}="${value}" aria-label="${label}" ${extra}>
-    <option value="">${t('import.marker.choose')}</option>
-    ${catalogue.people.map((person) => html`<option value="person:${person.id}">${person.displayName}</option>`)}
-    ${catalogue.roles.map((role) => html`<option value="role:${role}">${role}</option>`)}
-  </select></span></div>`;
+export function markerKey(group, marker) {
+  return `${group.accountId ?? ''}:${marker.marker}`;
 }
 
 /**
@@ -53,12 +44,12 @@ function entryRow(group, marker, entry, catalogue) {
         attr: 'data-entry-select',
         value: String(entry.itemId),
         label: `${marker.marker} ${entry.sourceId}`,
-        extra: `data-marker="${marker.marker}" data-account="${group.accountId}"`,
       })}
       <button class="btn btn--secondary btn--sm btn--icon" type="button" data-action="save-entry" data-item="${entry.itemId}"
         data-marker="${marker.marker}" data-account="${group.accountId}"
         title="${t('import.marker.save')}" aria-label="${t('import.marker.save')}">✓</button>
       <span class="meta c-import-speakers__text">${entry.text}</span>
+      ${newPersonFields(rowId([group.accountId, marker.marker, entry.itemId]))}
     </li>
   `;
 }
@@ -91,6 +82,7 @@ function markerRow(group, marker, catalogue, view) {
         <button class="btn btn--secondary btn--sm" type="button" data-action="review"
           data-marker="${marker.marker}" data-account="${group.accountId}" aria-expanded="${String(open)}">${t('import.marker.review', { n: marker.entries.length })}</button>
       </div>
+      ${newPersonFields(rowId([group.accountId, marker.marker]))}
       ${check}
       ${open ? entries : ''}
     </li>
@@ -154,49 +146,42 @@ function attrOf(button, attribute) {
 }
 
 /**
- * The select in `button`'s row (a marker or an entry), its current value.
- * @param {Element} button @param {string} rowSelector @param {string} selectSelector
+ * Sends the answer in `button`'s row (a marker or an entry), creating a
+ * new person first when that's the answer. Nothing chosen sends nothing;
+ * a new person who couldn't be added, or a save that changed no entry,
+ * says so.
+ * @param {BindContext} context @param {Element} button
+ * @param {{ row: string, select: string, extra?: Record<string, unknown> }} where
  */
-function rowValue(button, rowSelector, selectSelector) {
-  const row = /** @type {Element|null} */ (button.closest(rowSelector));
-  const select = /** @type {HTMLSelectElement|null} */ (row?.querySelector(selectSelector) ?? null);
-  return select?.value ?? '';
-}
-
-/** @param {string} value @returns {Speaker|null} */
-function speakerOf(value) {
-  if (value.startsWith('person:')) return { person: Number(value.slice('person:'.length)) };
-  if (value.startsWith('role:')) return { role: value.slice('role:'.length) };
-  return null;
-}
-
-/**
- * The map request for one marker or one entry, or null when no speaker
- * was chosen (the select's first option).
- * @param {SpeakersState} state @param {Element} button @param {string} value
- * @param {Record<string, unknown>} [extra]
- */
-function mappingBody(state, button, value, extra = {}) {
-  const speaker = speakerOf(value);
-  if (!speaker) return null;
-  return {
-    accountId: Number(attrOf(button, 'data-account')),
-    marker: attrOf(button, 'data-marker'),
-    speaker,
-    remember: state.remember,
-    ...extra,
-  };
+async function sendAnswer(context, button, { row, select, extra = {} }) {
+  const rowEl = button.closest(row);
+  if (!rowEl) return;
+  let speaker;
+  try {
+    speaker = await answerOf(rowEl, select, (input) => postJson('/api/people', input));
+  } catch {
+    context.say(t('add.personFailed'));
+    return;
+  }
+  if (!speaker) return;
+  // "translator unknown" renders no account (''): entries credited to no one.
+  const account = attrOf(button, 'data-account');
+  const accountId = account === '' ? null : Number(account);
+  const marker = attrOf(button, 'data-marker');
+  // "not a speaker" is for this import only: never remembered.
+  const remember = 'plain' in speaker ? false : context.state.remember;
+  const result = await context.map({ accountId, marker, speaker, remember, ...extra });
+  // Nothing to repaint, and a repaint would wipe the message.
+  if (result?.updated === 0) { context.say(t('import.marker.nothing')); return; }
+  await context.reload();
 }
 
 /** @param {BindContext} context */
 function bindMapping(context) {
-  const { state, map, reload, fail } = context;
-  /** @param {Element} button @param {string} rowSelector @param {string} selectSelector @param {Record<string, unknown>} [extra] */
-  const send = (button, rowSelector, selectSelector, extra) => {
-    const body = mappingBody(state, button, rowValue(button, rowSelector, selectSelector), extra);
-    if (!body) return;
-    void map(body).then(reload).catch(fail);
-  };
+  const { state, reload, fail } = context;
+  /** @param {Element} button @param {string} row @param {string} select @param {Record<string, unknown>} [extra] */
+  const send = (button, row, select, extra) => { void sendAnswer(context, button, { row, select, extra }).catch(fail); };
+  bindPick(context.root);
   on(context.root, '[data-action="save-marker"]', 'click', (_event, button) => {
     send(button, '.c-import-speakers__marker', '[data-marker-select]');
   });

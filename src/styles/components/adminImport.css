@@ -58,7 +58,8 @@
 
 .c-import-speakers__marker {
   display: grid;
-  grid-template-columns: 28px 28px 1fr 180px auto;
+  /* The marker column grows for a word marker ("Juniper"); emoji keep 28px. */
+  grid-template-columns: minmax(28px, max-content) 28px 1fr 180px auto;
   gap: var(--space-2);
   align-items: center;
   padding: var(--space-2) 0;
@@ -88,7 +89,8 @@
    width, under its cells (left to auto-placement, the list landed in the
    28px glyph column and wrapped one letter a line). */
 .c-import-speakers__check,
-.c-import-speakers__entries {
+.c-import-speakers__entries,
+.c-import-speakers__new {
   grid-column: 1 / -1;
 }
 
@@ -114,12 +116,20 @@
 
 @media (max-width: 859.98px) {
   .c-import-speakers__marker {
-    grid-template-columns: 28px 28px 1fr;
+    grid-template-columns: minmax(28px, max-content) 28px 1fr;
   }
 
   .c-import-speakers__pick,
   .c-import-speakers__actions {
     grid-column: 1 / -1;
+  }
+
+  /* Stacked, the new person's fields sit right under the select, before
+     the save button that sends them. */
+  .c-import-speakers__actions,
+  .c-import-speakers__check,
+  .c-import-speakers__entries {
+    order: 1;
   }
 
   .c-import-speakers__entry {
