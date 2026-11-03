@@ -11,7 +11,7 @@
  * "Newest first" is **not** a CSS flip: that would desync reading/focus
  * order from what's shown (an accessibility bug) and fight pagination
  * once "more" has appended further items. Instead the toggle re-fetches
- * `/api/event/:slug?order=desc` (offset reset) and re-renders every
+ * `/api/event/:date/:tag?order=desc` (offset reset) and re-renders every
  * section; "more" always continues in whichever order is currently
  * active (Task 3 review #1).
  *
@@ -31,7 +31,7 @@ import * as emptyState from '../components/emptyState.js';
 import * as pageShell from '../components/pageShell.js';
 import * as inlineSearch from '../components/inlineSearch.js';
 import { filtersSlot, headerProps, region } from '../components/inlineSearchView.js';
-import { slugFromEventPath, HOME_PATH } from '../core/routes.js';
+import { slugFromEventPath, addressPath, HOME_PATH } from '../core/routes.js';
 import { KIND_UI, renderSections } from '../kinds/_registry.js';
 
 /** Entries are compact previews, as on the person and translator pages (spec: "Entries show their opening lines ... as its preview"; mockups/screens-v2.html's event screen; fix round 1, I2). */
@@ -184,7 +184,7 @@ async function loadMore(root, slug, state, button) {
   if (!container || !kindUi) return;
   const offset = Number(container.getAttribute('data-offset') ?? '0');
   button.disabled = true;
-  const page = await getJson(`/api/event/${encodeURIComponent(slug)}`, { offset, order: state.order });
+  const page = await getJson(`/api/event/${addressPath(slug)}`, { offset, order: state.order });
   const section = page.sections.find((/** @type {any} */ s) => s.kind === kind);
   if (!section) return;
   appendMoreItems(container, /** @type {string} */ (kind), kindUi.section, section);
@@ -203,7 +203,7 @@ async function toggleOrder(root, slug, state, toggle) {
   const pressed = toggle.getAttribute('aria-pressed') === 'true';
   state.order = pressed ? 'asc' : 'desc';
   toggle.disabled = true;
-  const page = await getJson(`/api/event/${encodeURIComponent(slug)}`, { order: state.order });
+  const page = await getJson(`/api/event/${addressPath(slug)}`, { order: state.order });
   const container = root.querySelector('[data-event-sections]');
   if (container) renderAndBindSections(container, page.sections);
   toggle.setAttribute('aria-pressed', String(!pressed));
@@ -247,7 +247,7 @@ export async function start() {
   /** @type {import('../../../src/http/contracts.js').EventView} */
   let data;
   try {
-    data = await getJson(`/api/event/${encodeURIComponent(slug)}`);
+    data = await getJson(`/api/event/${addressPath(slug)}`);
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) {
       mountNotFound(root);

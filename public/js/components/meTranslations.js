@@ -78,7 +78,7 @@ function row(item, state) {
     <li class="c-me__entry"${item.removedByYou || item.hidden ? html` data-faded` : ''}>
       <div class="c-me__entry-top">
         ${selectable ? html`
-          <label class="check c-me__select">
+          <label class="check check--bare">
             <input type="checkbox" data-action="select" data-key="${key}"
               aria-label="${t('me.translations.select')}" ${state.selected.has(key) ? 'checked' : ''}>
           </label>

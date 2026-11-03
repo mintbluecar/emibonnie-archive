@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { MiniElement } from '../helpers/miniDom.js';
 import { mount } from '../../public/js/core/dom.js';
-import { copyRe } from '../helpers/copyMarkup.js';
+import { copyRe, pattern } from '../helpers/copyMarkup.js';
 import { withGlobals } from '../helpers/globals.js';
 const { render, bind } = await import('../../public/js/components/ownerSection.js');
 const { t } = await import('../../public/js/core/site.js');
@@ -107,6 +107,12 @@ test('recent import jobs list with a link and counts; none renders nothing', () 
 
   const none = String(render(owner()));
   assert.ok(!none.includes(t('owner.imports')), 'no heading when there are no jobs');
+});
+
+test('the events list is linked whether or not there are import jobs', () => {
+  for (const markup of [String(render(owner())), String(render(owner({ imports: [{ id: 9, source: 'notion', status: 'done', createdAt: '', counts: {} }] })))]) {
+    assert.match(markup, new RegExp(`<a class="tap-link" href="/admin/events">${pattern(t('owner.events'))}</a>`));
+  }
 });
 
 test('toggling the switch posts the new state and reloads', async () => {

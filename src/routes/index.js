@@ -4,7 +4,7 @@
  * server shares it, and the build writes `vercel.json`'s function
  * rewrites from `rewrites`. First match wins. The function sees the
  * original request URL, so `/api/*` routes match `/api/...` and the
- * link-preview meta routes match their page paths (`/e/:slug`, and
+ * link-preview meta routes match their page paths (`/e/:date/:tag`, and
  * `<urlPrefix>:sourceId` per kind), derived from `src/pages.js` and the
  * kinds registry.
  */
@@ -34,6 +34,8 @@ import { importMapRoute } from './importMap.js';
 import { importPublishRoute, importSkipRoute, importArchiveRoute, importRetryRoute } from './importActions.js';
 import { devImportRoute } from './importDev.js';
 import { ownerRoute, approvalRoute, reviewRoute, hideReportRoute, restoreReportRoute, dismissReportRoute, usersRoute, blockUserRoute, unblockUserRoute, signInAlertRoute } from './owner.js';
+import { ownerEventsRoute, ownerEventRoute, ownerEventEntriesRoute } from './ownerEvents.js';
+import { ownerEventMergeRoute, ownerEventEditRoute, ownerEventMoveRoute, ownerEventSplitRoute } from './ownerEventActions.js';
 // scaffold:route-imports (`npm run new route <name>` adds its import above this line)
 
 /** @type {import('../http/handler.js').Route[]} */
@@ -50,6 +52,9 @@ export const routes = [
   importPublishRoute, importSkipRoute, importArchiveRoute, importRetryRoute, devImportRoute,
   ownerRoute, approvalRoute, reviewRoute, hideReportRoute, restoreReportRoute, dismissReportRoute,
   usersRoute, blockUserRoute, unblockUserRoute, signInAlertRoute,
+  // `ownerEventMergeRoute`'s literal `/merge` is registered before `ownerEventEditRoute`'s
+  // `/:id` (Ruling R2): both are 4-segment POSTs, and the router matches in this order.
+  ownerEventsRoute, ownerEventRoute, ownerEventEntriesRoute, ownerEventMergeRoute, ownerEventEditRoute, ownerEventMoveRoute, ownerEventSplitRoute,
   // scaffold:routes (`npm run new route <name>` adds its route above this line)
   ...metaRoutes(pages, Object.values(kindsRegistry)),
 ];

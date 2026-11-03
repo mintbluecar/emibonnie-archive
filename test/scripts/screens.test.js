@@ -18,8 +18,8 @@ import { pagesFor, outPathFor, runCleanup } from '../../scripts/screens.js';
 
 /** A stub API with one event, one item, two people, one translator, and one import job. */
 const FIXTURE = {
-  '/api/home': { months: [{ events: [{ slug: 'an-event' }] }] },
-  '/api/event/an-event': {
+  '/api/home': { months: [{ events: [{ slug: '2026-01-01/an event' }] }] },
+  '/api/event/2026-01-01/an%20event': {
     sections: [{ items: [{ kind: 'translation', sourceId: '42', url: '/t/42', lines: [{ text: 'hello world' }] }] }],
   },
   '/api/filters': {
@@ -27,6 +27,7 @@ const FIXTURE = {
     accounts: [{ handle: 'tl_alpha' }],
   },
   '/api/owner/imports': { jobs: [{ id: 7 }, { id: 3 }] },
+  '/api/owner/events': { events: [{ id: 4 }, { id: 2 }], total: 2 },
 };
 
 /** @param {Record<string, any>} fixture @returns {(path: string) => Promise<any>} */
@@ -38,7 +39,7 @@ test('pagesFor: the common pages every role gets, discovered through the API', a
   const pages = await pagesFor('guest', stubApi(FIXTURE));
   const paths = pages.map((p) => p.path);
   assert.ok(paths.includes('/'), 'home');
-  assert.ok(paths.includes('/e/an-event'), 'the first event');
+  assert.ok(paths.includes('/e/2026-01-01/an%20event'), 'the first event');
   assert.ok(paths.includes('/t/42'), "the first event's first item");
   assert.ok(paths.includes('/p/solsunny') && paths.includes('/p/lunamoon'), 'every listed person');
   assert.ok(paths.includes('/tl/tl_alpha'), 'the first translator');
@@ -54,6 +55,14 @@ test('pagesFor: owner adds the edit and import review pages, plus /me and /add',
   assert.ok(paths.includes('/add'));
   assert.ok(paths.includes('/edit/translation/42'), 'the first item, by kind and sourceId');
   assert.ok(paths.includes('/admin/imports/7'), 'the newest job (jobs[0])');
+  assert.ok(paths.includes('/admin/events'), 'the events list');
+  assert.ok(paths.includes('/admin/events/edit?id=4'), "the first event's edit page");
+  assert.ok(paths.includes('/admin/events/entries?id=4'), "the first event's tweets page");
+});
+
+test('pagesFor: owner with no events gets no edit event page', async () => {
+  const pages = await pagesFor('owner', stubApi({ ...FIXTURE, '/api/owner/events': { events: [], total: 0 } }));
+  assert.ok(!pages.some((p) => p.path.startsWith('/admin/events/edit') || p.path.startsWith('/admin/events/entries')));
 });
 
 test('pagesFor: owner with no import jobs gets no import review page', async () => {
@@ -78,7 +87,7 @@ test('pagesFor: guest has no owner pages (no edit, add or import review)', async
   const pages = await pagesFor('guest', stubApi(FIXTURE));
   assert.ok(!pages.some((p) => p.path === '/add'));
   assert.ok(!pages.some((p) => p.path.startsWith('/edit/')));
-  assert.ok(!pages.some((p) => p.path.startsWith('/admin/imports/')));
+  assert.ok(!pages.some((p) => p.path.startsWith('/admin/')));
   assert.ok(pages.some((p) => p.path === '/me'), 'still visits /me, signed out');
 });
 

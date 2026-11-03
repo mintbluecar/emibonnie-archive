@@ -3,7 +3,7 @@
  * `public/js/core/routes.js` is the front-end's one copy of the event
  * path prefix; this test (crossing layers -- tests may import both
  * `src/**` and `public/js/**`, unlike runtime code) pins it against
- * `src/pages.js`'s real `/e/:slug` route, so the two can't silently
+ * `src/pages.js`'s real `/e/:date/:tag` route, so the two can't silently
  * drift apart (review round 2).
  */
 import assert from 'node:assert/strict';
@@ -15,30 +15,32 @@ import {
   ACCOUNT_PATH_PREFIX, accountHref, accountFromAccountPath,
   EDIT_PATH_PREFIX, editHref,
   IMPORT_PATH_PREFIX, importHref,
+  ADMIN_EVENTS_PATH, adminEventEditHref, adminEventMergeHref, adminEventEntriesHref, adminEventSplitHref,
 } from '../../public/js/core/routes.js';
 
-test('EVENT_PATH_PREFIX matches the /e/:slug page route in src/pages.js', () => {
-  const eventPage = pages.find((p) => p.path === '/e/:slug');
-  assert.ok(eventPage, 'src/pages.js lists an /e/:slug route');
+test('EVENT_PATH_PREFIX matches the /e/:date/:tag page route in src/pages.js', () => {
+  const eventPage = pages.find((p) => p.path === '/e/:date/:tag');
+  assert.ok(eventPage, 'src/pages.js lists an /e/:date/:tag route');
   assert.ok(eventPage?.path.startsWith(EVENT_PATH_PREFIX), `${eventPage?.path} should start with ${EVENT_PATH_PREFIX}`);
   assert.equal(EVENT_PATH_PREFIX, '/e/');
 });
 
-test('eventHref: builds the event page path, encoding the slug', () => {
-  assert.equal(eventHref('solluna-happy-day-2026-10-19'), '/e/solluna-happy-day-2026-10-19');
-  assert.equal(eventHref('a b'), '/e/a%20b');
+test('eventHref: builds the two-part event page path, encoding each part but not the slash between', () => {
+  assert.equal(eventHref('2025-12-04/juniper-tiktok-live'), '/e/2025-12-04/juniper-tiktok-live');
+  assert.equal(eventHref('2025-12-04/a b'), '/e/2025-12-04/a%20b');
 });
 
-test('slugFromEventPath: reads the slug back out of an event page pathname, else null', () => {
-  assert.equal(slugFromEventPath('/e/solluna-happy-day-2026-10-19'), 'solluna-happy-day-2026-10-19');
-  assert.equal(slugFromEventPath('/e/a%20b'), 'a b');
-  assert.equal(slugFromEventPath('/e/a-slug/extra'), 'a-slug', 'stops at the next /');
+test('slugFromEventPath: reads the two-part slug back out of an event page pathname, else null', () => {
+  assert.equal(slugFromEventPath('/e/2025-12-04/juniper-tiktok-live'), '2025-12-04/juniper-tiktok-live');
+  assert.equal(slugFromEventPath('/e/2025-12-04/a%20b'), '2025-12-04/a b');
+  assert.equal(slugFromEventPath('/e/old-slug'), null, 'the one-part address is gone');
   assert.equal(slugFromEventPath('/t/123'), null);
   assert.equal(slugFromEventPath('/'), null);
 });
 
 test('eventHref and slugFromEventPath round-trip', () => {
-  assert.equal(slugFromEventPath(eventHref('some-event-2026-01-01')), 'some-event-2026-01-01');
+  assert.equal(slugFromEventPath(eventHref('2026-01-01/some-event')), '2026-01-01/some-event');
+  assert.equal(slugFromEventPath(eventHref('2026-01-01/a b')), '2026-01-01/a b');
 });
 
 test('PERSON_PATH_PREFIX matches the /p/:ig page route in src/pages.js', () => {
@@ -77,6 +79,19 @@ test('IMPORT_PATH_PREFIX matches the /admin/imports/:id page route in src/pages.
 test('importHref: builds the import review page path from a job id', () => {
   assert.equal(importHref(7), '/admin/imports/7');
   assert.equal(importHref(0), '/admin/imports/0');
+});
+
+test('ADMIN_EVENTS_PATH is the /admin/events page route in src/pages.js', () => {
+  assert.equal(ADMIN_EVENTS_PATH, '/admin/events');
+  assert.ok(pages.some((p) => p.path === ADMIN_EVENTS_PATH), 'src/pages.js lists /admin/events');
+});
+
+test('the event admin hrefs: edit, merge, entries and split, ids kept readable', () => {
+  assert.equal(adminEventEditHref(3), '/admin/events/edit?id=3');
+  assert.equal(adminEventMergeHref([3, 7]), '/admin/events/edit?merge=3,7');
+  assert.equal(adminEventMergeHref([12, 4, 9]), '/admin/events/edit?merge=12,4,9', 'in the order given');
+  assert.equal(adminEventEntriesHref(5), '/admin/events/entries?id=5');
+  assert.equal(adminEventSplitHref(5, [11, 12]), '/admin/events/edit?from=5&items=11,12');
 });
 
 test('personHref/igFromPersonPath: builds and parses the person page path, encoding/decoding the handle', () => {

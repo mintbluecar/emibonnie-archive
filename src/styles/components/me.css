@@ -57,13 +57,6 @@
   gap: var(--space-2);
 }
 
-/* The checkbox beside a translation has no visible text of its own (its
-   aria-label names it), so its label is the 24px target by itself. */
-.c-me__select {
-  min-width: var(--target-min);
-  justify-content: center;
-}
-
 /* A removed or hidden translation. */
 .c-me__entry[data-faded] {
   opacity: 0.55;

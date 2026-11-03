@@ -67,6 +67,26 @@
  * @typedef {{ approvalRequired: boolean, signInFailedAt: string|null,
  *   waiting: AddedPreview[], reports: ReportVM[] }} OwnerView
  *
+ * @typedef {import('../repo/eventAdminList.js').AdminEventRow} AdminEventRow
+ * @typedef {import('../repo/eventAdminList.js').AdminEvent} AdminEvent
+ * @typedef {import('../repo/eventAdminList.js').EventEntry} EventEntry
+ *   The owner's event admin (Task 7): one event, newest `occurredOn`
+ *   first in the list, as `eventAdminList.js` builds them.
+ * @typedef {{ events: AdminEventRow[], total: number }} AdminEventList
+ *   `GET /api/owner/events?q&offset`: page size 50; `total` counts every
+ *   match, not just this page.
+ * @typedef {{ id: number, displayName: string }} EventPersonOption
+ * @typedef {{ code: string, name: string }} EventPlatformOption
+ * @typedef {AdminEvent & { options: { people: EventPersonOption[], platforms: EventPlatformOption[] } }} AdminEventDetail
+ *   `GET /api/owner/events/:id`: the event plus the edit form's options
+ *   (every known person; every `platforms` code, `name` the code itself);
+ *   404 when the id is missing, non-numeric, or the event was merged away.
+ * @typedef {{ event: AdminEventRow, entries: (EventEntry & { snippet: string })[] }} AdminEventEntries
+ *   `GET /api/owner/events/:id/entries`: `snippet` is the entry's preview's
+ *   first text line, trimmed, at most 120 characters, or `''` when it has
+ *   no preview; 404 when the id is missing, non-numeric, or the event was
+ *   merged away.
+ *
  * @typedef {{ type: 'item', kind: string, sourceId: string } | { type: 'event', slug: string }} ReportTarget
  *   What a public report names: a visible item (by kind and source id) or a
  *   visible event (by slug).

@@ -170,7 +170,7 @@ const NAME = /^[a-z][a-z0-9_]*$/;
 const URL_PREFIX = /^\/[a-z0-9-]+\/$/;
 
 /**
- * A page path's first segment as a `/x/` prefix (`'/e/:slug'` -> `'/e/'`),
+ * A page path's first segment as a `/x/` prefix (`'/e/:date/:tag'` -> `'/e/'`),
  * or `null` for one with none (`'/'`).
  * @param {string} pagePath
  * @returns {string|null}

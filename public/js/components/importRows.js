@@ -68,7 +68,7 @@ function table(rows) {
   };
   return html`
     <div class="c-import__rows">
-      <table class="table table--stack">
+      <table class="table table--stack table--raised">
         <thead>
           <tr>
             <th scope="col">${col.state}</th>

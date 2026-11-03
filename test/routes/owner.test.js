@@ -50,7 +50,7 @@ function get(path, sid) {
 test('a member and a signed-out visitor are refused on every owner route', async () => {
   // Chosen by path, not by `auth`, so a route that loses its owner check fails here.
   const ownerOnly = routes.filter((r) => r.path.startsWith('/api/owner'));
-  assert.equal(ownerOnly.length, 18, 'every owner route (update when one is added)');
+  assert.equal(ownerOnly.length, 25, 'every owner route (update when one is added)');
   for (const r of ownerOnly) assert.equal(r.auth, 'owner', `${r.method} ${r.path}`);
   assert.deepEqual(routes.filter((r) => r.auth === 'owner'), ownerOnly, 'no owner route outside /api/owner');
   for (const r of ownerOnly) {

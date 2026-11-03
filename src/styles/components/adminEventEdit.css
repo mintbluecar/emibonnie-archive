@@ -1,0 +1,11 @@
+/*
+ * public/js/pages/adminEventEdit.js (event editing, spec screen ②): the
+ * owner's edit event page in its three modes. The heading, the merge and
+ * create strips (card), the notices and the buttons are primitives; this
+ * file keeps only the page's own spacing. The fields are eventForm.css.
+ * See STYLING.md.
+ */
+
+.c-event-edit {
+  padding: var(--space-3) 0 var(--space-6);
+}

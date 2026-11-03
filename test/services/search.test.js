@@ -33,7 +33,7 @@ test('"hug" finds LONG, with its matching lines and event', async () => {
   assert.equal(count, 1);
   const [long] = results;
   assert.equal(long.sourceId, IDS.LONG);
-  assert.equal(long.event?.slug, 'solluna-at-starfest-2026-10-18');
+  assert.equal(long.event?.slug, '2026-10-18/sollunastarfest');
   assert.ok(long.matchLines.length > 0 && long.matchLines.length <= 3);
   assert.ok(long.matchLines.every((line) => line.toLowerCase().includes('hug')));
   assert.equal(long.lines.length, 2);
@@ -155,7 +155,7 @@ test('placements: shared story and posts', async () => {
 });
 
 test('filters: event, account, dates, categories, kinds; limit 0 gives the count only', async () => {
-  assert.deepEqual((await ids({ eventSlug: 'solluna-happy-day-2026-10-19' })).sort(), [IDS.EVENT_A, IDS.EVENT_B].sort());
+  assert.deepEqual((await ids({ eventSlug: '2026-10-19/slhappyday2026' })).sort(), [IDS.EVENT_A, IDS.EVENT_B].sort());
   assert.deepEqual(await ids({ accountHandle: 'TL_GAMMA' }), [IDS.EVENT_B]);
   assert.equal((await search(deps, { categories: [32767], clientId: 32767 })).count, 0, 'the smallint maximum is accepted');
   assert.deepEqual(await ids({ from: '2026-03-01', to: '2026-03-01' }), [IDS.JOINT_LIVE]);

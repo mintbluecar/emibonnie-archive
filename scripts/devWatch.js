@@ -74,9 +74,9 @@ export function createRebuilder({ build, onBuilt = () => {}, debounceMs = DEBOUN
   };
 }
 
-/** The folders watched: engine markup, styles and browser code, and the site. @param {string} siteDir @returns {string[]} */
+/** The folders watched: engine markup, styles, browser code and the pure domain rules it imports, and the site. @param {string} siteDir @returns {string[]} */
 export function watchedDirs(siteDir) {
-  return ['src/html', 'src/styles', 'public/js', siteDir];
+  return ['src/html', 'src/styles', 'src/domain', 'public/js', siteDir];
 }
 
 /** @param {string} script @param {string[]} [args] @returns {import('node:child_process').ChildProcess} */

@@ -4,7 +4,7 @@
       "month": "2026-10",
       "events": [
         {
-          "slug": "solluna-happy-day-2026-10-19",
+          "slug": "2026-10-19/slhappyday2026",
           "name": "SOLLUNA HAPPY DAY",
           "occurredOn": "2026-10-19",
           "hashtag": "SLHappyDay2026",
@@ -13,7 +13,7 @@
           }
         },
         {
-          "slug": "solluna-at-starfest-2026-10-18",
+          "slug": "2026-10-18/sollunastarfest",
           "name": "SOLLUNA AT STARFEST",
           "occurredOn": "2026-10-18",
           "hashtag": "SolLunaStarfest",
@@ -27,7 +27,7 @@
       "month": "2026-03",
       "events": [
         {
-          "slug": "sol-luna-ig-live-2026-03-01",
+          "slug": "2026-03-01/sol-luna-ig-live",
           "name": "sol & luna ig live",
           "occurredOn": "2026-03-01",
           "hashtag": null,
@@ -41,7 +41,7 @@
       "month": "2026-02",
       "events": [
         {
-          "slug": "luna-tiktok-live-2026-02-12",
+          "slug": "2026-02-12/luna-tiktok-live",
           "name": "luna tiktok live",
           "occurredOn": "2026-02-12",
           "hashtag": null,

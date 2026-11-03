@@ -15,6 +15,8 @@ import { findLookup, ensureLookup } from '../repo/lookups.js';
 import { findVisibleItemId } from '../repo/cards.js';
 import { findItemIdBySource } from '../repo/itemState.js';
 import { eventExists } from '../repo/events.js';
+import { resolveEventId } from '../repo/eventAdmin.js';
+import { insertItemEdit } from '../repo/itemEdits.js';
 import { validateFixes } from '../domain/lineFixes.js';
 import { itemTag } from '../domain/cacheTags.js';
 import { itemChangeTags } from './cache.js';
@@ -147,6 +149,19 @@ async function applyKindChanges(tx, { kind, id, changes, deps }) {
 }
 
 /**
+ * `changes` with an `eventId` that was merged away replaced by the event
+ * it now lives on (`resolveEventId`), so reverting a move out of a
+ * since-merged event lands in the kept one. An id that resolves nowhere
+ * is left as is, for `eventExists` to refuse.
+ * @param {any} db @param {Partial<EditableFields>} changes @returns {Promise<Partial<EditableFields>>}
+ */
+async function withResolvedEvent(db, changes) {
+  if (typeof changes.eventId !== 'number') return changes;
+  const kept = await resolveEventId(db, changes.eventId);
+  return kept === null || kept === changes.eventId ? changes : { ...changes, eventId: kept };
+}
+
+/**
  * The item a kind + source id names: any archived state for the owner,
  * visible only for everyone else.
  * @param {any} db @param {{ name: string, platform: string }} kind @param {string} sourceId @param {boolean} allowAnyState
@@ -181,8 +196,9 @@ async function resolveEditInput(deps, kindName, { sourceId, changes, actor }) {
  * @param {{ kind: string, sourceId: string, changes: Partial<EditableFields>, actor: SessionUser, reverts?: number|null }} input
  * @returns {Promise<{ editId: number }>}
  */
-export async function editItem(deps, { kind: kindName, sourceId, changes, actor, reverts = null }) {
-  const { kind, id, itemRow, role } = await resolveEditInput(deps, kindName, { sourceId, changes, actor });
+export async function editItem(deps, { kind: kindName, sourceId, changes: requested, actor, reverts = null }) {
+  const { kind, id, itemRow, role } = await resolveEditInput(deps, kindName, { sourceId, changes: requested, actor });
+  const changes = await withResolvedEvent(deps.db, requested);
 
   const tagsBefore = await itemChangeTags(deps.db, id);
   const before = await editableOf(deps.db, kind, id);
@@ -204,17 +220,14 @@ export async function editItem(deps, { kind: kindName, sourceId, changes, actor,
     const after = await editableOf(tx, kind, id);
     const changed = diffOf(before, after);
     if (Object.keys(changed.before).length === 0) throw new BadRequest('nothing to change');
-    const { rows } = await tx.query(
-      'insert into item_edits (item_id, before, after, reverts, created_by) values ($1, $2, $3, $4, $5) returning id',
-      [id, JSON.stringify(changed.before), JSON.stringify(changed.after), reverts, actor.id],
-    );
+    const editId = await insertItemEdit(tx, { itemId: id, before: changed.before, after: changed.after, reverts, createdBy: actor.id });
     // Both the old and the new relationships: moving an entry to another
     // event (or changing its cast) leaves the previous pages stale too. The
     // entry's own page is deleted, not invalidated (`itemEdited`), so the
     // editor reopening it never gets the pre-edit copy from the CDN.
     w.purge.tags(tagsBefore.filter((tag) => tag !== itemTag(id)));
     w.purge.itemEdited(id);
-    return rows[0].id;
+    return editId;
   });
   return { editId: /** @type {number} */ (editId) };
 }

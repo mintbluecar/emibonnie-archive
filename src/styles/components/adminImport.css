@@ -3,27 +3,18 @@
  * importSpeakers.js (Plan 3; on primitives since the styling system's
  * Task 10): the owner's import review page. The header, filter chips,
  * search field, rows table, buttons, cards and texts are primitives;
- * this file keeps the page's own layout -- the table's surface on a
- * desktop, the row state colours, the two-line text clamp and the marker
- * rows' grid. See STYLING.md.
+ * this file keeps the page's own layout -- the row state colours, the
+ * two-line text clamp and the marker rows' grid (the table's desktop
+ * surface is table--raised). See STYLING.md.
  */
 
 .c-import {
   padding: var(--space-3) 0 var(--space-6);
 }
 
-/* The rows table: smaller text, and on a desktop one raised surface (on
-   a phone each row is its own card, table--stack). */
+/* The rows table's smaller text. */
 .c-import__rows {
   font-size: var(--text-12);
-}
-
-@media (min-width: 860px) {
-  .c-import__rows {
-    background: var(--color-card);
-    border-radius: var(--radius-card);
-    box-shadow: var(--shadow-card);
-  }
 }
 
 .c-import__state {

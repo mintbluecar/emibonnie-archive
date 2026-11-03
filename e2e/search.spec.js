@@ -11,7 +11,7 @@
 import { test, expect } from '@playwright/test';
 import { checkPage, gotoReady, DARK_PROJECTS } from './helpers.js';
 
-const EVENT = '/e/solluna-at-starfest-2026-10-18';
+const EVENT = '/e/2026-10-18/sollunastarfest';
 const Q = 'everyone';
 const LIGHT_ONLY = 'behaviour, not colour: light projects only (axe runs in every project below)';
 
@@ -161,7 +161,7 @@ test('the filter sheet: opens from the icon, keeps focus inside, Escape closes i
   await filterBtn.click();
   const dialog = page.locator('[data-filter-sheet]');
   await expect(dialog).toBeVisible();
-  await expect(dialog.locator('[data-filter="event"]')).toHaveValue('solluna-at-starfest-2026-10-18');
+  await expect(dialog.locator('[data-filter="event"]')).toHaveValue('2026-10-18/sollunastarfest');
   // showModal() makes the rest of the page inert: Tab only ever reaches the sheet's own
   // controls (or the browser's own UI, which leaves document.body active), never the page behind.
   let inside = 0;

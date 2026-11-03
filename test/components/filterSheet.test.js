@@ -15,7 +15,7 @@ const OPTIONS = {
     { id: 2, name: 'luna', emoji: '🌙', colour: '#6a5cd6', igHandle: 'lunamoon' },
   ],
   categories: [{ id: 5, name: 'live' }, { id: 6, name: 'show / interview' }],
-  events: [{ slug: 'solluna-happy-day-2026-10-19', name: 'SOLLUNA HAPPY DAY' }],
+  events: [{ slug: '2026-10-19/slhappyday2026', name: 'SOLLUNA HAPPY DAY' }],
   clients: [{ id: 9, name: 'Big Media Co' }],
   accounts: [{ handle: 'tl_beta' }, { handle: 'tl_gamma' }],
 };

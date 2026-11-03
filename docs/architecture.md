@@ -19,7 +19,7 @@ src/db/                  client (per-request pool, date parser, transactions wit
 src/site/                settings schema/validation, regions.js (Vercel regions), copy, generated.js (GENERATED: static import of site config)
 src/domain/              PURE: no I/O, no clock, no imports from other layers
 src/pages.js             the one list of page routes and redirects (rewrites, vercel.json redirects, reserved kind prefixes)
-public/js/core|components|pages|state|kinds/<kind>/   browser code (no src/ imports); kinds/_registry.js GENERATED
+public/js/core|components|pages|state|kinds/<kind>/   browser code (no src/ imports except the pure src/domain/, bundled by esbuild); kinds/_registry.js GENERATED
 scripts/                 build, dev, setup, migrate, doctor, init-site, seed-dev, add, remap, new (scaffolder + templates/)
 site/                    a site's own folder (gitignored in the template); examples/solluna/ is the template example
 ```
@@ -72,7 +72,7 @@ site/                    a site's own folder (gitignored in the template); examp
 
 ## Routing on Vercel
 
-There is one function, `api/index.js`, and the build writes every `vercel.json` rewrite that reaches it with an **unnamed** source and the destination exactly `/api`: `/api/(.*)`, then each link-preview page (`/e/(.*)`, and `<urlPrefix>(.*)` per kind, e.g. `/t/(.*)`). Static pages rewrite to their file the same way (`/p/(.*)` to `/person.html`).
+There is one function, `api/index.js`, and the build writes every `vercel.json` rewrite that reaches it with an **unnamed** source and the destination exactly `/api`: `/api/(.*)`, then each link-preview page (`/e/(.*)/(.*)`, and `<urlPrefix>(.*)` per kind, e.g. `/t/(.*)`). Static pages rewrite to their file the same way (`/p/(.*)` to `/person.html`).
 
 - **Why unnamed:** a named param in a source is added to the request's query string (`/t/:id` arrives as `/t/123?id=123`; [Vercel's rewrites doc](https://vercel.com/docs/routing/rewrites): "This converts a request like /resize/800/600 to /api/sharp?width=800&height=600"), and the handler refuses unknown query params. A catch-all file name (`api/[...route].js`) does the same with its segment, and only matches one level deep.
 - **Why `/api`:** the function sees the original request URL, not the rewrite's destination, so the route table matches `/api/home` and `/t/:sourceId` directly. `src/pages.js` (a page's `meta`) and the kinds registry (`urlPrefix`) decide which page paths have meta; `src/routes/meta.js` builds the routes and `src/routes/index.js` the rewrites from them.

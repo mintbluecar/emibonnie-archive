@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented here. Versions are semver tags (`vX.Y.Z`). Each release lists its **upgrade steps**; to take one, see `docs/start-your-own.md`, step 10.
 
+## Unreleased
+
+**Owner event editor at `/admin/events`:** search the events, edit one (title, date, keywords and hashtags, who was live, its address), merge duplicate events into one, and move tweets to another event or to a new one. A merged-away event's address redirects to the kept event while that event is public.
+
+**Event addresses change from `/e/<slug>` to `/e/<date>/<tag>`** (e.g. an event tagged `#MoonGala` moves from `/e/moon-gala-with-juniper-2025-10-04` to `/e/2025-10-04/moongala`). **Old `/e/<slug>` links stop working**: there is no redirect from them, so links shared before the upgrade answer not-found.
+
+**Upgrade steps:**
+
+1. `git fetch upstream --tags`, then merge the release tag.
+2. **Migration `006_event_editing`.** It adds `events.merged_into` (a merged event points at the one it went into) and `events.address_locked_at`, which a new `lock_event_address` trigger on `items` stamps once, the first time an entry in the event publishes -- a published event's address never moves again. `events.slug`'s check now also accepts the two-part address (`yyyy-mm-dd/tag`).
+3. **Readdress the events, before deploying the new code.** Against the production database, in this order:
+   1. `DATABASE_URL=… npm run migrate`.
+   2. `DATABASE_URL=… npm run readdress-events -- --dry-run`, and read every `old -> new` line.
+   3. `DATABASE_URL=… npm run readdress-events`: it rewrites every one-part slug to its two-part address and backfills `address_locked_at` on events that published before the trigger existed, in one transaction.
+   4. Only then push or deploy the new code.
+
+   This order is safe: the old code's router decodes each path segment, so it still serves a two-part slug as `/e/2025-10-04%2Fmoongala`, and its event links keep working. Deploying first is not: the new code routes only `/e/<date>/<tag>`, so every event page and event link is a 404 until the script runs. If your deploy workflow runs `npm run migrate` itself, run steps 1-3 by hand before pushing anyway. Pages the CDN cached before the readdress can show old links for up to five minutes (`s-maxage=300`) plus one stale-while-revalidate answer.
+4. **No new environment variables.**
+5. **Copy keys.** Added: `owner.events` and the `adminEvents.*`, `adminEventEdit.*` and `adminEventEntries.*` keys of the three new pages. A site that overrides copy needs none of them.
+6. `npm run build`, then redeploy.
+
 ## 0.5.1
 
 Fixes from a whole-codebase review: two data bugs in import, cache behaviour that made signed-in readers (the owner above all) pay a full database trip on every item page, lighter first screens, and shared building blocks that replace logic copied across routes, services and scripts. The test suite also runs about a third faster with no test removed.

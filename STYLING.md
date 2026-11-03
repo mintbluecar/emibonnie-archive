@@ -295,7 +295,8 @@ and `--text-14`. `field__select` is the dropdown's wrapper (this was
 wrapper only sizes the select to the field's width. A control with an
 error gets `aria-invalid="true"` (the danger border). `check` is a
 checkbox or radio with its text, the label itself the target, at least
-`--target-min` tall.
+`--target-min` tall. `check--bare` is one with no visible text (its
+`aria-label` names it): the label is widened to the target by itself.
 
 ### Card (`card.css`)
 
@@ -346,6 +347,8 @@ and each cell shows its column's name (its `data-label`) above its
 value; the header row is hidden visually but kept for screen readers. A
 cell's long unbroken text (a handle, a URL) wraps rather than widening
 the page -- never add `white-space: nowrap` to a text cell.
+`table--raised`: on a desktop the whole table is one raised surface,
+the card's (on a phone `table--stack` already makes each row a card).
 
 ### Chip (`chip.css`)
 

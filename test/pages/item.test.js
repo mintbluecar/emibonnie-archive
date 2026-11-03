@@ -29,7 +29,7 @@ const flush = () => new Promise((resolve) => { setTimeout(resolve, 0); });
 function itemVm(overrides = {}) {
   return {
     kind: 'translation', sourceId: '1900000000000000004', url: '/t/1900000000000000004',
-    placement: 'post', event: { slug: 'solluna-happy-day-2026-10-19', name: 'SOLLUNA HAPPY DAY', occurredOn: '2026-10-19' },
+    placement: 'post', event: { slug: '2026-10-19/slhappyday2026', name: 'SOLLUNA HAPPY DAY', occurredOn: '2026-10-19' },
     people: [], tags: { keyword: null, hashtags: ['SLHappyDay2026'] }, category: 'clip', addedBy: { kind: 'handle', handle: 'tl_alpha' },
     followsOnFrom: null, prev: { sourceId: '1', url: '/t/1' }, next: { sourceId: '2', url: '/t/2' },
     bubbles: [{ kind: 'speech', emoji: '🧡', name: 'sol', colour: '#ff8a3d', text: 'hello', cont: false }],
@@ -52,7 +52,7 @@ test('composeItem: the back row, media box, credits, pills, cast and bubbles, in
 
 test('composeItem: the back row links to the event page via the shared eventUrl helper, with the event name as its text', () => {
   const markup = String(composeItem(itemVm()));
-  assert.match(markup, /<a class="meta c-item__back" href="\/e\/solluna-happy-day-2026-10-19">‹ SOLLUNA HAPPY DAY<\/a>/);
+  assert.match(markup, /<a class="meta c-item__back" href="\/e\/2026-10-19\/slhappyday2026">‹ SOLLUNA HAPPY DAY<\/a>/);
 });
 
 test('composeItem: no back row when the item has no event', () => {

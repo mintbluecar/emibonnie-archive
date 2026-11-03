@@ -14,7 +14,7 @@ import { html } from '../core/html.js';
 import { on } from '../core/dom.js';
 import { getJson, postJson } from '../core/api.js';
 import { t } from '../core/site.js';
-import { importHref } from '../core/routes.js';
+import { ADMIN_EVENTS_PATH, importHref } from '../core/routes.js';
 import * as previewCard from './previewCard.js';
 
 /** @typedef {import('../../../src/http/contracts.js').OwnerView} OwnerView */
@@ -181,6 +181,7 @@ export function render(owner) {
       </label>
       ${waitingBlock(owner)}
       ${importsBlock(owner)}
+      <p><a class="tap-link" href="${ADMIN_EVENTS_PATH}">${t('owner.events')}</a></p>
       ${reportsBlock(owner)}
       ${usersBlock(owner)}
       <p class="notice notice--error c-owner__status" role="status" data-owner-status></p>

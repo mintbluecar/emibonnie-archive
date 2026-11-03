@@ -1,9 +1,11 @@
 // @ts-check
 /**
  * Validation shared by the services that read query-string numbers:
- * anything out of bounds is a `BadRequest`, never clamped silently.
+ * anything out of bounds is a `BadRequest`, never clamped silently. Also
+ * `idParam`, for a path `:id` segment, which answers `NotFound` instead
+ * (Ruling R2): a malformed id and an unknown one must look the same.
  */
-import { BadRequest } from '../domain/errors.js';
+import { BadRequest, NotFound } from '../domain/errors.js';
 
 /** The hub pages' per-section page size: at most this many, and this many by default. */
 export const HUB_LIMIT_MAX = 50;
@@ -36,6 +38,22 @@ export function hubPage(params = {}) {
   const limit = integer('limit', params.limit, HUB_LIMIT_MAX, HUB_LIMIT_MAX);
   if (limit < 1) throw new BadRequest(`limit must be an integer from 1 to ${HUB_LIMIT_MAX}`);
   return { limit, offset: integer('offset', params.offset, HUB_OFFSET_MAX, 0) };
+}
+
+/**
+ * A path `:id` segment as a positive integer id: `NotFound` (never a 400)
+ * for anything that isn't one -- `integer`'s own `BadRequest` is caught and
+ * replaced, so a malformed id reads exactly like an unknown one to the
+ * caller (Ruling R2).
+ * @param {string} raw
+ * @returns {number}
+ */
+export function idParam(raw) {
+  try {
+    return integer('id', raw, Number.MAX_SAFE_INTEGER);
+  } catch {
+    throw new NotFound();
+  }
 }
 
 /**

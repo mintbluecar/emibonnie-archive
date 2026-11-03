@@ -1,0 +1,13 @@
+/*
+ * public/js/pages/adminEventEntries.js (event editing, spec screen ③):
+ * the tweets in an event. The heading, day labels, tables, checks,
+ * badges, the move card, the search field, the notices and the buttons
+ * are primitives (each day's desktop surface is table--raised, the tick
+ * box check--bare); this file keeps the page's own spacing. See
+ * STYLING.md.
+ */
+
+.c-event-entries {
+  padding: var(--space-3) 0 var(--space-6);
+}
+

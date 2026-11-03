@@ -41,7 +41,7 @@ const IDS = {
   POST: '1900000000000000008',
   PHOTO: '1900000000000000009',
 };
-const EVENT_SLUG = 'solluna-at-starfest-2026-10-18';
+const EVENT_SLUG = '2026-10-18/sollunastarfest';
 const SEARCH_Q = encodeURIComponent('ครบ');
 /** 40% of the phone viewport's 844px height, matching src/styles/components/videoPlayer.css's `max-height: 40svh`. */
 const LIVE_HEIGHT_CAP = 338;

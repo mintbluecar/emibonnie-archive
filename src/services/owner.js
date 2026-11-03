@@ -9,6 +9,7 @@ import { pendingItemIds, findItemIdBySource, restoreItem } from '../repo/itemSta
 import { importHeldItemIdSet } from '../repo/imports.js';
 import { listVisibleItemIds } from '../repo/items.js';
 import { hideEvent } from '../repo/events.js';
+import { lockEvents } from '../repo/eventAdmin.js';
 import { get as settingsGet, set as settingsSet } from '../repo/settings.js';
 import { eventTag, HOME_TAG, SEARCH_TAG } from '../domain/cacheTags.js';
 import { kindNamed, kindsOf, presenterContext, previewsForAny } from './cards.js';
@@ -227,7 +228,8 @@ export async function hideReportTarget(deps, { reportId, actor }) {
 }
 
 /**
- * Undoes a hide: an item with `hidden_by_owner`, or a soft-deleted event.
+ * Undoes a hide: an item with `hidden_by_owner`, or a soft-deleted event
+ * (`Conflict('merged')` for one merged away).
  * @param {ViewDeps & { env?: Record<string, string|undefined> }} deps
  * @param {{ reportId: number, actor: SessionUser }} input
  * @returns {Promise<{ restored: boolean }>}
@@ -244,6 +246,10 @@ export async function restoreReportTarget(deps, { reportId, actor }) {
   }
   const eventId = Number(report.target_id);
   await write(deps, actor.id, async (w) => {
+    // A merged-away event is not "hidden": restoring it would bring back
+    // an empty event whose address redirects.
+    const event = (await lockEvents(w.tx, [eventId])).get(eventId);
+    if (event && event.mergedInto !== null) throw new Conflict('merged');
     const { rows } = await w.tx.query(
       'update events set deleted_at = null where id = $1 and deleted_at is not null returning slug',
       [eventId],

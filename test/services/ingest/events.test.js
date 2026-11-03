@@ -26,6 +26,37 @@ test('EVENT_A then EVENT_B land in one event, with one hashtag row and two item_
   }
 });
 
+test('EVENT_A proposes a two-part address: the item date, then its hashtag', async () => {
+  const deps = await ingestDeps();
+  try {
+    const result = await ingest(deps, IDS.EVENT_A);
+    const [event] = await rows(deps.db, 'select slug from events where id = $1', [result.eventId]);
+    assert.equal(event.slug, '2026-10-19/slhappyday2026');
+  } finally {
+    await deps.db.end();
+  }
+});
+
+test('an undated proposal (no header date) is addressed by the item date given at write time', async () => {
+  const deps = await ingestDeps();
+  try {
+    const undated = {
+      ...translation,
+      draft: (/** @type {any} */ input, /** @type {any} */ ctx) => {
+        const draft = translation.draft(input, ctx);
+        const { proposal } = draft.common;
+        return { ...draft, common: { ...draft.common, proposal: proposal && { ...proposal, slug: null, occurredOn: null } } };
+      },
+    };
+    const result = await ingest({ ...deps, kinds: { translation: undated } }, IDS.EVENT_A, { overrides: { occurredOn: '2026-11-05' } });
+    assert.equal(result.status, 'added');
+    const [event] = await rows(deps.db, 'select slug, occurred_on from events where id = $1', [result.eventId]);
+    assert.deepEqual(event, { slug: '2026-11-05/slhappyday2026', occurred_on: '2026-11-05' });
+  } finally {
+    await deps.db.end();
+  }
+});
+
 test('EVENT_A stores a media source credited to the clipper, with the video.twimg.com variants', async () => {
   const deps = await ingestDeps();
   try {

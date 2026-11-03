@@ -10,6 +10,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { addressPath } from '../src/domain/eventAddress.js';
 
 /**
  * Nested property access that never throws (`undefined` at the first
@@ -51,8 +52,8 @@ async function eventAndItemPages(api) {
   const home = await api('/api/home');
   const slug = dig(home, ['months', 0, 'events', 0, 'slug']) ?? null;
   if (!slug) return { pages: [], firstItem: null };
-  const pages = [{ name: 'first event', path: `/e/${encodeURIComponent(slug)}` }];
-  const event = await api(`/api/event/${encodeURIComponent(slug)}`);
+  const pages = [{ name: 'first event', path: `/e/${addressPath(slug)}` }];
+  const event = await api(`/api/event/${addressPath(slug)}`);
   const firstItem = dig(event, ['sections', 0, 'items', 0]) ?? null;
   if (firstItem) pages.push({ name: 'first item', path: firstItem.url });
   return { pages, firstItem };
@@ -95,8 +96,11 @@ async function commonPages(api) {
 }
 
 /**
- * Owner-only pages: the first item's edit page, `/add`, and the newest
- * import job's review page when one exists (`GET /api/owner/imports`).
+ * Owner-only pages: the first item's edit page, `/add`, the newest
+ * import job's review page when one exists (`GET /api/owner/imports`),
+ * and the event admin pages (event editing: the events list, and the
+ * first event's edit and tweets pages when there is one,
+ * `GET /api/owner/events`).
  * @param {(path: string) => Promise<any>} api @param {any} firstItem
  * @returns {Promise<{name: string, path: string}[]>}
  */
@@ -108,6 +112,12 @@ async function ownerPages(api, firstItem) {
   const imports = await api('/api/owner/imports');
   const latest = dig(imports, ['jobs', 0]);
   if (latest) pages.push({ name: 'import review', path: `/admin/imports/${encodeURIComponent(String(latest.id))}` });
+  pages.push({ name: 'admin events', path: '/admin/events' });
+  const firstEvent = dig(await api('/api/owner/events'), ['events', 0, 'id']);
+  if (firstEvent) {
+    const id = encodeURIComponent(String(firstEvent));
+    pages.push({ name: 'admin event edit', path: `/admin/events/edit?id=${id}` }, { name: 'admin event tweets', path: `/admin/events/entries?id=${id}` });
+  }
   return pages;
 }
 

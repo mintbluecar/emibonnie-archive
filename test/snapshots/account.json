@@ -101,7 +101,7 @@
           "occurredOn": "2026-10-18",
           "placement": "event",
           "event": {
-            "slug": "solluna-at-starfest-2026-10-18",
+            "slug": "2026-10-18/sollunastarfest",
             "name": "SOLLUNA AT STARFEST",
             "occurredOn": "2026-10-18"
           }
@@ -186,7 +186,7 @@
           "occurredOn": "2026-02-12",
           "placement": "event",
           "event": {
-            "slug": "luna-tiktok-live-2026-02-12",
+            "slug": "2026-02-12/luna-tiktok-live",
             "name": "luna tiktok live",
             "occurredOn": "2026-02-12"
           }

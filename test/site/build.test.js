@@ -222,7 +222,7 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
     // explicit rewrite -- it doesn't resolve to <path>.html on its own).
     const core = [
       { source: '/api/(.*)', destination: '/api' },
-      { source: '/e/(.*)', destination: '/api' },
+      { source: '/e/(.*)/(.*)', destination: '/api' },
       { source: '/t/(.*)', destination: '/api' },
       { source: '/p/(.*)', destination: '/person.html' },
       { source: '/tl/(.*)', destination: '/account.html' },

@@ -82,6 +82,13 @@
   cursor: pointer;
 }
 
+/* check--bare: a checkbox with no visible text of its own (its
+   aria-label names it), so the label is widened to the target by itself. */
+.check--bare {
+  min-width: var(--target-min);
+  justify-content: center;
+}
+
 .check input {
   flex: none;
   margin: 0;

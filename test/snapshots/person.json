@@ -126,7 +126,7 @@
           "occurredOn": "2026-10-19",
           "placement": "event",
           "event": {
-            "slug": "solluna-happy-day-2026-10-19",
+            "slug": "2026-10-19/slhappyday2026",
             "name": "SOLLUNA HAPPY DAY",
             "occurredOn": "2026-10-19"
           }
@@ -175,7 +175,7 @@
           "occurredOn": "2026-10-19",
           "placement": "event",
           "event": {
-            "slug": "solluna-happy-day-2026-10-19",
+            "slug": "2026-10-19/slhappyday2026",
             "name": "SOLLUNA HAPPY DAY",
             "occurredOn": "2026-10-19"
           }
@@ -230,7 +230,7 @@
           "occurredOn": "2026-10-18",
           "placement": "event",
           "event": {
-            "slug": "solluna-at-starfest-2026-10-18",
+            "slug": "2026-10-18/sollunastarfest",
             "name": "SOLLUNA AT STARFEST",
             "occurredOn": "2026-10-18"
           }
@@ -279,7 +279,7 @@
           "occurredOn": "2026-03-01",
           "placement": "event",
           "event": {
-            "slug": "sol-luna-ig-live-2026-03-01",
+            "slug": "2026-03-01/sol-luna-ig-live",
             "name": "sol & luna ig live",
             "occurredOn": "2026-03-01"
           }

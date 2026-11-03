@@ -14,10 +14,20 @@ const htmlResponse = ({ html, found, tags }) => withCacheTags(new Response(html,
 }), found ? tags ?? [] : []);
 
 /**
+ * A merged-away event's page: a 308, like `src/pages.js`'s `redirects`
+ * (`permanent: true`). The route's own cache applies (`toResponse`), and
+ * the tags let a purge of either event reach it.
+ * @param {import('../services/meta.js').MetaRedirect} page
+ */
+const redirectResponse = ({ redirect, tags }) => withCacheTags(new Response(null, { status: 308, headers: { location: redirect } }), tags);
+
+/** @typedef {import('../services/meta.js').MetaPage | import('../services/meta.js').MetaRedirect} RenderedPage */
+
+/**
  * One link-preview meta route on a page path. Shared links carry
  * tracking params (`?s=20`), so any query is accepted and ignored.
  * @param {string} path
- * @param {(input: import('../http/handler.js').RouteInput, deps: import('../http/deps.js').Deps) => Promise<{ html: string, found: boolean, tags: string[] }>} render
+ * @param {(input: import('../http/handler.js').RouteInput, deps: import('../http/deps.js').Deps) => Promise<RenderedPage>} render
  */
 const metaRoute = (path, render) => ({
   method: 'GET',
@@ -25,22 +35,25 @@ const metaRoute = (path, render) => ({
   cache: PUBLIC_CACHE,
   query: null,
   /** @param {import('../http/handler.js').RouteInput} input @param {import('../http/deps.js').Deps} deps */
-  run: async (input, deps) => htmlResponse(await render(input, deps)),
+  run: async (input, deps) => {
+    const page = await render(input, deps);
+    return 'redirect' in page ? redirectResponse(page) : htmlResponse(page);
+  },
 });
 
 /**
  * The renderer each `src/pages.js` `meta` name stands for. `event` reads
- * the page path's `:slug`.
- * @type {Record<string, (input: import('../http/handler.js').RouteInput, deps: import('../http/deps.js').Deps) => Promise<{ html: string, found: boolean, tags: string[] }>>}
+ * the page path's `:date/:tag` (the slug `<date>/<tag>`).
+ * @type {Record<string, (input: import('../http/handler.js').RouteInput, deps: import('../http/deps.js').Deps) => Promise<RenderedPage>>}
  */
 const PAGE_META = {
-  event: ({ params, origin }, deps) => eventMetaPage(deps, { slug: params.slug, origin }),
+  event: ({ params, origin }, deps) => eventMetaPage(deps, { slug: `${params.date}/${params.tag}`, origin }),
 };
 
 /**
  * The link-preview meta routes, on the original page paths: Vercel hands
  * the function the URL the browser asked for (`/t/123`, not a rewritten
- * one), so these match `/e/:slug` and `<urlPrefix>:sourceId` directly.
+ * one), so these match `/e/:date/:tag` and `<urlPrefix>:sourceId` directly.
  * Derived from the one source of truth: each `src/pages.js` page with a
  * `meta` name, then each registered kind's `urlPrefix` (the item page).
  * A hidden or unknown target gets the generic site meta.

@@ -71,11 +71,14 @@ function postAuthorIdsOf(tweet, accounts) {
 
 /**
  * A copy of `proposal` whose slug no existing event has, numbered
- * `-2`, `-3`… with the name suffixed `(2)`, `(3)`…
+ * `-2`, `-3`… with the name suffixed `(2)`, `(3)`… An undated proposal
+ * (`slug: null`, settled later at write time) is returned unchanged --
+ * there's nothing yet to dedupe against.
  * @param {EventProposal} proposal
  * @param {Event[]} events
  */
 function distinctProposal(proposal, events) {
+  if (proposal.slug === null) return proposal;
   const taken = new Set(events.map((e) => e.slug));
   if (!taken.has(proposal.slug)) return proposal;
   let n = 2;
