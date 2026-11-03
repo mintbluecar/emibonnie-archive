@@ -5,7 +5,7 @@ import { after, before, test } from 'node:test';
 import { IDS } from '../helpers/fixtures.js';
 import { HOST, ingestDeps, ingest, rows, SYSTEM } from '../helpers/ingest.js';
 import { createJob, insertRows, rowsPage, updateRow } from '../../src/repo/imports.js';
-import { applyMapping } from '../../src/services/importMapping.js';
+import { applyMapping, applyNotSpeaker } from '../../src/services/importMapping.js';
 import { ensureOwnerUser, markerTable } from '../../src/services/importJob.js';
 import { publishRows } from '../../src/services/importActions.js';
 import { personView } from '../../src/services/hubs.js';
@@ -153,4 +153,31 @@ test('mapping an attached row purges its public parent', async () => {
   const { updated } = await applyMapping(purging, { jobId: job, accountId: data.accountId, marker: '🦉', speaker: { role: 'fan' }, actor: owner });
   assert.equal(updated, 1);
   assert.ok(calls.flat().includes(`item:${data.liveId}`), JSON.stringify(calls));
+});
+
+test('"not a speaker" turns the marker\'s lines plain on that translator\'s entries, never remembered', async () => {
+  const marker = '🦊';
+  await appendLine(data.longId, '🦊: not really a speaker');
+  await appendLine(data.longId, '🦊: still not one');
+  assert.ok((await openOnLong()).includes(marker));
+  const before = await recall(deps.db, data.accountId);
+  const { updated } = await applyNotSpeaker(deps, { jobId, accountId: data.accountId, marker, actor: owner });
+  assert.ok(updated >= 1);
+  assert.ok(!(await openOnLong()).includes(marker), 'the marker leaves the table');
+  const fixes = await rows(deps.db, 'select as_kind from translation_line_fixes where item_id = $1', [data.longId]);
+  assert.ok(fixes.length > 0 && fixes.every((fix) => fix.as_kind === 'plain'));
+  assert.equal(await answerOf(data.longId, marker), null, 'no speaker is mapped');
+  assert.deepEqual(await recall(deps.db, data.accountId), before);
+  const others = await rows(deps.db, 'select 1 from translation_line_fixes where item_id = $1', [data.otherId]);
+  assert.equal(others.length, 0, "another translator's entry is untouched");
+});
+
+test('"not a speaker" keeps an entry\'s earlier line fixes', async () => {
+  const marker = '🐸';
+  await appendLine(data.longId, '🐸: another false marker');
+  const kept = await rows(deps.db, 'select position, line from translation_line_fixes where item_id = $1', [data.longId]);
+  await applyNotSpeaker(deps, { jobId, accountId: data.accountId, marker, actor: owner });
+  const now = await rows(deps.db, 'select position, line from translation_line_fixes where item_id = $1', [data.longId]);
+  for (const fix of kept) assert.ok(now.some((n) => n.position === fix.position && n.line === fix.line));
+  assert.ok(now.length > kept.length);
 });

@@ -376,6 +376,7 @@
   "import.marker.remember": "remember for this translator",
   "import.marker.select": "map {marker}",
   "import.marker.choose": "choose a speaker",
+  "import.marker.notSpeaker": "not a speaker (plain text)",
   "import.marker.save": "save",
   "import.publish.ready": "publish ready",
   "import.publish.all": "publish all",

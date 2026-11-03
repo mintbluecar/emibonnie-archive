@@ -240,3 +240,91 @@ test('retryJob sends the cursor back and stops at remaining 0', async () => {
     assert.equal(reloads, 1, 'stops once remaining is 0, instead of looping to the 200-attempt cap');
   });
 });
+
+test('the select offers a new person and "not a speaker" between the people and the roles', () => {
+  const [select] = selectsOf(String(render({ markers: [group()], people: PEOPLE, roles: ROLES, expanded: new Set(), remember: true })));
+  assert.match(select, copyRe(t('add.newPerson')));
+  assert.match(select, copyRe(t('import.marker.notSpeaker')));
+  assert.ok(select.indexOf('person:6') < select.indexOf('value="new"'), 'people first');
+  assert.ok(select.indexOf('value="plain"') < select.indexOf('role:fan'), 'roles last');
+});
+
+/**
+ * Renders and binds one card against a fake fetch, returning the requests it made.
+ * @param {{ remember?: boolean, respond?: (url: string) => Response }} [opts]
+ */
+async function withCard({ remember = true, respond = () => Response.json({ updated: 1 }) } = {}, fn) {
+  /** @type {{ url: string, body: any }[]} */
+  const calls = [];
+  await withGlobals({
+    fetch: /** @type {any} */ (async (url, init) => {
+      calls.push({ url: String(url), body: JSON.parse(String(init?.body ?? '{}')) });
+      return respond(String(url));
+    }),
+  }, async () => {
+    const st = state({ markers: [group()], remember });
+    const root = new MiniElement('div');
+    mount(root, render({ markers: st.markers, people: PEOPLE, roles: ROLES, expanded: new Set(), remember: st.remember }));
+    bind(/** @type {any} */ (root), { state: st, map: (body) => postJson(`/api/owner/imports/${st.jobId}/map`, body), reload: async () => {} });
+    await fn(root);
+  });
+  return calls;
+}
+
+/** @param {any} root @param {string} value */
+function choose(root, value) {
+  const select = root.querySelector('[data-marker-select]');
+  select.value = value;
+  select.dispatchEvent({ type: 'change', target: select });
+}
+
+/** @param {any} root */
+async function saveMarker(root) {
+  root.querySelector('[data-action="save-marker"]').click();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+}
+
+test('choosing a new person opens its name and handle fields; choosing someone else closes them', async () => {
+  await withCard({}, async (root) => {
+    const fields = /** @type {any} */ (root.querySelector('[data-new-person]'));
+    choose(root, 'new');
+    assert.equal(fields.hidden, false);
+    choose(root, 'person:5');
+    assert.equal(fields.hidden, true);
+  });
+});
+
+test('saving a new person creates them, then maps the marker to their id', async () => {
+  const calls = await withCard({
+    respond: (url) => (url === '/api/people' ? Response.json({ id: 42 }) : Response.json({ updated: 2 })),
+  }, async (root) => {
+    choose(root, 'new');
+    /** @type {any} */ (root.querySelector('[data-new-name]')).value = ' Juniper ';
+    /** @type {any} */ (root.querySelector('[data-new-handle]')).value = 'juniper.x';
+    await saveMarker(root);
+  });
+  assert.deepEqual(calls.map((c) => c.url), ['/api/people', '/api/owner/imports/7/map']);
+  assert.deepEqual(calls[0].body, { displayName: 'Juniper', igHandle: 'juniper.x' });
+  assert.deepEqual(calls[1].body, { accountId: 3, marker: '☀️', speaker: { person: 42 }, remember: true });
+});
+
+test('a new person with no handle posts nothing and says they could not be added', async () => {
+  let status = '';
+  const calls = await withCard({}, async (root) => {
+    choose(root, 'new');
+    /** @type {any} */ (root.querySelector('[data-new-name]')).value = 'Juniper';
+    await saveMarker(root);
+    status = root.querySelector('[data-import-speakers-status]').textContent;
+  });
+  assert.equal(calls.length, 0);
+  assert.equal(status, t('add.personFailed'));
+});
+
+test('"not a speaker" maps the marker to plain text and is never remembered', async () => {
+  const calls = await withCard({ remember: true }, async (root) => {
+    choose(root, 'plain');
+    await saveMarker(root);
+  });
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].body, { accountId: 3, marker: '☀️', speaker: { plain: true }, remember: false });
+});

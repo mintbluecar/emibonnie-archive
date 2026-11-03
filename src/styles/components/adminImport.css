@@ -95,7 +95,8 @@
    width, under its cells (left to auto-placement, the list landed in the
    28px glyph column and wrapped one letter a line). */
 .c-import-speakers__check,
-.c-import-speakers__entries {
+.c-import-speakers__entries,
+.c-import-speakers__new {
   grid-column: 1 / -1;
 }
 

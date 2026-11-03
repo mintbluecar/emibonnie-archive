@@ -1,18 +1,23 @@
 // @ts-check
 /**
  * `POST /api/owner/imports/:id/map` (Plan 3): one marker answer for a
- * translator's held entries, batch or per-entry, with optional remembering.
+ * translator's held entries, batch or per-entry, with optional remembering;
+ * or "not a speaker" (`speaker: { plain: true }`), which is never remembered.
  */
 import { BadRequest } from '../http/errors.js';
 import { defineRoute, fieldsOf } from '../http/defineRoute.js';
-import { applyMapping } from '../services/importMapping.js';
+import { applyMapping, applyNotSpeaker } from '../services/importMapping.js';
 import { ROLES } from '../domain/constants.js';
 
-/** @param {unknown} raw @returns {import('../domain/speakers.js').Speaker|null} */
+/**
+ * A person, a role, or `{ plain: true }` ("not a speaker").
+ * @param {unknown} raw @returns {import('../domain/speakers.js').Speaker|{ plain: true }|null}
+ */
 function speakerOf(raw) {
   if (raw === null || typeof raw !== 'object') return null;
   const speaker = fieldsOf(raw);
   if (typeof speaker.person === 'number') return { person: speaker.person };
+  if (speaker.plain === true) return { plain: true };
   const role = ROLES.find((known) => known === speaker.role);
   if (role) return { role };
   return null;
@@ -26,7 +31,7 @@ function mappingBody(raw) {
   const body = fieldsOf(raw);
   const marker = typeof body.marker === 'string' ? body.marker : '';
   const speaker = speakerOf(body.speaker);
-  if (marker === '' || speaker === null) throw new BadRequest('a marker and exactly one of person or role');
+  if (marker === '' || speaker === null) throw new BadRequest('a marker and exactly one of person, role or plain');
   return {
     accountId: Number(body.accountId),
     marker,
@@ -43,5 +48,9 @@ export const importMapRoute = defineRoute({
   auth: 'owner',
   limit: 'owner',
   body: mappingBody,
-  run: async ({ params, body, user }, deps) => applyMapping(deps, { jobId: Number(params.id), ...body, actor: user.id }),
+  run: async ({ params, body: { speaker, remember, ...rest }, user }, deps) => {
+    const input = { jobId: Number(params.id), ...rest, actor: user.id };
+    if ('plain' in speaker) return applyNotSpeaker(deps, input);
+    return applyMapping(deps, { ...input, speaker, remember });
+  },
 });

@@ -4,7 +4,8 @@
  * unmapped markers; a per-entry list overrides those items; remembering
  * merges one marker into the translator's memory. Each entry changes
  * through its kind's `remapSpeakers`, so its people move with its
- * speakers, under the owner's actor.
+ * speakers, under the owner's actor. "Not a speaker" turns a marker's
+ * lines plain instead, through the kind's `setLineFixes`.
  */
 import { partLines } from '../domain/lineFixes.js';
 import { findMarkers } from '../domain/lines.js';
@@ -79,6 +80,47 @@ export async function applyMapping(deps, { jobId, accountId, marker, speaker, re
       const memory = await recall(w.tx, accountId);
       memory[marker] = speaker;
       await remember(w.tx, accountId, memory);
+    }
+  });
+  for (const item of targets) await recomputeRowForItem(deps, jobId, item.id);
+  return { updated: targets.length };
+}
+
+/**
+ * Plain-text fixes for every line in `detail` that uses `marker`, added
+ * to the fixes it already has.
+ * @param {any} detail @param {string} marker
+ * @returns {import('../domain/lineFixes.js').LineFix[]}
+ */
+function withPlainFixes(detail, marker) {
+  const fixes = detail.fixes ?? [];
+  const added = partLines(detail.parts, fixes)
+    .filter((line) => line.kind === 'speech' && !line.fixed && line.markers.includes(marker))
+    .map((line) => ({ part: line.part, line: line.line, as: /** @type {const} */ ('plain') }));
+  return [...fixes, ...added];
+}
+
+/**
+ * "Not a speaker" (owner feedback, 2026-11-02): the marker's lines on a
+ * translator's held entries in this job read as plain text, through line
+ * fixes, so the marker leaves the table. For this import only: speaker
+ * memory is never touched. Batch mode and `entries` work as in
+ * `applyMapping`.
+ * @param {ViewDeps} deps
+ * @param {{ jobId: number, accountId: number, marker: string, entries?: number[], actor: string }} input
+ * @returns {Promise<{ updated: number }>}
+ */
+export async function applyNotSpeaker(deps, { jobId, accountId, marker, entries, actor }) {
+  const only = Array.isArray(entries) && entries.length > 0 ? new Set(entries) : null;
+  const { using, targets } = await entriesUsing(deps, await heldEntries(deps, jobId, accountId), marker, only);
+  if (using.length === 0) return { updated: 0 };
+  const details = await detailsOf(deps, targets);
+  await write(deps, actor, async (w) => {
+    for (const item of targets) {
+      const setLineFixes = kindNamed(w, item.kind)?.setLineFixes;
+      if (typeof setLineFixes !== 'function') throw new BadRequest(`kind ${item.kind} has no lines to fix`);
+      await setLineFixes(w.tx, { itemId: item.id, fixes: withPlainFixes(details.get(item.id), marker) });
+      if (item.attached) w.purge.item(item.id);
     }
   });
   for (const item of targets) await recomputeRowForItem(deps, jobId, item.id);
