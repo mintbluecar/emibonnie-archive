@@ -13,6 +13,24 @@ looks. An element with no class still looks on-brand. Forgetting a style
 degrades to "plain but correct", never "broken" -- and if it doesn't,
 that's a check to add, not a one-off fix.
 
+## Rules card
+
+- Compose primitives first (section 4): `btn`, `field`, `card`, `grid`,
+  `list`, `stack`, `cluster`, and the rest.
+- Before writing a CSS rule, search `src/styles/` for the property;
+  reuse what's already there instead of adding a copy.
+- A second screen needing the same thing means promoting it to a
+  primitive with a setting, not copying the rule again.
+- Tweak a primitive only through its settings, set on your own `c-`
+  class (e.g. `--grid-min` on `.c-widget__grid`) -- never by
+  restyling the primitive's own rule.
+- A failing style check or test is a signal to fix the CSS, never an
+  allow-list to widen without the owner. The one exception:
+  `/* not shared: <reason> */` directly before a rule that
+  coincidentally matches another (`scripts/styleDuplicates.js`).
+- Work on a branch -- the hook refuses edits and commits on `main`.
+- Section 8 has the full table of checks and fixes.
+
 ## 1. Layers
 
 `app.css` is one file, in cascade layers declared once:
@@ -508,10 +526,11 @@ named, documented option here, never a second mount function.
 
 ## 6. When to write component CSS
 
-A component file (`src/styles/components/<name>.css`) holds only this
-screen's own genuinely unique layout and look -- never a primitive's
-look rebuilt by hand. Lint enforces both halves, inside
-`src/styles/components/*.css` only:
+See "Rules card" at the top of this doc first. A component file
+(`src/styles/components/<name>.css`) holds only this screen's own
+genuinely unique layout and look -- never a primitive's look rebuilt
+by hand. Lint enforces both halves, inside `src/styles/components/*.css`
+only:
 
 - `selector-disallowed-list` rejects a selector naming a primitive
   class (`btn`, `field`, `check`, `card`, `table`, `chip`, `badge`,
