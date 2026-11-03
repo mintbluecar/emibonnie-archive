@@ -22,12 +22,14 @@ that's a check to add, not a one-off fix.
 - A second screen needing the same thing means promoting it to a
   primitive with a setting, not copying the rule again.
 - Tweak a primitive only through its settings, set on your own `c-`
-  class (e.g. `--grid-min` on `.c-widget__grid`) -- never by
-  restyling the primitive's own rule.
+  class (e.g. `--grid-min` and `--grid-min-wide` on `.c-widget__grid`)
+  -- never by restyling the primitive's own rule.
 - A failing style check or test is a signal to fix the CSS, never an
   allow-list to widen without the owner. The one exception:
-  `/* not shared: <reason> */` directly before a rule that
-  coincidentally matches another (`scripts/styleDuplicates.js`).
+  `/* not shared: <reason> */` directly before the component rule
+  that coincidentally matches another (`scripts/styleDuplicates.js`).
+- The check only catches exact copies; a near-copy (one value changed,
+  a rule split in two) is still a copy.
 - Work on a branch -- the hook refuses edits and commits on `main`.
 - Section 8 has the full table of checks and fixes.
 
@@ -424,10 +426,9 @@ labelling a list. `tap-link` is a small text link whose target is still
 is one inside a row of small controls, `--control-sm` tall like
 `btn--sm`. `heading` sets the look, never the level -- pick the element
 (`h1`/`h2`/`h3`) for the outline and the class (`heading--lg`/`--md`/
-`--sm`) for the size. `gradient-text` (styling reuse enforcement, Task
-3) paints the primary gradient across its text, clipped to the glyphs
--- the wordmark's accent letters; the rest of the wordmark beside it
-stays plain text.
+`--sm`) for the size. `gradient-text` paints the primary gradient
+across its text, clipped to the glyphs -- the wordmark's accent
+letters; the rest of the wordmark beside it stays plain text.
 
 ### Spacing and layout (`spacing.css`)
 
@@ -470,10 +471,11 @@ a column may get (150px), and `--grid-gap`, the gap between cards
 (`--space-2`); from the 860px breakpoint `--grid-min-wide` (190px) and
 `--grid-gap-wide` (`--space-3`) take over. A screen that needs other
 values adds its own class next to `grid` on the same element and sets
-the setting there, e.g. `--grid-min: 120px` on `.c-widget__grid`: the
-components layer comes after primitives, so the screen's value wins.
-Set on a parent instead, it would lose to the value `.grid` defines on
-itself.
+the settings there, e.g. `--grid-min: 120px` and `--grid-min-wide: 160px`
+on `.c-widget__grid` -- set both, or the wide breakpoint keeps the
+primitive's own 190px: the components layer comes after primitives, so
+the screen's value wins. Set on a parent instead, it would lose to the
+value `.grid` defines on itself.
 
 ### List (`list.css`)
 
@@ -482,11 +484,11 @@ itself.
 <ul class="list c-import-speakers__entries">...</ul>
 ```
 
-A `<ul>`/`<ol>` used as a layout container rather than a bulleted list
-(styling reuse enforcement, Task 3): no browser marker, no inherited
-margin or padding. Pair it with `stack`/`cluster` for the gap between
-items, or add the block's own class next to it for the layout its
-items need (a grid, dividers between rows, ...).
+A `<ul>`/`<ol>` used as a layout container rather than a bulleted list:
+no browser marker, no inherited margin or padding. Pair it with
+`stack`/`cluster` for the gap between items, or add the block's own
+class next to it for the layout its items need (a grid, dividers
+between rows, ...).
 
 ### Shared: the sheet and the container
 
@@ -534,8 +536,9 @@ only:
 
 - `selector-disallowed-list` rejects a selector naming a primitive
   class (`btn`, `field`, `check`, `card`, `table`, `chip`, `badge`,
-  `notice`, `meta`, `label`, `heading`, `stack`, `cluster`, `grid`) at
-  a real boundary -- a component never re-opens a primitive's own rule
+  `notice`, `segmented`, `meta`, `label`, `heading`, `tap-link`,
+  `stack`, `cluster`, `grid`, `list`, `gradient-text`) at a real
+  boundary -- a component never re-opens a primitive's own rule
   (setting a primitive's settings, like `grid`'s, on its own class is
   how a screen adjusts one).
 - `local/no-rebuilt-primitive` (`scripts/stylelint/no-rebuilt-primitive.js`)
@@ -628,7 +631,7 @@ both only exist locally (`VERCEL` unset), never in production.
 | `at-rule-disallowed-list: layer` (stylelint) | a hand-written `@layer` | delete it -- the build assigns the layer by folder |
 | `selector-disallowed-list` (stylelint, `components/*.css` only) | a selector naming a primitive class at a real boundary | don't restyle a primitive from a component file; use the component's own `c-<block>` class |
 | `local/no-rebuilt-primitive` (stylelint, `components/*.css` only) | a button-/field-like selector declaring background + `border-radius` + `padding*` together | use the `btn`/`field` primitive instead of rebuilding it |
-| `scripts/styleDuplicates.js` (run by `npm run check` after stylelint) | a component rule whose 3+ declarations, in the same media context, are exactly another component's or a primitive's | use the existing class, or move the rule into `src/styles/primitives/` and use it from both; if the match is a coincidence, put `/* not shared: <reason> */` directly before one of the two rules |
+| `scripts/styleDuplicates.js` (run by `npm run check` after stylelint) | a component rule whose 3+ declarations, in the same media context, are exactly another component's or a primitive's | use the existing class, or move the rule into `src/styles/primitives/` and use it from both; if the match is a coincidence, put `/* not shared: <reason> */` directly before the component rule |
 | `test/styles/classUsage.test.js` | a class used in `public/js`/the style guide template with no matching CSS selector, or vice versa; or a class/token in this doc's own code blocks that isn't real | add the missing rule, or delete the dead class/selector; keep this doc's examples matched to the real classes and tokens |
 | `test/site/themeTokens.test.js` (the theme test) | a site `theme.css` sets a custom property `tokens.css` doesn't define, or a font token names a family that's neither the engine's own nor declared in that site's `fonts` | override only existing tokens; declare a font (`docs/site-settings.md`, "Fonts") before pointing a role at it |
 | e2e `checkPage`'s structure assertions (`e2e/helpers.js`, every `e2e/*.spec.js` page) | no `<header>`/`main.container` | mount through `pageShell.render()` + `mountPage()` (section 5) |

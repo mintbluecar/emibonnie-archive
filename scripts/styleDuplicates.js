@@ -8,9 +8,11 @@
  * layer), and so are short rules (two declarations match by chance too
  * often to mean a copy).
  *
- * A real coincidence is marked with a comment directly before either
- * rule, `/* not shared: <reason> *\/`; the reason must not be empty. A
- * marked rule takes no part in the comparison.
+ * A real coincidence is marked with a comment directly before the
+ * component rule, `/* not shared: <reason> *\/`; the reason must not be
+ * empty. A marked component rule takes no part in the comparison. The
+ * marker is ignored on a primitive rule -- a primitive is the shared
+ * layer, so excusing it would silence every component that copies it.
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
@@ -69,7 +71,8 @@ function groupRules(sources) {
   for (const source of sources) {
     postcss.parse(source.text).walkRules((rule) => {
       const decls = declarationsOf(rule);
-      if (decls.length < MIN_DECLARATIONS || isMarkedNotShared(rule)) return;
+      if (decls.length < MIN_DECLARATIONS) return;
+      if (!source.primitive && isMarkedNotShared(rule)) return;
       const pairs = decls.map((d) => `${d.prop.toLowerCase()}:${collapse(d.value)}${d.important ? ' !important' : ''}`);
       const key = `${contextOf(rule)}\n${[...new Set(pairs)].sort().join(';')}`;
       const props = [...new Set(decls.map((d) => d.prop.toLowerCase()))].sort();

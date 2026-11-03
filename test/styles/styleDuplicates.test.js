@@ -82,6 +82,27 @@ test('a "not shared" comment with no reason -> one', () => {
   ]).length, 1);
 });
 
+test('a "not shared" comment on a primitive does not excuse a component copy', () => {
+  const found = findDuplicates([
+    src('p.css', '/* not shared: coincidence */\n.p{display:grid;gap:1px;color:red}', true),
+    src('c.css', '.c{display:grid;gap:1px;color:red}'),
+  ]);
+  assert.equal(found.length, 1);
+  assert.deepEqual(found[0].a, { path: 'c.css', selector: '.c' });
+  assert.deepEqual(found[0].b, { path: 'p.css', selector: '.p' });
+});
+
+test('a 3-way group of components with one marked still reports the other two', () => {
+  const found = findDuplicates([
+    src('a.css', '/* not shared: wordmark sizes differ by design */\n.a{display:grid;gap:1px;color:red}'),
+    src('b.css', '.b{display:grid;gap:1px;color:red}'),
+    src('c.css', '.c{display:grid;gap:1px;color:red}'),
+  ]);
+  assert.equal(found.length, 1);
+  assert.deepEqual(found[0].a, { path: 'c.css', selector: '.c' });
+  assert.deepEqual(found[0].b, { path: 'b.css', selector: '.b' });
+});
+
 test('formatDuplicate gives the exact message', () => {
   const message = formatDuplicate({
     a: { path: 'src/styles/components/b.css', selector: '.b' },

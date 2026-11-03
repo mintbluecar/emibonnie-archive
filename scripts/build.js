@@ -184,6 +184,10 @@ export async function runBuild(options = {}) {
   const copy = loadCopy(siteDir);
 
   const tokensCss = readFileSync(path.join(repoRoot, 'src/styles/tokens.css'), 'utf8');
+  // Primitives are walked again here deliberately: `collectEngineCssSources`
+  // below is the "used" side of the token check (every engine CSS file,
+  // primitives included); this is the "defined" side -- a primitive's own
+  // custom properties (e.g. `grid`'s `--grid-min`) count as defined too.
   const primitivesCss = walkFiles(path.join(repoRoot, 'src/styles/primitives'), '.css').map((file) => file.text);
   const missingTokens = findMissingCssTokens(collectEngineCssSources(repoRoot), tokensCss, primitivesCss);
   if (missingTokens.length > 0) {

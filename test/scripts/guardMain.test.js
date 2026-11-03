@@ -7,6 +7,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { decide, isGitCommit } from '../../scripts/hooks/guardMain.js';
 
@@ -53,6 +56,69 @@ for (const command of ['git status', 'git log --grep=commit', 'echo "git commit"
 test('decide allows Read on main', () => {
   const { block } = decide({ tool_name: 'Read', cwd: '/repo' }, onMain);
   assert.equal(block, false);
+});
+
+/**
+ * `decide` must judge the branch of the edited file, not the session
+ * `cwd` -- a Claude Code session can sit in one checkout while editing a
+ * file that resolves into another (a worktree, or a file outside any
+ * repo entirely). These use real temp directories so `nearestExistingDir`
+ * (which calls the real `fs.existsSync`) has real paths to walk, with an
+ * injected `branchOf` standing in for git.
+ */
+test('decide for Edit/Write/NotebookEdit judges the branch of the file_path/notebook_path, not cwd', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'fan-archive-guard-'));
+  try {
+    const mainRepo = path.join(root, 'main-repo');
+    const worktree = path.join(root, 'feature-worktree');
+    const outside = path.join(root, 'not-a-repo');
+    mkdirSync(path.join(mainRepo, 'src'), { recursive: true });
+    mkdirSync(path.join(worktree, 'src'), { recursive: true });
+    mkdirSync(outside, { recursive: true });
+
+    /** @type {(cwd: string) => string|null} */
+    const branchOf = (cwd) => {
+      if (cwd.startsWith(worktree)) return 'feature';
+      if (cwd.startsWith(mainRepo)) return 'main';
+      return null; // outside any repo
+    };
+
+    // File outside any repo entirely, session cwd on main -> allowed.
+    assert.equal(
+      decide({ tool_name: 'Write', tool_input: { file_path: path.join(outside, 'notes.txt') }, cwd: mainRepo }, branchOf).block,
+      false,
+    );
+
+    // File inside a feature-branch worktree, session cwd on main -> allowed.
+    // The immediate parent ('deep/nested') doesn't exist yet (e.g. Write
+    // creating it), so this also exercises walking up to the nearest
+    // directory that does exist ('src').
+    assert.equal(
+      decide(
+        { tool_name: 'Edit', tool_input: { file_path: path.join(worktree, 'src', 'deep', 'nested', 'a.css') }, cwd: mainRepo },
+        branchOf,
+      ).block,
+      false,
+    );
+
+    // File inside the main checkout, session cwd also on main -> blocked.
+    assert.equal(
+      decide(
+        { tool_name: 'NotebookEdit', tool_input: { notebook_path: path.join(mainRepo, 'src', 'nb.ipynb') }, cwd: mainRepo },
+        branchOf,
+      ).block,
+      true,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('decide falls back to cwd for Bash, and to process.cwd() when cwd is missing', () => {
+  /** @type {(cwd: string) => string|null} */
+  const branchOf = (cwd) => (cwd === process.cwd() ? 'main' : 'feature');
+  const { block } = decide({ tool_name: 'Bash', tool_input: { command: 'git commit -m x' } }, branchOf);
+  assert.equal(block, true);
 });
 
 test('a blocked reason tells the agent to create a branch', () => {
