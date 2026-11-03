@@ -328,3 +328,49 @@ test('"not a speaker" maps the marker to plain text and is never remembered', as
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0].body, { accountId: 3, marker: '☀️', speaker: { plain: true }, remember: false });
 });
+
+test('the "translator unknown" card sends accountId null, not a number', async () => {
+  /** @type {any[]} */
+  const bodies = [];
+  await withGlobals({
+    fetch: /** @type {any} */ (async (_url, init) => { bodies.push(JSON.parse(String(init?.body ?? '{}'))); return Response.json({ updated: 1 }); }),
+  }, async () => {
+    const st = state({ markers: [group({ accountId: null, handle: null })] });
+    const root = new MiniElement('div');
+    mount(root, render({ markers: st.markers, people: PEOPLE, roles: ROLES, expanded: new Set(), remember: true }));
+    bind(/** @type {any} */ (root), { state: st, map: (body) => postJson('/api/owner/imports/7/map', body), reload: async () => {} });
+    choose(root, 'role:fan');
+    await saveMarker(root);
+  });
+  assert.equal(bodies.length, 1);
+  assert.equal(bodies[0].accountId, null);
+});
+
+test('a save that changes nothing says so and does not reload', async () => {
+  let status = '';
+  let reloads = 0;
+  await withGlobals({ fetch: /** @type {any} */ (async () => Response.json({ updated: 0 })) }, async () => {
+    const st = state({ markers: [group()] });
+    const root = new MiniElement('div');
+    mount(root, render({ markers: st.markers, people: PEOPLE, roles: ROLES, expanded: new Set(), remember: true }));
+    bind(/** @type {any} */ (root), { state: st, map: (body) => postJson('/api/owner/imports/7/map', body), reload: async () => { reloads += 1; } });
+    choose(root, 'role:fan');
+    await saveMarker(root);
+    status = /** @type {any} */ (root.querySelector('[data-import-speakers-status]')).textContent;
+  });
+  assert.equal(status, t('import.marker.nothing'));
+  assert.equal(reloads, 0);
+});
+
+test('review opens a marker on the "translator unknown" card too', async () => {
+  const st = state({ markers: [group({ accountId: null, handle: null })] });
+  const root = new MiniElement('div');
+  const paint = () => {
+    mount(root, render({ markers: st.markers, people: PEOPLE, roles: ROLES, expanded: st.expanded, remember: st.remember }));
+  };
+  paint();
+  bind(/** @type {any} */ (root), { state: st, map: async () => ({}), reload: async () => { paint(); } });
+  /** @type {any} */ (root.querySelector('[data-action="review"]')).click();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.ok(root.querySelector('[data-entry-select]'), 'the entries are open');
+});

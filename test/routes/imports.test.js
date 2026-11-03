@@ -102,6 +102,15 @@ test('"not a speaker" is accepted as a speaker and takes the marker off the tabl
   assert.ok(!left.includes(marker));
 });
 
+test('the map body keeps a null accountId (the "translator unknown" card) and refuses one that is not a number', async () => {
+  const body = { accountId: null, marker: 'none-such', speaker: { role: 'fan' } };
+  const ok = await api.call('POST', `/api/owner/imports/${jobId}/map`, { cookies: owner, body });
+  assert.equal(ok.status, 200, ok.text);
+  assert.deepEqual(JSON.parse(ok.text), { updated: 0 });
+  const bad = await api.call('POST', `/api/owner/imports/${jobId}/map`, { cookies: owner, body: { ...body, accountId: 'x' } });
+  assert.equal(bad.status, 400, bad.text);
+});
+
 test('the owner publishes, skips, retries; a member may not', async () => {
   const seeded = await api.call('POST', '/api/dev/import', {
     cookies: owner, body: { urls: [`https://x.com/a/status/${IDS.POST}`] },

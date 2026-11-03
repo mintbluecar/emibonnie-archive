@@ -22,15 +22,16 @@ import { write } from './write.js';
 
 /**
  * The translator's entries held in the job, one per item; `attached` when
- * a row attached a part to it (its entry is already public).
- * @param {ViewDeps} deps @param {number} jobId @param {number} accountId
+ * a row attached a part to it (its entry is already public). A null
+ * `accountId` is the "translator unknown" card: entries credited to no one.
+ * @param {ViewDeps} deps @param {number} jobId @param {number|null} accountId
  * @returns {Promise<Candidate[]>}
  */
 async function heldEntries(deps, jobId, accountId) {
   const { rows } = await deps.db.query(
     `select i.id, i.kind, bool_or(r.state = 'attached') as attached
      from items i join import_rows r on r.item_id = i.id
-     where r.job_id = $1 and r.state = any($2::text[]) and i.credited_account_id = $3
+     where r.job_id = $1 and r.state = any($2::text[]) and i.credited_account_id is not distinct from $3
      group by i.id, i.kind order by i.id`,
     [jobId, ['fetched', 'needs_speakers', 'check', 'attached'], accountId],
   );
@@ -60,7 +61,7 @@ async function entriesUsing(deps, candidates, marker, only) {
  * those items (the per-entry override). Remembering merges into the
  * translator's memory, never replacing its other markers.
  * @param {ViewDeps} deps
- * @param {{ jobId: number, accountId: number, marker: string, speaker: Speaker,
+ * @param {{ jobId: number, accountId: number|null, marker: string, speaker: Speaker,
  *   remember?: boolean, entries?: number[], actor: string }} input
  * @returns {Promise<{ updated: number }>} how many entries changed
  */
@@ -76,7 +77,8 @@ export async function applyMapping(deps, { jobId, accountId, marker, speaker, re
       await remap(w.tx, { itemId: item.id, map: { [marker]: speaker }, ctx });
       if (item.attached) w.purge.item(item.id);
     }
-    if (rememberIt) {
+    // Memory is per translator: an entry credited to no one has nobody to remember for.
+    if (rememberIt && accountId !== null) {
       const memory = await recall(w.tx, accountId);
       memory[marker] = speaker;
       await remember(w.tx, accountId, memory);
@@ -107,7 +109,7 @@ function withPlainFixes(detail, marker) {
  * memory is never touched. Batch mode and `entries` work as in
  * `applyMapping`.
  * @param {ViewDeps} deps
- * @param {{ jobId: number, accountId: number, marker: string, entries?: number[], actor: string }} input
+ * @param {{ jobId: number, accountId: number|null, marker: string, entries?: number[], actor: string }} input
  * @returns {Promise<{ updated: number }>}
  */
 export async function applyNotSpeaker(deps, { jobId, accountId, marker, entries, actor }) {

@@ -22,9 +22,14 @@ import { speakerSelect, newPersonFields, rowId, bindPick, answerOf } from './imp
  *   reload: () => Promise<void>, say: (text: string) => void, fail: () => void }} BindContext
  */
 
-/** The key a marker's "review" toggle stores in `expanded`. @param {MarkerGroup} group @param {Marker} marker */
+/**
+ * The key a marker's "review" toggle stores in `expanded`. The
+ * "translator unknown" card's null account is '', as its `data-account`
+ * renders, so the toggle (which reads that attribute) finds the same key.
+ * @param {MarkerGroup} group @param {Marker} marker
+ */
 export function markerKey(group, marker) {
-  return `${group.accountId}:${marker.marker}`;
+  return `${group.accountId ?? ''}:${marker.marker}`;
 }
 
 /**
@@ -143,7 +148,8 @@ function attrOf(button, attribute) {
 /**
  * Sends the answer in `button`'s row (a marker or an entry), creating a
  * new person first when that's the answer. Nothing chosen sends nothing;
- * a new person who couldn't be added says so.
+ * a new person who couldn't be added, or a save that changed no entry,
+ * says so.
  * @param {BindContext} context @param {Element} button
  * @param {{ row: string, select: string, extra?: Record<string, unknown> }} where
  */
@@ -158,11 +164,15 @@ async function sendAnswer(context, button, { row, select, extra = {} }) {
     return;
   }
   if (!speaker) return;
-  const accountId = Number(attrOf(button, 'data-account'));
+  // "translator unknown" renders no account (''): entries credited to no one.
+  const account = attrOf(button, 'data-account');
+  const accountId = account === '' ? null : Number(account);
   const marker = attrOf(button, 'data-marker');
   // "not a speaker" is for this import only: never remembered.
   const remember = 'plain' in speaker ? false : context.state.remember;
-  await context.map({ accountId, marker, speaker, remember, ...extra });
+  const result = await context.map({ accountId, marker, speaker, remember, ...extra });
+  // Nothing to repaint, and a repaint would wipe the message.
+  if (result?.updated === 0) { context.say(t('import.marker.nothing')); return; }
   await context.reload();
 }
 

@@ -181,3 +181,13 @@ test('"not a speaker" keeps an entry\'s earlier line fixes', async () => {
   for (const fix of kept) assert.ok(now.some((n) => n.position === fix.position && n.line === fix.line));
   assert.ok(now.length > kept.length);
 });
+
+test('the "translator unknown" card maps the entries credited to no one (accountId null), and never remembers', async () => {
+  await deps.db.transaction((tx) => tx.query('update items set credited_account_id = null where id = $1', [data.otherId]), SYSTEM);
+  await appendLine(data.otherId, '🦉: a line with no translator');
+  const { updated } = await applyMapping(deps, { jobId, accountId: null, marker: '🦉', speaker: { role: 'fan' }, remember: true, actor: owner });
+  assert.equal(updated, 1);
+  assert.deepEqual(await answerOf(data.otherId, '🦉'), { person_id: null, role: 'fan' });
+  const plain = await applyNotSpeaker(deps, { jobId, accountId: null, marker: '🐱', actor: owner });
+  assert.equal(plain.updated, 1);
+});

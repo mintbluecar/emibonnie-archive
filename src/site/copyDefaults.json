@@ -379,6 +379,7 @@
   "import.marker.newPerson": "＋ new person",
   "import.marker.notSpeaker": "not a speaker",
   "import.marker.save": "save",
+  "import.marker.nothing": "nothing changed — no entry here still needs that marker",
   "import.publish.ready": "publish ready",
   "import.publish.all": "publish all",
   "import.publish.done": "published {n}",

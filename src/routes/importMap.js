@@ -32,8 +32,11 @@ function mappingBody(raw) {
   const marker = typeof body.marker === 'string' ? body.marker : '';
   const speaker = speakerOf(body.speaker);
   if (marker === '' || speaker === null) throw new BadRequest('a marker and exactly one of person, role or plain');
+  // null: the "translator unknown" card, entries credited to no one.
+  const accountId = body.accountId === null ? null : Number(body.accountId);
+  if (accountId !== null && !Number.isInteger(accountId)) throw new BadRequest('accountId is a number or null');
   return {
-    accountId: Number(body.accountId),
+    accountId,
     marker,
     speaker,
     remember: body.remember === true,
