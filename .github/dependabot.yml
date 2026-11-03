@@ -4,7 +4,27 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # A dependency joins the first group it matches.
+    groups:
+      # The ESLint toolchain is released in step, so it moves together,
+      # majors included.
+      eslint:
+        patterns:
+          - "eslint"
+          - "@eslint/*"
+          - "eslint-plugin-*"
+          - "globals"
+      # Everything else: minor and patch bumps in one PR. Majors still
+      # arrive one per PR so each can be reviewed on its own.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      actions:
+        patterns:
+          - "*"
