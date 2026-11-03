@@ -155,7 +155,7 @@ test('LIVE (vertical clip) at phone width: the media box is capped at 40% of vie
   const box = await video.boundingBox();
   expect(/** @type {{height: number}} */ (box).height).toBeLessThanOrEqual(LIVE_HEIGHT_CAP);
 
-  const firstBubbleTop = await page.locator('.c-bubbles__msg, .c-bubbles__plain, .c-bubbles__crowd').first().evaluate((el) => el.getBoundingClientRect().top);
+  const firstBubbleTop = await page.locator('.c-bubbles__msg, [data-bubble="plain"], .c-bubbles__crowd').first().evaluate((el) => el.getBoundingClientRect().top);
   expect(firstBubbleTop).toBeLessThan(testInfo.project.use.viewport?.height ?? 844);
 
   // Review round 2, C3: the stub clip must actually decode, not just avoid a 404.

@@ -15,9 +15,6 @@
 }
 
 .c-quote__text {
-  overflow-wrap: anywhere;
-  font-size: var(--text-13);
-  line-height: 1.45;
   margin-bottom: var(--space-2);
 }
 

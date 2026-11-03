@@ -4,8 +4,11 @@
  * is the card's `card__link` (stretched over the whole card, card.css),
  * carrying the padding here, same as previewCard.css, so the translator
  * credit line's own link (cardCredit.css) stays independently clickable
- * above it. The event line is the label primitive and the people line
- * is meta.
+ * above it. The event line is the label primitive, the people line is
+ * meta, and each matching line (`.c-result-card__text > div`) is the
+ * `body-text` primitive -- same look as the bubbles' plain line and the
+ * quote card's text, so it carries no `c-result-card__line` rule of its
+ * own any more.
  */
 
 .c-result-card__link {
@@ -14,13 +17,6 @@
 
 .c-result-card__event {
   margin-bottom: var(--space-1);
-}
-
-/* not shared: a search snippet sized for the card; the bubbles' plain line follows the speech bubbles beside it instead */
-.c-result-card__line {
-  overflow-wrap: anywhere;
-  font-size: var(--text-13);
-  line-height: 1.45;
 }
 
 .c-result-card__text mark {

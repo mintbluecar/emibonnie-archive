@@ -2,7 +2,12 @@
  * public/js/components/bubbles.js. Task 10c (p): every text box here
  * wraps a long unbroken string (a URL) anywhere rather than overflowing
  * -- the text itself is never changed -- and the bubble, a flex child,
- * may shrink below that string's width (`min-width: 0`).
+ * may shrink below that string's width (`min-width: 0`). The wrap, size
+ * and line-height come from the `body-text` primitive (text.css), on
+ * `.c-bubbles__bub` and the plain line (`[data-bubble="plain"]`, a
+ * data attribute since the line's only CSS is now that primitive's --
+ * `test/styles/classUsage.test.js` fails a class with no rule of its
+ * own).
  *
  * `--c` is this element's own
  * `data-c` colour, applied by `bind()`; an element with none keeps the
@@ -81,11 +86,8 @@
 
 .c-bubbles__bub {
   min-width: 0;
-  overflow-wrap: anywhere;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-xs) var(--radius-md) var(--radius-md) var(--radius-md);
-  font-size: var(--text-13);
-  line-height: 1.45;
   max-width: 320px;
   background: color-mix(in srgb, var(--c) 12%, var(--color-card));
 }
@@ -117,12 +119,6 @@
   font-size: var(--text-12);
   color: var(--color-ink-muted);
   font-style: italic;
-}
-
-.c-bubbles__plain {
-  overflow-wrap: anywhere;
-  font-size: var(--text-13);
-  line-height: 1.45;
 }
 
 .c-bubbles__notes {

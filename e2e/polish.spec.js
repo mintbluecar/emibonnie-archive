@@ -72,7 +72,7 @@ test('LIVE at phone width (Task 10c k): with the gap, the first bubble still sho
   test.skip(testInfo.project.name !== 'phone', 'phone layout');
   await stubSyntheticMedia(page);
   await gotoReady(page, `/t/${LIVE}`);
-  const first = await page.locator('.c-bubbles__msg, .c-bubbles__plain').first().evaluate((el) => el.getBoundingClientRect().top);
+  const first = await page.locator('.c-bubbles__msg, [data-bubble="plain"]').first().evaluate((el) => el.getBoundingClientRect().top);
   expect(first).toBeLessThan(844);
 });
 

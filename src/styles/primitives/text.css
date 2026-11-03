@@ -10,6 +10,7 @@
  *   <h2 class="heading heading--md">Speakers</h2>
  *   <h3 class="heading heading--sm">Check the details</h3>
  *   <span class="gradient-text">fix</span>ture archive
+ *   <p class="body-text">a quoted post's text, a card's search snippet, a plain translation line</p>
  *
  * The heading classes set the look, never the level: pick the element
  * for the outline and the class for the size. label--section is a label
@@ -19,7 +20,11 @@
  * controls, --control-sm tall like btn--sm. gradient-text (the Task 3
  * styling reuse enforcement primitive) paints the primary gradient
  * across its text -- the wordmark's accent letters -- clipped to the
- * glyphs; the rest of the wordmark beside it stays plain text.
+ * glyphs; the rest of the wordmark beside it stays plain text. body-text
+ * (styling reuse enforcement) is a card's or bubble's body copy: it
+ * wraps a long unbroken string anywhere rather than overflowing, at
+ * --text-13/1.45. A block needing its own spacing (a margin, e.g.) adds
+ * that on its own class next to body-text, never inside this one.
  */
 
 .meta {
@@ -71,4 +76,10 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.body-text {
+  overflow-wrap: anywhere;
+  font-size: var(--text-13);
+  line-height: 1.45;
 }

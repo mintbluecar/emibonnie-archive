@@ -180,8 +180,12 @@ test('Task 10c (o): an avatar\'s emoji sits in its own .c-emoji box, centred by 
 
 test('Task 10c (p): every bubble text box wraps a long unbroken string, and the bubble may shrink in its row', () => {
   const css = readFileSync('src/styles/components/bubbles.css', 'utf8');
-  for (const cls of ['c-bubbles__bub', 'c-bubbles__crowd', 'c-bubbles__plain', 'c-bubbles__note', 'c-bubbles-compact']) {
+  for (const cls of ['c-bubbles__crowd', 'c-bubbles__note', 'c-bubbles-compact']) {
     assert.match(new RegExp(`\\.${cls}\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? '', /overflow-wrap:\s*anywhere/, cls);
   }
+  // c-bubbles__bub and the plain line (data-bubble="plain") get the wrap
+  // from the shared body-text primitive instead (STYLING.md "body-text").
+  const textCss = readFileSync('src/styles/primitives/text.css', 'utf8');
+  assert.match(/\.body-text\s*\{([^}]*)\}/.exec(textCss)?.[1] ?? '', /overflow-wrap:\s*anywhere/, 'body-text');
   assert.match(/\.c-bubbles__bub\s*\{([^}]*)\}/.exec(css)?.[1] ?? '', /min-width:\s*0/);
 });

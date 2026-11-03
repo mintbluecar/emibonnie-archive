@@ -16,7 +16,7 @@ that's a check to add, not a one-off fix.
 ## Rules card
 
 - Compose primitives first (section 4): `btn`, `field`, `card`, `grid`,
-  `list`, `stack`, `cluster`, and the rest.
+  `list`, `stack`, `cluster`, `body-text`, and the rest.
 - Before writing a CSS rule, search `src/styles/` for the property;
   reuse what's already there instead of adding a copy.
 - A second screen needing the same thing means promoting it to a
@@ -30,6 +30,8 @@ that's a check to add, not a one-off fix.
   that coincidentally matches another (`scripts/styleDuplicates.js`).
 - The check only catches exact copies; a near-copy (one value changed,
   a rule split in two) is still a copy.
+- `not shared` is only for coincidences: if two rules mean the same
+  thing, share them, even if tests or hooks need adjusting.
 - Work on a branch -- the hook refuses edits and commits on `main`.
 - Section 8 has the full table of checks and fixes.
 
@@ -417,6 +419,7 @@ track's width evenly.
 <h2 class="heading heading--md">Speakers</h2>
 <h3 class="heading heading--sm">Check the details</h3>
 <span class="gradient-text">fix</span>ture archive
+<p class="body-text">a quoted post's text, a card's search snippet, a plain translation line</p>
 ```
 
 `meta` is small muted text. `label` is a small, heavy, label-coloured
@@ -429,6 +432,10 @@ is one inside a row of small controls, `--control-sm` tall like
 `--sm`) for the size. `gradient-text` paints the primary gradient
 across its text, clipped to the glyphs -- the wordmark's accent
 letters; the rest of the wordmark beside it stays plain text.
+`body-text` is a card's or bubble's body copy -- a quoted post, a
+search snippet, a plain translation line -- `--text-13`/`1.45`, wrapping
+a long unbroken string anywhere rather than overflowing; a block
+needing its own spacing adds that on its own class alongside it.
 
 ### Spacing and layout (`spacing.css`)
 
@@ -537,8 +544,8 @@ only:
 - `selector-disallowed-list` rejects a selector naming a primitive
   class (`btn`, `field`, `check`, `card`, `table`, `chip`, `badge`,
   `notice`, `segmented`, `meta`, `label`, `heading`, `tap-link`,
-  `stack`, `cluster`, `grid`, `list`, `gradient-text`) at a real
-  boundary -- a component never re-opens a primitive's own rule
+  `stack`, `cluster`, `grid`, `list`, `gradient-text`, `body-text`) at
+  a real boundary -- a component never re-opens a primitive's own rule
   (setting a primitive's settings, like `grid`'s, on its own class is
   how a screen adjusts one).
 - `local/no-rebuilt-primitive` (`scripts/stylelint/no-rebuilt-primitive.js`)
