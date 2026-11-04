@@ -67,7 +67,7 @@ function metaLine(result) {
 export function render(props) {
   const { result, q, eager = false } = props;
   const text = result.matchLines.length > 0
-    ? html`<div class="c-result-card__text">${result.matchLines.map((line) => html`<div class="c-result-card__line">${highlighted(line, q)}</div>`)}</div>`
+    ? html`<div class="c-result-card__text">${result.matchLines.map((line) => html`<div class="body-text">${highlighted(line, q)}</div>`)}</div>`
     : bubbles.renderCompact({ bubbles: result.lines.filter((b) => b.kind !== 'note').slice(0, FALLBACK_LINES) });
   return html`
     <article class="card card--flush" data-result-card>

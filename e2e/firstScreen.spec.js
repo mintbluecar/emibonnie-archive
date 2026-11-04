@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test';
 import { gotoReady, stubSyntheticMedia, DARK_PROJECTS } from './helpers.js';
 
 const LONG = '1900000000000000001';
-const EVENT_SLUG = 'solluna-at-starfest-2026-10-18';
+const EVENT_SLUG = '2026-10-18/sollunastarfest';
 /** Long enough after `load` for Chromium's unused-preload warning to have fired. */
 const UNUSED_PRELOAD_WAIT_MS = 3500;
 

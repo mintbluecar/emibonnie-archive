@@ -20,6 +20,7 @@ import { mount, on } from '../core/dom.js';
 import { getJson } from '../core/api.js';
 import { t } from '../core/site.js';
 import { withQuery } from '../core/routes.js';
+import { debounced } from '../core/debounce.js';
 import * as resultCard from './resultCard.js';
 import { toApiParams, filterCount, sanitizeTypes, withoutFilter } from '../state/searchState.js';
 import { cleared, queryOf, stateFromQuery, viewOf } from '../state/searchScope.js';
@@ -211,16 +212,6 @@ function bindAreas(root, ctx) {
   }
   const searchEl = root.querySelector('.c-search');
   if (searchEl) on(searchEl, '[data-action="more-results"]', 'click', (_e, button) => loadMore(searchEl, ctx, button));
-}
-
-/** @param {(value: string) => void} fn @param {number} ms @returns {(value: string) => void} */
-function debounced(fn, ms) {
-  /** @type {ReturnType<typeof setTimeout>|undefined} */
-  let timer;
-  return (value) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(value), ms);
-  };
 }
 
 /** @param {Element} root @param {Ctx} ctx @returns {void} */

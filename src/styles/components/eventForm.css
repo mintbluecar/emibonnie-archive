@@ -1,0 +1,21 @@
+/*
+ * public/js/components/eventForm.js (event editing, spec screen ②): the
+ * edit event page's field set. Every control is the field, chip or button
+ * primitive; this file keeps the form's readable width, the short date
+ * field, and the tag box with its add button on one row. See STYLING.md.
+ */
+
+.c-event-form {
+  max-width: 640px;
+}
+
+.c-event-form__date {
+  max-width: 220px;
+}
+
+.c-event-form__add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+}

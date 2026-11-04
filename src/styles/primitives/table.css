@@ -25,6 +25,11 @@
  * the header row is then hidden visually but kept for screen readers.
  * A cell's long unbroken text (a handle, a URL) wraps rather than
  * widening the page.
+ *
+ * table--raised: on a desktop the table is one raised surface, the
+ * card's (on a phone table--stack already makes each row its own card).
+ * The separate border model is what lets the corners round; with no
+ * spacing and bottom-only dividers it draws the same rows.
  */
 
 .table th {
@@ -55,6 +60,16 @@
 
 .table__actions .cluster {
   justify-content: flex-end;
+}
+
+@media (min-width: 860px) {
+  .table--raised {
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--color-card);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
 }
 
 @media (max-width: 859.98px) {

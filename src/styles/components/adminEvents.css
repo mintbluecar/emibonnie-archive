@@ -1,0 +1,15 @@
+/*
+ * public/js/pages/adminEvents.js (event editing, spec screen ①): the
+ * owner's events list. The heading, search field, table, check, badge,
+ * buttons and texts are primitives (the table's desktop surface is
+ * table--raised, the tick box check--bare); this file keeps the page's
+ * own spacing and the event name's weight. See STYLING.md.
+ */
+
+.c-admin-events {
+  padding: var(--space-3) 0 var(--space-6);
+}
+
+.c-admin-events__name {
+  font-weight: var(--weight-bold);
+}

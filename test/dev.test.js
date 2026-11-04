@@ -126,9 +126,9 @@ test('dev server: a page response carries vercel.json\'s headers, CSP and Referr
     { source: '/(.*)', headers: [{ key: 'Content-Security-Policy', value: "default-src 'self'" }, { key: 'Referrer-Policy', value: 'no-referrer' }] },
     { source: '/build/(.*)', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] },
   ];
-  const srv = createServer({ root: 'test/fixtures/static', rewrites: [...REWRITES, { source: '/e/(.*)', destination: '/event.html' }], headers, handle });
+  const srv = createServer({ root: 'test/fixtures/static', rewrites: [...REWRITES, { source: '/e/(.*)/(.*)', destination: '/event.html' }], headers, handle });
   const base = await listen(srv);
-  const page = await fetch(base + '/e/x');
+  const page = await fetch(base + '/e/2026-01-01/x');
   assert.equal(page.headers.get('content-security-policy'), "default-src 'self'");
   assert.equal(page.headers.get('referrer-policy'), 'no-referrer');
   assert.equal(page.headers.get('cache-control'), null, 'only /build/(.*) gets Cache-Control');
@@ -139,11 +139,11 @@ test('dev server: a page response carries vercel.json\'s headers, CSP and Referr
 
 test('dev server: a header rule matches the incoming path, not a rewrite\'s destination (review round 2, "also, small")', async () => {
   const handle = async (req) => Response.json({ path: new URL(req.url).pathname });
-  // Only the incoming /e/x matches this; the rewrite's destination, /event.html, never would.
-  const headers = [{ source: '/e/(.*)', headers: [{ key: 'X-Incoming-Path-Rule', value: 'hit' }] }];
-  const srv = createServer({ root: 'test/fixtures/static', rewrites: [...REWRITES, { source: '/e/(.*)', destination: '/event.html' }], headers, handle });
+  // Only the incoming /e/2026-01-01/x matches this; the rewrite's destination, /event.html, never would.
+  const headers = [{ source: '/e/(.*)/(.*)', headers: [{ key: 'X-Incoming-Path-Rule', value: 'hit' }] }];
+  const srv = createServer({ root: 'test/fixtures/static', rewrites: [...REWRITES, { source: '/e/(.*)/(.*)', destination: '/event.html' }], headers, handle });
   const base = await listen(srv);
-  const page = await fetch(base + '/e/x');
+  const page = await fetch(base + '/e/2026-01-01/x');
   assert.equal(page.headers.get('x-incoming-path-rule'), 'hit');
   srv.close();
 });

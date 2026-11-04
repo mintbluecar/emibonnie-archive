@@ -38,7 +38,7 @@ const EXAMPLE = 'examples/solluna';
 /** A featured person of the example, named in the proof post so it shows on their page. */
 const PERSON = JSON.parse(readFileSync(path.join(REPO_ROOT, EXAMPLE, 'site.json'), 'utf8')).featuredPeople[0].igHandle;
 const KIND = 'zzcheck';
-const SLUG = 'zzcheck-proof-2026-10-01';
+const SLUG = '2026-10-01/zzcheck-proof';
 const WORD = 'quokkaproof';
 /** Never a real database: the copy's scripts get PGlite in a temp dir, whatever this shell has set. */
 const SAFE_ENV = { ...process.env, DATABASE_URL: '', VERCEL: '', TEST_DATABASE_URL: '', SITE_DIR: EXAMPLE };

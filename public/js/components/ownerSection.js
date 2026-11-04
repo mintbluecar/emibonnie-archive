@@ -14,7 +14,7 @@ import { html } from '../core/html.js';
 import { on } from '../core/dom.js';
 import { getJson, postJson } from '../core/api.js';
 import { t } from '../core/site.js';
-import { importHref } from '../core/routes.js';
+import { ADMIN_EVENTS_PATH, importHref } from '../core/routes.js';
 import * as previewCard from './previewCard.js';
 
 /** @typedef {import('../../../src/http/contracts.js').OwnerView} OwnerView */
@@ -121,7 +121,7 @@ function waitingBlock(owner) {
   `);
   return html`
     <h3 class="label c-owner__heading">${t('owner.waiting')}</h3>
-    ${rows.length > 0 ? html`<ul class="c-owner__list">${rows}</ul>` : html`<p class="meta">${t('owner.waitingEmpty')}</p>`}
+    ${rows.length > 0 ? html`<ul class="list">${rows}</ul>` : html`<p class="meta">${t('owner.waitingEmpty')}</p>`}
   `;
 }
 
@@ -142,7 +142,7 @@ function importsBlock(owner) {
   });
   return html`
     <h3 class="label c-owner__heading">${t('owner.imports')}</h3>
-    <ul class="c-owner__list">${rows}</ul>
+    <ul class="list">${rows}</ul>
   `;
 }
 
@@ -181,6 +181,7 @@ export function render(owner) {
       </label>
       ${waitingBlock(owner)}
       ${importsBlock(owner)}
+      <p><a class="tap-link" href="${ADMIN_EVENTS_PATH}">${t('owner.events')}</a></p>
       ${reportsBlock(owner)}
       ${usersBlock(owner)}
       <p class="notice notice--error c-owner__status" role="status" data-owner-status></p>

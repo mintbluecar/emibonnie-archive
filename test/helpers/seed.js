@@ -16,7 +16,7 @@ export async function insertPerson(tx, { name = 'Person A', colour = '#112233' }
 }
 
 /** @param {Tx} tx */
-export async function insertEvent(tx, { slug = 'an-event', occurredOn = '2026-02-13' } = {}) {
+export async function insertEvent(tx, { slug = '2026-02-13/an-event', occurredOn = '2026-02-13' } = {}) {
   const { rows } = await tx.query(
     "insert into events (slug, name, occurred_on) values ($1, 'An event', $2) returning id",
     [slug, occurredOn],

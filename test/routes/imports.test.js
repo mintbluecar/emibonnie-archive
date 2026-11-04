@@ -88,6 +88,29 @@ test('a mapping is audited as the signed-in owner', async () => {
   assert.deepEqual(rows.map((row) => row.actor), [`x:${deps.site.ownerXUserId}`]);
 });
 
+test('"not a speaker" is accepted as a speaker and takes the marker off the table', async () => {
+  const view = JSON.parse((await api.call('GET', `/api/owner/imports/${jobId}`, { cookies: owner })).text);
+  const group = view.markers[0];
+  assert.ok(group, 'a marker to map');
+  const { marker } = group.markers[0];
+  const body = { accountId: group.accountId, marker, speaker: { plain: true }, remember: true };
+  const res = await api.call('POST', `/api/owner/imports/${jobId}/map`, { cookies: owner, body });
+  assert.equal(res.status, 200, res.text);
+  assert.ok(JSON.parse(res.text).updated >= 1);
+  const after = JSON.parse((await api.call('GET', `/api/owner/imports/${jobId}`, { cookies: owner })).text);
+  const left = after.markers.filter((g) => g.accountId === group.accountId).flatMap((g) => g.markers.map((m) => m.marker));
+  assert.ok(!left.includes(marker));
+});
+
+test('the map body keeps a null accountId (the "translator unknown" card) and refuses one that is not a number', async () => {
+  const body = { accountId: null, marker: 'none-such', speaker: { role: 'fan' } };
+  const ok = await api.call('POST', `/api/owner/imports/${jobId}/map`, { cookies: owner, body });
+  assert.equal(ok.status, 200, ok.text);
+  assert.deepEqual(JSON.parse(ok.text), { updated: 0 });
+  const bad = await api.call('POST', `/api/owner/imports/${jobId}/map`, { cookies: owner, body: { ...body, accountId: 'x' } });
+  assert.equal(bad.status, 400, bad.text);
+});
+
 test('the owner publishes, skips, retries; a member may not', async () => {
   const seeded = await api.call('POST', '/api/dev/import', {
     cookies: owner, body: { urls: [`https://x.com/a/status/${IDS.POST}`] },

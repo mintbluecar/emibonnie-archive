@@ -469,3 +469,12 @@ test('a pending follow-up part is hidden from the public view and shown with inc
     await own.db.end();
   }
 });
+
+test('a word marker ("Juniper:") never shows as an emoji: unmapped, it is named by the word; as a role, the role default', () => {
+  const card = { sourceId: 'x', followsOn: null, people: [], account: null };
+  const unmapped = /** @type {any} */ (translation.present.preview(card, { body: 'Juniper: hello', speakers: {}, sources: [] }, fakePreviewCtx()));
+  assert.deepEqual(unmapped.lines[0], { kind: 'speech', emoji: '', name: 'Juniper', text: 'hello', cont: false });
+  const role = /** @type {any} */ (translation.present.preview(card, { body: 'Juniper: hello', speakers: { Juniper: { role: 'fan' } }, sources: [] }, fakePreviewCtx()));
+  assert.equal(role.lines[0].emoji, '💬');
+  assert.equal(role.lines[0].name, 'fan');
+});

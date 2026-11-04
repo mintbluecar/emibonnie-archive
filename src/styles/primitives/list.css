@@ -1,0 +1,17 @@
+/*
+ * List (styling reuse enforcement, Task 3): an unordered or ordered
+ * list used as a layout container rather than a bulleted list -- no
+ * browser marker, no inherited margin or padding. Pair it with stack
+ * or cluster for the gap between items, or add the block's own class
+ * next to it for the layout the items themselves need (a grid,
+ * dividers, ...).
+ *
+ *   <ul class="list stack stack--2">...</ul>
+ *   <ul class="list c-import-speakers__entries">...</ul>
+ */
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

@@ -29,15 +29,16 @@
     "e2e:site": "node scripts/e2eSite.js",
     "new": "node scripts/new.js",
     "test:kind": "node --test test/kinds/scaffoldedKind.test.js",
-    "import": "node scripts/import.js"
+    "import": "node scripts/import.js",
+    "readdress-events": "node scripts/readdressEvents.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
-    "@vercel/functions": "^3.10.2"
+    "@vercel/functions": "^3.10.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
-    "@electric-sql/pglite": "^0.5.10",
+    "@electric-sql/pglite": "^0.5.13",
     "@eslint/js": "^9.39.5",
     "@fontsource/ibm-plex-sans-thai": "^5.3.0",
     "@fontsource/nunito": "^5.3.0",

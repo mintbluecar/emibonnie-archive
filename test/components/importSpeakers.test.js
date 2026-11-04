@@ -4,7 +4,8 @@ import '../helpers/siteFixture.js';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { MiniElement } from '../helpers/miniDom.js';
-import { mount } from '../../public/js/core/dom.js';
+import { mount, mountPage } from '../../public/js/core/dom.js';
+import { ShellHtml } from '../../public/js/core/html.js';
 import { postJson } from '../../public/js/core/api.js';
 import { copyRe } from '../helpers/copyMarkup.js';
 import { withGlobals } from '../helpers/globals.js';
@@ -156,6 +157,22 @@ test('review toggles the marker open and closed and remembers the choice', async
   assert.equal(reloads, 1);
 });
 
+test('review still opens a marker after the page has repainted and bound again (the owner bug: it did nothing)', async () => {
+  const st = state({ markers: [group()] });
+  const root = new MiniElement('div');
+  let reloads = 0;
+  const paint = () => {
+    mountPage(/** @type {any} */ (root), new ShellHtml(String(render({ markers: st.markers, people: PEOPLE, roles: ROLES, expanded: st.expanded, remember: st.remember }))));
+    bind(/** @type {any} */ (root), { state: st, map: async () => ({}), reload: async () => { reloads += 1; paint(); } });
+  };
+  paint();
+  paint();
+  /** @type {any} */ (root.querySelector('[data-action="review"]')).click();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.ok(st.expanded.has('3:☀️'));
+  assert.equal(reloads, 1);
+});
+
 test('remember toggles the state the next save sends', async () => {
   const st = state({ markers: [group()] });
   const root = new MiniElement('div');
@@ -222,4 +239,138 @@ test('retryJob sends the cursor back and stops at remaining 0', async () => {
     assert.match(String(status?.textContent), /7/, 'the total processed count');
     assert.equal(reloads, 1, 'stops once remaining is 0, instead of looping to the 200-attempt cap');
   });
+});
+
+test('the select offers a new person and "not a speaker" between the people and the roles', () => {
+  const [select] = selectsOf(String(render({ markers: [group()], people: PEOPLE, roles: ROLES, expanded: new Set(), remember: true })));
+  assert.match(select, copyRe(t('import.marker.newPerson')));
+  assert.match(select, copyRe(t('import.marker.notSpeaker')));
+  assert.ok(select.indexOf('person:6') < select.indexOf('value="new"'), 'people first');
+  assert.ok(select.indexOf('value="plain"') < select.indexOf('role:fan'), 'roles last');
+});
+
+/**
+ * Renders and binds one card against a fake fetch, returning the requests it made.
+ * @param {{ remember?: boolean, respond?: (url: string) => Response }} [opts]
+ */
+async function withCard({ remember = true, respond = () => Response.json({ updated: 1 }) } = {}, fn) {
+  /** @type {{ url: string, body: any }[]} */
+  const calls = [];
+  await withGlobals({
+    fetch: /** @type {any} */ (async (url, init) => {
+      calls.push({ url: String(url), body: JSON.parse(String(init?.body ?? '{}')) });
+      return respond(String(url));
+    }),
+  }, async () => {
+    const st = state({ markers: [group()], remember });
+    const root = new MiniElement('div');
+    mount(root, render({ markers: st.markers, people: PEOPLE, roles: ROLES, expanded: new Set(), remember: st.remember }));
+    bind(/** @type {any} */ (root), { state: st, map: (body) => postJson(`/api/owner/imports/${st.jobId}/map`, body), reload: async () => {} });
+    await fn(root);
+  });
+  return calls;
+}
+
+/** @param {any} root @param {string} value */
+function choose(root, value) {
+  const select = root.querySelector('[data-marker-select]');
+  select.value = value;
+  select.dispatchEvent({ type: 'change', target: select });
+}
+
+/** @param {any} root */
+async function saveMarker(root) {
+  root.querySelector('[data-action="save-marker"]').click();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+}
+
+test('choosing a new person opens its name and handle fields; choosing someone else closes them', async () => {
+  await withCard({}, async (root) => {
+    const fields = /** @type {any} */ (root.querySelector('[data-new-person]'));
+    choose(root, 'new');
+    assert.equal(fields.hidden, false);
+    choose(root, 'person:5');
+    assert.equal(fields.hidden, true);
+  });
+});
+
+test('saving a new person creates them, then maps the marker to their id', async () => {
+  const calls = await withCard({
+    respond: (url) => (url === '/api/people' ? Response.json({ id: 42 }) : Response.json({ updated: 2 })),
+  }, async (root) => {
+    choose(root, 'new');
+    /** @type {any} */ (root.querySelector('[data-new-name]')).value = ' Juniper ';
+    /** @type {any} */ (root.querySelector('[data-new-handle]')).value = 'juniper.x';
+    await saveMarker(root);
+  });
+  assert.deepEqual(calls.map((c) => c.url), ['/api/people', '/api/owner/imports/7/map']);
+  assert.deepEqual(calls[0].body, { displayName: 'Juniper', igHandle: 'juniper.x' });
+  assert.deepEqual(calls[1].body, { accountId: 3, marker: '☀️', speaker: { person: 42 }, remember: true });
+});
+
+test('a new person with no handle posts nothing and says they could not be added', async () => {
+  let status = '';
+  const calls = await withCard({}, async (root) => {
+    choose(root, 'new');
+    /** @type {any} */ (root.querySelector('[data-new-name]')).value = 'Juniper';
+    await saveMarker(root);
+    status = root.querySelector('[data-import-speakers-status]').textContent;
+  });
+  assert.equal(calls.length, 0);
+  assert.equal(status, t('add.personFailed'));
+});
+
+test('"not a speaker" maps the marker to plain text and is never remembered', async () => {
+  const calls = await withCard({ remember: true }, async (root) => {
+    choose(root, 'plain');
+    await saveMarker(root);
+  });
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].body, { accountId: 3, marker: '☀️', speaker: { plain: true }, remember: false });
+});
+
+test('the "translator unknown" card sends accountId null, not a number', async () => {
+  /** @type {any[]} */
+  const bodies = [];
+  await withGlobals({
+    fetch: /** @type {any} */ (async (_url, init) => { bodies.push(JSON.parse(String(init?.body ?? '{}'))); return Response.json({ updated: 1 }); }),
+  }, async () => {
+    const st = state({ markers: [group({ accountId: null, handle: null })] });
+    const root = new MiniElement('div');
+    mount(root, render({ markers: st.markers, people: PEOPLE, roles: ROLES, expanded: new Set(), remember: true }));
+    bind(/** @type {any} */ (root), { state: st, map: (body) => postJson('/api/owner/imports/7/map', body), reload: async () => {} });
+    choose(root, 'role:fan');
+    await saveMarker(root);
+  });
+  assert.equal(bodies.length, 1);
+  assert.equal(bodies[0].accountId, null);
+});
+
+test('a save that changes nothing says so and does not reload', async () => {
+  let status = '';
+  let reloads = 0;
+  await withGlobals({ fetch: /** @type {any} */ (async () => Response.json({ updated: 0 })) }, async () => {
+    const st = state({ markers: [group()] });
+    const root = new MiniElement('div');
+    mount(root, render({ markers: st.markers, people: PEOPLE, roles: ROLES, expanded: new Set(), remember: true }));
+    bind(/** @type {any} */ (root), { state: st, map: (body) => postJson('/api/owner/imports/7/map', body), reload: async () => { reloads += 1; } });
+    choose(root, 'role:fan');
+    await saveMarker(root);
+    status = /** @type {any} */ (root.querySelector('[data-import-speakers-status]')).textContent;
+  });
+  assert.equal(status, t('import.marker.nothing'));
+  assert.equal(reloads, 0);
+});
+
+test('review opens a marker on the "translator unknown" card too', async () => {
+  const st = state({ markers: [group({ accountId: null, handle: null })] });
+  const root = new MiniElement('div');
+  const paint = () => {
+    mount(root, render({ markers: st.markers, people: PEOPLE, roles: ROLES, expanded: st.expanded, remember: st.remember }));
+  };
+  paint();
+  bind(/** @type {any} */ (root), { state: st, map: async () => ({}), reload: async () => { paint(); } });
+  /** @type {any} */ (root.querySelector('[data-action="review"]')).click();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.ok(root.querySelector('[data-entry-select]'), 'the entries are open');
 });

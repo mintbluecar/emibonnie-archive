@@ -11,11 +11,16 @@
  * Every component is migrated now (Task 15), so that list -- and the
  * merge -- is retired: a component file that fails this lint is a real
  * violation, never a pending one.
+ *
+ * After stylelint, `main` runs the duplicate-rule check
+ * (`scripts/styleDuplicates.js`): a component rule repeating another
+ * component's or a primitive's rule body fails too.
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import stylelint from 'stylelint';
+import { findDuplicates, formatDuplicate, readStyleSources } from './styleDuplicates.js';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 const FILES = ['src/styles/**/*.css', 'examples/*/theme.css'];
@@ -45,6 +50,9 @@ async function main() {
   const { errored, report } = await lintStyles();
   if (report) console.log(report);
   if (errored) process.exitCode = 1;
+  const duplicates = findDuplicates(readStyleSources());
+  for (const duplicate of duplicates) console.log(formatDuplicate(duplicate));
+  if (duplicates.length > 0) process.exitCode = 1;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

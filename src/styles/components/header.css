@@ -128,13 +128,6 @@
   text-overflow: ellipsis;
 }
 
-.c-header__accent {
-  background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
 .c-header[data-compact] .c-header__wordmark {
   font-size: var(--text-16);
 }

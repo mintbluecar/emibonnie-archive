@@ -33,7 +33,7 @@ test('composeHome: shows "october 2026" for an event in that month, newest first
 
 test('composeHome: each event is a link to /e/<slug>, with its name and total count', () => {
   const markup = String(composeHome(HOME));
-  assert.match(markup, /href="\/e\/solluna-happy-day-2026-10-19"/);
+  assert.match(markup, /href="\/e\/2026-10-19\/slhappyday2026"/);
   assert.match(markup, /SOLLUNA HAPPY DAY/);
   assert.match(markup, /<span class="badge badge--accent c-event-card__count">2<\/span>/);
 });

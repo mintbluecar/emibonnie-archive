@@ -42,6 +42,7 @@
 }
 
 /* Top-right, clear of the native control bar along the bottom (review round 1, MINOR). */
+/* not shared: placed for the video's own controls; matches the sheet's close button only by the corner offset */
 .c-video__full {
   position: absolute;
   top: var(--space-2);

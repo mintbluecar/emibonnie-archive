@@ -16,7 +16,9 @@ import { route as searchRoute } from '../../src/routes/search.js';
 
 const PUBLIC = 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400';
 const VIDEO = 'public, s-maxage=600, stale-while-revalidate=86400, stale-if-error=86400';
-const SLUG = 'solluna-happy-day-2026-10-19';
+const SLUG = '2026-10-19/slhappyday2026';
+/** `SLUG` as the event route's params. */
+const SLUG_PARAMS = { date: '2026-10-19', tag: 'slhappyday2026' };
 
 /** @type {any} */
 let deps;
@@ -43,7 +45,7 @@ const neverStored = (cache) => cache === 'no-store' || cache === PRIVATE_NO_STOR
 
 test('every route is { method, path, cache, run }, with a unique method+path', () => {
   // The original page paths of the meta routes: the event page, and each kind's item page.
-  const pagePaths = ['/e/:slug', ...Object.values(kindsRegistry).map((kind) => `${kind.urlPrefix}:sourceId`)];
+  const pagePaths = ['/e/:date/:tag', ...Object.values(kindsRegistry).map((kind) => `${kind.urlPrefix}:sourceId`)];
   assert.ok(pagePaths.includes('/t/:sourceId'));
   for (const r of routes) {
     assert.ok(['GET', 'POST'].includes(r.method), r.path);
@@ -68,16 +70,23 @@ test('a GET that resolves a user is never publicly cached', () => {
 });
 
 test('event returns sections[0].kind', async () => {
-  const view = await bodyOf(await eventRoute.run(input({ slug: SLUG }), routeDeps()));
+  const view = await bodyOf(await eventRoute.run(input(SLUG_PARAMS), routeDeps()));
   assert.equal(view.sections[0].kind, 'translation');
-  await assert.rejects(eventRoute.run(input({ slug: 'no-such-event' }), routeDeps()), NotFound);
+  await assert.rejects(eventRoute.run(input({ date: '2026-10-19', tag: 'no-such-event' }), routeDeps()), NotFound);
+});
+
+test('GET /api/event/:date/:tag answers the event whose slug is `<date>/<tag>`', async () => {
+  const res = await apiFor(deps).call('GET', `/api/event/${SLUG}`);
+  assert.equal(res.status, 200, res.text);
+  assert.equal(JSON.parse(res.text).event.slug, SLUG);
+  assert.equal((await apiFor(deps).call('GET', '/api/event/slhappyday2026')).status, 404, 'a one-part address matches no route');
 });
 
 test('event: ?order=desc reverses the section; an unknown order is a BadRequest', async () => {
-  const asc = await bodyOf(await eventRoute.run(input({ slug: SLUG }, { order: 'asc' }), routeDeps()));
-  const desc = await bodyOf(await eventRoute.run(input({ slug: SLUG }, { order: 'desc' }), routeDeps()));
+  const asc = await bodyOf(await eventRoute.run(input(SLUG_PARAMS, { order: 'asc' }), routeDeps()));
+  const desc = await bodyOf(await eventRoute.run(input(SLUG_PARAMS, { order: 'desc' }), routeDeps()));
   assert.deepEqual(desc.sections[0].items.map((/** @type {any} */ i) => i.sourceId).reverse(), asc.sections[0].items.map((/** @type {any} */ i) => i.sourceId));
-  await assert.rejects(eventRoute.run(input({ slug: SLUG }, { order: 'bogus' }), routeDeps()), { name: 'BadRequest' });
+  await assert.rejects(eventRoute.run(input(SLUG_PARAMS, { order: 'bogus' }), routeDeps()), { name: 'BadRequest' });
 });
 
 test('item: a removed item and an unknown kind throw NotFound', async () => {
@@ -197,7 +206,7 @@ test('the item GET refreshes an elapsed, unfinalized edit window in the backgrou
 
 test('public GET 404s are cached for 60 s only', async () => {
   const api = apiFor(deps);
-  for (const path of ['/api/event/no-such-event', '/api/item/translation/1', '/api/person/nobody', '/api/account/nobody', '/api/video/translation/1']) {
+  for (const path of ['/api/event/2026-10-19/no-such-event', '/api/item/translation/1', '/api/person/nobody', '/api/account/nobody', '/api/video/translation/1']) {
     const res = await api.call('GET', path);
     assert.equal(res.status, 404, path);
     assert.equal(res.headers.get('vercel-cdn-cache-control'), 'public, s-maxage=60', path);
@@ -224,7 +233,7 @@ test('unknown query params on API GETs are a no-store 400; meta pages ignore tra
   assert.equal((await api.call('GET', `/e/${SLUG}?q=hug&people=1&people=2&scope=all`)).status, 200);
 });
 
-test('the meta routes answer on the page paths the function sees (/t/:id, /e/:slug); there is no /api/meta/*', async () => {
+test('the meta routes answer on the page paths the function sees (/t/:id, /e/:date/:tag); there is no /api/meta/*', async () => {
   const api = apiFor(deps);
   const item = await api.call('GET', `/t/${IDS.LONG}`);
   assert.equal(item.status, 200);

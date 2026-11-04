@@ -12,7 +12,7 @@ const { html } = await import('../../public/js/core/html.js');
 
 test('header: shows the accent in the brand gradient class, plus the rest of the wordmark', () => {
   const markup = String(render());
-  assert.match(markup, /<span class="c-header__accent">fix<\/span>ture archive/);
+  assert.match(markup, /<span class="gradient-text">fix<\/span>ture archive/);
 });
 
 test('header: shows the FAN-MADE badge', () => {

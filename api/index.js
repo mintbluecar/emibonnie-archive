@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * The only Vercel function. `vercel.json`'s rewrites send every `/api/*`
- * request and every shared `/t/:id` and `/e/:slug` link here, to `/api`,
+ * request and every shared `/t/:id` and `/e/:date/:tag` link here, to `/api`,
  * with unnamed sources only; the function sees the original request URL,
  * so src/routes/index.js matches `/api/...` and the page paths directly.
  * Deps are built per request and closed in `finally` (src/http/handler.js).

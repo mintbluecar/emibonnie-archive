@@ -58,7 +58,7 @@ function historyBlock(history) {
     <section class="card c-edit__history">
       <h2 class="heading heading--sm c-add__heading">${t('edit.history')}</h2>
       ${history.length === 0 ? '' : html`
-        <ul class="stack stack--2 c-edit__edits">
+        <ul class="list stack stack--2">
           ${history.map((entry) => html`
             <li class="c-edit__edit">
               <p class="c-edit__when">${t('edit.by', { name: entry.by })} · ${whenLabel(entry.at)}</p>

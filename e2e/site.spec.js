@@ -9,7 +9,7 @@
  * Nothing here names any site's data: every URL is found through the
  * site's own API --
  * - home, and the first event `/api/home` lists;
- * - the first item of that event (`/api/event/:slug`'s first section);
+ * - the first item of that event (`/api/event/:date/:tag`'s first section);
  * - every person `/api/filters` lists (featured people, and anyone else
  *   on a visible item -- each has a page);
  * - the first translator account `/api/filters` lists;
@@ -20,6 +20,7 @@
  */
 import { test, expect } from '@playwright/test';
 import { checkPage } from './helpers.js';
+import { eventHref, addressPath } from '../public/js/core/routes.js';
 
 /**
  * @param {import('@playwright/test').APIRequestContext} request @param {string} path
@@ -41,7 +42,7 @@ async function firstEventSlug(request) {
 async function firstItem(request) {
   const slug = await firstEventSlug(request);
   if (!slug) return null;
-  const event = await api(request, `/api/event/${encodeURIComponent(slug)}`);
+  const event = await api(request, `/api/event/${addressPath(slug)}`);
   return event.sections?.[0]?.items?.[0] ?? null;
 }
 
@@ -66,7 +67,7 @@ test('home: 200, no console errors, no horizontal scroll, no serious a11y violat
 test('the first event on home', async ({ page, request }) => {
   const slug = await firstEventSlug(request);
   test.skip(!slug, 'the seed has no event');
-  await checkPage(page, `/e/${encodeURIComponent(/** @type {string} */ (slug))}`);
+  await checkPage(page, eventHref(/** @type {string} */ (slug)));
 });
 
 test('the first item of that event', async ({ page, request }) => {

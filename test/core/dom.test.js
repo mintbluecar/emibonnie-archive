@@ -42,9 +42,13 @@ class FakeElement {
   setAttribute(name, value) {
     this.attrs[name] = value;
   }
-  /** @param {string} event @param {(e: any) => void} fn */
-  addEventListener(event, fn) {
+  /** @param {string} event @param {(e: any) => void} fn @param {{ signal?: AbortSignal }} [options] */
+  addEventListener(event, fn, options = {}) {
+    if (options.signal?.aborted) return;
     (this.listeners[event] ??= []).push(fn);
+    options.signal?.addEventListener('abort', () => {
+      this.listeners[event] = this.listeners[event].filter((f) => f !== fn);
+    });
   }
   /** @param {string} event @param {FakeElement} target */
   dispatch(event, target) {
@@ -124,6 +128,31 @@ test('on: the handler receives the event and the matched element', () => {
   on(root, '.go', 'click', (e, target) => seen.push([e.type, target]));
   root.dispatch('click', button);
   assert.deepEqual(seen, [['click', button]]);
+});
+
+test('mountPage: drops the delegated listeners bound on root before it, so a re-paint that binds again handles each event once', () => {
+  const button = new FakeElement('button', { className: 'go' });
+  const root = new FakeElement('div', { children: [button] });
+  let calls = 0;
+  const paint = () => {
+    mountPage(root, new ShellHtml('<main></main>'));
+    on(root, '.go', 'click', () => { calls += 1; });
+  };
+  paint();
+  paint();
+  paint();
+  root.dispatch('click', button);
+  assert.equal(calls, 1);
+});
+
+test('mount: a partial re-render keeps the delegated listeners bound on root', () => {
+  const button = new FakeElement('button', { className: 'go' });
+  const root = new FakeElement('div', { children: [button] });
+  let calls = 0;
+  on(root, '.go', 'click', () => { calls += 1; });
+  mount(root, html`<main></main>`);
+  root.dispatch('click', button);
+  assert.equal(calls, 1);
 });
 
 test('applyColours: a valid #rrggbb data-c is applied as --c', () => {

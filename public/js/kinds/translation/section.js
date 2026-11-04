@@ -3,8 +3,9 @@
  * The translation kind's front-end "section" half (public/js/kinds/_registry.js's
  * `KIND_UI.translation.section`): a stack of `previewCard`s for a hub
  * page's `Section` of translation items (src/http/contracts.js), or a
- * grid of compact ones (kindTranslation.css). Entries show opening
- * lines, never a title.
+ * grid of compact ones (the grid primitive: the event, person and
+ * translator pages browse as cards led by the picture, owner 2026-10-23).
+ * Entries show opening lines, never a title.
  */
 import { html } from '../../core/html.js';
 import * as previewCard from '../../components/previewCard.js';
@@ -23,7 +24,7 @@ export function render(section, ctx = {}) {
   const compact = ctx.compact === true;
   const cards = section.items.map((result, i) => previewCard.render({ result, compact, eager: ctx.cardsBefore !== undefined && ctx.cardsBefore + i < EAGER_COUNT }));
   return compact
-    ? html`<div class="k-translation-grid" data-kind="translation">${cards}</div>`
+    ? html`<div class="grid" data-kind="translation">${cards}</div>`
     : html`<div class="stack stack--2" data-kind="translation">${cards}</div>`;
 }
 

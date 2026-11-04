@@ -22,7 +22,7 @@
 /** @type {PageRoute[]} */
 export const pages = [
   { path: '/', file: 'index.html' },
-  { path: '/e/:slug', file: 'event.html', meta: 'event' },
+  { path: '/e/:date/:tag', file: 'event.html', meta: 'event' },
   // Task 6: no meta renderer for these yet (src/routes/meta.js's PAGE_META
   // has only `event`), so these two rewrite straight to their file, same
   // as a static page. If a later task adds person/account link-preview
@@ -41,6 +41,14 @@ export const pages = [
   { path: '/edit/:kind/:sourceId', file: 'edit.html' },
   // Plan 3: the owner's import review page. `/admin/` is reserved this way.
   { path: '/admin/imports/:id', file: 'adminImport.html' },
+  // Event editing: the owner's events list (search, tick to merge, links
+  // to each event's edit page and its entries).
+  { path: '/admin/events', file: 'adminEvents.html' },
+  // The edit event page, one page in three modes (`?id=`, `?merge=`,
+  // `?from=&items=`): public/js/state/eventFormState.js reads the query.
+  { path: '/admin/events/edit', file: 'adminEventEdit.html' },
+  // The tweets in one event (`?id=`): tick, then move them or split them off.
+  { path: '/admin/events/entries', file: 'adminEventEntries.html' },
 ];
 
 /**

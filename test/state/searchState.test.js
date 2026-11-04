@@ -17,7 +17,7 @@ const OPTIONS = {
     { id: 2, name: 'luna', emoji: '🌙', colour: '#6a5cd6', igHandle: 'lunamoon' },
   ],
   categories: [{ id: 5, name: 'live' }, { id: 6, name: 'show / interview' }],
-  events: [{ slug: 'solluna-happy-day-2026-10-19', name: 'SOLLUNA HAPPY DAY' }],
+  events: [{ slug: '2026-10-19/slhappyday2026', name: 'SOLLUNA HAPPY DAY' }],
   clients: [{ id: 9, name: 'Big Media Co' }],
   accounts: [{ handle: 'tl_beta' }, { handle: 'tl_gamma' }],
 };
@@ -26,7 +26,7 @@ test('parseState: a round trip through the URL returns the same state', () => {
   /** @type {import('../../public/js/state/searchState.js').State} */
   const state = {
     q: 'hello world', people: [2, 5], peopleMode: 'all', types: ['live', 'shared story', 'posts'],
-    event: 'solluna-happy-day-2026-10-19', account: 'tl_beta', client: 9, from: '2026-01-01', to: '2026-12-31',
+    event: '2026-10-19/slhappyday2026', account: 'tl_beta', client: 9, from: '2026-01-01', to: '2026-12-31',
   };
   const roundTripped = parseState(toQuery(state));
   assert.deepEqual(roundTripped, state);

@@ -2,6 +2,7 @@
 import { norm } from './text.js';
 import { daysBetween, localDate } from './dates.js';
 import { LIVE_WINDOW_DAYS } from './constants.js';
+import { addressOf, defaultAddressTag } from './eventAddress.js';
 
 /**
  * @typedef {import('./header.js').Header} Header
@@ -13,7 +14,7 @@ import { LIVE_WINDOW_DAYS } from './constants.js';
  *   livePeopleIds: number[], livePlatformCode: string|null,
  * }} Event
  * @typedef {{
- *   name: string, slug: string, occurredOn: string|null,
+ *   name: string, slug: string|null, addressTag: string, occurredOn: string|null,
  *   keywords: string[], hashtags: string[],
  *   livePeopleIds: number[], livePlatformCode: string|null,
  * }} EventProposal
@@ -53,21 +54,6 @@ export function peopleForTags(tags, people) {
     if (person && !found.includes(person)) found.push(person);
   }
   return found;
-}
-
-/**
- * Lower-case ASCII words joined by `-`; diacritics are dropped. A name
- * with nothing left (e.g. all Thai) falls back to `event`.
- * @param {string} name
- */
-function slugify(name) {
-  const slug = name
-    .normalize('NFKD')
-    .replace(/\p{M}/gu, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return slug || 'event';
 }
 
 /**
@@ -187,16 +173,21 @@ function proposalName(header, livePeople, formatName) {
 /**
  * A new event built from a header: named after the keyword, else the
  * live's people and platform (`"a & b ig live"`), else the first
- * hashtag. The slug is the name's slug plus the date.
+ * hashtag. Its address tag is the first hashtag, else the name
+ * (`defaultAddressTag`); the slug is `<date>/<tag>` once a date is
+ * known, else `null` (an undated proposal, settled at write time --
+ * `eventIdOf`, `src/services/ingestWrite.js`).
  * @param {{header: Header, date: string|null, people: EventPerson[], formatName: FormatName}} input
  * @returns {EventProposal}
  */
 export function proposeEvent({ header, date, people, formatName }) {
   const livePeople = header.live ? peopleForTags(header.personTags, people) : [];
   const name = proposalName(header, livePeople, formatName);
+  const addressTag = defaultAddressTag({ hashtags: header.tags, name });
   return {
     name,
-    slug: date ? `${slugify(name)}-${date}` : slugify(name),
+    addressTag,
+    slug: date ? addressOf({ occurredOn: date, addressTag }) : null,
     occurredOn: date,
     keywords: header.keyword ? [header.keyword] : [],
     hashtags: [...header.tags],

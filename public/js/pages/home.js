@@ -31,7 +31,7 @@ function monthGroup(group, before) {
   return html`
     <section>
       <h2 class="label label--section c-home-month__label">${monthLabel(group.month)}</h2>
-      <div class="c-home-month__grid">${group.events.map((event, i) => eventCard.render({ event, eager: before + i < EAGER_COUNT }))}</div>
+      <div class="grid">${group.events.map((event, i) => eventCard.render({ event, eager: before + i < EAGER_COUNT }))}</div>
     </section>
   `;
 }

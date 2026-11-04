@@ -44,7 +44,7 @@ export function render(quote) {
   return html`
     <div class="c-quote">
       ${authorLine(quote)}
-      <p class="c-quote__text">${thaiSpans(quote.text, site.sourceLanguage)}</p>
+      <p class="body-text c-quote__text">${thaiSpans(quote.text, site.sourceLanguage)}</p>
       ${quote.inner ? innerMedia(quote.inner) : ''}
     </div>
   `;

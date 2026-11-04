@@ -281,3 +281,22 @@ test('restoring a hidden event brings its entries back where they were', async (
   const { rows: after } = await deps.db.query("select count(*)::int as n from items where event_id = $1 and deleted_at is null and review_state = 'published'", [before.id]);
   assert.equal(after[0].n, before.n, 'every entry still sits on its event');
 });
+
+test('restoring a report on a merged-away event is 409 merged, and the event stays merged', async () => {
+  const { mergeEvents } = await import('../../src/services/eventAdmin.js');
+  const { createEvent } = await import('../../src/repo/events.js');
+  const make = (/** @type {string} */ slug) => deps.db.transaction((tx) => createEvent(tx, {
+    name: slug, slug, addressTag: 'x', occurredOn: slug.slice(0, 10), keywords: [], hashtags: [], livePeopleIds: [], livePlatformCode: null,
+  }), { actor: 'system' }).then((/** @type {any} */ e) => e.id);
+  const [keep, gone] = [await make('2035-01-01/keep'), await make('2035-01-01/gone')];
+  const actor = /** @type {any} */ ({ id: 'system' });
+  const { rows } = await deps.db.transaction((tx) => tx.query(
+    "insert into reports (target_table, target_id, reason) values ('events', $1, 'merged later') returning id", [gone],
+  ), { actor: 'system' });
+  const fields = { name: 'Kept', occurredOn: '2035-01-01', keywords: [], hashtags: [], livePeopleIds: [], livePlatformCode: null, addressTag: 'keep' };
+  await mergeEvents(deps, { keepId: keep, mergeIds: [gone], fields, actor });
+  await assert.rejects(restoreReportTarget(deps, { reportId: rows[0].id, actor }), { name: 'Conflict', code: 'merged' });
+  const { rows: after } = await deps.db.query('select deleted_at, merged_into from events where id = $1', [gone]);
+  assert.ok(after[0].deleted_at);
+  assert.equal(Number(after[0].merged_into), keep);
+});

@@ -7,10 +7,14 @@
  * must not depend on which worker wrote first.
  */
 import { test, expect } from '@playwright/test';
-import { checkPage, signInAs, gotoReady } from './helpers.js';
+import { checkPage, signInAs, gotoReady, stubSyntheticMedia } from './helpers.js';
 
 test('me as a translator: the badge, the two tabs and an accessible page', async ({ page }) => {
   await signInAs(page, 'translator');
+  // Before the first load, not just checkPage's: the entries' thumbnails
+  // are synthetic X URLs that 404 for real, and a late 404 from this load
+  // would land among checkPage's console errors.
+  await stubSyntheticMedia(page);
   // A selectable checkbox is on screen, so checkPage's 24px target check
   // really measures its label rather than passing with none to measure.
   await gotoReady(page, '/me');
@@ -25,6 +29,7 @@ test('me as a translator: the badge, the two tabs and an accessible page', async
 test('a translator removes, restores and opts out from me', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'phone', 'writes to the shared e2e data; one project runs it');
   await signInAs(page, 'translator');
+  await stubSyntheticMedia(page);
   await page.goto('/me');
 
   // Remove the first live entry.

@@ -173,10 +173,11 @@ test('a tweet quoting its own author sets followsOn', async () => {
 });
 
 test('newEvent forces a proposal, with a slug that does not collide', async () => {
-  const draft = draftTranslation(await tweet(IDS.EVENT_B), ctx({ events: [HAPPY_DAY], overrides: { newEvent: true } }));
+  const taken = { ...HAPPY_DAY, slug: '2026-10-19/slhappyday2026' };
+  const draft = draftTranslation(await tweet(IDS.EVENT_B), ctx({ events: [taken], overrides: { newEvent: true } }));
   assert.equal(draft.common.eventId, null);
   assert.equal(draft.common.placement, 'event');
-  assert.equal(draft.common.proposal?.slug, 'solluna-happy-day-2026-10-19-2');
+  assert.equal(draft.common.proposal?.slug, '2026-10-19/slhappyday2026-2');
   assert.equal(draft.common.proposal?.name, 'SOLLUNA HAPPY DAY (2)');
 });
 
@@ -212,10 +213,10 @@ test("a 'post' override keeps the linked-account authors even when the header ma
 });
 
 test("an 'event' override with no signals proposes a slug that does not collide", () => {
-  const taken = { ...HAPPY_DAY, id: 11, slug: 'event-2026-02-12', name: 'event', occurredOn: '2026-02-12' };
+  const taken = { ...HAPPY_DAY, id: 11, slug: '2026-02-12/event', name: 'event', occurredOn: '2026-02-12' };
   const draft = draftTranslation(tweetWith('🦁: hi'), ctx({ events: [taken], overrides: { placement: 'event' } }));
   assert.equal(draft.common.placement, 'event');
-  assert.equal(draft.common.proposal?.slug, 'event-2026-02-12-2');
+  assert.equal(draft.common.proposal?.slug, '2026-02-12/event-2');
 });
 
 test('a known event hashtag on the tweet\'s last line places it in that event (known tags decide, Task 9a item 5)', () => {

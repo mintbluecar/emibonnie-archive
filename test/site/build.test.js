@@ -53,6 +53,12 @@ test('findMissingCssTokens: passes when every used token is defined', () => {
   assert.deepEqual(missing, []);
 });
 
+test('findMissingCssTokens: a setting a primitive defines on itself counts as defined', () => {
+  const sources = [{ path: 'a.css', text: '.x { width: var(--grid-min); }' }];
+  assert.deepEqual(findMissingCssTokens(sources, ':root{}', ['.grid { --grid-min: 150px; }']), []);
+  assert.deepEqual(findMissingCssTokens(sources, ':root{}'), ['--grid-min']);
+});
+
 test("findMissingCopyKeys: fails when code uses t('nope.key')", () => {
   const missing = findMissingCopyKeys(
     [{ path: 'fixture.js', text: "t('nope.key')" }],
@@ -216,7 +222,7 @@ test('runBuild: builds examples/solluna end to end into a temp repo root', async
     // explicit rewrite -- it doesn't resolve to <path>.html on its own).
     const core = [
       { source: '/api/(.*)', destination: '/api' },
-      { source: '/e/(.*)', destination: '/api' },
+      { source: '/e/(.*)/(.*)', destination: '/api' },
       { source: '/t/(.*)', destination: '/api' },
       { source: '/p/(.*)', destination: '/person.html' },
       { source: '/tl/(.*)', destination: '/account.html' },

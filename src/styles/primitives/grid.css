@@ -1,0 +1,39 @@
+/*
+ * Grid (styling reuse enforcement, Task 2): a grid of cards, as many
+ * columns as fit, each at least a minimum width and sharing the row's
+ * leftover space -- 2 across on a phone, more on wider screens.
+ *
+ *   <div class="grid">...cards...</div>
+ *
+ * Settings: custom properties .grid defines on itself, not tokens.
+ *
+ *   --grid-min       the narrowest a column may get (150px)
+ *   --grid-gap       the gap between cards (var(--space-2))
+ *   --grid-min-wide  --grid-min from the 860px breakpoint (190px)
+ *   --grid-gap-wide  --grid-gap from the 860px breakpoint (var(--space-3))
+ *
+ * A screen that needs other values sets them on its own class, on the
+ * same element (the components layer comes after primitives, so its
+ * values win; set on a parent they'd lose to .grid's own):
+ *
+ *   <div class="grid c-widget__grid">...</div>
+ *   .c-widget__grid { --grid-min: 120px; }
+ */
+
+.grid {
+  --grid-min: 150px;
+  --grid-gap: var(--space-2);
+  --grid-min-wide: 190px;
+  --grid-gap-wide: var(--space-3);
+
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--grid-min), 1fr));
+  gap: var(--grid-gap);
+}
+
+@media (min-width: 860px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(var(--grid-min-wide), 1fr));
+    gap: var(--grid-gap-wide);
+  }
+}

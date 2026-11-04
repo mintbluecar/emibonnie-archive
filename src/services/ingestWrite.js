@@ -11,6 +11,7 @@ import { insertItem } from '../repo/items.js';
 import { setItemPeople } from '../repo/itemPeople.js';
 import { approvalRequired } from '../repo/settings.js';
 import { BadRequest } from '../domain/errors.js';
+import { addressOf } from '../domain/eventAddress.js';
 
 /** @typedef {import('../db/common.js').Tx} Tx */
 /** @typedef {import('../kinds/defineKind.js').Kind} Kind */
@@ -37,7 +38,8 @@ function upsertCredited(tx, credited) {
 /**
  * The matched event's id, or the proposed event (created, or found when
  * another ingest just created the same slug), dated `occurredOn` when the
- * proposal has no date of its own.
+ * proposal has no date of its own, and addressed there too (an undated
+ * proposal has no slug yet -- `addressOf` builds it from the tag).
  * @param {Tx} tx
  * @param {DraftCommon} common
  * @param {string} occurredOn
@@ -45,7 +47,10 @@ function upsertCredited(tx, credited) {
  */
 async function eventIdOf(tx, common, occurredOn) {
   if (!common.proposal) return common.eventId;
-  const event = await createEvent(tx, { ...common.proposal, occurredOn: common.proposal.occurredOn ?? occurredOn });
+  const { proposal } = common;
+  const eventOccurredOn = proposal.occurredOn ?? occurredOn;
+  const slug = proposal.slug ?? addressOf({ occurredOn: eventOccurredOn, addressTag: proposal.addressTag });
+  const event = await createEvent(tx, { ...proposal, slug, occurredOn: eventOccurredOn });
   return event.id;
 }
 

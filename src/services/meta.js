@@ -21,9 +21,10 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { findVisibleItemId } from '../repo/cards.js';
-import { getVisibleEventBySlug } from '../repo/events.js';
+import { getVisibleEventBySlug, resolveMergedSlug } from '../repo/events.js';
 import { kindsOf, presenterContext, previewsFor } from './cards.js';
 import { accountTag, eventTag, itemTag, personTag } from '../domain/cacheTags.js';
+import { addressPath } from '../domain/eventAddress.js';
 
 /** @typedef {import('./cards.js').ViewDeps & { pages?: { dir: string, logo: string|null } }} MetaDeps */
 /** @typedef {{ title: string, description: string, image: string|null }} Meta */
@@ -31,6 +32,9 @@ import { accountTag, eventTag, itemTag, personTag } from '../domain/cacheTags.js
  * @typedef {{ html: string, found: boolean, tags: string[] }} MetaPage
  *   `found`: false when the target is hidden or missing (the generic meta),
  *   so the route can cache it as briefly as a 404; `tags` is empty then.
+ * @typedef {{ redirect: string, tags: string[] }} MetaRedirect
+ *   a merged-away event's page: a permanent redirect to the kept event's
+ *   page, tagged with both events so a purge of either reaches it.
  */
 
 const DESCRIPTION_MAX = 200;
@@ -120,15 +124,32 @@ export async function itemMetaPage(deps, { prefix, sourceId, origin }) {
 }
 
 /**
+ * The redirect for a merged-away event's page, when the event it was
+ * merged into has a public page; `null` otherwise, so a merge into a
+ * hidden event answers exactly like a missing one (test/privacy.test.js).
+ * @param {MetaDeps} deps @param {string} slug
+ * @returns {Promise<MetaRedirect|null>}
+ */
+async function mergedRedirect(deps, slug) {
+  const kept = await resolveMergedSlug(deps.db, slug);
+  if (kept === null || !(await getVisibleEventBySlug(deps.db, kept))) return null;
+  return { redirect: `/e/${addressPath(kept)}`, tags: [eventTag(slug), eventTag(kept)] };
+}
+
+/**
  * @param {MetaDeps} deps
  * @param {{ slug: string, origin: string }} target
- * @returns {Promise<MetaPage>}
+ * @returns {Promise<MetaPage|MetaRedirect>}
  */
 export async function eventMetaPage(deps, { slug, origin }) {
   const event = await getVisibleEventBySlug(deps.db, slug);
+  if (!event) {
+    const redirect = await mergedRedirect(deps, slug);
+    if (redirect) return redirect;
+  }
   const html = await readPage(deps, 'event.html');
   if (!event) return { html: injectMeta(html, metaOf(deps, origin, deps.site.name)), found: false, tags: [] };
-  const preload = `/api/event/${encodeURIComponent(slug)}`;
+  const preload = `/api/event/${addressPath(slug)}`;
   const description = [event.occurredOn, ...(event.hashtags[0] ? [`#${event.hashtags[0]}`] : [])].join(' · ');
   return { html: injectMeta(html, metaOf(deps, origin, titled(deps, event.name), description), preload), found: true, tags: [eventTag(event.slug)] };
 }

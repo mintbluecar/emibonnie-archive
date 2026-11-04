@@ -4,9 +4,11 @@ import { after, before, test } from 'node:test';
 import { IDS } from '../helpers/fixtures.js';
 import { seededDeps, itemIdOf, SYSTEM } from '../helpers/ingest.js';
 import { apiFor } from '../helpers/api.js';
+import { insertItem } from '../helpers/seed.js';
 import { injectMeta, escapeAttr } from '../../src/services/meta.js';
 
-const SLUG = 'solluna-happy-day-2026-10-19';
+const SLUG = '2026-10-19/slhappyday2026';
+const MISSING = '/e/2026-10-19/no-such-event';
 
 /** @type {any} */
 let deps;
@@ -70,7 +72,7 @@ test('a removed, unknown or opted-out item gets only the generic site meta, with
   }
 });
 
-test('/e/<slug>: the event page with the event name; a hidden or unknown event gets the generic meta', async () => {
+test('/e/<date>/<tag>: the event page with the event name; a hidden or unknown event gets the generic meta', async () => {
   const res = await apiFor(deps).call('GET', `/e/${SLUG}`);
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('vercel-cdn-cache-control'), 'public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400');
@@ -79,11 +81,54 @@ test('/e/<slug>: the event page with the event name; a hidden or unknown event g
   assert.match(res.text, /<title>SOLLUNA HAPPY DAY · solluna archive<\/title>/);
   assert.match(res.text, /EVENT PAGE/);
   assert.equal(metaContent(res.text, 'og:description'), '2026-10-19 · #SLHappyDay2026');
-  const missing = await apiFor(deps).call('GET', '/e/no-such-event');
+  const missing = await apiFor(deps).call('GET', MISSING);
   assert.equal(missing.status, 200);
   assert.equal(missing.headers.get('vercel-cdn-cache-control'), 'public, s-maxage=60');
-  assert.equal((await apiFor(deps).call('GET', '/e/no-such-event')).headers.get('vercel-cdn-cache-control'), 'public, s-maxage=60');
+  assert.equal((await apiFor(deps).call('GET', MISSING)).headers.get('vercel-cdn-cache-control'), 'public, s-maxage=60');
   assert.equal(metaContent(missing.text, 'og:title'), 'solluna archive');
+});
+
+/**
+ * Inserts events in order, each `[slug, mergedIntoSlug?]`; a merged one is
+ * also soft-deleted, as a merge leaves it. `visible` slugs get a
+ * published entry, so they have a public page.
+ * @param {[string, string?][]} events @param {string[]} [visible]
+ */
+async function seedEvents(events, visible = []) {
+  await deps.db.transaction(async (/** @type {any} */ tx) => {
+    for (const [slug, into] of events) {
+      const { rows: [event] } = await tx.query(
+        `insert into events (slug, name, occurred_on, merged_into, deleted_at)
+         values ($1, 'Merge test', '2025-10-04', (select id from events where slug = $2), case when $2::text is null then null else now() end)
+         returning id`,
+        [slug, into ?? null],
+      );
+      if (visible.includes(slug)) await insertItem(tx, { placement: 'event', eventId: event.id });
+    }
+  }, SYSTEM);
+}
+
+test("a merged-away event's page redirects to the kept event", async () => {
+  await seedEvents([['2025-10-04/a'], ['2025-10-04/b', '2025-10-04/a'], ['2025-10-04/c', '2025-10-04/a'], ['2025-10-04/d', '2025-10-04/c']], ['2025-10-04/a']);
+  for (const from of ['/e/2025-10-04/b', '/e/2025-10-04/d']) {
+    const res = await apiFor(deps).call('GET', from);
+    assert.equal(res.status, 308, from);
+    assert.equal(res.headers.get('location'), '/e/2025-10-04/a', `${from}: lands on the kept event, through the chain`);
+    assert.deepEqual((res.headers.get('vercel-cache-tag') ?? '').split(','), [`event:${from.slice(3)}`, 'event:2025-10-04/a'], `${from}: purged with either event`);
+  }
+  assert.equal((await apiFor(deps).call('GET', '/e/2025-10-04/a')).status, 200, 'the kept event itself is no redirect');
+});
+
+test('a merged event whose chain ends nowhere public gets the generic page, as a missing one does', async () => {
+  // Ends at a deleted, unmerged event; ends at a live event with no public entry (no redirect may reveal it).
+  await seedEvents([['2025-10-04/gone'], ['2025-10-04/into-gone', '2025-10-04/gone'], ['2025-10-04/empty'], ['2025-10-04/into-empty', '2025-10-04/empty']]);
+  await deps.db.transaction((/** @type {any} */ tx) => tx.query("update events set deleted_at = now() where slug = '2025-10-04/gone'"), SYSTEM);
+  for (const from of ['/e/2025-10-04/into-gone', '/e/2025-10-04/into-empty']) {
+    const res = await apiFor(deps).call('GET', from);
+    assert.equal(res.status, 200, from);
+    assert.equal(res.headers.get('location'), null, from);
+    assert.equal(res.headers.get('vercel-cdn-cache-control'), 'public, s-maxage=60', `${from}: the generic page, cached like a 404`);
+  }
 });
 
 test('without a built page, a minimal shell carries the meta', () => {
@@ -120,8 +165,8 @@ test('injectMeta replaces a page\'s own title, og:*, twitter:* and description t
 
 test('metaRoutes derives the meta routes from src/pages.js and the kinds: page paths, never /api/meta/*', async () => {
   const { metaRoutes } = await import('../../src/routes/meta.js');
-  const pageList = [{ path: '/e/:slug', file: 'event.html', meta: /** @type {const} */ ('event') }, { path: '/search', file: 'search.html' }];
-  assert.deepEqual(metaRoutes(pageList, [{ urlPrefix: '/t/' }, { urlPrefix: '/zz/' }]).map((r) => r.path), ['/e/:slug', '/t/:sourceId', '/zz/:sourceId']);
+  const pageList = [{ path: '/e/:date/:tag', file: 'event.html', meta: /** @type {const} */ ('event') }, { path: '/search', file: 'search.html' }];
+  assert.deepEqual(metaRoutes(pageList, [{ urlPrefix: '/t/' }, { urlPrefix: '/zz/' }]).map((r) => r.path), ['/e/:date/:tag', '/t/:sourceId', '/zz/:sourceId']);
   assert.throws(() => metaRoutes([{ path: '/x/:id', file: 'x.html', meta: /** @type {any} */ ('nope') }], []), /unknown meta renderer 'nope'/);
 });
 
@@ -134,7 +179,7 @@ test('Task 11: the item and event meta pages preload their own API request (as="
   const event = (await apiFor(deps).call('GET', `/e/${SLUG}`)).text;
   assert.deepEqual(preloads(event), [`<link rel="preload" as="fetch" href="/api/event/${SLUG}" crossorigin>`]);
   // A hidden or missing target's generic page has none: it must carry nothing of the URL (test/privacy.test.js).
-  assert.deepEqual(preloads((await apiFor(deps).call('GET', '/e/no-such-event')).text), []);
+  assert.deepEqual(preloads((await apiFor(deps).call('GET', MISSING)).text), []);
   assert.deepEqual(preloads((await apiFor(deps).call('GET', '/t/1')).text), []);
 });
 

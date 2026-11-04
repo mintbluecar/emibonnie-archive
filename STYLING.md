@@ -13,6 +13,28 @@ looks. An element with no class still looks on-brand. Forgetting a style
 degrades to "plain but correct", never "broken" -- and if it doesn't,
 that's a check to add, not a one-off fix.
 
+## Rules card
+
+- Compose primitives first (section 4): `btn`, `field`, `card`, `grid`,
+  `list`, `stack`, `cluster`, `body-text`, and the rest.
+- Before writing a CSS rule, search `src/styles/` for the property;
+  reuse what's already there instead of adding a copy.
+- A second screen needing the same thing means promoting it to a
+  primitive with a setting, not copying the rule again.
+- Tweak a primitive only through its settings, set on your own `c-`
+  class (e.g. `--grid-min` and `--grid-min-wide` on `.c-widget__grid`)
+  -- never by restyling the primitive's own rule.
+- A failing style check or test is a signal to fix the CSS, never an
+  allow-list to widen without the owner. The one exception:
+  `/* not shared: <reason> */` directly before the component rule
+  that coincidentally matches another (`scripts/styleDuplicates.js`).
+- The check only catches exact copies; a near-copy (one value changed,
+  a rule split in two) is still a copy.
+- `not shared` is only for coincidences: if two rules mean the same
+  thing, share them, even if tests or hooks need adjusting.
+- Work on a branch -- the hook refuses edits and commits on `main`.
+- Section 8 has the full table of checks and fixes.
+
 ## 1. Layers
 
 `app.css` is one file, in cascade layers declared once:
@@ -273,7 +295,8 @@ and `--text-14`. `field__select` is the dropdown's wrapper (this was
 wrapper only sizes the select to the field's width. A control with an
 error gets `aria-invalid="true"` (the danger border). `check` is a
 checkbox or radio with its text, the label itself the target, at least
-`--target-min` tall.
+`--target-min` tall. `check--bare` is one with no visible text (its
+`aria-label` names it): the label is widened to the target by itself.
 
 ### Card (`card.css`)
 
@@ -324,6 +347,8 @@ and each cell shows its column's name (its `data-label`) above its
 value; the header row is hidden visually but kept for screen readers. A
 cell's long unbroken text (a handle, a URL) wraps rather than widening
 the page -- never add `white-space: nowrap` to a text cell.
+`table--raised`: on a desktop the whole table is one raised surface,
+the card's (on a phone `table--stack` already makes each row a card).
 
 ### Chip (`chip.css`)
 
@@ -396,6 +421,8 @@ track's width evenly.
 <h1 class="heading heading--lg">Import review</h1>
 <h2 class="heading heading--md">Speakers</h2>
 <h3 class="heading heading--sm">Check the details</h3>
+<span class="gradient-text">fix</span>ture archive
+<p class="body-text">a quoted post's text, a card's search snippet, a plain translation line</p>
 ```
 
 `meta` is small muted text. `label` is a small, heavy, label-coloured
@@ -405,7 +432,13 @@ labelling a list. `tap-link` is a small text link whose target is still
 is one inside a row of small controls, `--control-sm` tall like
 `btn--sm`. `heading` sets the look, never the level -- pick the element
 (`h1`/`h2`/`h3`) for the outline and the class (`heading--lg`/`--md`/
-`--sm`) for the size.
+`--sm`) for the size. `gradient-text` paints the primary gradient
+across its text, clipped to the glyphs -- the wordmark's accent
+letters; the rest of the wordmark beside it stays plain text.
+`body-text` is a card's or bubble's body copy -- a quoted post, a
+search snippet, a plain translation line -- `--text-13`/`1.45`, wrapping
+a long unbroken string anywhere rather than overflowing; a block
+needing its own spacing adds that on its own class alongside it.
 
 ### Spacing and layout (`spacing.css`)
 
@@ -428,6 +461,44 @@ wrapping row with a gap (default `--space-2`). The number suffix
 the `--space-<n>` step. `cluster--fill` keeps one row and shares its
 width evenly between the children, their content centred -- a view
 switch.
+
+### Grid (`grid.css`)
+
+```html
+<div class="grid">
+  <article class="card card--flush">...</article>
+  <article class="card card--flush">...</article>
+</div>
+```
+
+A grid of cards: as many columns as fit, each at least a minimum width,
+sharing the row's leftover space -- 2 across on a phone, more on wider
+screens (home's months, the event, person and translator pages).
+
+Its settings are custom properties `.grid` defines on itself -- not
+tokens, so they're never in `tokens.css`: `--grid-min`, the narrowest
+a column may get (150px), and `--grid-gap`, the gap between cards
+(`--space-2`); from the 860px breakpoint `--grid-min-wide` (190px) and
+`--grid-gap-wide` (`--space-3`) take over. A screen that needs other
+values adds its own class next to `grid` on the same element and sets
+the settings there, e.g. `--grid-min: 120px` and `--grid-min-wide: 160px`
+on `.c-widget__grid` -- set both, or the wide breakpoint keeps the
+primitive's own 190px: the components layer comes after primitives, so
+the screen's value wins. Set on a parent instead, it would lose to the
+value `.grid` defines on itself.
+
+### List (`list.css`)
+
+```html
+<ul class="list stack stack--2">...</ul>
+<ul class="list c-import-speakers__entries">...</ul>
+```
+
+A `<ul>`/`<ol>` used as a layout container rather than a bulleted list:
+no browser marker, no inherited margin or padding. Pair it with
+`stack`/`cluster` for the gap between items, or add the block's own
+class next to it for the layout its items need (a grid, dividers
+between rows, ...).
 
 ### Shared: the sheet and the container
 
@@ -467,15 +538,19 @@ named, documented option here, never a second mount function.
 
 ## 6. When to write component CSS
 
-A component file (`src/styles/components/<name>.css`) holds only this
-screen's own genuinely unique layout and look -- never a primitive's
-look rebuilt by hand. Lint enforces both halves, inside
-`src/styles/components/*.css` only:
+See "Rules card" at the top of this doc first. A component file
+(`src/styles/components/<name>.css`) holds only this screen's own
+genuinely unique layout and look -- never a primitive's look rebuilt
+by hand. Lint enforces both halves, inside `src/styles/components/*.css`
+only:
 
 - `selector-disallowed-list` rejects a selector naming a primitive
   class (`btn`, `field`, `check`, `card`, `table`, `chip`, `badge`,
-  `notice`, `meta`, `label`, `heading`, `stack`, `cluster`) at a real
-  boundary -- a component never re-opens a primitive's own rule.
+  `notice`, `segmented`, `meta`, `label`, `heading`, `tap-link`,
+  `stack`, `cluster`, `grid`, `list`, `gradient-text`, `body-text`) at
+  a real boundary -- a component never re-opens a primitive's own rule
+  (setting a primitive's settings, like `grid`'s, on its own class is
+  how a screen adjusts one).
 - `local/no-rebuilt-primitive` (`scripts/stylelint/no-rebuilt-primitive.js`)
   rejects a button- or field-like selector (a `button`, `select`,
   `textarea`, a non-checkbox/radio `input`, or a class ending in
@@ -566,6 +641,7 @@ both only exist locally (`VERCEL` unset), never in production.
 | `at-rule-disallowed-list: layer` (stylelint) | a hand-written `@layer` | delete it -- the build assigns the layer by folder |
 | `selector-disallowed-list` (stylelint, `components/*.css` only) | a selector naming a primitive class at a real boundary | don't restyle a primitive from a component file; use the component's own `c-<block>` class |
 | `local/no-rebuilt-primitive` (stylelint, `components/*.css` only) | a button-/field-like selector declaring background + `border-radius` + `padding*` together | use the `btn`/`field` primitive instead of rebuilding it |
+| `scripts/styleDuplicates.js` (run by `npm run check` after stylelint) | a component rule whose 3+ declarations, in the same media context, are exactly another component's or a primitive's | use the existing class, or move the rule into `src/styles/primitives/` and use it from both; if the match is a coincidence, put `/* not shared: <reason> */` directly before the component rule |
 | `test/styles/classUsage.test.js` | a class used in `public/js`/the style guide template with no matching CSS selector, or vice versa; or a class/token in this doc's own code blocks that isn't real | add the missing rule, or delete the dead class/selector; keep this doc's examples matched to the real classes and tokens |
 | `test/site/themeTokens.test.js` (the theme test) | a site `theme.css` sets a custom property `tokens.css` doesn't define, or a font token names a family that's neither the engine's own nor declared in that site's `fonts` | override only existing tokens; declare a font (`docs/site-settings.md`, "Fonts") before pointing a role at it |
 | e2e `checkPage`'s structure assertions (`e2e/helpers.js`, every `e2e/*.spec.js` page) | no `<header>`/`main.container` | mount through `pageShell.render()` + `mountPage()` (section 5) |

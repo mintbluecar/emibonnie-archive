@@ -114,7 +114,7 @@ test('add: a post with no markers saves as plain text, with nothing pinned', asy
   await expect(page.locator('[data-action="save"]')).toBeEnabled();
   await page.locator('[data-action="save"]').click();
   await page.waitForURL(`**/t/${NO_MARKERS}`);
-  await expect(page.locator('.c-bubbles__plain').first()).toContainText('here is a short note with no speakers at all');
+  await expect(page.locator('[data-bubble="plain"]').first()).toContainText('here is a short note with no speakers at all');
   await expect(page.locator('.c-media-box video, .c-media-box img, .c-carousel, .c-quote')).toHaveCount(0);
 });
 
@@ -154,7 +154,7 @@ test('add: a mapped marker and a plain line save; the edit page puts the bubble 
   await page.locator('[data-action="save"]').click();
   await page.waitForURL(`**/t/${EDITED_NEW}`);
   const line = "can't wait to see everyone at the fanmeet next weekend";
-  await expect(page.locator('.c-bubbles__plain')).toContainText(`☀️: ${line}`);
+  await expect(page.locator('[data-bubble="plain"]')).toContainText(`☀️: ${line}`);
   await expect(page.locator('.c-bubbles__msg')).toHaveCount(0);
 
   // Edit it back: the same line becomes speech again, by a picked person.
@@ -167,5 +167,5 @@ test('add: a mapped marker and a plain line save; the edit page puts the bubble 
 
   await gotoReady(page, `/t/${EDITED_NEW}`);
   await expect(page.locator('.c-bubbles__bub')).toContainText(line);
-  await expect(page.locator('.c-bubbles__plain')).toHaveCount(0);
+  await expect(page.locator('[data-bubble="plain"]')).toHaveCount(0);
 });

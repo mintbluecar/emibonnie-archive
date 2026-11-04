@@ -6,6 +6,8 @@ import { ingestDeps, ingest, rows, count } from '../helpers/ingest.js';
 import { signInUser } from '../../src/services/session.js';
 import { canEdit, editItem, revertEdit, resolveForEdit, editableOf } from '../../src/services/editItem.js';
 import { Forbidden, BadRequest, Conflict } from '../../src/http/errors.js';
+import { createEvent } from '../../src/repo/events.js';
+import { mergeEvents } from '../../src/services/eventAdmin.js';
 
 /**
  * Runs `fn` against a fresh database, so no test sees another's items,
@@ -186,5 +188,32 @@ test('an edit deletes the entry\'s own page from the CDN and invalidates the res
     const rest = invalidated.flat();
     assert.ok(!rest.includes(own), 'the entry\'s own tag is never merely invalidated');
     for (const tag of ['home', 'search', `event:${slug}`]) assert.ok(rest.includes(tag), `${tag} is invalidated: ${rest.join(',')}`);
+  });
+});
+
+test('reverting a move into a merged-away event lands in the kept event; one already there is nothing to change', async () => {
+  await withDeps(async ({ deps, owner }) => {
+    const o = await owner();
+    const { itemId } = await ingest(deps, IDS.EVENT_A);
+    const [{ event_id: original }] = await rows(deps.db, 'select event_id from items where id = $1', [itemId]);
+    const make = (/** @type {string} */ slug) => deps.db.transaction((tx) => createEvent(tx, {
+      name: slug, slug, addressTag: 'x', occurredOn: slug.slice(0, 10), keywords: [], hashtags: [], livePeopleIds: [], livePlatformCode: null,
+    }), { actor: 'system' }).then((/** @type {any} */ e) => e.id);
+    const [b, c] = [await make('2034-01-01/b'), await make('2034-01-01/c')];
+    const fields = { name: 'Kept', occurredOn: '2034-01-01', keywords: [], hashtags: [], livePeopleIds: [], livePlatformCode: null, addressTag: '' };
+    const eventOf = async () => (await rows(deps.db, 'select event_id from items where id = $1', [itemId]))[0].event_id;
+
+    const first = await editItem(deps, { kind: 'translation', sourceId: IDS.EVENT_A, changes: { eventId: b }, actor: o });
+    await mergeEvents(deps, { keepId: c, mergeIds: [original], fields, actor: o });
+    await revertEdit(deps, { kind: 'translation', sourceId: IDS.EVENT_A, editId: first.editId, actor: o });
+    assert.equal(await eventOf(), c, 'the merged-away event resolved to the one it was merged into');
+
+    const second = await editItem(deps, { kind: 'translation', sourceId: IDS.EVENT_A, changes: { eventId: b }, actor: o });
+    await mergeEvents(deps, { keepId: b, mergeIds: [c], fields, actor: o });
+    await assert.rejects(
+      revertEdit(deps, { kind: 'translation', sourceId: IDS.EVENT_A, editId: second.editId, actor: o }),
+      { name: 'BadRequest', message: 'nothing to change' },
+    );
+    assert.equal(await eventOf(), b);
   });
 });

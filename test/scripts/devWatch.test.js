@@ -46,7 +46,7 @@ test('a failed build serves nothing new', async () => {
 });
 
 test('it watches the engine\'s markup, styles and browser code, and the active site folder', () => {
-  assert.deepEqual(watchedDirs('examples/solluna'), ['src/html', 'src/styles', 'public/js', 'examples/solluna']);
+  assert.deepEqual(watchedDirs('examples/solluna'), ['src/html', 'src/styles', 'src/domain', 'public/js', 'examples/solluna']);
 });
 
 

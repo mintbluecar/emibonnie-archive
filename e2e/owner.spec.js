@@ -17,6 +17,71 @@ test('me as the owner: the owner section, the switch and an accessible page', as
   await expect(page.locator('.c-owner')).toBeVisible();
   await expect(page.locator('[data-action="approval"]')).toBeVisible();
   await expect(page.locator('[data-owner-search]')).toBeVisible();
+  await expect(page.locator('.c-owner a[href="/admin/events"]')).toBeVisible();
+});
+
+test('the events list: accessible, and two ticks make merge a link', async ({ page }) => {
+  await signInAs(page, 'owner');
+  await checkPage(page, '/admin/events');
+  const merge = page.locator('[data-admin-events-merge]');
+  await expect(merge).toBeDisabled();
+  const ticks = page.locator('[data-action="tick"]');
+  await ticks.nth(0).check();
+  await expect(merge).toBeDisabled();
+  await ticks.nth(1).check();
+  await expect(merge).toHaveAttribute('href', /^\/admin\/events\/edit\?merge=\d+,\d+$/);
+  await expect(page.locator('[data-admin-events-ticked]')).toHaveText('2 ticked');
+});
+
+test('the edit event page: accessible, and a changed title saves', async ({ page }, testInfo) => {
+  await signInAs(page, 'owner');
+  await gotoReady(page, '/admin/events');
+  const href = await page.locator('a[href^="/admin/events/edit?id="]').first().getAttribute('href');
+  expect(href).toBeTruthy();
+  await checkPage(page, String(href));
+  test.skip(testInfo.project.name !== 'phone', 'writes to the shared e2e data; one project runs it');
+
+  const id = Number(new URL(String(href), 'http://x').searchParams.get('id'));
+  const before = await page.evaluate(async (eventId) => (await fetch(`/api/owner/events/${eventId}`)).json(), id);
+  try {
+    const name = page.locator('[data-event-name]');
+    await name.fill(`${before.name} (e2e)`);
+    await page.locator('[data-event-edit-form] [type="submit"]').click();
+    await expect(page.locator('[data-notice="saved"]')).toBeVisible();
+    await page.reload();
+    await expect(page.locator('[data-event-name]')).toHaveValue(`${before.name} (e2e)`);
+  } finally {
+    // Put the event back for the other specs, whatever failed above. The
+    // slug's own tag half re-addresses it to the same slug.
+    const status = await page.evaluate(async (event) => {
+      const fields = {
+        name: event.name, occurredOn: event.occurredOn, keywords: event.keywords, hashtags: event.hashtags,
+        livePeopleIds: event.livePeopleIds, livePlatformCode: event.livePlatformCode,
+        addressTag: event.slug.slice(event.slug.indexOf('/') + 1),
+      };
+      const res = await fetch(`/api/owner/events/${event.id}`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(fields),
+      });
+      return res.status;
+    }, before);
+    expect(status).toBe(200);
+  }
+});
+
+test('the tweets in an event: day groups, accessible, read-only', async ({ page }) => {
+  await signInAs(page, 'owner');
+  await gotoReady(page, '/me');
+  // The first event with an entry; nothing here writes, so every project runs it.
+  const id = await page.evaluate(async () => {
+    const { events } = await (await fetch('/api/owner/events')).json();
+    return events.find((/** @type {{ entryCount: number }} */ e) => e.entryCount > 0)?.id ?? null;
+  });
+  expect(id).toBeTruthy();
+  await checkPage(page, `/admin/events/entries?id=${id}`);
+  await expect(page.locator('[data-day]').first()).toBeVisible();
+  await expect(page.locator('[data-action="move"]')).toBeDisabled();
+  await page.locator('[data-action="tick"]').first().check();
+  await expect(page.locator('[data-event-entries-new]')).toHaveAttribute('href', new RegExp(`^/admin/events/edit\\?from=${id}&items=\\d+$`));
 });
 
 test('the owner approves a held entry, hides and restores a report, and blocks a user', async ({ page }, testInfo) => {

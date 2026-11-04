@@ -78,7 +78,7 @@ function row(item, state) {
     <li class="c-me__entry"${item.removedByYou || item.hidden ? html` data-faded` : ''}>
       <div class="c-me__entry-top">
         ${selectable ? html`
-          <label class="check c-me__select">
+          <label class="check check--bare">
             <input type="checkbox" data-action="select" data-key="${key}"
               aria-label="${t('me.translations.select')}" ${state.selected.has(key) ? 'checked' : ''}>
           </label>
@@ -131,7 +131,7 @@ function optOutBox(state) {
 /** @param {TranslationsState} state @returns {import('../core/html.js').SafeHtml} */
 export function render(state) {
   const list = state.items.length > 0
-    ? html`<ul class="c-me__list">${state.items.map((item) => row(item, state))}</ul>`
+    ? html`<ul class="list">${state.items.map((item) => row(item, state))}</ul>`
     : html`<p class="meta c-me__empty">${t('me.translations.empty')}</p>`;
   return html`
     <section data-translations>

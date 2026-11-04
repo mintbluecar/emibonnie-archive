@@ -3,27 +3,18 @@
  * importSpeakers.js (Plan 3; on primitives since the styling system's
  * Task 10): the owner's import review page. The header, filter chips,
  * search field, rows table, buttons, cards and texts are primitives;
- * this file keeps the page's own layout -- the table's surface on a
- * desktop, the row state colours, the two-line text clamp and the marker
- * rows' grid. See STYLING.md.
+ * this file keeps the page's own layout -- the row state colours, the
+ * two-line text clamp and the marker rows' grid (the table's desktop
+ * surface is table--raised). See STYLING.md.
  */
 
 .c-import {
   padding: var(--space-3) 0 var(--space-6);
 }
 
-/* The rows table: smaller text, and on a desktop one raised surface (on
-   a phone each row is its own card, table--stack). */
+/* The rows table's smaller text. */
 .c-import__rows {
   font-size: var(--text-12);
-}
-
-@media (min-width: 860px) {
-  .c-import__rows {
-    background: var(--color-card);
-    border-radius: var(--radius-card);
-    box-shadow: var(--shadow-card);
-  }
 }
 
 .c-import__state {
@@ -56,16 +47,10 @@
   justify-content: space-between;
 }
 
-.c-import-speakers__markers,
-.c-import-speakers__entries {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
 .c-import-speakers__marker {
   display: grid;
-  grid-template-columns: 28px 28px 1fr 180px auto;
+  /* The marker column grows for a word marker ("Juniper"); emoji keep 28px. */
+  grid-template-columns: minmax(28px, max-content) 28px 1fr 180px auto;
   gap: var(--space-2);
   align-items: center;
   padding: var(--space-2) 0;
@@ -95,7 +80,8 @@
    width, under its cells (left to auto-placement, the list landed in the
    28px glyph column and wrapped one letter a line). */
 .c-import-speakers__check,
-.c-import-speakers__entries {
+.c-import-speakers__entries,
+.c-import-speakers__new {
   grid-column: 1 / -1;
 }
 
@@ -121,12 +107,20 @@
 
 @media (max-width: 859.98px) {
   .c-import-speakers__marker {
-    grid-template-columns: 28px 28px 1fr;
+    grid-template-columns: minmax(28px, max-content) 28px 1fr;
   }
 
   .c-import-speakers__pick,
   .c-import-speakers__actions {
     grid-column: 1 / -1;
+  }
+
+  /* Stacked, the new person's fields sit right under the select, before
+     the save button that sends them. */
+  .c-import-speakers__actions,
+  .c-import-speakers__check,
+  .c-import-speakers__entries {
+    order: 1;
   }
 
   .c-import-speakers__entry {

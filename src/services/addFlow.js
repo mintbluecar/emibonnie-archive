@@ -7,7 +7,7 @@
 import { ingestItem } from './ingest.js';
 import { ROLES } from '../domain/constants.js';
 import { listPeople, addPerson, getPersonByHandle } from '../repo/people.js';
-import { listVisibleEvents } from '../repo/events.js';
+import { listEvents, listVisibleEvents } from '../repo/events.js';
 import { listCategories, listClients } from '../repo/lookups.js';
 import { purgeItem } from './cache.js';
 
@@ -16,16 +16,19 @@ import { purgeItem } from './cache.js';
 /** @typedef {import('./ingest.js').IngestResult} IngestResult */
 
 /**
- * The form's options: known people, generic roles, recent events, and the
- * owner-managed category (type) and client lists.
+ * The form's options: known people, generic roles, events, and the
+ * owner-managed category (type) and client lists. The owner gets every
+ * non-deleted event (one with no published entry yet too, so an entry can
+ * be moved into it); everyone else the 200 newest visible ones.
  * @param {{ db: Db }} deps
+ * @param {{ owner: boolean }} viewer
  * @returns {Promise<{ people: {id:number, displayName:string, emoji:string, igHandle:string|null}[],
  *   roles: string[], events: {id:number, name:string, slug:string, occurredOn:string}[],
  *   categories: string[], clients: string[] }>}
  */
-export async function addOptions(deps) {
+export async function addOptions(deps, { owner }) {
   const [people, events, categories, clients] = await Promise.all([
-    listPeople(deps.db), listVisibleEvents(deps.db, { limit: 200 }),
+    listPeople(deps.db), owner ? listEvents(deps.db) : listVisibleEvents(deps.db, { limit: 200 }),
     listCategories(deps.db), listClients(deps.db),
   ]);
   return {

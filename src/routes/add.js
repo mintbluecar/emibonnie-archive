@@ -27,7 +27,7 @@ export const optionsRoute = defineRoute({
   auth: 'user',
   cache: NO_STORE,
   query: [],
-  run: async (_ctx, deps) => addOptions(deps),
+  run: async ({ user }, deps) => addOptions(deps, { owner: user.isOwner === true }),
 });
 
 /** The add form's body goes to the add flow as sent; `previewAdd`/`addItem` check it. */

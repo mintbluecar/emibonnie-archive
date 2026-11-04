@@ -10,7 +10,7 @@ import { checkPage, gotoReady, stubSyntheticMedia, DARK_PROJECTS } from './helpe
 
 const LONG = '1900000000000000001';
 const LIVE = '1900000000000000004';
-const PAGES = [['home', '/'], ['event', '/e/solluna-at-starfest-2026-10-18'], ['item', `/t/${LONG}`], ['home, searching', `/?q=${encodeURIComponent('ครบ')}`], ['person', '/p/solsunny']];
+const PAGES = [['home', '/'], ['event', '/e/2026-10-18/sollunastarfest'], ['item', `/t/${LONG}`], ['home, searching', `/?q=${encodeURIComponent('ครบ')}`], ['person', '/p/solsunny']];
 
 /** Forces `choice` the way the switch remembers it, before any page script. @param {import('@playwright/test').Page} page @param {string} choice */
 async function forceTheme(page, choice) {
@@ -72,7 +72,7 @@ test('LIVE at phone width (Task 10c k): with the gap, the first bubble still sho
   test.skip(testInfo.project.name !== 'phone', 'phone layout');
   await stubSyntheticMedia(page);
   await gotoReady(page, `/t/${LIVE}`);
-  const first = await page.locator('.c-bubbles__msg, .c-bubbles__plain').first().evaluate((el) => el.getBoundingClientRect().top);
+  const first = await page.locator('.c-bubbles__msg, [data-bubble="plain"]').first().evaluate((el) => el.getBoundingClientRect().top);
   expect(first).toBeLessThan(844);
 });
 

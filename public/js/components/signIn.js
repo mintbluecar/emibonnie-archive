@@ -40,7 +40,7 @@ export function render({ returnTo = '/me', failed = false } = {}) {
     <section class="card card--roomy c-signin">
       <div class="c-signin__brand">
         ${site.logo ? html`<img class="c-signin__logo" src="${site.logo}" alt="" width="64" height="64">` : ''}
-        <p class="c-signin__wordmark"><span class="c-signin__accent">${site.wordmark.accent}</span>${site.wordmark.rest}</p>
+        <p class="c-signin__wordmark"><span class="gradient-text">${site.wordmark.accent}</span>${site.wordmark.rest}</p>
         <p class="badge c-signin__badge">${t('badge.fanMade')}</p>
       </div>
       ${failed ? html`<p class="notice notice--error c-signin__failed" role="alert">${t('signIn.failed')}</p>` : ''}

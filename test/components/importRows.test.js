@@ -42,7 +42,7 @@ test('the header names the job and the chips count every state', () => {
 
 test('the rows are a table with a heading per column and every cell labelled for phones', () => {
   const markup = String(render(state({ rows: [row()] })));
-  assert.match(markup, /<table class="table table--stack">/);
+  assert.match(markup, /<table class="table table--stack table--raised">/);
   const heads = [...markup.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1]);
   assert.deepEqual(heads, ['import.col.state', 'import.col.translator', 'import.col.text', 'import.col.event', 'import.col.actions'].map((key) => t(key)));
   assert.deepEqual(heads, ['state', 'translator', 'text', 'event', 'actions']);

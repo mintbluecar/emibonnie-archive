@@ -154,7 +154,7 @@ test('a luna tiktok live 3 days away proposes a new event', () => {
   assert.equal(result.placement, 'event');
   assert.equal(result.event, null);
   assert.equal(result.proposal?.name, 'luna tiktok live');
-  assert.equal(result.proposal?.slug, 'luna-tiktok-live-2026-02-15');
+  assert.equal(result.proposal?.slug, '2026-02-15/luna-tiktok-live');
   assert.deepEqual(result.proposal?.livePeopleIds, [LUNA]);
 });
 
@@ -170,7 +170,7 @@ test('a joint live matches only the event with both people', () => {
   assert.equal(match('#lunamoon IG live [260301]', { events: [jointIg] }).event, null);
   const proposal = match('#solsunny #lunamoon IG live [260301]', { events: [lunaIg] }).proposal;
   assert.equal(proposal?.name, 'sol & luna ig live');
-  assert.match(proposal?.slug ?? '', /^[a-z0-9-]+$/);
+  assert.match(proposal?.slug ?? '', /^[0-9]{4}-[0-9]{2}-[0-9]{2}\/[a-z0-9-]+$/);
 });
 
 test('an unknown tag alone is never a shared story (that only comes from an override): unsorted, newTags carries it', () => {
@@ -221,17 +221,24 @@ test('suggestions: events within ±1 day, excluding the match, at most 5', () =>
   assert.ok(result.suggestions.every((s) => s.id !== 10 && s.id !== 200));
 });
 
-test('proposeEvent: keyword name, a slug from it, tags carried', () => {
+test('proposeEvent: keyword name, an address from its hashtag, tags carried', () => {
   const proposal = proposeEvent({ header: header('SOLLUNA AT STARFEST\n#SolLunaStarfest'), date: '2026-10-18', people: PEOPLE, formatName: lower });
   assert.equal(proposal.name, 'SOLLUNA AT STARFEST');
-  assert.equal(proposal.slug, 'solluna-at-starfest-2026-10-18');
+  assert.equal(proposal.addressTag, 'SolLunaStarfest');
+  assert.equal(proposal.slug, '2026-10-18/sollunastarfest');
   assert.deepEqual(proposal.keywords, ['SOLLUNA AT STARFEST']);
   assert.deepEqual(proposal.hashtags, ['SolLunaStarfest']);
   assert.equal(proposal.livePlatformCode, null);
 });
 
-test('proposeEvent: a name with no Latin letters still gives a valid slug', () => {
+test('proposeEvent: a name with no Latin letters still gives a valid address', () => {
   const thai = { keyword: 'งานแฟนมีต', tags: [], personTags: [], live: null, context: null };
   const proposal = proposeEvent({ header: thai, date: '2026-10-18', people: PEOPLE, formatName: lower });
-  assert.match(proposal.slug, /^[a-z0-9]+(-[a-z0-9]+)*$/);
+  assert.match(proposal.slug ?? '', /^[0-9]{4}-[0-9]{2}-[0-9]{2}\/[a-z0-9]+(-[a-z0-9]+)*$/);
+});
+
+test('proposeEvent: no date gives a null slug, settled later at write time', () => {
+  const proposal = proposeEvent({ header: header('SOLLUNA AT STARFEST\n#SolLunaStarfest'), date: null, people: PEOPLE, formatName: lower });
+  assert.equal(proposal.slug, null);
+  assert.equal(proposal.addressTag, 'SolLunaStarfest');
 });

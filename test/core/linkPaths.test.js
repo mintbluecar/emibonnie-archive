@@ -81,8 +81,8 @@ export function resolves(raw) {
 
 test('the guard itself: a trailing-slash page path, an unknown path and a bare /soon fail; real routes pass', () => {
   assert.deepEqual(literalPaths('html`<a href="/privacy/">x</a>`; x = { href: \'/me/\' }; window.location.href = \'/soon\';'), ['/privacy/', '/me/', '/soon']);
-  for (const bad of ['/privacy/', '/about/', '/takedown/', '/add/', '/me/', '/soon', '/nope', '/search', '/search?filters=1']) assert.equal(resolves(bad), false, bad);
-  for (const good of ['/', '/?q=x', '/privacy', '/about', '/takedown', '/add', '/me', '/api/search', '/e/x?q=hi', '/e/x', '/p/x', '/tl/x', `${KIND_PREFIXES[0]}123`]) {
+  for (const bad of ['/privacy/', '/about/', '/takedown/', '/add/', '/me/', '/soon', '/nope', '/search', '/search?filters=1', '/e/x']) assert.equal(resolves(bad), false, bad);
+  for (const good of ['/', '/?q=x', '/privacy', '/about', '/takedown', '/add', '/me', '/api/search', '/e/2026-01-01/x?q=hi', '/e/2026-01-01/x', '/p/x', '/tl/x', `${KIND_PREFIXES[0]}123`]) {
     assert.equal(resolves(good), true, good);
   }
 });

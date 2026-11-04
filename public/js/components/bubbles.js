@@ -35,7 +35,7 @@ function speechBubble(bubble) {
     return html`
       <div class="c-bubbles__msg c-bubbles__msg--cont"${bubble.colour ? html` data-c="${bubble.colour}"` : ''}>
         <div class="c-bubbles__avatar c-bubbles__avatar--blank" aria-hidden="true"></div>
-        <div class="c-bubbles__bub">${thaiSpans(bubble.text)}</div>
+        <div class="c-bubbles__bub body-text">${thaiSpans(bubble.text)}</div>
       </div>
     `;
   }
@@ -43,7 +43,7 @@ function speechBubble(bubble) {
   return html`
     <div class="c-bubbles__msg"${bubble.colour ? html` data-c="${bubble.colour}"` : ''}>
       ${bubble.emoji ? html`<div class="c-bubbles__avatar"><span class="c-emoji">${bubble.emoji}</span></div>` : html`<div class="c-bubbles__avatar c-bubbles__avatar--none" aria-hidden="true"></div>`}
-      <div class="c-bubbles__bub">
+      <div class="c-bubbles__bub body-text">
         <div class="c-bubbles__name">${name}</div>
         ${thaiSpans(bubble.text)}
       </div>
@@ -65,7 +65,7 @@ function jointBubble(bubble) {
     return html`
       <div class="c-bubbles__msg c-bubbles__msg--cont">
         <div class="c-bubbles__avatar c-bubbles__avatar--blank" aria-hidden="true"></div>
-        <div class="c-bubbles__bub">${thaiSpans(bubble.text)}</div>
+        <div class="c-bubbles__bub body-text">${thaiSpans(bubble.text)}</div>
       </div>
     `;
   }
@@ -75,7 +75,7 @@ function jointBubble(bubble) {
       <div class="c-bubbles__avatars">
         ${bubble.parts.map((p) => html`<div class="c-bubbles__avatar"><span class="c-emoji">${p.emoji}</span></div>`)}
       </div>
-      <div class="c-bubbles__bub">
+      <div class="c-bubbles__bub body-text">
         <div class="c-bubbles__name">${name}</div>
         ${thaiSpans(bubble.text)}
       </div>
@@ -91,7 +91,7 @@ function nonNoteBubble(bubble) {
   if (bubble.kind === 'speech') return speechBubble(bubble);
   if (bubble.kind === 'joint') return jointBubble(bubble);
   if (bubble.kind === 'crowd') return html`<p class="c-bubbles__crowd">${thaiSpans(bubble.text)}</p>`;
-  return html`<p class="c-bubbles__plain">${thaiSpans(bubble.text)}</p>`;
+  return html`<p class="body-text" data-bubble="plain">${thaiSpans(bubble.text)}</p>`;
 }
 
 /**

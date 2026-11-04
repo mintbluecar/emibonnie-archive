@@ -58,7 +58,7 @@ test('resolveArtists matches names and warns on strangers', async () => {
 });
 
 test('eventOverrideOf matches an existing event, else proposes one', async () => {
-  const matched = await eventOverrideOf(deps, 'solluna-happy-day-2026-10-19');
+  const matched = await eventOverrideOf(deps, '2026-10-19/slhappyday2026');
   assert.ok('eventId' in matched);
   const fresh = await eventOverrideOf(deps, 'a brand new keyword');
   assert.deepEqual(fresh, { newEvent: true, eventName: 'a brand new keyword' });

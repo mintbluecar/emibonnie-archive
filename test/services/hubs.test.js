@@ -21,9 +21,9 @@ test('homeView: visible events newest first, grouped by month, counts per kind',
   const { months } = await homeView(deps);
   assert.deepEqual(months.map((m) => m.month), ['2026-10', '2026-03', '2026-02']);
   const october = months[0].events;
-  assert.deepEqual(october.map((e) => e.slug), ['solluna-happy-day-2026-10-19', 'solluna-at-starfest-2026-10-18']);
+  assert.deepEqual(october.map((e) => e.slug), ['2026-10-19/slhappyday2026', '2026-10-18/sollunastarfest']);
   assert.deepEqual(october[0], {
-    slug: 'solluna-happy-day-2026-10-19', name: 'SOLLUNA HAPPY DAY', occurredOn: '2026-10-19',
+    slug: '2026-10-19/slhappyday2026', name: 'SOLLUNA HAPPY DAY', occurredOn: '2026-10-19',
     hashtag: 'SLHappyDay2026', counts: { translation: 2 },
     // The representative picture: the first of the event's items that has one.
     thumb: { url: 'https://pbs.twimg.com/amplify_video_thumb/1900000000000000002v/thumb?format=jpg&name=small', width: 1280, height: 720, video: true },
@@ -32,7 +32,7 @@ test('homeView: visible events newest first, grouped by month, counts per kind',
 });
 
 test('eventView: the event, its translator count, people, and per-kind sections in event order', async () => {
-  const view = /** @type {any} */ (await eventView(deps, 'solluna-happy-day-2026-10-19'));
+  const view = /** @type {any} */ (await eventView(deps, '2026-10-19/slhappyday2026'));
   assert.equal(view.event.name, 'SOLLUNA HAPPY DAY');
   assert.equal(view.event.occurredOn, '2026-10-19');
   assert.equal(view.accountCount, 2);
@@ -43,7 +43,7 @@ test('eventView: the event, its translator count, people, and per-kind sections 
 });
 
 test('eventView: order=desc reverses each section (the event page\'s "newest first" toggle); an unknown order is a BadRequest', async () => {
-  const slug = 'solluna-happy-day-2026-10-19';
+  const slug = '2026-10-19/slhappyday2026';
   const asc = /** @type {any} */ (await eventView(deps, slug));
   assert.deepEqual(asc.sections[0].items.map((/** @type {any} */ i) => i.sourceId), [IDS.EVENT_A, IDS.EVENT_B]);
   const defaulted = /** @type {any} */ (await eventView(deps, slug, { order: 'asc' }));
@@ -57,7 +57,7 @@ test('an event whose items are all hidden is not visible', async () => {
   const id = await itemIdOf(deps.db, IDS.LIVE);
   await deps.db.transaction((/** @type {any} */ tx) => tx.query("update items set deleted_at = now(), deleted_reason = 'spam' where id = $1", [id]), SYSTEM);
   try {
-    assert.equal(await eventView(deps, 'luna-tiktok-live-2026-02-12'), null);
+    assert.equal(await eventView(deps, '2026-02-12/luna-tiktok-live'), null);
     const { months } = await homeView(deps);
     assert.ok(!months.some((m) => m.month === '2026-02'));
   } finally {
@@ -75,7 +75,7 @@ test('personView: the person, counts, and their items newest first with each ite
   assert.equal(items[0].sourceId, IDS.PHOTO);
   assert.equal(items[0].event, null);
   const long = items.find((/** @type {any} */ i) => i.sourceId === IDS.LONG);
-  assert.deepEqual(long.event, { slug: 'solluna-at-starfest-2026-10-18', name: 'SOLLUNA AT STARFEST', occurredOn: '2026-10-18' });
+  assert.deepEqual(long.event, { slug: '2026-10-18/sollunastarfest', name: 'SOLLUNA AT STARFEST', occurredOn: '2026-10-18' });
   assert.equal((/** @type {any} */ (await personView(deps, 'SolSunny'))).redirectTo, 'solsunny');
   assert.equal(await personView(deps, 'nobody_here'), null);
 });
@@ -154,7 +154,7 @@ test('itemView: neighbours in the event, follows-on, and null for an unknown kin
   const a = /** @type {any} */ (await itemView(deps, 'translation', IDS.EVENT_A));
   assert.equal(a.prev, null);
   assert.deepEqual(a.next, { sourceId: IDS.EVENT_B, url: `/t/${IDS.EVENT_B}` });
-  assert.equal(a.event.slug, 'solluna-happy-day-2026-10-19');
+  assert.equal(a.event.slug, '2026-10-19/slhappyday2026');
   assert.equal(await itemView(deps, 'no_such_kind', IDS.EVENT_A), null);
   assert.equal(await itemView(deps, 'translation', '1'), null);
 
@@ -186,7 +186,7 @@ test('followsOnFrom names the visible item this one follows on from', async () =
 });
 
 test('previews carry the shared occurredOn and placement; search results too', async () => {
-  const view = /** @type {any} */ (await eventView(deps, 'solluna-happy-day-2026-10-19'));
+  const view = /** @type {any} */ (await eventView(deps, '2026-10-19/slhappyday2026'));
   const first = view.sections[0].items[0];
   assert.equal(first.occurredOn, '2026-10-19');
   assert.equal(first.placement, 'event');
@@ -202,7 +202,7 @@ test('previews carry the shared occurredOn and placement; search results too', a
 });
 
 test('eventView: type and client names, and visible counts per kind from a count query', async () => {
-  const slug = 'solluna-happy-day-2026-10-19';
+  const slug = '2026-10-19/slhappyday2026';
   const plain = /** @type {any} */ (await eventView(deps, slug));
   assert.equal(plain.event.type, null);
   assert.equal(plain.event.client, null);
@@ -271,7 +271,7 @@ test('addedByOf: the public form of a submitter', () => {
 });
 
 test('hub sections page with limit/offset: real totals, hasMore, and counts that ignore the page', async () => {
-  const slug = 'solluna-happy-day-2026-10-19';
+  const slug = '2026-10-19/slhappyday2026';
   const first = /** @type {any} */ (await eventView(deps, slug, { limit: '1' }));
   assert.deepEqual(first.sections.map((/** @type {any} */ s) => [s.kind, s.total, s.hasMore, s.items.length]), [['translation', 2, true, 1]]);
   assert.equal(first.sections[0].items[0].sourceId, IDS.EVENT_A);
@@ -298,11 +298,11 @@ test('hub sections page with limit/offset: real totals, hasMore, and counts that
 
 test('hub paging params out of range are a BadRequest', async () => {
   for (const params of [{ limit: '0' }, { limit: '51' }, { limit: 'abc' }, { limit: '-1' }, { offset: '10001' }, { offset: '1.5' }, { limit: Number.NaN }]) {
-    await assert.rejects(eventView(deps, 'solluna-happy-day-2026-10-19', params), { name: 'BadRequest' }, JSON.stringify(params));
+    await assert.rejects(eventView(deps, '2026-10-19/slhappyday2026', params), { name: 'BadRequest' }, JSON.stringify(params));
     await assert.rejects(personView(deps, 'solsunny', params), { name: 'BadRequest' });
     await assert.rejects(accountView(deps, 'tl_alpha', params), { name: 'BadRequest' });
   }
-  assert.ok(await eventView(deps, 'solluna-happy-day-2026-10-19', { limit: '50', offset: '10000' }));
+  assert.ok(await eventView(deps, '2026-10-19/slhappyday2026', { limit: '50', offset: '10000' }));
 });
 
 test('filters and person pages only through visible items: a person and category known only from a hidden item stay out', async () => {

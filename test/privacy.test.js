@@ -74,7 +74,7 @@ async function representativeCalls() {
   const ids = [...Object.values(IDS), '1'];
   /** @type {[string, string][]} */
   const calls = [['GET', '/api/home'], ['GET', '/api/filters']];
-  for (const slug of [...slugs, 'no-such-event']) calls.push(['GET', `/api/event/${slug}`], ['GET', `/e/${slug}`]);
+  for (const slug of [...slugs, '2026-10-19/no-such-event']) calls.push(['GET', `/api/event/${slug}`], ['GET', `/e/${slug}`]);
   // Every kind's item routes (an id of another kind's item must leak nothing either).
   for (const kind of Object.values(kindsRegistry)) {
     for (const id of ids) {
@@ -88,7 +88,7 @@ async function representativeCalls() {
   for (const handle of [...handles, 'nobody']) calls.push(['GET', `/api/account/${encodeURIComponent(handle)}`]);
   const searches = [
     '', '?limit=50', '?offset=5', '?q=tell%20you', '?q=fanmeet', '?q=tl_gamma', '?q=clipper', '?q=everyone',
-    '?accountHandle=tl_gamma', '?accountHandle=clipper_one', '?eventSlug=solluna-happy-day-2026-10-19', '?placements=event,unsorted',
+    '?accountHandle=tl_gamma', '?accountHandle=clipper_one', '?eventSlug=2026-10-19/slhappyday2026', '?placements=event,unsorted',
     '?kinds=translation&from=2026-01-01&to=2026-12-31', '?people=1,2,3&peopleMode=all', '?categories=1,2,3',
     ...Object.keys(kindsRegistry).map((name) => `?q=tell%20you&kinds=${name}`),
   ];
@@ -105,6 +105,8 @@ async function representativeCalls() {
   calls.push(['POST', '/api/reports']);
   // The owner section: 401 without a session.
   calls.push(['GET', '/api/owner'], ['POST', '/api/owner/approval'], ['POST', '/api/owner/items/translation/1/review'], ['POST', '/api/owner/reports/1/hide'], ['POST', '/api/owner/reports/1/restore'], ['POST', '/api/owner/reports/1/dismiss'], ['GET', '/api/owner/users?q=ab'], ['GET', '/api/owner/imports'], ['GET', '/api/owner/imports/1'], ['GET', '/api/owner/imports/1/rows'], ['POST', '/api/owner/imports/1/map'], ['POST', '/api/owner/imports/1/publish'], ['POST', '/api/owner/imports/1/rows/1/skip'], ['POST', '/api/owner/imports/1/rows/1/archive'], ['POST', '/api/owner/imports/1/retry'], ['POST', '/api/dev/import'], ['POST', '/api/owner/users/block'], ['POST', '/api/owner/users/unblock'], ['POST', '/api/owner/sign-in-alert/dismiss']);
+  // Task 7: the owner's event admin -- 401 without a session, nothing leaks.
+  calls.push(['GET', '/api/owner/events'], ['GET', '/api/owner/events/1'], ['GET', '/api/owner/events/1/entries'], ['POST', '/api/owner/events/1'], ['POST', '/api/owner/events/merge'], ['POST', '/api/owner/events/1/move'], ['POST', '/api/owner/events/1/split']);
   // Editing and follow-ups: all signed-in, a bare probe is 401 (no session).
   calls.push(['GET', '/api/item/translation/1/edit'], ['POST', '/api/item/translation/1/edit'], ['POST', '/api/item/translation/1/edits/1/revert'], ['POST', '/api/item/translation/1/follow-ups']);
   return calls;
