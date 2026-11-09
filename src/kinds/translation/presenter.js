@@ -113,13 +113,52 @@ function jointBubble(line, speakers, ctx) {
 }
 
 /**
+ * Whether every one of a joint line's markers maps to the same known
+ * person: a translator who writes one person as a run of emoji (☀️⭐),
+ * not two people speaking at once.
+ * @param {string[]} markers
+ * @param {SpeakerMap} speakers
+ */
+function isOnePerson(markers, speakers) {
+  const ids = markers.map((marker) => {
+    const speaker = Object.hasOwn(speakers, marker) ? speakers[marker] : undefined;
+    return speaker && 'person' in speaker ? speaker.person : undefined;
+  });
+  return ids[0] !== undefined && ids.every((id) => id === ids[0]);
+}
+
+/** @param {string} marker @param {SpeakerMap} speakers */
+function isDecoration(marker, speakers) {
+  const speaker = Object.hasOwn(speakers, marker) ? speakers[marker] : undefined;
+  return speaker !== undefined && 'role' in speaker && speaker.role === 'decoration';
+}
+
+/**
+ * The markers a speech line is shown as: without any answered
+ * `decoration` (part of another emoji, never a speaker), then its first
+ * alone when the rest are all one person (`isOnePerson`), else all of
+ * them -- none when every marker was decoration (the line reads as
+ * plain). Every display path (bubbles, search match lines) goes through
+ * this, so a one-person run never shows as two speakers.
+ * @param {Extract<Line, { kind: 'speech' }>} line
+ * @param {SpeakerMap} speakers
+ * @returns {string[]}
+ */
+export function speakingMarkersOf(line, speakers) {
+  const markers = line.markers.filter((marker) => !isDecoration(marker, speakers));
+  return isOnePerson(markers, speakers) ? [markers[0]] : markers;
+}
+
+/**
  * @param {Extract<Line, { kind: 'speech' }>} line
  * @param {SpeakerMap} speakers
  * @param {PresentContext} ctx
  * @returns {KeyedBubble}
  */
 function speechBubble(line, speakers, ctx) {
-  return line.markers.length > 1 ? jointBubble(line, speakers, ctx) : soloBubble(line.marker, line.text, speakers, ctx);
+  const markers = speakingMarkersOf(line, speakers);
+  if (markers.length === 0) return { kind: 'plain', text: line.text };
+  return markers.length > 1 ? jointBubble({ ...line, markers }, speakers, ctx) : soloBubble(markers[0], line.text, speakers, ctx);
 }
 
 /**
@@ -239,6 +278,9 @@ function preview(card, details, ctx) {
   };
 }
 
+/** Roles that never join the cast: a crowd reaction, and an emoji that is only part of another (`decoration`). */
+const NO_CAST_ROLES = new Set(['crowd', 'decoration']);
+
 /**
  * `marker`'s cast entry (a person, or a non-crowd role), keyed for
  * dedupe; `null` for crowd or an unmapped marker.
@@ -253,7 +295,7 @@ function castEntryOf(marker, speaker, ctx) {
     const name = ctx.formatName(person.displayName);
     return [`p:${person.id}`, { kind: 'person', id: person.id, emoji: person.emoji, name, colour: person.colour, igHandle: person.igHandle }];
   }
-  if ('role' in speaker && speaker.role !== 'crowd') return [`m:${marker}`, { kind: 'role', role: speaker.role, emoji: roleEmojiOf(marker, speaker.role, ctx), name: speaker.role }];
+  if ('role' in speaker && !NO_CAST_ROLES.has(speaker.role)) return [`m:${marker}`, { kind: 'role', role: speaker.role, emoji: roleEmojiOf(marker, speaker.role, ctx), name: speaker.role }];
   return null;
 }
 
@@ -264,7 +306,7 @@ function fixedCastEntry(speaker, line, ctx) {
     if (!person) return null;
     return [`p:${person.id}`, { kind: 'person', id: person.id, emoji: person.emoji, name: ctx.formatName(person.displayName), colour: person.colour, igHandle: person.igHandle }];
   }
-  if (speaker.role === 'crowd') return null;
+  if (NO_CAST_ROLES.has(speaker.role)) return null;
   return [`m:${line.marker}`, { kind: 'role', role: speaker.role, emoji: roleEmojiOf(line.marker, speaker.role, ctx), name: speaker.role }];
 }
 

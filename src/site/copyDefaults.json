@@ -124,6 +124,7 @@
   "add.role.fan": "Fan",
   "add.role.speaker": "Speaker",
   "add.role.crowd": "Crowd reaction",
+  "add.role.decoration": "Part of another emoji",
   "add.linesTitle": "Lines as they'll show",
   "add.unmappedNote.one": "{n} not mapped yet — you can fix this later",
   "add.unmappedNote.other": "{n} not mapped yet — you can fix this later",
