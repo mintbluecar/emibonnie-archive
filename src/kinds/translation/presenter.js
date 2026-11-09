@@ -113,13 +113,42 @@ function jointBubble(line, speakers, ctx) {
 }
 
 /**
+ * Whether every one of a joint line's markers maps to the same known
+ * person: a translator who writes one person as a run of emoji (☀️⭐),
+ * not two people speaking at once.
+ * @param {string[]} markers
+ * @param {SpeakerMap} speakers
+ */
+function isOnePerson(markers, speakers) {
+  const ids = markers.map((marker) => {
+    const speaker = Object.hasOwn(speakers, marker) ? speakers[marker] : undefined;
+    return speaker && 'person' in speaker ? speaker.person : undefined;
+  });
+  return ids[0] !== undefined && ids.every((id) => id === ids[0]);
+}
+
+/**
+ * The markers a speech line is shown as: its first alone when they are
+ * all one person (`isOnePerson`), else all of them. Every display path
+ * (bubbles, search match lines) goes through this, so a one-person run
+ * never shows as two speakers.
+ * @param {Extract<Line, { kind: 'speech' }>} line
+ * @param {SpeakerMap} speakers
+ * @returns {string[]}
+ */
+export function speakingMarkersOf(line, speakers) {
+  return isOnePerson(line.markers, speakers) ? [line.markers[0]] : line.markers;
+}
+
+/**
  * @param {Extract<Line, { kind: 'speech' }>} line
  * @param {SpeakerMap} speakers
  * @param {PresentContext} ctx
  * @returns {KeyedBubble}
  */
 function speechBubble(line, speakers, ctx) {
-  return line.markers.length > 1 ? jointBubble(line, speakers, ctx) : soloBubble(line.marker, line.text, speakers, ctx);
+  const markers = speakingMarkersOf(line, speakers);
+  return markers.length > 1 ? jointBubble(line, speakers, ctx) : soloBubble(markers[0], line.text, speakers, ctx);
 }
 
 /**

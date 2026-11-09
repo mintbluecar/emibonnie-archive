@@ -8,6 +8,8 @@ All notable changes to this project are documented here. Versions are semver tag
 
 **Event addresses change from `/e/<slug>` to `/e/<date>/<tag>`** (e.g. an event tagged `#MoonGala` moves from `/e/moon-gala-with-juniper-2025-10-04` to `/e/2025-10-04/moongala`). **Old `/e/<slug>` links stop working**: there is no redirect from them, so links shared before the upgrade answer not-found.
 
+**A run of emoji that a translator uses for one person shows as that person.** When every emoji in a run like `☀️⭐:` is mapped to the same person, the line is that person's own bubble (and one speaker in search results), not a shared "sol & sol" bubble. Runs that map to different people or roles stay shared lines.
+
 **Upgrade steps:**
 
 1. `git fetch upstream --tags`, then merge the release tag.
