@@ -71,7 +71,7 @@ test('render (Task 10c g): a chip with an emoji puts it in its own decorative el
 
 test('hashtagChip (Task 10c h): links to X\'s hashtag search through the allowlist, in a new tab, noopener noreferrer, with the "search on X" tooltip; a plain chip stays a span', () => {
   const markup = String(render({ items: [hashtagChip('SolLuna Day'), { label: 'live' }] }));
-  assert.match(markup, /<a class="chip c-chips__chip" href="https:\/\/x\.com\/hashtag\/SolLuna%20Day" target="_blank" rel="noopener noreferrer" title="search on X">#SolLuna Day<\/a>/);
+  assert.match(markup, /<a class="chip c-chips__chip" href="https:\/\/x\.com\/hashtag\/SolLuna%20Day" target="_blank" rel="noopener noreferrer" title="Search on X">#SolLuna Day<\/a>/);
   assert.match(markup, /<span class="chip c-chips__chip">live<\/span>/);
   assert.equal(hashtagChip('ไทย').href, `https://x.com/hashtag/${encodeURIComponent('ไทย')}`);
 });

@@ -31,7 +31,7 @@ test('me, signed out: the sign-in screen, X listed before Google, and no signed-
 test('me, ?signin=failed: the failure is announced, not silent', async ({ page }, testInfo) => {
   test.skip(DARK_PROJECTS.includes(testInfo.project.name), 'the same markup in both themes; light projects only');
   await checkPage(page, '/me?signin=failed');
-  await expect(page.getByRole('alert')).toContainText('sign-in');
+  await expect(page.getByRole('alert')).toContainText('Sign-in');
 });
 
 test('me, signed in as a member: who is signed in, the empty own list, and labelled icon controls', async ({ page }) => {

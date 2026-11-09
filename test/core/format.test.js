@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { monthLabel, dayLabel } from '../../public/js/core/format.js';
 
 test('labels', () => {
-  assert.equal(monthLabel('2026-10'), 'october 2026');
+  assert.equal(monthLabel('2026-10'), 'October 2026');
   assert.equal(dayLabel('2026-10-14'), '14 Oct 2026');
 });
 

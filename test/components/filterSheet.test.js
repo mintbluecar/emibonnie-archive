@@ -22,7 +22,7 @@ const OPTIONS = {
 
 test('render: shows the count copy on the apply button', () => {
   const markup = String(render({ state: EMPTY_STATE, options: OPTIONS, count: 7 }));
-  assert.match(markup, /c-filter-sheet__apply[^>]*>show 7</);
+  assert.match(markup, /c-filter-sheet__apply[^>]*>Show 7</);
 });
 
 /** The whole `<button ...>label</button>` tag for one chip's `data-value`, wherever its attributes land. @param {string} markup @param {string} value @returns {string} */
@@ -153,7 +153,7 @@ test('bind: a stale count response never overwrites a newer one, however the two
     resolvers[0](99);
     await flush();
 
-    assert.equal(root.querySelector('.c-filter-sheet__apply')?.textContent, 'show 2', 'the newer response, not the stale 99');
+    assert.equal(root.querySelector('.c-filter-sheet__apply')?.textContent, 'Show 2', 'the newer response, not the stale 99');
   } finally {
     mock.restoreAll();
   }

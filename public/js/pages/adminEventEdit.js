@@ -90,7 +90,7 @@ export function pageState(me, mode, view) {
  */
 function moveNotice(state) {
   const { tweets, events } = moveSummary(state.events, state.keepId);
-  const lines = [`${tCount('adminEventEdit.moveTweets', tweets, { events: tCount('adminEventEdit.events', events) })}; ${tCount('adminEventEdit.mergeHidden', events)}`];
+  const lines = [`${tCount('adminEventEdit.moveTweets', tweets, { events: tCount('adminEventEdit.events', events) })}. ${tCount('adminEventEdit.mergeHidden', events)}`];
   const keptHidden = state.events.some((e) => e.id === state.keepId && e.hidden);
   const hiddenMerged = state.events.filter((e) => e.id !== state.keepId && e.hidden).length;
   if (keptHidden) lines.push(t('adminEventEdit.hiddenKept'));

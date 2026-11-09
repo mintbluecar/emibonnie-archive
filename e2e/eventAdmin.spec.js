@@ -86,7 +86,7 @@ test('merge mode: the strip, a keep choice per event, and an accessible page', a
   await checkPage(page, `/admin/events/edit?merge=${a.id},${b.id}`);
   await expect(page.locator('[data-event-keep]')).toHaveCount(2);
   await expect(page.locator('[data-event-move-notice]')).toBeVisible();
-  await expect(page.locator('[data-event-edit-form] [type="submit"]')).toHaveText('merge and save');
+  await expect(page.locator('[data-event-edit-form] [type="submit"]')).toHaveText('Merge and save');
 });
 
 test('create mode: new event for the ticked tweet, and an accessible page', async ({ page }) => {
@@ -97,7 +97,7 @@ test('create mode: new event for the ticked tweet, and an accessible page', asyn
   await checkPage(page, `/admin/events/edit?from=${from.id}&items=${itemId}`);
   await expect(page.getByRole('heading', { name: 'new event for 1 tweet' })).toBeVisible();
   await expect(page.locator('[data-event-name]')).toHaveValue('');
-  await expect(page.locator('[data-event-edit-form] [type="submit"]')).toHaveText('create and move 1 tweet');
+  await expect(page.locator('[data-event-edit-form] [type="submit"]')).toHaveText('Create and move 1 tweet');
 });
 
 test('merge two events, then move one tweet into a new event', async ({ page }, testInfo) => {

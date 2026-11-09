@@ -10,12 +10,12 @@
  */
 
 const MONTHS_LONG = [
-  'january', 'february', 'march', 'april', 'may', 'june',
-  'july', 'august', 'september', 'october', 'november', 'december',
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
 ];
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-/** `'2026-10'` → `'october 2026'`. @param {string} yearMonth @returns {string} */
+/** `'2026-10'` → `'October 2026'`. @param {string} yearMonth @returns {string} */
 export function monthLabel(yearMonth) {
   const [year, month] = yearMonth.split('-');
   return `${MONTHS_LONG[Number(month) - 1]} ${year}`;

@@ -28,7 +28,7 @@ test('render: shown only while editOpenUntil is in the future', () => {
 
 test('render (Task 10b): the button says "check X for edits" (fix M2) and shows no clock time (never the viewer\'s local time)', () => {
   const markup = String(render({ editOpenUntil: '2026-10-19T09:00:00.000Z', now: NOW }));
-  assert.match(markup, /check X for edits/);
+  assert.match(markup, /Check X for edits/);
   assert.ok(!/editable until|\d:\d\d|\b(am|pm)\b/.test(markup), markup);
 });
 
@@ -150,7 +150,7 @@ test('bind: a network failure (fetch rejects) keeps the lock and shows the gentl
     btn.click();
     assert.equal(btn.disabled, true, 'the lock still applies even though the request will fail');
     await flush();
-    assert.equal(btn.textContent, "couldn't check right now, try again later");
+    assert.equal(btn.textContent, "Couldn't check right now, try again later");
   } finally {
     mock.restoreAll();
     delete (/** @type {any} */ (globalThis)).document;

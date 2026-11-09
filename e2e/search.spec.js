@@ -72,7 +72,7 @@ test('event page: the box searches within the event, preset as a removable chip;
   test.skip(DARK_PROJECTS.includes(testInfo.project.name), LIGHT_ONLY);
   await gotoReady(page, EVENT);
   const box = page.locator('.c-header__search-box');
-  await expect(box).toHaveAttribute('placeholder', 'search this event…');
+  await expect(box).toHaveAttribute('placeholder', 'Search this event…');
   const chip = page.locator('[data-action="remove-filter"][data-field="event"]');
   await expect(chip).toBeVisible();
   await typeQuery(page, Q);
@@ -85,7 +85,7 @@ test('event page: the box searches within the event, preset as a removable chip;
   await chip.click();
   await widened;
   await expect(countLine(page)).toHaveText('7 translations · best match first');
-  await expect(box).toHaveAttribute('placeholder', 'search what they said…');
+  await expect(box).toHaveAttribute('placeholder', 'Search what they said…');
   expect(new URL(page.url()).pathname).toBe(EVENT);
   await page.reload();
   await page.waitForSelector('#app[data-ready]', { state: 'attached' });
@@ -94,7 +94,7 @@ test('event page: the box searches within the event, preset as a removable chip;
   // Fix round 1, M6: with the event's chip still removed, an empty box hints to type -- the
   // page searches the whole archive now, so its own list isn't shown; "clear all" brings both back.
   await box.fill('');
-  await expect(page.locator('.c-search__hint')).toHaveText('type to search everything');
+  await expect(page.locator('.c-search__hint')).toHaveText('Type to search everything');
   await expect(page.locator('[data-event-sections]')).toBeHidden();
   await page.locator('[data-action="clear-filters"]').click();
   await expect(page.locator('[data-event-sections]')).toBeVisible();
@@ -134,7 +134,7 @@ test('fix round 1, I1: clearing and typing again never flashes the old results, 
 test('person page: preset person chip; removing it widens the results; "clear all" brings it back', async ({ page }, testInfo) => {
   test.skip(DARK_PROJECTS.includes(testInfo.project.name), LIGHT_ONLY);
   await gotoReady(page, `/p/solsunny?q=${Q}`);
-  await expect(page.locator('.c-header__search-box')).toHaveAttribute('placeholder', 'search sol…');
+  await expect(page.locator('.c-header__search-box')).toHaveAttribute('placeholder', 'Search sol…');
   await expect(countLine(page)).toHaveText('4 translations · best match first');
   await page.locator('[data-action="remove-filter"][data-field="people"]').click();
   await expect(countLine(page)).toHaveText('7 translations · best match first');
@@ -240,5 +240,5 @@ test('desktop: the box sits in the content column under the pinned bar on home a
     }
     await expect(page.locator('.c-header__find')).toHaveCount(0);
   }
-  await expect(page.locator('.c-tabbar a')).toHaveText(['home', '＋ add', 'me']);
+  await expect(page.locator('.c-tabbar a')).toHaveText(['Home', '＋ Add', 'Me']);
 });

@@ -57,9 +57,9 @@ test('merge mode: the kept event is the largest, "merge and save", and the move 
   const markup = String(composeAdminEventEdit(pageState(OWNER, modeOf('?merge=3,7,9'), { events: MERGE, missing: [] })));
   assert.match(markup, new RegExp(`>${pattern(t('adminEventEdit.mergeSave'))}</button>`));
   assert.match(markup, /type="radio"[^>]*value="3"[^>]*checked/);
-  const notice = `${tCount('adminEventEdit.moveTweets', 2, { events: tCount('adminEventEdit.events', 2) })}; ${tCount('adminEventEdit.mergeHidden', 2)}`;
+  const notice = `${tCount('adminEventEdit.moveTweets', 2, { events: tCount('adminEventEdit.events', 2) })}. ${tCount('adminEventEdit.mergeHidden', 2)}`;
   assert.match(markup, copyRe(notice));
-  assert.match(markup, /2 tweets from 2 events move into this one; the other 2 events are hidden and their links redirect here/);
+  assert.match(markup, /2 tweets from 2 events move into this one\. The other 2 events are hidden and their links redirect here/);
   assert.match(markup, /value="#?B"|>#B</, 'the tags combined from every event');
   assert.doesNotMatch(submitTag(markup), /disabled/);
 });
@@ -115,7 +115,7 @@ test('create mode: "create and move 2 tweets", an empty title, and cancel back t
   const entries = [{ itemId: 1, occurredOn: '2026-10-21' }, { itemId: 2, occurredOn: '2026-10-20' }];
   const markup = String(composeAdminEventEdit(pageState(OWNER, modeOf('?from=5&items=1,2'), { events: [event({ id: 5, name: 'LISBON' })], missing: [], entries })));
   assert.match(markup, new RegExp(`>${pattern(tCount('adminEventEdit.createSave', 2))}</button>`));
-  assert.match(markup, /create and move 2 tweets/);
+  assert.match(markup, /Create and move 2 tweets/);
   assert.match(markup, /<input[^>]*data-event-name[^>]*value=""/);
   assert.match(markup, /value="2026-10-20"/, 'dated by the earliest ticked entry');
   assert.match(markup, copyRe(t('adminEventEdit.createFrom', { name: 'LISBON' })));
