@@ -15,7 +15,10 @@
   margin-bottom: var(--space-3);
 }
 
+/* A page-coloured panel inside a card, so the picker's boxes in it take
+   the card colour. */
 .c-speaker-step__marker {
+  --field-fill: var(--color-card);
   background: var(--color-bg);
   border: 1.5px solid var(--color-card-shadow);
   border-radius: var(--radius-md);

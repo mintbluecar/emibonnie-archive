@@ -25,14 +25,6 @@
   margin-bottom: var(--space-4);
 }
 
-/* The sheet is on the page background, so its fields sit on the card
-   colour to stand out from it (background-color, never the shorthand,
-   which would also reset base.css's select chevron). */
-.c-filter-sheet__selects select,
-.c-filter-sheet__selects input {
-  background-color: var(--color-card);
-}
-
 /* The apply button keeps its taller target. */
 .c-filter-sheet__apply {
   min-height: calc(var(--tap-target) + var(--space-1));

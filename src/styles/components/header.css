@@ -162,14 +162,12 @@
   pointer-events: none;
 }
 
-/* base.css's text box, on the card colour so it stands out from the
-   page, with room on the left for the magnifier. */
+/* base.css's text box, with room on the left for the magnifier. */
 .c-header__search-box {
   flex: 1;
   min-width: 0;
   min-height: var(--tap-target);
   padding-left: var(--space-8);
-  background-color: var(--color-card);
   font-size: var(--text-13);
 }
 

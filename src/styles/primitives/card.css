@@ -23,6 +23,7 @@
  */
 
 .card {
+  --field-fill: var(--color-bg);
   padding: var(--space-4);
   background: var(--color-card);
   border-radius: var(--radius-card);

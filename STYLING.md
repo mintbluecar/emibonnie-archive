@@ -141,6 +141,20 @@ control placed over a picture or clip (`btn--overlay`); `--color-media`
 is the letterbox/zoom background a picture or clip sits on; the brand
 colours are sign-in buttons (X, Google) and are the same in both themes.
 
+**Text box fill:**
+
+```css
+--field-fill: var(--color-card);
+```
+
+Every text box, select and textarea is filled with `--field-fill`
+(`base.css`), so it always reads as filled in: the card colour on the
+page. A card-coloured surface (`card`, `table--raised`, a
+`table--stack` row) sets it to `--color-bg` for the boxes inside it,
+and a page-coloured panel inside a card sets it back to
+`--color-card` on its own `c-` class. Never set a box's background by
+hand.
+
 **Control and target sizes:**
 
 ```css
@@ -288,8 +302,8 @@ request) dims it like `:disabled`.
 ```
 
 A label, its control, an optional hint and an optional error, stacked.
-The control's own look (border, radius, padding, the select chevron)
-comes from `base.css`; `field` makes it full width, `--tap-target` tall
+The control's own look (border, radius, padding, the select chevron,
+the `--field-fill` fill) comes from `base.css`; `field` makes it full width, `--tap-target` tall
 and `--text-14`. `field__select` is the dropdown's wrapper (this was
 `.c-select`): `base.css`'s `select` already draws the chevron, so the
 wrapper only sizes the select to the field's width. A control with an
