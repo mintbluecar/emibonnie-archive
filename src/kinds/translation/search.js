@@ -99,7 +99,7 @@ function matchLines(details, q, ctx) {
       return `${speaker} ${excerptAround(line.text, q)}`.trim();
     }
     if (line.kind !== 'speech') return excerptAround(line.text, q);
-    return `${speakingMarkersOf(line, details.speakers ?? {}).map((/** @type {string} */ marker) => shownSpeaker(componentOf(marker, details.speakers ?? {}, ctx))).join('')} ${excerptAround(line.text, q)}`;
+    return `${speakingMarkersOf(line, details.speakers ?? {}).map((/** @type {string} */ marker) => shownSpeaker(componentOf(marker, details.speakers ?? {}, ctx))).join('')} ${excerptAround(line.text, q)}`.trim();
   });
 }
 

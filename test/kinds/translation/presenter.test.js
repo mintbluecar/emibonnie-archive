@@ -20,7 +20,8 @@ after(async () => { await deps.db.end(); });
  * 'host' markers (twice, to check continuation), two known people (sol &
  * luna), one with a never-mapped component, and one with a crowd
  * component. Task 7b (joint speaker lines). Plus one run of two emoji
- * that a translator uses for one person (☀️⭐, both sol).
+ * that a translator uses for one person (☀️⭐, both sol), and a 💙 that
+ * is never a speaker on its own, only part of another emoji (🌙💙 is luna).
  * @returns {Promise<{ jointDeps: any, view: any }>}
  */
 async function jointLinesFixture() {
@@ -30,6 +31,7 @@ async function jointLinesFixture() {
     '👦🏻': { role: 'host' }, '👩🏻': { role: 'host' },
     '☀️': { person: 'solsunny' }, '🌙': { person: 'lunamoon' },
     '🗣️': { role: 'crowd' }, '⭐': { person: 'solsunny' },
+    '💙': { role: 'decoration' },
   };
   const chosen = await resolveSpeakerRefs(jointDeps.db, refs);
   const result = await ingest(jointDeps, IDS.SHARED, { chosen });
@@ -41,6 +43,9 @@ async function jointLinesFixture() {
     '🐸👦🏻: one component never mapped',
     '🗣️👦🏻: one component is crowd',
     '☀️⭐: one person, two emoji',
+    '🌙💙: luna, with a heart',
+    '☀️🌙💙: both, with a heart',
+    '💙: a heart on its own',
   ].join('\n');
   await jointDeps.db.transaction((/** @type {any} */ tx) => addParts(tx, itemId, [{ sourceId: null, body }]), SYSTEM);
   await jointDeps.db.transaction((/** @type {any} */ tx) => setSpeakers(tx, itemId, chosen), SYSTEM);
@@ -220,6 +225,23 @@ test('a run of emoji that all map to the same person is that person\'s own bubbl
   assert.equal(typeof bubble.colour, 'string');
 });
 
+test('an emoji answered "part of another emoji" is dropped from a run: 🌙💙 is luna\'s own bubble', () => {
+  const bubble = jointView.bubbles.find((/** @type {any} */ b) => b.text === 'luna, with a heart');
+  assert.equal(bubble.kind, 'speech');
+  assert.equal(bubble.emoji, '🌙');
+  assert.equal(bubble.name, 'luna');
+});
+
+test('a run that is still two people once its "part of another emoji" emoji is dropped stays a shared bubble of just those two', () => {
+  const bubble = jointBubbleFor(jointView.bubbles, 'both, with a heart');
+  assert.deepEqual(bubble.parts, [{ emoji: '☀️', name: 'sol' }, { emoji: '🌙', name: 'luna' }]);
+});
+
+test('a line whose only marker is "part of another emoji" reads as a plain line', () => {
+  const bubble = jointView.bubbles.find((/** @type {any} */ b) => b.text === 'a heart on its own');
+  assert.equal(bubble.kind, 'plain');
+});
+
 test('consecutive identical joint lines collapse the same way single speakers do (cont, keyed on the whole joint)', () => {
   const first = jointBubbleFor(jointView.bubbles, 'joint hosts, line one');
   const second = jointBubbleFor(jointView.bubbles, 'joint hosts, line two (same speakers, should collapse)');
@@ -296,6 +318,13 @@ test('search.matchLines shows a run of emoji that all map to one person as that 
   const ctx = /** @type {any} */ ({ people, formatName: (/** @type {string} */ n) => n.toLowerCase() });
   const details = { body: '🐶⭐: a hug from sol', speakers: { '🐶': { person: 1 }, '⭐': { person: 1 } } };
   assert.deepEqual(translation.search.matchLines(details, 'hug', ctx), ['☀️ a hug from sol']);
+});
+
+test('search.matchLines drops a "part of another emoji" emoji from the speaker', () => {
+  const people = new Map([[1, { id: 1, emoji: '☀️', displayName: 'Sol', colour: '#d9a400', igHandle: 'solsunny' }]]);
+  const ctx = /** @type {any} */ ({ people, formatName: (/** @type {string} */ n) => n.toLowerCase() });
+  const details = { body: '🐶💙: a hug from sol\n💙: a hug from nobody', speakers: { '🐶': { person: 1 }, '💙': { role: /** @type {const} */ ('decoration') } } };
+  assert.deepEqual(translation.search.matchLines(details, 'hug', ctx), ['☀️ a hug from sol', 'a hug from nobody']);
 });
 
 test('search.textClause and rank only interpolate their placeholder index', () => {

@@ -52,6 +52,11 @@ function selectsOf(markup) {
   return [...markup.matchAll(/<select[\s\S]*?<\/select>/g)].map((m) => m[0]);
 }
 
+test('the select names each role in words, so "part of another emoji" reads apart from "not a speaker"', () => {
+  const markup = String(render({ markers: [group()], people: PEOPLE, roles: ['decoration'], expanded: new Set(), remember: true }));
+  assert.ok(markup.includes(`<option value="role:decoration">${t('add.role.decoration')}</option>`), markup);
+});
+
 test('a marker card shows its handle, entry count, example and a select of people then roles', () => {
   const markup = String(render({ markers: [group()], people: PEOPLE, roles: ROLES, expanded: new Set(), remember: true }));
   assert.match(markup, /@tl_alpha/);

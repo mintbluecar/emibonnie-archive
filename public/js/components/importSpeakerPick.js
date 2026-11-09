@@ -44,7 +44,7 @@ export function speakerSelect(catalogue, { attr, value, label }) {
     ${catalogue.people.map((person) => html`<option value="person:${person.id}">${person.displayName}</option>`)}
     <option value="${NEW_PERSON}">${t('import.marker.newPerson')}</option>
     <option value="${NOT_SPEAKER}">${t('import.marker.notSpeaker')}</option>
-    ${catalogue.roles.map((role) => html`<option value="role:${role}">${role}</option>`)}
+    ${catalogue.roles.map((role) => html`<option value="role:${role}">${t(`add.role.${role}`)}</option>`)}
   </select></span></div>`;
 }
 
