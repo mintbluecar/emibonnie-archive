@@ -13,7 +13,7 @@ import { eventSelect, toEvent } from './events.js';
  *   people: string[], hidden: boolean, addressLocked: boolean }} AdminEventRow
  * @typedef {AdminEventRow & { keywords: string[], hashtags: string[], livePeopleIds: number[],
  *   livePlatformCode: string|null, mergedInto: number|null }} AdminEvent
- * @typedef {{ itemId: number, kind: string, sourceId: string|null, occurredOn: string,
+ * @typedef {{ itemId: number, kind: string, sourceId: string|null, sourceUrl: string|null, occurredOn: string,
  *   reviewState: import('../domain/constants.js').ReviewState, people: string[] }} EventEntry
  */
 
@@ -88,7 +88,7 @@ export async function getAdminEvent(db, id) {
  */
 export async function listEventEntries(db, eventId) {
   const { rows } = await db.query(
-    `select i.id, i.kind, ps.external_id as source_id, i.occurred_on, i.review_state,
+    `select i.id, i.kind, ps.external_id as source_id, ps.url as source_url, i.occurred_on, i.review_state,
        ${peopleOf('pi.id = i.id')} as people
      from items i
      left join item_sources ps on ps.item_id = i.id and ps.role = 'primary'
@@ -97,7 +97,7 @@ export async function listEventEntries(db, eventId) {
     [eventId],
   );
   return rows.map((row) => ({
-    itemId: row.id, kind: row.kind, sourceId: row.source_id ?? null, occurredOn: row.occurred_on,
+    itemId: row.id, kind: row.kind, sourceId: row.source_id ?? null, sourceUrl: row.source_url ?? null, occurredOn: row.occurred_on,
     reviewState: row.review_state, people: row.people,
   }));
 }

@@ -474,6 +474,7 @@
   "adminEventEntries.col.people": "People",
   "adminEventEntries.col.tweet": "Tweet",
   "adminEventEntries.col.state": "State",
+  "adminEventEntries.openTweet": "Open on X",
   "adminEventEntries.tick": "Tick tweet {id}",
   "adminEventEntries.state.pending": "Pending",
   "adminEventEntries.state.published": "Published",

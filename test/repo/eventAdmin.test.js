@@ -152,8 +152,8 @@ test('listEventEntries: non-deleted entries in occurred_on, sort_key, id order, 
   assert.deepEqual(entries.map((e) => e.itemId), [first, later, last]);
   assert.equal(entries.some((e) => e.itemId === deleted), false);
   assert.deepEqual(entries[0], {
-    itemId: first, kind: 'translation', sourceId: 'e-first', occurredOn: '2026-02-13', reviewState: 'published',
-    people: ['Luna'],
+    itemId: first, kind: 'translation', sourceId: 'e-first', sourceUrl: 'https://example.com/status/e-first',
+    occurredOn: '2026-02-13', reviewState: 'published', people: ['Luna'],
   });
   assert.deepEqual(entries[1].people, []);
 });

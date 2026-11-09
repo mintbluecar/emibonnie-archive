@@ -29,7 +29,8 @@ function eventRow(overrides = {}) {
 /** @param {Partial<any>} [overrides] @returns {any} */
 function entry(overrides = {}) {
   return {
-    itemId: 11, kind: 'translation', sourceId: '1900000000000000011', occurredOn: '2026-10-19',
+    itemId: 11, kind: 'translation', sourceId: '1900000000000000011', sourceUrl: 'https://x.com/i/status/1900000000000000011',
+    occurredOn: '2026-10-19',
     reviewState: 'published', people: ['sol'], snippet: 'hello there', ...overrides,
   };
 }
@@ -39,7 +40,7 @@ const DATA = {
   entries: [
     entry({ itemId: 11 }),
     entry({ itemId: 12, reviewState: 'pending', people: ['sol', 'luna'], snippet: 'second' }),
-    entry({ itemId: 13, occurredOn: '2026-10-21', people: [], snippet: '' }),
+    entry({ itemId: 13, occurredOn: '2026-10-21', people: [], snippet: '', sourceId: null, sourceUrl: null }),
   ],
 };
 
@@ -95,6 +96,16 @@ test('each entry shows its people, its snippet and its review state as a badge',
   assert.match(markup, /hello there/);
   assert.match(markup, new RegExp(`<span class="badge[^"]*">${pattern(t('adminEventEntries.state.pending'))}</span>`));
   assert.match(markup, new RegExp(`<span class="badge[^"]*">${pattern(t('adminEventEntries.state.published'))}</span>`));
+});
+
+test('each entry links to its original tweet in a new tab; one with no source has no link', () => {
+  const markup = String(composeAdminEventEntries(DATA, state()));
+  const links = [...markup.matchAll(/<a [^>]*href="https:\/\/x\.com\/i\/status\/[^"]*"[^>]*>([^<]*)<\/a>/g)];
+  assert.equal(links.length, 2);
+  assert.match(links[0][0], /target="_blank" rel="noopener noreferrer"/);
+  assert.equal(links[0][1], t('adminEventEntries.openTweet'));
+  const row13 = markup.slice(markup.indexOf('data-entry="13"'));
+  assert.doesNotMatch(row13.slice(0, row13.indexOf('</tr>')), /<a /);
 });
 
 test('the move control and "＋ new event" are disabled with no ticks', () => {

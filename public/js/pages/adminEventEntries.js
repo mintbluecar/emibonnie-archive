@@ -4,7 +4,8 @@
  * `/admin/events/entries?id=5`), opened from an events-list row's
  * "tweets": the event's name (with the hidden badge when it is hidden),
  * tweet count and date range; its entries
- * grouped by day, each with a tick box, people, snippet and review state;
+ * grouped by day, each with a tick box, people, snippet (and a link to
+ * the original tweet) and review state;
  * and "move N ticked to:" -- a search over the other events (never this
  * one, never a hidden one: moving tweets there would hide them) and
  * "＋ new event", a link to the edit page's create mode
@@ -86,7 +87,10 @@ const entryRow = (entry, ticked, col) => html`
       <input type="checkbox" data-action="tick" value="${entry.itemId}" aria-label="${t('adminEventEntries.tick', { id: entry.sourceId ?? entry.itemId })}" ${ticked ? 'checked' : ''}>
     </label></td>
     <td class="meta" data-label="${col.people}">${entry.people.length > 0 ? entry.people.join(', ') : '—'}</td>
-    <td data-label="${col.tweet}">${entry.snippet || '—'}</td>
+    <td data-label="${col.tweet}"><div class="stack stack--1">
+      <span>${entry.snippet || '—'}</span>
+      ${entry.sourceUrl ? html`<span><a class="btn btn--secondary btn--sm" href="${entry.sourceUrl}" target="_blank" rel="noopener noreferrer">${t('adminEventEntries.openTweet')}</a></span>` : ''}
+    </div></td>
     <td data-label="${col.state}"><span class="${BADGE[entry.reviewState]}">${t(`adminEventEntries.state.${entry.reviewState}`)}</span></td>
   </tr>`;
 
