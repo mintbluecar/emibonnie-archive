@@ -8,6 +8,7 @@ import { html } from '../core/html.js';
 import { t } from '../core/site.js';
 import * as previewCard from './previewCard.js';
 import * as meTranslations from './meTranslations.js';
+import * as meGroups from './meGroups.js';
 import { editHref } from '../core/routes.js';
 
 /** @typedef {import('./meTranslations.js').TranslationsState} TranslationsState */
@@ -28,7 +29,7 @@ function stateBadge(preview) {
 /** @param {AddedPreview} preview @returns {import('../core/html.js').SafeHtml} */
 function entry(preview) {
   return html`
-    <li class="c-me__entry">
+    <li class="stack stack--1 c-me__entry">
       ${previewCard.render({ result: preview, compact: true })}
       <div class="c-me__bar">
         ${stateBadge(preview)}
@@ -68,7 +69,7 @@ export function tabs(state) {
  */
 export function added(state) {
   const list = state.added.length > 0
-    ? html`<ul class="list">${state.added.map(entry)}</ul>`
+    ? meGroups.render(state.added, entry)
     : html`<p class="meta c-me__empty">${t('me.empty')}</p>`;
   return html`
     <h2 class="label c-me__heading">${t('me.addedByMe')}</h2>

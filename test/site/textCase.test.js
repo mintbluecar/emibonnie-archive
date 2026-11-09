@@ -4,8 +4,9 @@
  * and that is `site.lowercaseNames` (applied server-side by `formatName`,
  * src/site/loadSite.js, to person display names only). Engine CSS must
  * not lowercase anything else on its own: an event name keeps the case
- * it was stored with. The one exception is the home page's month heading
- * (spec: "small, bold, lowercase"), which is a date, not a name.
+ * it was stored with. The one exception is the month label primitive,
+ * `label--month` (spec: "small, bold, lowercase"), which is a date, not
+ * a name.
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -14,7 +15,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const STYLES = fileURLToPath(new URL('../../src/styles/', import.meta.url));
-const ALLOWED = new Set(['.c-home-month__label']);
+const ALLOWED = new Set(['.label--month']);
 
 /** @param {string} dir @returns {string[]} */
 const cssFiles = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (

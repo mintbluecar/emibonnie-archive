@@ -132,6 +132,14 @@ const DEFAULT_LIST_LIMIT = 50;
 export const EVENT_NOT_DELETED = 'not exists (select 1 from events ev where ev.id = i.event_id and ev.deleted_at is not null)';
 
 /**
+ * The me page's own lists, newest first by when it happened (the event's
+ * date, else the item's own), with an event's items kept together -- so
+ * the page can group them by month and event, as home does.
+ */
+export const OWN_LIST_ORDER = `coalesce((select ev.occurred_on from events ev where ev.id = i.event_id), i.occurred_on) desc,
+  i.event_id desc nulls last, i.placement, i.sort_key desc, i.id desc`;
+
+/**
  * The equality/exists clauses for `listVisibleItemIds`' optional
  * filters, split out so the caller's own complexity stays low. Every
  * value is bound through a `$n` placeholder; only fixed, code-chosen
@@ -262,7 +270,7 @@ export async function updateLookups(tx, { itemId, categoryId, clientId }) {
 }
 
 /**
- * The ids of one submitter's own added items, newest first, in any review
+ * The ids of one submitter's own added items, newest first (`OWN_LIST_ORDER`), in any review
  * state: what the me page's "added by me" lists (Task 12). A soft-deleted
  * item, or one in a deleted event, is left out -- it has no page to link
  * to; the caller's own pending/rejected state is deliberately not
@@ -277,7 +285,7 @@ export async function ownAddedIds(db, userId, { limit, offset }) {
   const { rows } = await db.query(
     `select i.id from items i
      where i.created_by = $1 and i.deleted_at is null and ${EVENT_NOT_DELETED}
-     order by i.id desc limit $2 offset $3`,
+     order by ${OWN_LIST_ORDER} limit $2 offset $3`,
     [userId, limit + 1, offset],
   );
   const ids = rows.map((row) => row.id);

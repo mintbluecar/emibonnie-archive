@@ -25,7 +25,7 @@ test('composeHome: shows the header, tab bar and footer', () => {
 
 test('composeHome: shows "october 2026" for an event in that month, newest first', () => {
   const markup = String(composeHome(HOME));
-  assert.match(markup, /<h2 class="label label--section c-home-month__label">october 2026<\/h2>/);
+  assert.match(markup, /<h2 class="label label--section label--month">october 2026<\/h2>/);
   const octoberIndex = markup.indexOf('october 2026');
   const marchIndex = markup.indexOf('march 2026');
   assert.ok(octoberIndex !== -1 && marchIndex !== -1 && octoberIndex < marchIndex, 'months are newest first');
@@ -47,7 +47,7 @@ test('composeHome: an empty months list shows the empty state instead', () => {
 test('composeHome (Task 10d): the event list sits in the in-place search region, shown until something is typed or filtered', async () => {
   const { prepare } = await import('../../public/js/components/inlineSearch.js');
   const blank = String(composeHome(HOME));
-  assert.match(blank, /<div class="c-search" hidden><\/div>\s*<div data-search-list>[\s\S]*c-home-month/);
+  assert.match(blank, /<div class="c-search" hidden><\/div>\s*<div data-search-list>[\s\S]*label--month/);
   assert.ok(blank.indexOf('data-search-filters') < blank.indexOf('data-search-list'), 'the chips sit above, under the box');
   const searching = String(composeHome(HOME, prepare({ search: 'q=hug' })));
   assert.match(searching, /<div class="c-search"><\/div>\s*<div data-search-list hidden>/, 'a ?q= link never flashes the list');

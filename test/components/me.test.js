@@ -12,6 +12,8 @@ import { test } from 'node:test';
 import { copyRe } from '../helpers/copyMarkup.js';
 const { composeSignedIn, composeSignedOut } = await import('../../public/js/pages/me.js');
 const { t } = await import('../../public/js/core/site.js');
+const { monthLabel } = await import('../../public/js/core/format.js');
+const { eventHref } = await import('../../public/js/core/routes.js');
 
 /** @returns {import('../../src/http/contracts.js').Preview & { reviewState: string }} */
 function result(overrides = {}) {
@@ -19,7 +21,7 @@ function result(overrides = {}) {
     kind: 'translation', sourceId: '1900000000000000001', url: '/t/1900000000000000001',
     lines: [{ kind: 'speech', emoji: '🦁', name: 'host', colour: '#b5651d', text: 'hi', cont: false }],
     people: [], accountHandle: 'tl_alpha', accountUrl: 'https://x.com/tl_alpha', hasVideo: false, followsOnFrom: null, thumb: null,
-    occurredOn: '2026-10-14', placement: 'post', reviewState: 'published',
+    occurredOn: '2026-10-14', placement: 'post', event: null, reviewState: 'published',
     ...overrides,
   };
 }
@@ -80,4 +82,24 @@ test('me: the empty list says so, and delete my account is present', () => {
   const markup = String(composeSignedIn({ user: X_USER, added: [], hasMore: false }));
   assert.match(markup, copyRe(t('me.empty')));
   assert.match(markup, copyRe(t('me.deleteAccount')));
+});
+
+test('me: entries are cards grouped by month, then by event (linked) or day, in the order given', () => {
+  const event = { slug: 'grand-night', name: 'Grand night', occurredOn: '2026-09-05' };
+  const markup = String(composeSignedIn({
+    user: X_USER,
+    added: [
+      result({ sourceId: '1', url: '/t/1', occurredOn: '2026-10-14' }),
+      result({ sourceId: '2', url: '/t/2', occurredOn: '2026-09-05', placement: 'event', event }),
+      result({ sourceId: '3', url: '/t/3', occurredOn: '2026-09-05', placement: 'event', event }),
+    ],
+    hasMore: false,
+  }));
+  const months = [...markup.matchAll(/label--month">([^<]+)</g)].map((m) => m[1]);
+  assert.deepEqual(months, [monthLabel('2026-10'), monthLabel('2026-09')]);
+  assert.equal((markup.match(/class="cluster c-me__group-head"/g) ?? []).length, 2);
+  assert.equal(markup.split(`href="${eventHref('grand-night')}"`).length - 1, 1);
+  assert.match(markup, copyRe(t('search.posts')));
+  const order = ['/t/1', '/t/2', '/t/3'].map((url) => markup.indexOf(`href="${url}"`));
+  assert.deepEqual([...order].sort((a, b) => a - b), order);
 });

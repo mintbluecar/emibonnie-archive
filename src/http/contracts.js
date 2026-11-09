@@ -101,10 +101,11 @@
  *
  * @typedef {{ items: TranslatorPreview[], hasMore: boolean, totals: TranslatorTotals }} TranslatorList
  *
- * @typedef {Preview & { reviewState: import('../domain/constants.js').ReviewState }} AddedPreview
+ * @typedef {Preview & { event: EventRef|null, reviewState: import('../domain/constants.js').ReviewState }} AddedPreview
  *   One of the signed-in submitter's own items (Task 12's "added by me"):
  *   every review state is listed, so the page can label a held or rejected
- *   entry. Public lists never carry `reviewState`.
+ *   entry. Public lists never carry `reviewState`. `event`: so the page
+ *   can group its entries by event, as home groups events by month.
  *
  * @typedef {{ url: string, width: number, height: number }} ImageVM
  * @typedef {{ bitrate: number, url: string }} VariantVM

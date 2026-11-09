@@ -4,10 +4,11 @@
  * system's Task 11): the me page. The title, the who-is-signed-in card,
  * its icon buttons, the tabs, the state badges, the welcome card, the
  * opt-out notice, the name form, the delete button and its dialog are
- * all primitives; this file keeps the page's own layout -- the head
- * row, the entry list and the bar under each entry, the checkbox beside
- * a translation, a removed row's fade and the dialog's width. See
- * STYLING.md.
+ * all primitives, and so are the lists' month labels, event groups and
+ * card grids (meGroups.js); this file keeps the page's own layout --
+ * the head row, a group heading's inset, the bar under each entry, the
+ * checkbox in a translation's bar, a removed row's fade and the
+ * dialog's width. See STYLING.md.
  */
 
 .c-me__title {
@@ -36,8 +37,17 @@
   margin: var(--space-3) var(--space-1) var(--space-2);
 }
 
-.c-me__entry {
-  margin-bottom: var(--space-3);
+/* An event's (or day's) name and day above its grid, inset like the
+   page's other headings; a long unbroken name wraps. */
+.c-me__group-head {
+  margin: 0 var(--space-1);
+  overflow-wrap: anywhere;
+}
+
+/* One entry in a grid: its card takes the row's free height, so the
+   bars under cards side by side line up. */
+.c-me__entry > .c-preview-card {
+  flex: 1;
 }
 
 /* Under each entry: its state on the left, its one action on the right. */
@@ -48,13 +58,6 @@
   gap: var(--space-2);
   min-height: var(--tap-target);
   padding-left: var(--space-1);
-}
-
-/* not shared: a checkbox beside an entry's title; matches the chat bubble's avatar row only by being a top-aligned flex row */
-.c-me__entry-top {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
 }
 
 /* A removed or hidden translation. */

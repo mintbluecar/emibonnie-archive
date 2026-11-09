@@ -10,7 +10,7 @@ import {
   findItemIdBySource, restoreItem, translatorItemIds, translatorStates, translatorTotals,
 } from '../repo/itemState.js';
 import { getItem } from '../repo/items.js';
-import { kindNamed, presenterContext, previewsForAny } from './cards.js';
+import { eventRefOf, kindNamed, presenterContext, previewsForAny } from './cards.js';
 import { write } from './write.js';
 import { remove } from './itemLifecycle.js';
 
@@ -46,6 +46,7 @@ export async function translatorList(deps, user, { offset }) {
       const removedByYou = state?.reason === 'removed_by_account';
       return {
         ...preview,
+        event: eventRefOf(card.event),
         reviewState: card.reviewState,
         removedByYou,
         hidden: state?.reason != null && !removedByYou,

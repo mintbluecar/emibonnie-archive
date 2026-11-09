@@ -1,9 +1,0 @@
-/*
- * public/js/pages/home.js: each month's group -- its label (the label
- * primitive, lowercase as the spec asks: "small, bold, lowercase,
- * purple") above a grid of event cards (eventCard.js, in the grid primitive).
- */
-
-.c-home-month__label {
-  text-transform: lowercase;
-}

@@ -14,6 +14,7 @@ import { on } from '../core/dom.js';
 import { postJson } from '../core/api.js';
 import { t, tCount } from '../core/site.js';
 import * as previewCard from './previewCard.js';
+import * as meGroups from './meGroups.js';
 
 /** @typedef {import('../../../src/http/contracts.js').TranslatorPreview} TranslatorPreview */
 
@@ -75,18 +76,18 @@ function row(item, state) {
   const key = keyOf(item);
   const selectable = !item.removedByYou && !item.hidden && item.reviewState !== 'rejected';
   return html`
-    <li class="c-me__entry"${item.removedByYou || item.hidden ? html` data-faded` : ''}>
-      <div class="c-me__entry-top">
-        ${selectable ? html`
-          <label class="check check--bare">
-            <input type="checkbox" data-action="select" data-key="${key}"
-              aria-label="${t('me.translations.select')}" ${state.selected.has(key) ? 'checked' : ''}>
-          </label>
-        ` : ''}
-        ${previewCard.render({ result: item, compact: true })}
-      </div>
+    <li class="stack stack--1 c-me__entry"${item.removedByYou || item.hidden ? html` data-faded` : ''}>
+      ${previewCard.render({ result: item, compact: true })}
       <div class="c-me__bar">
-        ${stateBadgeOf(item)}
+        <span class="cluster cluster--2">
+          ${selectable ? html`
+            <label class="check check--bare">
+              <input type="checkbox" data-action="select" data-key="${key}"
+                aria-label="${t('me.translations.select')}" ${state.selected.has(key) ? 'checked' : ''}>
+            </label>
+          ` : ''}
+          ${stateBadgeOf(item)}
+        </span>
         ${item.removedByYou ? html`
           <button class="btn btn--quiet btn--sm" type="button" data-action="restore" data-kind="${item.kind}"
             data-source="${item.sourceId}">${t('me.translations.restore')}</button>
@@ -131,7 +132,7 @@ function optOutBox(state) {
 /** @param {TranslationsState} state @returns {import('../core/html.js').SafeHtml} */
 export function render(state) {
   const list = state.items.length > 0
-    ? html`<ul class="list">${state.items.map((item) => row(item, state))}</ul>`
+    ? meGroups.render(state.items, (item) => row(item, state))
     : html`<p class="meta c-me__empty">${t('me.translations.empty')}</p>`;
   return html`
     <section data-translations>

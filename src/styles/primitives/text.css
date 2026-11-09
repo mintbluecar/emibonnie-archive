@@ -4,6 +4,7 @@
  *   <p class="meta">@tl_gamma · 21 Oct 2026</p>
  *   <h2 class="label">october 2026</h2>
  *   <h2 class="label label--section">october 2026</h2>
+ *   <h2 class="label label--section label--month">october 2026</h2>
  *   <a class="meta tap-link" href="/">‹ events</a>
  *   <a class="tap-link tap-link--sm" href="https://x.com/...">original tweet</a>
  *   <h1 class="heading heading--lg">Import review</h1>
@@ -14,7 +15,10 @@
  *
  * The heading classes set the look, never the level: pick the element
  * for the outline and the class for the size. label--section is a label
- * heading a list below it: room above, a little below. tap-link is a
+ * heading a list below it: room above, a little below. label--month
+ * is a month's label over a timeline (home, the me page), lowercase as
+ * the spec asks ("small, bold, lowercase") -- a date, never a name
+ * (test/site/textCase.test.js). tap-link is a
  * small text link whose target is still --tap-target tall (pair it with
  * meta for a muted one); tap-link--sm is one inside a row of small
  * controls, --control-sm tall like btn--sm. gradient-text (the Task 3
@@ -40,6 +44,10 @@
 
 .label--section {
   margin: var(--space-4) 0 var(--space-2);
+}
+
+.label--month {
+  text-transform: lowercase;
 }
 
 .tap-link {
