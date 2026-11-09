@@ -34,6 +34,15 @@ function choice(action, label, on) {
 }
 
 /**
+ * The speaker options without `decoration` (part of another emoji): it
+ * names nobody, so it can't be a whole line's speaker.
+ * @param {any} options
+ */
+function lineOptions(options) {
+  return { ...options, roles: options.roles.filter((/** @type {string} */ role) => role !== 'decoration') };
+}
+
+/**
  * @param {{ line: any, options: any, fixes?: LineFix[] }} props
  *   `fixes`: the fixes already chosen, so the sheet shows which answer is
  *   current (a line marked plain offers speech to put it back).
@@ -53,7 +62,7 @@ export function render({ line, options, fixes = [] }) {
       </div>
       <div class="c-line-fix__picker" hidden>
         <p class="label c-line-fix__speaker">${t('add.lineSpeaker')}</p>
-        ${personPicker.render({ options, current, idPrefix: `line-${line.part}-${line.line}` })}
+        ${personPicker.render({ options: lineOptions(options), current, idPrefix: `line-${line.part}-${line.line}` })}
       </div>
     </section>
   `;

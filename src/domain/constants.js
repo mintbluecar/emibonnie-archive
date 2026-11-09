@@ -2,12 +2,14 @@
 
 /**
  * Generic speaker roles, used when a speaker has no known person page
- * (host, fan, crowd reaction, or an unnamed speaker).
- * @typedef {'host' | 'fan' | 'speaker' | 'crowd'} Role
+ * (host, fan, crowd reaction, or an unnamed speaker). `decoration` is
+ * an emoji that names nobody, only ever written attached to another one
+ * (🐰💙 is one person, 🦊💙 another): lines drop it from a run of emoji.
+ * @typedef {'host' | 'fan' | 'speaker' | 'crowd' | 'decoration'} Role
  */
 
 /** @type {Role[]} */
-export const ROLES = ['host', 'fan', 'speaker', 'crowd'];
+export const ROLES = ['host', 'fan', 'speaker', 'crowd', 'decoration'];
 
 /**
  * The emoji a generic role shows when the translator gave its speaker

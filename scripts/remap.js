@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * `npm run remap -- <sourceId> '<marker>=person:<igHandle>'|'<marker>=role:<fan|host|speaker|crowd>'… [--kind <kind>]`
+ * `npm run remap -- <sourceId> '<marker>=person:<igHandle>'|'<marker>=role:<fan|host|speaker|crowd|decoration>'… [--kind <kind>]`
  *
  * The owner's fix for a marker on an archived item (Task 10c): sets who
  * each marker means and updates the item's people to match, in one
