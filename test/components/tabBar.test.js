@@ -9,9 +9,18 @@ test('tabBar (Task 10d): shows home, + add and me, each linking to its route -- 
   const markup = String(render({ active: 'home' }));
   assert.equal(markup.split('<a').length - 1, 3);
   assert.ok(!markup.includes('/search'));
-  assert.match(markup, /href="\/"[^>]*>[\s\S]*?Home/);
-  assert.match(markup, /href="\/add"[^>]*>[\s\S]*?＋[\s\S]*?Add/);
-  assert.match(markup, /href="\/me"[^>]*>[\s\S]*?Me/);
+  assert.match(markup, /href="\/"[^>]*aria-label="Home"/);
+  assert.match(markup, /href="\/add"[^>]*aria-label="Add"/);
+  assert.match(markup, /href="\/me"[^>]*aria-label="Me"/);
+});
+
+test('tabBar (owner, 2026-11-09): each tab is an icon, named and titled by its word', () => {
+  const items = String(render()).split('<a').slice(1);
+  for (const item of items) {
+    assert.match(item, /aria-label="([^"]+)"[\s\S]*title="\1"/);
+    assert.match(item, /<svg[^>]*aria-hidden="true"/);
+    assert.doesNotMatch(item.replace(/<svg[\s\S]*<\/svg>/, ''), />\s*[^\s<]+\s*</, 'no visible text beside the icon');
+  }
 });
 
 test('tabBar: marks only the active tab', () => {

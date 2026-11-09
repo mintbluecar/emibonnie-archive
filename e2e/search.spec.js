@@ -240,5 +240,5 @@ test('desktop: the box sits in the content column under the pinned bar on home a
     }
     await expect(page.locator('.c-header__find')).toHaveCount(0);
   }
-  await expect(page.locator('.c-tabbar a')).toHaveText(['Home', '＋ Add', 'Me']);
+  for (const [i, name] of ['Home', 'Add', 'Me'].entries()) await expect(page.locator('.c-tabbar a').nth(i)).toHaveAccessibleName(name);
 });

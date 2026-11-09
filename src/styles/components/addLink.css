@@ -15,11 +15,6 @@
   margin-bottom: var(--space-3);
 }
 
-.c-add-link__note {
-  margin-top: var(--space-3);
-  white-space: pre-line;
-}
-
 .c-add-link__status {
   font-size: var(--text-14);
   font-weight: var(--weight-bold);

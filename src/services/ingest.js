@@ -37,7 +37,8 @@ import { kindNamed } from './cards.js';
  *   `kinds` replaces the registry (tests inject a failing kind).
  * @typedef {{ kind: string, input: string, chosen?: SpeakerMap, overrides?: DraftOverrides, addedVia: string,
  *   actor: string, dryRun?: boolean, allowUnmapped?: boolean, lineFixes?: import('../domain/lineFixes.js').LineFix[],
- *   subbed?: boolean, lookups?: 'create'|'existing', holdForReview?: boolean }} IngestRequest
+ *   subbed?: boolean, lookups?: 'create'|'existing', holdForReview?: boolean, byOwner?: boolean }} IngestRequest
+ *   `byOwner`: the site owner is adding it, so it publishes at once (unless held for review).
  * @typedef {{ status: 'added'|'attached'|'pending'|'duplicate'|'removed'|'opted_out'|'deleted'|'unavailable'
  *     |'needs_speakers'|'needs_date'|'ready',
  *   sourceId: string, itemId?: number, eventId?: number|null, missing?: object[], draft?: object,
@@ -86,7 +87,7 @@ async function attachIfFollowUp({ deps, request, kind, sourceId }, { input, cred
   // A pasted follow-up's own text is never hand-typed, so its pending state
   // is exactly the approval switch (the same rule ingestWrite applies).
   const pending = await deps.db.transaction(async (tx) => {
-    const review = await reviewStateOf(tx, { common: { textEnteredManually: false }, actor: request.actor, creditedUserId: null });
+    const review = await reviewStateOf(tx, { common: { textEnteredManually: false }, actor: request.actor, creditedUserId: null, byOwner: request.byOwner === true });
     const held = request.holdForReview === true || review === 'pending';
     await append(tx, { itemId: owner.itemId, accountId, input, pending: held });
     return held;
@@ -147,7 +148,7 @@ async function write(run, { draft: drafted, occurredOn, creditedUserId }) {
   const draft = withExtraPeople(drafted, run.extraPeople);
   try {
     const written = await deps.db.transaction(
-      (tx) => writeItem(tx, { kind, draft, occurredOn, addedVia, actor, creditedUserId, lookups: request.lookups ?? 'create', holdForReview: request.holdForReview === true }),
+      (tx) => writeItem(tx, { kind, draft, occurredOn, addedVia, actor, creditedUserId, lookups: request.lookups ?? 'create', holdForReview: request.holdForReview === true, byOwner: request.byOwner === true }),
       { actor },
     );
     const status = written.reviewState === 'pending' ? 'pending' : 'added';

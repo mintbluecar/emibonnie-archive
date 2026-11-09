@@ -217,3 +217,23 @@ test('reverting a move into a merged-away event lands in the kept event; one alr
     assert.equal(await eventOf(), b);
   });
 });
+
+test('owner, 2026-11-09: an entry waiting for approval stays open to its submitter, but not to a stranger, and not once removed', async () => {
+  await withDeps(async ({ deps, user }) => {
+    const submitter = await user({ via: 'x', subject: '21', handle: 'waiting_sub' });
+    const stranger = await user({ via: 'x', subject: '22', handle: 'other' });
+    const added = await ingest(deps, IDS.EVENT_B, { actor: 'x:21', holdForReview: true });
+    assert.equal(added.status, 'pending');
+
+    const resolved = await resolveForEdit(deps, 'translation', IDS.EVENT_B, submitter);
+    assert.equal(resolved?.role, 'submitter', 'the submitter reaches their waiting entry');
+    await editItem(deps, { kind: 'translation', sourceId: IDS.EVENT_B, changes: { placement: 'unsorted' }, actor: submitter });
+    const [item] = await rows(deps.db, 'select placement, review_state from items where id = $1', [added.itemId]);
+    assert.deepEqual(item, { placement: 'unsorted', review_state: 'pending' }, 'edited, and still waiting');
+
+    assert.equal(await resolveForEdit(deps, 'translation', IDS.EVENT_B, stranger), null, 'a stranger never finds it');
+
+    await deps.db.transaction((tx) => tx.query("update items set deleted_at = now(), deleted_reason = 'hidden_by_owner' where id = $1", [added.itemId]), { actor: 'system' });
+    assert.equal(await resolveForEdit(deps, 'translation', IDS.EVENT_B, submitter), null, 'a removed entry stays closed');
+  });
+});

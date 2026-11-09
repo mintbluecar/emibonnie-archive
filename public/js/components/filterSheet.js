@@ -67,7 +67,7 @@ function selectsSection(options, state) {
   return html`
     <label class="field">
       <span class="field__label">${t('search.eventLabel')}</span>
-      <span class="field__select"><select data-filter="event">
+      <span class="field__select"><select data-filter="event" data-menu-search="${t('add.searchEvents')}">
         <option value="">${t('search.allEvents')}</option>
         ${options.events.map((e) => html`<option value="${e.slug}"${selectedAttr(e.slug, state.event)}>${e.name}</option>`)}
       </select></span>

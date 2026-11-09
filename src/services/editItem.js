@@ -162,14 +162,24 @@ async function withResolvedEvent(db, changes) {
 }
 
 /**
- * The item a kind + source id names: any archived state for the owner,
- * visible only for everyone else.
- * @param {any} db @param {{ name: string, platform: string }} kind @param {string} sourceId @param {boolean} allowAnyState
+ * The item a kind + source id names: any archived state for the owner;
+ * for everyone else, a visible one, or one waiting for approval that they
+ * may edit (`canEdit`).
+ * @param {any} db @param {{ name: string, platform: string }} kind @param {string} sourceId @param {SessionUser} user
  * @returns {Promise<number|null>}
  */
-async function itemIdOf(db, kind, sourceId, allowAnyState) {
+async function itemIdOf(db, kind, sourceId, user) {
   const ref = { kind: kind.name, platform: kind.platform, externalId: sourceId };
-  return allowAnyState ? findItemIdBySource(db, ref) : findVisibleItemId(db, ref);
+  if (user.isOwner === true) return findItemIdBySource(db, ref);
+  const visible = await findVisibleItemId(db, ref);
+  if (visible !== null) return visible;
+  // Waiting for approval: still open to whoever may edit it, so an adder
+  // can fix the event or the speakers before the owner looks (owner,
+  // 2026-11-09). A removed item stays closed.
+  const id = await findItemIdBySource(db, ref);
+  const item = id === null ? null : /** @type {any} */ (await getItem(db, id));
+  const waiting = item && item.deletedAt === null && item.reviewState === 'pending';
+  return waiting && canEdit(user, { createdBy: item.createdBy ?? null, creditedAccountId: item.creditedAccountId ?? null }) ? id : null;
 }
 
 /** @param {any} deps @param {string} kindName @param {{ sourceId: string, changes: Partial<EditableFields>, actor: SessionUser }} input */
@@ -179,7 +189,7 @@ async function resolveEditInput(deps, kindName, { sourceId, changes, actor }) {
   // An unknown kind, like an unknown item, is a 404: the route segment
   // itself is meaningless, not a bad request on an otherwise real one.
   if (!kind) throw new NotFound();
-  const id = await itemIdOf(deps.db, kind, sourceId, actor.isOwner === true);
+  const id = await itemIdOf(deps.db, kind, sourceId, actor);
   if (id === null) throw new BadRequest(`no archived ${kindName} item for ${sourceId}`);
   const itemRow = /** @type {any} */ (await getItem(deps.db, id));
   if (!itemRow) throw new BadRequest('item not found');
@@ -251,7 +261,7 @@ export async function revertEdit(deps, { kind: kindName, sourceId, editId, actor
   // The edit id must belong to the item the URL addresses: otherwise a
   // caller could apply one item's `before` to another item.
   const kind = kindNamed(deps, kindName);
-  const itemId = kind ? await itemIdOf(deps.db, kind, sourceId, actor.isOwner === true) : null;
+  const itemId = kind ? await itemIdOf(deps.db, kind, sourceId, actor) : null;
   if (itemId === null || itemId !== rows[0].item_id) throw new BadRequest('unknown edit');
   const already = await deps.db.query('select 1 from item_edits where reverts = $1 limit 1', [editId]);
   if (already.rows.length > 0) throw new Conflict('already reverted');
@@ -274,7 +284,7 @@ export async function revertEdit(deps, { kind: kindName, sourceId, editId, actor
 export async function resolveForEdit(deps, kindName, sourceId, user) {
   const kind = kindNamed(deps, kindName);
   if (!kind) return null;
-  const id = await itemIdOf(deps.db, kind, sourceId, user.isOwner === true);
+  const id = await itemIdOf(deps.db, kind, sourceId, user);
   if (id === null) return null;
   const item = /** @type {any} */ (await getItem(deps.db, id));
   if (!item) return null;

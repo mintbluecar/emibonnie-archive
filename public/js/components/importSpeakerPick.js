@@ -8,10 +8,12 @@
  */
 import { html } from '../core/html.js';
 import { on } from '../core/dom.js';
-import { t } from '../core/site.js';
+import { t, site } from '../core/site.js';
+import { menuOption, personOption } from '../core/menuOption.js';
+import { ROLE_EMOJI } from '../../../src/domain/constants.js';
 
 /**
- * @typedef {{ id: number, displayName: string }} Person
+ * @typedef {{ id: number, displayName: string, emoji: string, igHandle?: string|null }} Person
  * @typedef {{ people: Person[], roles: string[] }} Catalogue
  * @typedef {{ person: number }|{ role: string }|{ plain: true }} Answer
  * @typedef {(input: { displayName: string, igHandle: string }) => Promise<{ id: number }>} CreatePerson
@@ -32,19 +34,39 @@ export function rowId(parts) {
 }
 
 /**
- * The select: nothing chosen, the known people, a new person, not a
- * speaker, then the roles. Values: `''`, `person:<id>`, `new`, `plain`,
- * `role:<name>`.
+ * A role's emoji in the dropdown: the site's default for it (`roleEmoji`
+ * over `ROLE_EMOJI`), and for crowd -- which has none, as it shows as a
+ * note, not a speaker -- a crowd, here only.
+ * @param {string} role
+ */
+const roleEmojiOf = (role) => /** @type {Record<string, string|undefined>} */ ({ crowd: '👥', ...ROLE_EMOJI, .../** @type {Record<string, string>} */ (site.roleEmoji ?? {}) })[role] ?? '';
+
+/** @param {{ name: string }} a @param {{ name: string }} b */
+const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+
+/**
+ * The select, searchable: its "choose" placeholder (never listed), the
+ * two actions -- not a speaker, a new person -- then the roles, then the
+ * known people, each A to Z by what they show. Values: `''`,
+ * `person:<id>`, `new`, `plain`, `role:<name>`.
  * @param {Catalogue} catalogue
  * @param {{ attr: string, value: string, label: string }} field
  */
 export function speakerSelect(catalogue, { attr, value, label }) {
-  return html`<div class="field c-import-speakers__pick"><span class="field__select"><select ${attr}="${value}" aria-label="${label}" data-speaker-select>
-    <option value="">${t('import.marker.choose')}</option>
-    ${catalogue.people.map((person) => html`<option value="person:${person.id}">${person.displayName}</option>`)}
-    <option value="${NEW_PERSON}">${t('import.marker.newPerson')}</option>
-    <option value="${NOT_SPEAKER}">${t('import.marker.notSpeaker')}</option>
-    ${catalogue.roles.map((role) => html`<option value="role:${role}">${role}</option>`)}
+  const roles = catalogue.roles.map((role) => {
+    const name = t(`add.role.${role}`);
+    return { name, option: menuOption(`role:${role}`, name, { lead: roleEmojiOf(role) }) };
+  }).sort(byName);
+  const people = catalogue.people
+    .map((person) => ({ name: person.displayName, option: personOption(`person:${person.id}`, person) }))
+    .sort(byName);
+  const speakers = [...roles, ...people];
+  return html`<div class="field c-import-speakers__pick"><span class="field__select"><select ${attr}="${value}" aria-label="${label}"
+    data-speaker-select data-menu-search="${t('import.marker.search')}">
+    <option value="" hidden>${t('import.marker.choose')}</option>
+    <option value="${NOT_SPEAKER}" data-action>${t('import.marker.notSpeaker')}</option>
+    <option value="${NEW_PERSON}" data-action>${t('import.marker.newPerson')}</option>
+    ${speakers.map((s) => s.option)}
   </select></span></div>`;
 }
 

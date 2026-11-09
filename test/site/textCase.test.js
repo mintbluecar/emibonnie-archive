@@ -27,8 +27,10 @@ test('engine CSS never lowercases text: only people\'s names are lowercase, via 
 });
 
 // Copy slotted into the middle of another string ("12 translations ·
-// newest first", "theme: dark", "added by a fan"), so it stays lowercase.
+// newest first", "theme: dark", "added by a fan"), so it stays lowercase;
+// and a URL, which is never capitalised.
 const INLINE = new Set([
+  'add.urlPlaceholder',
   'search.newestFirst', 'search.bestFirst', 'theme.light', 'theme.dark', 'theme.system',
   'item.addedByFan', 'owner.fan',
   'import.status.queued', 'import.status.running', 'import.status.done', 'import.status.failed',

@@ -20,7 +20,7 @@ import { addressOf } from '../domain/eventAddress.js';
 /** @typedef {import('../domain/constants.js').ReviewState} ReviewState */
 /**
  * @typedef {{ kind: Readonly<Kind>, draft: Draft, occurredOn: string, addedVia: string, actor: string,
- *   creditedUserId: string|null, lookups?: 'create'|'existing', holdForReview?: boolean }} WriteRequest
+ *   creditedUserId: string|null, lookups?: 'create'|'existing', holdForReview?: boolean, byOwner?: boolean }} WriteRequest
  */
 
 /**
@@ -55,13 +55,16 @@ async function eventIdOf(tx, common, occurredOn) {
 }
 
 /**
- * Hand-typed text waits for review unless the credited account's own user
- * typed it; everything else follows `settings.approvalRequired`.
+ * The owner's own adds publish at once: there's no one else to approve
+ * them (owner, 2026-11-09). Otherwise, hand-typed text waits for review
+ * unless the credited account's own user typed it, and everything else
+ * follows `settings.approvalRequired`.
  * @param {Tx} tx
- * @param {{ common: { textEnteredManually: boolean }, actor: string, creditedUserId: string|null }} input
+ * @param {{ common: { textEnteredManually: boolean }, actor: string, creditedUserId: string|null, byOwner?: boolean }} input
  * @returns {Promise<ReviewState>}
  */
-export async function reviewStateOf(tx, { common, actor, creditedUserId }) {
+export async function reviewStateOf(tx, { common, actor, creditedUserId, byOwner = false }) {
+  if (byOwner) return 'published';
   if (common.textEnteredManually && creditedUserId !== actor) return 'pending';
   return (await approvalRequired(tx)) ? 'pending' : 'published';
 }
@@ -97,14 +100,14 @@ async function lookupId(tx, name, existing, kind) {
  * @param {WriteRequest} request
  * @returns {Promise<{ itemId: number, eventId: number|null, reviewState: ReviewState }>}
  */
-export async function writeItem(tx, { kind, draft, occurredOn, addedVia, actor, creditedUserId, lookups = 'create', holdForReview = false }) {
+export async function writeItem(tx, { kind, draft, occurredOn, addedVia, actor, creditedUserId, lookups = 'create', holdForReview = false, byOwner = false }) {
   const { common } = draft;
   const accountId = await upsertCredited(tx, common.credited);
   const eventId = await eventIdOf(tx, common, occurredOn);
   const existing = lookups === 'existing';
   const categoryId = await lookupId(tx, common.categoryName, existing, 'category');
   const clientId = await lookupId(tx, common.clientName, existing, 'client');
-  const reviewState = holdForReview ? 'pending' : await reviewStateOf(tx, { common, actor, creditedUserId });
+  const reviewState = holdForReview ? 'pending' : await reviewStateOf(tx, { common, actor, creditedUserId, byOwner });
   const itemId = await insertItem(tx, {
     kind: kind.name, placement: common.placement, eventId, categoryId, clientId, creditedAccountId: accountId,
     occurredOn, postedAt: common.postedAt, addedVia, reviewState, sortKey: common.postedAt ? null : epochOf(occurredOn),

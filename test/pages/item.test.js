@@ -62,7 +62,7 @@ test('composeItem: no back row when the item has no event', () => {
 
 test('composeItem: a <select>-free active "home" tab, per pageShell (review round 1, MINOR)', () => {
   const markup = String(composeItem(itemVm()));
-  assert.match(markup, /<a\s+class="c-tabbar__item"\s+href="\/"\s+aria-current="page"\s*>/);
+  assert.match(markup, /<a\s+class="c-tabbar__item"\s+href="\/"\s+aria-current="page"[^>]*>/);
 });
 
 test('composeItem: prev/next links when ItemView carries neighbours', () => {

@@ -54,7 +54,8 @@
 
 .field input:not([type="checkbox"]):not([type="radio"]),
 .field select,
-.field textarea {
+.field textarea,
+.field [role="combobox"] {
   width: 100%;
   min-height: var(--tap-target);
   font-size: var(--text-14);
@@ -65,11 +66,158 @@
 }
 
 .field__select {
+  position: relative;
   display: block;
 }
 
-.field__select select {
+.field__select select,
+.field__select [role="combobox"] {
   width: 100%;
+}
+
+/* select-menu: the site's own dropdown (public/js/core/selectMenu.js),
+   never the browser's native picker. The <select> stays underneath as
+   the source of truth, out of sight and out of reach; the button over
+   it takes base.css's field box and chevron (as a [role="combobox"]),
+   and its list opens below it (above, with data-up, when there's more
+   room there). */
+.field__select select[data-menu] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.select-menu__trigger {
+  display: flex;
+  align-items: center;
+  text-align: left;
+}
+
+.select-menu__trigger:disabled {
+  color: var(--color-ink-muted);
+  cursor: default;
+}
+
+.select-menu__value {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* An option's parts: data-lead before the name (a person's emoji),
+   data-detail after it, smaller and lighter (their IG handle). The name
+   always shows whole; when space runs out, the detail is what shortens. */
+.select-menu__lead,
+.select-menu__name {
+  flex: none;
+}
+
+.select-menu__detail {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-12);
+  font-weight: var(--weight-regular);
+  color: var(--color-ink-muted);
+}
+
+.select-menu__list {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  /* At least the button's width, wider when an option needs it (a long
+     handle); lined up on the right instead (data-end) when it would run
+     off the screen. */
+  /* A card-coloured surface, so its search box takes the page colour. */
+  --field-fill: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: max-content;
+  min-width: 100%;
+  max-width: min(360px, calc(100vw - 2 * var(--space-4)));
+  max-height: 300px;
+  padding: var(--space-1);
+  background: var(--color-card);
+  border: 1.5px solid var(--color-card-shadow);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.select-menu__list[hidden] {
+  display: none;
+}
+
+/* The search box stays put; only the options under it scroll. */
+.select-menu__search {
+  flex: none;
+  width: 100%;
+}
+
+.select-menu__options {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.select-menu__list[data-end] {
+  right: 0;
+  left: auto;
+}
+
+.select-menu__list[data-up] {
+  top: auto;
+  bottom: calc(100% + var(--space-1));
+}
+
+.select-menu__option {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-14);
+  cursor: pointer;
+}
+
+.select-menu__option[data-active] {
+  background: var(--color-label-tint);
+}
+
+.select-menu__option[aria-selected="true"] {
+  font-weight: var(--weight-bold);
+  color: var(--color-label-on-tint);
+}
+
+/* An action ("＋ New person", "Not a speaker"): accent-coloured, above
+   the rest, with a rule under the last one. */
+.select-menu__option[data-action] {
+  font-weight: var(--weight-bold);
+  color: var(--color-label);
+}
+
+.select-menu__option[data-action] + .select-menu__option:not([data-action]) {
+  position: relative;
+  margin-top: var(--space-2);
+}
+
+.select-menu__option[data-action] + .select-menu__option:not([data-action])::before {
+  content: "";
+  position: absolute;
+  top: calc(-1 * var(--space-1) - 1px);
+  right: var(--space-2);
+  left: var(--space-2);
+  border-top: 1px solid var(--color-card-shadow);
+}
+
+.select-menu__option[aria-disabled="true"] {
+  color: var(--color-ink-muted);
+  cursor: default;
 }
 
 /* A checkbox or radio with its text: the label is the target, at least

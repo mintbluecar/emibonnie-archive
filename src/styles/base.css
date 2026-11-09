@@ -90,10 +90,12 @@ button {
 
 /* Every text-like field (not checkbox/radio, which get their own rule
    below) shares one box, filled with --field-fill (tokens.css) so it
-   stands out from whatever surface it sits on. */
+   stands out from whatever surface it sits on. A combobox (the site's
+   own dropdown, public/js/core/selectMenu.js) is one too. */
 input:not([type="checkbox"]):not([type="radio"]),
 select,
-textarea {
+textarea,
+[role="combobox"] {
   font-family: inherit;
   color: var(--color-ink);
   background: var(--field-fill);
@@ -118,8 +120,10 @@ textarea {
    always runs through the box's centre, so the extra height only gives
    the strokes' top ends room instead of clipping them. Inset from the
    right edge like the old wrapper's arrow, and vertically centred. This
-   is every select's only chevron (Styling system Task 4, fix round 1). */
-select {
+   is every select's only chevron (Styling system Task 4, fix round 1),
+   and the site's own dropdown's. */
+select,
+button[role="combobox"] {
   appearance: none;
   -webkit-appearance: none;
   padding-right: calc(var(--space-6) + var(--space-2));
