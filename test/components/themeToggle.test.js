@@ -8,10 +8,10 @@ const header = await import('../../public/js/components/header.js');
 
 test('themeToggle (Task 10c f): an icon button named and titled for the current choice, carrying every choice\'s label, all three icons drawn', () => {
   const markup = String(render());
-  assert.match(markup, /<button class="btn btn--quiet btn--icon c-header__icon c-theme-toggle" type="button" data-choice="system" title="theme: follow device" aria-label="theme: follow device"/);
-  assert.match(markup, /data-label-light="theme: light"/);
-  assert.match(markup, /data-label-dark="theme: dark"/);
-  assert.match(markup, /data-label-system="theme: follow device"/);
+  assert.match(markup, /<button class="btn btn--quiet btn--icon c-header__icon c-theme-toggle" type="button" data-choice="system" title="Theme: follow device" aria-label="Theme: follow device"/);
+  assert.match(markup, /data-label-light="Theme: light"/);
+  assert.match(markup, /data-label-dark="Theme: dark"/);
+  assert.match(markup, /data-label-system="Theme: follow device"/);
   for (const icon of ['light', 'dark', 'system']) assert.match(markup, new RegExp(`c-theme-toggle__icon--${icon}`));
   assert.equal((markup.match(/aria-hidden="true"/g) ?? []).length, 3);
 });

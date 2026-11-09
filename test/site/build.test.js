@@ -10,6 +10,7 @@ import {
   findUsedCountKeys,
 } from '../../scripts/buildChecks.js';
 import {
+  buildGeneratedSiteModule,
   buildPublicSiteModule,
   buildKindsRegistryModule,
   buildVercelConfig,
@@ -94,6 +95,11 @@ test('findMissingCopyKeys: a tCount() key with both suffixes defined passes', ()
     { 'person.translations.one': '{n} translation', 'person.translations.other': '{n} translations' },
   );
   assert.deepEqual(missing, []);
+});
+
+test('buildGeneratedSiteModule: site carries its Site type, so a font\'s style stays a literal tsc accepts', () => {
+  const source = buildGeneratedSiteModule(loadSite('examples/solluna'), {});
+  assert.match(source, /\/\*\* @type \{import\('\.\/schema\.js'\)\.Site\} \*\/\nexport const site = /);
 });
 
 test('buildPublicSiteModule: excludes ownerXUserId', () => {

@@ -7,9 +7,9 @@ test('loadCopy: site overrides apply over engine defaults', () => {
   const copy = loadCopy('examples/solluna');
   assert.equal(
     copy['footer.unofficial'],
-    'unofficial, not affiliated with sol, luna, or their agency',
+    'Unofficial, not affiliated with sol, luna, or their agency',
   );
-  assert.equal(copy['nav.home'], 'home'); // untouched engine default
+  assert.equal(copy['nav.home'], 'Home'); // untouched engine default
 });
 
 test('loadCopy: an unknown copy key throws', () => {
@@ -21,5 +21,5 @@ test('loadCopy: an unknown copy key throws', () => {
 
 test('loadCopy: a site with no copy.json just gets the engine defaults', () => {
   const copy = loadCopy('test/fixtures/site-alt');
-  assert.equal(copy['nav.home'], 'home');
+  assert.equal(copy['nav.home'], 'Home');
 });

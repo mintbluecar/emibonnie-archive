@@ -64,6 +64,7 @@
 
 @media (min-width: 860px) {
   .table--raised {
+    --field-fill: var(--color-bg);
     border-collapse: separate;
     border-spacing: 0;
     background: var(--color-card);
@@ -90,6 +91,7 @@
   .table--stack tr {
     display: block;
     margin-bottom: var(--space-3);
+    --field-fill: var(--color-bg);
     padding: var(--space-3);
     background: var(--color-card);
     border-radius: var(--radius-card);

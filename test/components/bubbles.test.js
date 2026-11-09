@@ -34,7 +34,7 @@ test('bubbles: an unmapped marker (name: null) shows "unknown speaker" as a visi
   /** @type {BubbleVM[]} */
   const bubbles = [{ kind: 'speech', emoji: '🌧️', name: null, text: 'mystery', cont: false }];
   const markup = String(render({ bubbles }));
-  assert.match(markup, /<div class="c-bubbles__name">unknown speaker<\/div>/);
+  assert.match(markup, /<div class="c-bubbles__name">Unknown speaker<\/div>/);
   assert.ok(!markup.includes('aria-label'));
 });
 
@@ -52,7 +52,7 @@ test('bubbles: a joint bubble\'s never-mapped component joins into the visible n
   const bubbles = [{ kind: 'joint', parts: [{ emoji: '🐸', name: null }, { emoji: '👦🏻', name: 'host' }], text: 'mystery duo', cont: false }];
   const markup = String(render({ bubbles }));
   assert.ok(!markup.includes('aria-label'));
-  assert.match(markup, />unknown speaker &amp; host</);
+  assert.match(markup, />Unknown speaker &amp; host</);
 });
 
 test('bubbles: a joint bubble\'s text and names are escaped, like any other bubble', () => {
@@ -144,7 +144,7 @@ test('renderCompact (Task 9b): one paragraph of "emoji text" runs -- each speake
   assert.equal(markup.match(/<p class="c-bubbles-compact"/g)?.length, 1);
   assert.match(markup, /<span class="c-emoji" role="img" aria-label="luna">💜<\/span> hi &lt;b&gt;/);
   assert.equal(markup.match(/aria-label="luna"/g)?.length, 1, 'the continuation line adds no second emoji');
-  assert.match(markup, /aria-label="sol &amp; unknown speaker">🧡💜<\/span> both/);
+  assert.match(markup, /aria-label="sol &amp; Unknown speaker">🧡💜<\/span> both/);
   assert.match(markup, /context/);
   assert.ok(!markup.includes('a footnote'));
   assert.ok(!markup.includes('c-bubbles__bub'), 'no full bubbles');
@@ -152,7 +152,7 @@ test('renderCompact (Task 9b): one paragraph of "emoji text" runs -- each speake
 
 test('renderCompact (Task 9b): an unmapped speaker is named "unknown speaker", same as a full bubble', () => {
   const markup = String(renderCompact({ bubbles: [{ kind: 'speech', emoji: '🐰', name: null, colour: null, text: 'x', cont: false }] }));
-  assert.match(markup, /aria-label="unknown speaker">🐰/);
+  assert.match(markup, /aria-label="Unknown speaker">🐰/);
 });
 
 test('fix round 2: a speaker with no emoji (a bare ":" mapped to a role) gets a blank neutral avatar and its visible role name', () => {
@@ -167,7 +167,7 @@ test('fix round 2: compact, a speaker with no emoji shows its name as text ("fan
   assert.match(mapped, /<span class="c-bubbles-compact__name">fan:<\/span> hello/);
   assert.ok(!mapped.includes('role="img"'));
   const unmapped = String(renderCompact({ bubbles: [{ kind: 'speech', emoji: '', name: null, text: 'hello', cont: false }] }));
-  assert.match(unmapped, /c-bubbles-compact__name">unknown speaker:<\/span>/);
+  assert.match(unmapped, /c-bubbles-compact__name">Unknown speaker:<\/span>/);
 });
 
 test('Task 10c (o): an avatar\'s emoji sits in its own .c-emoji box, centred by the circle\'s grid', () => {

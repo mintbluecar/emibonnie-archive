@@ -33,9 +33,9 @@ function row(overrides = {}) {
 
 test('the header names the job and the chips count every state', () => {
   const markup = String(render(state()));
-  assert.match(markup, /import job 7/);
-  assert.match(markup, /notion export/);
-  for (const label of ['ready', 'needs speakers', 'check', 'published', 'skipped', 'failed']) {
+  assert.match(markup, /Import job 7/);
+  assert.match(markup, /Notion export/);
+  for (const label of ['Ready', 'Needs speakers', 'Check', 'Published', 'Skipped', 'Failed']) {
     assert.match(markup, new RegExp(label));
   }
 });
@@ -45,7 +45,7 @@ test('the rows are a table with a heading per column and every cell labelled for
   assert.match(markup, /<table class="table table--stack table--raised">/);
   const heads = [...markup.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1]);
   assert.deepEqual(heads, ['import.col.state', 'import.col.translator', 'import.col.text', 'import.col.event', 'import.col.actions'].map((key) => t(key)));
-  assert.deepEqual(heads, ['state', 'translator', 'text', 'event', 'actions']);
+  assert.deepEqual(heads, ['State', 'Translator', 'Text', 'Event', 'Actions']);
   const cells = [...markup.matchAll(/<td[^>]*>/g)].map((m) => m[0]);
   assert.equal(cells.length, 5);
   cells.forEach((cell, i) => assert.match(cell, new RegExp(`data-label="${heads[i]}"`), cell));

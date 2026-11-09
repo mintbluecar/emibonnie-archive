@@ -80,11 +80,11 @@ test('composeItem: the footer -- original tweet, follows on, added by, copy link
   const markup = String(composeItem(itemVm({
     followsOnFrom: { sourceId: '3', url: '/t/3' },
   })));
-  assert.match(markup, /<a class="tap-link tap-link--sm c-item__footer-link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">original tweet<\/a>/);
-  assert.match(markup, /<a class="tap-link tap-link--sm c-item__footer-link" href="\/t\/3">follows on from<\/a>/);
-  assert.match(markup, /added by @tl_alpha/);
-  assert.match(markup, /<button type="button" class="btn btn--secondary btn--sm" data-action="copy-link">copy link<\/button>/);
-  assert.match(markup, /<button class="btn btn--quiet btn--sm" type="button" data-action="report">report<\/button>/);
+  assert.match(markup, /<a class="tap-link tap-link--sm c-item__footer-link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">Original tweet<\/a>/);
+  assert.match(markup, /<a class="tap-link tap-link--sm c-item__footer-link" href="\/t\/3">Follows on from<\/a>/);
+  assert.match(markup, /Added by @tl_alpha/);
+  assert.match(markup, /<button type="button" class="btn btn--secondary btn--sm" data-action="copy-link">Copy link<\/button>/);
+  assert.match(markup, /<button class="btn btn--quiet btn--sm" type="button" data-action="report">Report<\/button>/);
   assert.match(markup, /<dialog[^>]*aria-labelledby="c-report-title"/);
 });
 
@@ -97,7 +97,7 @@ test('composeItem (Task 10b): with embedSources off, one "original tweet" link -
     ],
   })));
   assert.equal(markup.match(/c-item__footer-link" href="https:\/\/x\.com/g)?.length, 1, markup);
-  assert.match(markup, /<a class="tap-link tap-link--sm c-item__footer-link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">original tweet<\/a>/);
+  assert.match(markup, /<a class="tap-link tap-link--sm c-item__footer-link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">Original tweet<\/a>/);
   assert.ok(!markup.includes('original media') && !markup.includes('quoted tweet'));
   assert.ok(!markup.includes('twitter-tweet'), 'no embed while the setting is off');
 });
@@ -120,7 +120,7 @@ test('composeItem (Task 10b): with embedSources on, X\'s embed blockquote replac
     assert.match(markup, /<a class="tap-link tap-link--sm c-embed__link" href="https:\/\/x\.com\/tl_alpha\/status\/1900000000000000004">/);
     assert.ok(!markup.includes('c-item__footer-link" href="https://x.com'), 'the embed replaces the footer link');
     assert.match(markup, /data-action="copy-link"/);
-    assert.match(markup, /data-action="report">report<\/button>/);
+    assert.match(markup, /data-action="report">Report<\/button>/);
   });
 });
 
@@ -139,13 +139,13 @@ test('composeItem (Task 10b): a source URL that isn\'t a canonical x.com post is
   await withEmbedSources(() => {
     const markup = String(composeItem(itemVm({ sources: [{ role: 'primary', url: 'https://x.com/i/web/status/abc', status: 'live' }] })));
     assert.ok(!markup.includes('twitter-tweet'));
-    assert.match(markup, />original tweet<\/a>/);
+    assert.match(markup, />Original tweet<\/a>/);
   });
 });
 
 test('composeItem: "added by" shows a fan, a chosen name, or nothing for the engine\'s own writes', () => {
-  assert.match(String(composeItem(itemVm({ addedBy: { kind: 'fan' } }))), /added by a fan/);
-  assert.match(String(composeItem(itemVm({ addedBy: { kind: 'name', name: 'a reader' } }))), /added by a reader/);
+  assert.match(String(composeItem(itemVm({ addedBy: { kind: 'fan' } }))), /Added by a fan/);
+  assert.match(String(composeItem(itemVm({ addedBy: { kind: 'name', name: 'a reader' } }))), /Added by a reader/);
   assert.ok(!String(composeItem(itemVm({ addedBy: null }))).includes('data-added-by'));
 });
 
@@ -277,7 +277,7 @@ test('bind: the copy-link button copies the absolute item URL and shows "copied"
     button.click();
     await flush();
     assert.deepEqual(written, ['https://example.fan/t/1900000000000000004']);
-    assert.equal(button.textContent, 'copied');
+    assert.equal(button.textContent, 'Copied');
   } finally {
     mock.restoreAll();
     delete (/** @type {any} */ (globalThis)).document;
@@ -296,7 +296,7 @@ test('start: a non-404 failure renders the generic page.loadFailed fallback, nev
   mock.method(globalThis, 'fetch', async () => { throw new Error('network down'); });
   try {
     await start();
-    assert.match(root.querySelector('.c-empty-state__message')?.children?.[0]?.textContent ?? '', /something went wrong, try again/);
+    assert.match(root.querySelector('.c-empty-state__message')?.children?.[0]?.textContent ?? '', /Something went wrong, try again/);
   } finally {
     mock.restoreAll();
     delete (/** @type {any} */ (globalThis)).document;

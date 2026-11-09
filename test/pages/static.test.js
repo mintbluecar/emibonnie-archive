@@ -24,9 +24,9 @@ const COPY = loadCopy('examples/solluna');
 test('about: the "what is this" line, credits, FAN-MADE badge, and the unofficial note', () => {
   const markup = String(composeStatic('about'));
   assert.match(markup, /fan-made archive of translated posts and clips/);
-  assert.match(markup, /every entry credits the translator who made it/);
+  assert.match(markup, /Every entry credits the translator who made it/);
   assert.match(markup, /FAN-MADE/);
-  assert.match(markup, /unofficial, not affiliated/);
+  assert.match(markup, /Unofficial, not affiliated/);
 });
 
 /**
@@ -64,21 +64,21 @@ test('privacy: the contact link uses site.contactUrl, not a hardcoded address', 
 
 test('takedown: who can ask, what to send, and "hide first, review second"', () => {
   const markup = String(composeStatic('takedown'));
-  assert.match(markup, /who can ask/);
-  assert.match(markup, /what to send/);
+  assert.match(markup, /Who can ask/);
+  assert.match(markup, /What to send/);
   assert.match(markup, /hidden first, and reviewed second/);
   assert.match(markup, new RegExp(`href="${SITE.contactUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
 });
 
 test('404 (data-page="notFound"): a generic not-found message and a link home', () => {
   const markup = String(composeStatic('notFound'));
-  assert.match(markup, /page not found/);
+  assert.match(markup, /Page not found/);
   assert.match(markup, /<a href="\/">/);
 });
 
 test('an unknown data-page value falls back to the not-found content (defensive)', () => {
   const markup = String(composeStatic('something-unexpected'));
-  assert.match(markup, /page not found/);
+  assert.match(markup, /Page not found/);
 });
 
 test('every page includes the page shell\'s compact header, tab bar and footer links', () => {
@@ -114,7 +114,7 @@ test('privacy (Task 10b fix I1): with embedSources on, the no-sale line no longe
     const on = String(composeStatic('privacy'));
     assert.ok(on.includes(htmlEscaped(COPY['privacy.noSaleNoAdsEmbed'])), on);
     assert.ok(!on.includes(htmlEscaped(COPY['privacy.noSaleNoAds'])));
-    assert.match(COPY['privacy.noSaleNoAdsEmbed'], /apart from X's embed/);
+    assert.match(COPY['privacy.noSaleNoAdsEmbed'], /Apart from X's embed/);
   } finally {
     delete (/** @type {any} */ (SITE)).embedSources;
   }

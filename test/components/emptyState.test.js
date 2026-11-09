@@ -9,7 +9,7 @@ const { t } = await import('../../public/js/core/site.js');
 
 test('emptyState: shows the caller-resolved message, escaped', () => {
   const markup = String(render({ message: t('search.empty') }));
-  assert.match(markup, /<p class="c-empty-state__message">no results<\/p>/);
+  assert.match(markup, /<p class="c-empty-state__message">No results<\/p>/);
 });
 
 test('emptyState: a custom icon overrides the default', () => {

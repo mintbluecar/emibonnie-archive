@@ -20,7 +20,7 @@ test('me as a translator: the badge, the two tabs and an accessible page', async
   await gotoReady(page, '/me');
   await expect(page.locator('[data-action="select"]').first()).toBeVisible();
   await checkPage(page, '/me');
-  await expect(page.locator('.c-me__who [data-translator-badge]')).toContainText('translator');
+  await expect(page.locator('.c-me__who [data-translator-badge]')).toContainText('Translator');
   await expect(page.locator('[data-action="tab"]')).toHaveCount(2);
   await expect(page.locator('[data-translations]')).toBeVisible();
   await expect(page.locator('[data-action="opt-out"]')).toBeVisible();

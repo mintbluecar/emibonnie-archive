@@ -9,9 +9,9 @@ test('tabBar (Task 10d): shows home, + add and me, each linking to its route -- 
   const markup = String(render({ active: 'home' }));
   assert.equal(markup.split('<a').length - 1, 3);
   assert.ok(!markup.includes('/search'));
-  assert.match(markup, /href="\/"[^>]*>[\s\S]*?home/);
-  assert.match(markup, /href="\/add"[^>]*>[\s\S]*?＋[\s\S]*?add/);
-  assert.match(markup, /href="\/me"[^>]*>[\s\S]*?me/);
+  assert.match(markup, /href="\/"[^>]*>[\s\S]*?Home/);
+  assert.match(markup, /href="\/add"[^>]*>[\s\S]*?＋[\s\S]*?Add/);
+  assert.match(markup, /href="\/me"[^>]*>[\s\S]*?Me/);
 });
 
 test('tabBar: marks only the active tab', () => {

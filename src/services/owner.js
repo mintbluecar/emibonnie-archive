@@ -12,7 +12,7 @@ import { hideEvent } from '../repo/events.js';
 import { lockEvents } from '../repo/eventAdmin.js';
 import { get as settingsGet, set as settingsSet } from '../repo/settings.js';
 import { eventTag, HOME_TAG, SEARCH_TAG } from '../domain/cacheTags.js';
-import { kindNamed, kindsOf, presenterContext, previewsForAny } from './cards.js';
+import { eventRefOf, kindNamed, kindsOf, presenterContext, previewsForAny } from './cards.js';
 import { write } from './write.js';
 import { publish, reject, remove } from './itemLifecycle.js';
 
@@ -41,7 +41,7 @@ export async function ownerView(deps) {
   return {
     approvalRequired,
     signInFailedAt: typeof signInFailedAt === 'string' ? signInFailedAt : null,
-    waiting: entries.map(({ card, preview }) => ({ ...preview, reviewState: card.reviewState })),
+    waiting: entries.map(({ card, preview }) => ({ ...preview, event: eventRefOf(card.event), reviewState: card.reviewState })),
     reports: await reportQueue(deps),
   };
 }

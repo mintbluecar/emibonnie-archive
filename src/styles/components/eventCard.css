@@ -1,6 +1,6 @@
 /*
  * public/js/components/eventCard.js. Home shows each month's events as a
- * grid of cards (owner, 2026-10-23; the grid is homeMonth.css): the
+ * grid of cards (owner, 2026-10-23; the grid primitive): the
  * event's representative picture on top in a portrait frame (thumb.js's
  * cover picture), then the name, date, hashtag and count. Cards without
  * a picture are text only. The card, the muted lines and the count badge

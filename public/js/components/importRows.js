@@ -50,7 +50,7 @@ function chips(state) {
   `;
   return html`
     <div class="cluster cluster--2">
-      ${chip('', t('import.state.queued') === 'queued' ? 'all' : 'all', total)}
+      ${chip('', t('import.state.all'), total)}
       ${STATES.map((value) => chip(value, t(`import.state.${value}`), state.counts[value] ?? 0))}
     </div>
   `;

@@ -1,13 +1,14 @@
 // @ts-check
 /**
  * The me page's "added by me" list (Plan 2a Task 12): one page of the
- * signed-in submitter's own items, newest first, in every review state.
+ * signed-in submitter's own items, newest first, in every review state,
+ * each with its event so the page can group them.
  * Public lists only ever show published items; this one is the
  * submitter's own view, so a held or rejected entry is listed and
  * labelled rather than hidden.
  */
 import { ownAddedIds } from '../repo/items.js';
-import { presenterContext, ownPreviewsFor } from './cards.js';
+import { eventRefOf, presenterContext, ownPreviewsFor } from './cards.js';
 
 /** How many own items one page holds. */
 export const ADDED_PAGE_SIZE = 20;
@@ -26,7 +27,7 @@ export async function addedPreviews(deps, userId, { offset }) {
   const ctx = await presenterContext(deps);
   const entries = await ownPreviewsFor(deps, ids, ctx);
   return {
-    items: entries.map(({ card, preview }) => ({ ...preview, reviewState: card.reviewState })),
+    items: entries.map(({ card, preview }) => ({ ...preview, event: eventRefOf(card.event), reviewState: card.reviewState })),
     hasMore,
   };
 }

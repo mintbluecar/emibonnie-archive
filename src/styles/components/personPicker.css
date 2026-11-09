@@ -17,7 +17,9 @@
   color: var(--color-ink-muted);
 }
 
+/* A page-coloured panel inside a card, so its boxes take the card colour. */
 .c-person-picker__new {
+  --field-fill: var(--color-card);
   padding: var(--space-3);
   background: var(--color-bg);
   border-radius: var(--radius-md);
