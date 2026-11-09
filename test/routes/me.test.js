@@ -5,6 +5,7 @@ import { ingestDeps } from '../helpers/ingest.js';
 import { apiFor } from '../helpers/api.js';
 import { signInUser } from '../../src/services/session.js';
 import { insertItem } from '../../src/repo/items.js';
+import { insertEvent } from '../helpers/seed.js';
 
 /** @type {Awaited<ReturnType<typeof ingestDeps>>} */
 let depsSource;
@@ -16,14 +17,14 @@ const deps = () => ({ ...depsSource, env: {} });
 
 /** Add one of `userId`'s own items with a single text part (Task 12's own-list fixture). */
 let sourceSeq = 0;
-async function ownItem(userId, { reviewState = 'published', pendingPart = false, deleted = false } = {}) {
+async function ownItem(userId, { reviewState = 'published', pendingPart = false, deleted = false, occurredOn = '2026-10-01', eventId = null } = {}) {
   sourceSeq += 1;
   const externalId = `29000000000000000${String(sourceSeq).padStart(3, '0')}`;
   const body = `own item ${sourceSeq}`;
   const itemId = await db.transaction(async (tx) => {
     const id = await insertItem(tx, {
-      kind: 'translation', placement: 'post', occurredOn: '2026-10-01',
-      postedAt: `2026-10-01T00:00:${String(sourceSeq % 60).padStart(2, '0')}.000Z`,
+      kind: 'translation', placement: eventId === null ? 'post' : 'event', eventId, occurredOn,
+      postedAt: `${occurredOn}T00:00:${String(sourceSeq % 60).padStart(2, '0')}.000Z`,
       addedVia: 'submit', reviewState,
     });
     await tx.query('insert into translations (item_id) values ($1)', [id]);
@@ -191,6 +192,21 @@ test('GET /api/me/added lists my own items in every review state, newest first, 
   assert.ok(body.items[0].lines.some((line) => line.text === rejected.body), res.text);
   assert.ok(body.items[1].lines.some((line) => line.text === pending.body), res.text);
   assert.ok(body.items[2].lines.some((line) => line.text === published.body), res.text);
+});
+
+test('GET /api/me/added orders by when it happened, keeps an event together, and names the event', async () => {
+  const me = await userFor({ via: 'x', subject: '74', handle: 'grouper' });
+  const eventId = await db.transaction((tx) => insertEvent(tx, { slug: 'me-grouped', occurredOn: '2026-09-05' }), { actor: me.id });
+  const first = await ownItem(me.id, { eventId, occurredOn: '2026-09-05' });
+  const newer = await ownItem(me.id, { occurredOn: '2026-10-20' });
+  const second = await ownItem(me.id, { eventId, occurredOn: '2026-09-05' });
+
+  const api = apiFor(deps());
+  const body = JSON.parse((await api.call('GET', '/api/me/added', { cookies: { sid: me.sid } })).text);
+  const texts = body.items.map((item) => item.lines[0]?.text);
+  assert.deepEqual(texts, [newer.body, second.body, first.body]);
+  assert.equal(body.items[0].event, null);
+  assert.deepEqual(body.items[1].event, { slug: 'me-grouped', name: 'An event', occurredOn: '2026-09-05' });
 });
 
 test('GET /api/me/added pages 20 at a time', async () => {

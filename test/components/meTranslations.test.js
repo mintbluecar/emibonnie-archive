@@ -54,7 +54,7 @@ test('the welcome is gone once it has been marked', () => {
 
 test('a removed row is faded with a restore control; a hidden one has none', () => {
   const removed = String(render(state({ items: [item({ removedByYou: true })] })));
-  assert.match(removed, /<li class="c-me__entry" data-faded>/);
+  assert.match(removed, /<li class="stack stack--1 c-me__entry" data-faded>/);
   assert.match(removed, copyRe(t('me.translations.removedByYou')));
   assert.match(removed, /data-action="restore"/);
   assert.ok(!removed.includes('type="checkbox"'), 'a removed row is not selectable');

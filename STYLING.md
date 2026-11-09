@@ -428,8 +428,8 @@ track's width evenly.
 
 ```html
 <p class="meta">@tl_gamma · 21 Oct 2026</p>
-<h2 class="label">october 2026</h2>
-<h2 class="label label--section">october 2026</h2>
+<h2 class="label">October 2026</h2>
+<h2 class="label label--section">October 2026</h2>
 <a class="meta tap-link" href="/">‹ events</a>
 <a class="tap-link tap-link--sm" href="https://x.com/">original tweet</a>
 <h1 class="heading heading--lg">Import review</h1>
@@ -441,7 +441,8 @@ track's width evenly.
 
 `meta` is small muted text. `label` is a small, heavy, label-coloured
 heading; `label--section` adds room above and a little below, for
-labelling a list. `tap-link` is a small text link whose target is still
+labelling a list (a month over a timeline, on home and the me page).
+`tap-link` is a small text link whose target is still
 `--tap-target` tall (pair it with `meta` for a muted one); `tap-link--sm`
 is one inside a row of small controls, `--control-sm` tall like
 `btn--sm`. `heading` sets the look, never the level -- pick the element

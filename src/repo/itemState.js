@@ -7,7 +7,7 @@
  * the visibility and event-deletion rules are the same.
  */
 import { visibleItem } from './visibility.js';
-import { EVENT_NOT_DELETED } from './items.js';
+import { EVENT_NOT_DELETED, OWN_LIST_ORDER } from './items.js';
 
 /** @typedef {import('../db/common.js').Queryable} Tx */
 /** @typedef {import('../domain/constants.js').ReviewState} ReviewState */
@@ -83,7 +83,7 @@ export async function findItemIdBySource(db, { kind, platform, externalId }) {
  * The ids of every item credited to one of `accountIds`, in any review
  * state and any deletion except `erased` -- the translator's "my
  * translations" list, which keeps removed entries listed so they can be
- * restored. Newest first; `limit + 1` is read for `hasMore`.
+ * restored. Newest first (`OWN_LIST_ORDER`); `limit + 1` is read for `hasMore`.
  * @param {Tx} db
  * @param {number[]} accountIds
  * @param {{ limit: number, offset: number }} page
@@ -95,7 +95,7 @@ export async function translatorItemIds(db, accountIds, { limit, offset }) {
     `select i.id from items i
      where i.credited_account_id = any($1::bigint[])
        and (i.deleted_reason is null or i.deleted_reason <> 'erased')
-     order by i.id desc limit $2 offset $3`,
+     order by ${OWN_LIST_ORDER} limit $2 offset $3`,
     [accountIds, limit + 1, offset],
   );
   const ids = rows.map((row) => row.id);
