@@ -44,10 +44,10 @@ function eventField({ options, choices, eventId, allowNew }) {
     <div class="field">
       <label class="label" for="c-add-event">${t('add.event')}</label>
       <span class="field__select">
-        <select id="c-add-event" data-field="event">
+        <select id="c-add-event" data-field="event" data-menu-search="${t('add.searchEvents')}">
+          ${allowNew ? html`<option value="new" data-action${isNew ? ' selected' : ''}>${t('add.newEvent')}</option>` : ''}
           ${matchName ? labelled('match', `${matchName} · ${t('add.matches')}`, choices.eventMode === 'match') : ''}
           ${options.events.map((/** @type {any} */ e) => labelled(`event:${e.id}`, e.name, choices.eventMode === `event:${e.id}`))}
-          ${allowNew ? labelled('new', t('add.newEvent'), isNew) : ''}
         </select>
       </span>
       ${isNew ? html`

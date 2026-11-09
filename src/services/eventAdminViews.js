@@ -29,7 +29,7 @@ export async function adminEventList(deps, { q, offset }) {
   return listAdminEvents(deps.db, { q, limit: EVENT_PAGE_SIZE, offset });
 }
 
-/** @param {{ id: number, displayName: string }[]} people @param {string[]} platforms */
+/** @param {import('../http/contracts.js').EventPersonOption[]} people @param {string[]} platforms */
 function optionsOf(people, platforms) {
   return { people, platforms: platforms.map((code) => ({ code, name: code })) };
 }
@@ -38,13 +38,13 @@ function optionsOf(people, platforms) {
  * One event plus the edit form's options (people, live platforms); `null`
  * for an unknown or merged-away event (the route answers 404).
  * @param {{ db: Db }} deps @param {number} id
- * @returns {Promise<(AdminEvent & { options: { people: { id: number, displayName: string }[], platforms: { code: string, name: string }[] } }) | null>}
+ * @returns {Promise<(AdminEvent & { options: { people: import('../http/contracts.js').EventPersonOption[], platforms: { code: string, name: string }[] } }) | null>}
  */
 export async function adminEventDetail(deps, id) {
   const event = await getAdminEvent(deps.db, id);
   if (!event || event.mergedInto !== null) return null;
   const [people, platforms] = await Promise.all([listPeople(deps.db), listPlatforms(deps.db)]);
-  return { ...event, options: optionsOf(people.map((p) => ({ id: p.id, displayName: p.displayName })), platforms) };
+  return { ...event, options: optionsOf(people.map((p) => ({ id: p.id, displayName: p.displayName, emoji: p.emoji, igHandle: p.igHandle })), platforms) };
 }
 
 /** @param {AdminEvent} event @returns {AdminEventRow} */

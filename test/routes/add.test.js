@@ -122,7 +122,7 @@ test('GET /api/add/options lists people, roles, events, categories and clients',
   assert.equal(res.status, 200, res.text);
   const json = JSON.parse(res.text);
   assert.ok(Array.isArray(json.people));
-  assert.deepEqual(json.roles, ['host', 'fan', 'speaker', 'crowd']);
+  assert.deepEqual(json.roles, ['host', 'fan', 'speaker', 'crowd', 'decoration']);
   assert.ok(Array.isArray(json.events));
   assert.ok(Array.isArray(json.categories));
   assert.ok(Array.isArray(json.clients));

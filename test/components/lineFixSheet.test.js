@@ -15,7 +15,7 @@ const { render, bind } = await import('../../public/js/components/lineFixSheet.j
 
 const OPTIONS = {
   people: [{ id: 1, displayName: 'luna', emoji: '🌙', igHandle: 'lunamoon' }],
-  roles: ['host', 'fan', 'speaker', 'crowd'],
+  roles: ['host', 'fan', 'speaker', 'crowd', 'decoration'],
   events: [],
   categories: [],
   clients: [],
@@ -32,6 +32,12 @@ function mounted(line = LINE) {
   bind(root, { line, onFix: (fix) => emitted.push(fix) });
   return { root, emitted };
 }
+
+test('lineFixSheet: never offers "part of another emoji", which names nobody a whole line could be', () => {
+  const markup = String(render({ line: LINE, options: OPTIONS }));
+  assert.match(markup, /data-pick-role="crowd"/);
+  assert.doesNotMatch(markup, /data-pick-role="decoration"/);
+});
 
 test('lineFixSheet: shows the line, speech and plain choices', () => {
   const markup = String(render({ line: LINE, options: OPTIONS }));

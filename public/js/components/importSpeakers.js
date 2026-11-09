@@ -15,7 +15,7 @@ import { speakerSelect, newPersonFields, rowId, bindPick, answerOf } from './imp
  * @typedef {{ itemId: number, kind: string, sourceId: string, text: string }} MarkerEntry
  * @typedef {{ marker: string, count: number, example: string, entries: MarkerEntry[] }} Marker
  * @typedef {{ accountId: number|null, handle: string|null, markers: Marker[] }} MarkerGroup
- * @typedef {{ id: number, displayName: string, igHandle?: string|null }} Person
+ * @typedef {{ id: number, displayName: string, emoji: string, igHandle?: string|null }} Person
  * @typedef {{ people: Person[], roles: string[] }} Catalogue
  * @typedef {{ jobId: number, expanded: Set<string>, remember: boolean }} SpeakersState
  * @typedef {{ root: Element, state: SpeakersState, map: (body: any) => Promise<any>,

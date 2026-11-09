@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { ROLES, PLACEMENTS, REVIEW_STATES, LIVE_WINDOW_DAYS, LIVE_PATTERNS } from '../../src/domain/constants.js';
 
 test('ROLES is unchanged by extending the file', () => {
-  assert.deepEqual(ROLES, ['host', 'fan', 'speaker', 'crowd']);
+  assert.deepEqual(ROLES, ['host', 'fan', 'speaker', 'crowd', 'decoration']);
 });
 
 test('PLACEMENTS lists the four placements', () => {

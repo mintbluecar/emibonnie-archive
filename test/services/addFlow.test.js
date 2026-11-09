@@ -29,3 +29,24 @@ test('the owner’s options list an event with no visible entry; a member’s do
   assert.ok(!owner.includes(deleted) && !member.includes(deleted));
   assert.ok(member.length > 0 && member.every((id) => owner.includes(id)));
 });
+
+test('owner, 2026-11-09: with approval on, the owner’s own add publishes at once; anyone else’s waits', async () => {
+  const { ingestDeps, ingest } = await import('../helpers/ingest.js');
+  const { set } = await import('../../src/repo/settings.js');
+  const { IDS } = await import('../helpers/fixtures.js');
+  const { signInUser } = await import('../../src/services/session.js');
+  const fresh = await ingestDeps();
+  try {
+    /** @param {string} subject @param {string} handle */
+    const userId = async (subject, handle) => (await signInUser({ db: fresh.db, site: fresh.site, now: () => new Date() }, { via: 'x', subject, handle })).user.id;
+    const owner = await userId('0', 'owner');
+    const member = await userId('9', 'member');
+    await fresh.db.transaction((tx) => set(tx, 'approvalRequired', true), { actor: 'system' });
+    const byOwner = await ingest(fresh, IDS.EVENT_A, { actor: owner, byOwner: true });
+    const byMember = await ingest(fresh, IDS.EVENT_B, { actor: member });
+    assert.equal(byOwner.status, 'added');
+    assert.equal(byMember.status, 'pending');
+  } finally {
+    await fresh.db.end();
+  }
+});

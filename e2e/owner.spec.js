@@ -99,9 +99,12 @@ test('the owner approves a held entry, hides and restores a report, and blocks a
   await signInAs(page, 'owner');
   await gotoReady(page, '/me');
 
-  // Approval on, then an add waits for the owner.
+  // Approval on, then a member's add waits for the owner (the owner's own
+  // adds publish at once, owner 2026-11-09).
   const approval = page.locator('[data-action="approval"]');
   if (!(await approval.isChecked())) await approval.check();
+  await signInAs(page, 'member');
+  await gotoReady(page, '/me');
   const added = await page.evaluate(async (url) => {
     const res = await fetch('/api/add', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url }),
@@ -109,7 +112,9 @@ test('the owner approves a held entry, hides and restores a report, and blocks a
     return { status: res.status, text: await res.text() };
   }, tweetUrl(SUBBED));
   expect(added.status, added.text).toBe(200);
-  await page.reload();
+  expect(JSON.parse(added.text).status, 'a member\'s add waits').toBe('pending');
+  await signInAs(page, 'owner');
+  await gotoReady(page, '/me');
   await expect(page.locator('[data-action="approve"]').first()).toBeVisible();
   await page.locator('[data-action="approve"]').first().click();
   await expect(page.locator('[data-action="approve"]')).toHaveCount(0);

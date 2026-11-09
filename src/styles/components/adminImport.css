@@ -50,7 +50,8 @@
 .c-import-speakers__marker {
   display: grid;
   /* The marker column grows for a word marker ("Juniper"); emoji keep 28px. */
-  grid-template-columns: minmax(28px, max-content) 28px 1fr 180px auto;
+  /* The speaker pick's column fits a name, its emoji and a short handle. */
+  grid-template-columns: minmax(28px, max-content) 28px 1fr 240px auto;
   gap: var(--space-2);
   align-items: center;
   padding: var(--space-2) 0;
@@ -92,7 +93,7 @@
 
 .c-import-speakers__entry {
   display: grid;
-  grid-template-columns: 180px auto 1fr;
+  grid-template-columns: 240px auto 1fr;
   gap: var(--space-2);
   align-items: center;
   padding: var(--space-2) 0 var(--space-2) calc(var(--space-8) + var(--space-1));

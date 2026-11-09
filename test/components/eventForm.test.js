@@ -73,8 +73,8 @@ test('render: a locked address is disabled, with a note naming the address it ke
 test('render: live people as removable chips, the others to add, and the platform', () => {
   const markup = String(render(store()));
   assert.match(markup, new RegExp(`aria-label="${pattern(t('adminEventEdit.personRemove', { name: 'sol' }))}"`));
-  assert.match(markup, /<option value="2">luna<\/option>/);
-  assert.doesNotMatch(markup, /<option value="1">sol<\/option>/, 'sol is already live');
+  assert.match(markup, /<option value="2"[^>]*>luna<\/option>/);
+  assert.doesNotMatch(markup, /<option value="1"[^>]*>sol<\/option>/, 'sol is already live');
   assert.match(markup, /<option value="tiktok" selected>tiktok<\/option>/);
   const none = String(render(store({ livePlatformCode: null })));
   assert.match(none, new RegExp(`<option value="" selected>${pattern(t('adminEventEdit.platformNone'))}</option>`));

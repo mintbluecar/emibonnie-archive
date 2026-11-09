@@ -58,6 +58,7 @@ function requestOf(user, body, { dryRun }) {
     lookups: /** @type {'create'|'existing'} */ (user.isOwner ? 'create' : 'existing'),
     addedVia: 'submit',
     actor: user.id,
+    byOwner: user.isOwner === true,
     dryRun,
     allowUnmapped: true,
   };

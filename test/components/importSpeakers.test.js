@@ -52,7 +52,12 @@ function selectsOf(markup) {
   return [...markup.matchAll(/<select[\s\S]*?<\/select>/g)].map((m) => m[0]);
 }
 
-test('a marker card shows its handle, entry count, example and a select of people then roles', () => {
+test('the select names each role in words, so "part of another emoji" reads apart from "not a speaker"', () => {
+  const markup = String(render({ markers: [group()], people: PEOPLE, roles: ['decoration'], expanded: new Set(), remember: true }));
+  assert.match(markup, new RegExp(`<option value="role:decoration"[^>]*>${t('add.role.decoration')}</option>`), markup);
+});
+
+test('a marker card shows its handle, entry count, example and a select of roles then people (owner, 2026-11-09)', () => {
   const markup = String(render({ markers: [group()], people: PEOPLE, roles: ROLES, expanded: new Set(), remember: true }));
   assert.match(markup, /@tl_alpha/);
   assert.match(markup, /2/, 'the marker count');
@@ -63,7 +68,7 @@ test('a marker card shows its handle, entry count, example and a select of peopl
   assert.match(select, /<option value="person:5"/);
   assert.match(select, /<option value="person:6"/);
   assert.match(select, /<option value="role:fan"/);
-  assert.ok(select.indexOf('person:5') < select.indexOf('role:fan'), 'people come before roles');
+  assert.ok(select.indexOf('role:fan') < select.indexOf('person:5'), 'roles come before people');
 
   assert.match(markup, /data-remember/, 'the remember checkbox');
   assert.match(markup, /checked/, 'remember is on by default');
@@ -241,12 +246,15 @@ test('retryJob sends the cursor back and stops at remaining 0', async () => {
   });
 });
 
-test('the select offers a new person and "not a speaker" between the people and the roles', () => {
+test('the select offers "not a speaker" and a new person as actions first, then the roles, then the people (owner, 2026-11-09)', () => {
   const [select] = selectsOf(String(render({ markers: [group()], people: PEOPLE, roles: ROLES, expanded: new Set(), remember: true })));
   assert.match(select, copyRe(t('import.marker.newPerson')));
   assert.match(select, copyRe(t('import.marker.notSpeaker')));
-  assert.ok(select.indexOf('person:6') < select.indexOf('value="new"'), 'people first');
-  assert.ok(select.indexOf('value="plain"') < select.indexOf('role:fan'), 'roles last');
+  assert.match(select, /<option value="plain" data-action>/);
+  assert.match(select, /<option value="new" data-action>/);
+  assert.ok(select.indexOf('value="plain"') < select.indexOf('value="new"'), 'not a speaker, then a new person');
+  assert.ok(select.indexOf('value="new"') < select.indexOf('role:fan'), 'the actions come first');
+  assert.ok(select.indexOf('role:fan') < select.indexOf('person:5'), 'then the roles, then the people');
 });
 
 /**

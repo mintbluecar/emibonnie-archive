@@ -75,7 +75,7 @@
  * @typedef {{ events: AdminEventRow[], total: number }} AdminEventList
  *   `GET /api/owner/events?q&offset`: page size 50; `total` counts every
  *   match, not just this page.
- * @typedef {{ id: number, displayName: string }} EventPersonOption
+ * @typedef {{ id: number, displayName: string, emoji: string, igHandle: string|null }} EventPersonOption
  * @typedef {{ code: string, name: string }} EventPlatformOption
  * @typedef {AdminEvent & { options: { people: EventPersonOption[], platforms: EventPlatformOption[] } }} AdminEventDetail
  *   `GET /api/owner/events/:id`: the event plus the edit form's options

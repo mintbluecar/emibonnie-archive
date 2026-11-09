@@ -14,6 +14,7 @@
 import { html } from '../core/html.js';
 import { mount, on } from '../core/dom.js';
 import { t } from '../core/site.js';
+import { personOption } from '../core/menuOption.js';
 import { eventHref } from '../core/routes.js';
 import {
   addressPreview, withPersonAdded, withPersonRemoved, withTagAdded, withTagRemoved,
@@ -77,7 +78,7 @@ function peopleList({ fields, options }) {
 /** The people not yet live, to add. @param {FormStore} store @returns {SafeHtml} */
 function personChoices({ fields, options }) {
   const others = options.people.filter((p) => !fields.livePeopleIds.includes(p.id));
-  return html`${option('', t('adminEventEdit.personAdd'), true)}${others.map((p) => option(String(p.id), p.displayName, false))}`;
+  return html`${option('', t('adminEventEdit.personAdd'), true)}${others.map((p) => personOption(String(p.id), p))}`;
 }
 
 /** @param {FormStore} store @returns {SafeHtml} */

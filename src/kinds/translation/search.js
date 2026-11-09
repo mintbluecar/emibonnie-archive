@@ -8,7 +8,7 @@
  * the best-matching part's `word_similarity` to the raw query.
  */
 import { excerptAround } from '../../domain/text.js';
-import { componentOf, fixedSpeakerOf } from './presenter.js';
+import { componentOf, fixedSpeakerOf, speakingMarkersOf } from './presenter.js';
 import { partLines } from '../../domain/lineFixes.js';
 
 /** @typedef {import('../defineKind.js').PresentContext} PresentContext */
@@ -99,7 +99,7 @@ function matchLines(details, q, ctx) {
       return `${speaker} ${excerptAround(line.text, q)}`.trim();
     }
     if (line.kind !== 'speech') return excerptAround(line.text, q);
-    return `${line.markers.map((/** @type {string} */ marker) => shownSpeaker(componentOf(marker, details.speakers ?? {}, ctx))).join('')} ${excerptAround(line.text, q)}`;
+    return `${speakingMarkersOf(line, details.speakers ?? {}).map((/** @type {string} */ marker) => shownSpeaker(componentOf(marker, details.speakers ?? {}, ctx))).join('')} ${excerptAround(line.text, q)}`.trim();
   });
 }
 

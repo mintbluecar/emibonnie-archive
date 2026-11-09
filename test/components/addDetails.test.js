@@ -82,6 +82,16 @@ test('addDetails: a new event offers a typed title, prefilled from the proposed 
   assert.match(markup, /value="SOLLUNA HAPPY DAY \(2\)"/);
 });
 
+test('addDetails (owner, 2026-11-09): the event dropdown is searchable, with "＋ New event" as an action at its top', () => {
+  const markup = markupOf({
+    draft: draft({ common: { ...draft().common, eventId: null, proposal: { name: 'SOLLUNA HAPPY DAY (2)', slug: 'x' } } }),
+    choices: { eventMode: 'new' },
+  });
+  const select = markup.slice(markup.indexOf('<select id="c-add-event"'), markup.indexOf('</select>', markup.indexOf('<select id="c-add-event"')));
+  assert.match(select, new RegExp(`data-menu-search="${t('add.searchEvents')}"`));
+  assert.match(select, /^<select[^>]*>\s*<option value="new" data-action selected>/, 'the action comes first');
+});
+
 test('addDetails: every placement is offered, with the current one selected', () => {
   const markup = markupOf({ choices: { placement: 'post' } });
   for (const placement of ['event', 'shared_story', 'post', 'unsorted']) {

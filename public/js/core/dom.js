@@ -7,6 +7,7 @@
  */
 import { SafeHtml, ShellHtml } from './html.js';
 import { bindThemeToggles } from './theme.js';
+import { bindSelectMenus } from './selectMenu.js';
 
 /**
  * Replaces `el`'s content with already-escaped markup. Throws if `safeHtml`
@@ -55,6 +56,7 @@ export function mountPage(root, safeHtml) {
   listenersOf.get(root)?.abort();
   listenersOf.delete(root);
   bindThemeToggles();
+  bindSelectMenus(mount);
   root.setAttribute('data-ready', '');
 }
 

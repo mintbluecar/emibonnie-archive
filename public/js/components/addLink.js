@@ -81,7 +81,6 @@ export function render({ addingAs, url = '', busy = false, error = false, result
         ${urlField({ url, error })}
         <button class="btn btn--primary" type="submit"${busy ? ' disabled' : ''}>${busy ? t('add.checking') : t('add.next')}</button>
       </form>
-      <p class="meta c-add-link__note">${t('add.note')}</p>
     </section>
   `;
 }

@@ -8,10 +8,14 @@ All notable changes to this project are documented here. Versions are semver tag
 
 **Event addresses change from `/e/<slug>` to `/e/<date>/<tag>`** (e.g. an event tagged `#MoonGala` moves from `/e/moon-gala-with-juniper-2025-10-04` to `/e/2025-10-04/moongala`). **Old `/e/<slug>` links stop working**: there is no redirect from them, so links shared before the upgrade answer not-found.
 
+**Emoji runs that mean one person.** Translators sometimes write one person as a run of emoji. When every emoji in a run like `☀️⭐:` is mapped to the same person, the line is that person's own bubble (and one speaker in search results), not a shared "sol & sol" bubble. And a new speaker answer, **Part of another emoji** (role `decoration`), is for an emoji that never stands alone (🐰💙 is one person, 🦊💙 another): lines drop it, so 🐰💙 reads as 🐰. It is offered wherever a marker is mapped, not in the line-by-line fix. The admin import's speaker select now names roles in words, as the add page does.
+
 **Upgrade steps:**
 
 1. `git fetch upstream --tags`, then merge the release tag.
 2. **Migration `006_event_editing`.** It adds `events.merged_into` (a merged event points at the one it went into) and `events.address_locked_at`, which a new `lock_event_address` trigger on `items` stamps once, the first time an entry in the event publishes -- a published event's address never moves again. `events.slug`'s check now also accepts the two-part address (`yyyy-mm-dd/tag`).
+
+   **Migration `007_decoration_role`.** It adds `decoration` to the `speaker_role` domain. Nothing to backfill; it runs with the `npm run migrate` in step 3.
 3. **Readdress the events, before deploying the new code.** Against the production database, in this order:
    1. `DATABASE_URL=… npm run migrate`.
    2. `DATABASE_URL=… npm run readdress-events -- --dry-run`, and read every `old -> new` line.
@@ -20,7 +24,7 @@ All notable changes to this project are documented here. Versions are semver tag
 
    This order is safe: the old code's router decodes each path segment, so it still serves a two-part slug as `/e/2025-10-04%2Fmoongala`, and its event links keep working. Deploying first is not: the new code routes only `/e/<date>/<tag>`, so every event page and event link is a 404 until the script runs. If your deploy workflow runs `npm run migrate` itself, run steps 1-3 by hand before pushing anyway. Pages the CDN cached before the readdress can show old links for up to five minutes (`s-maxage=300`) plus one stale-while-revalidate answer.
 4. **No new environment variables.**
-5. **Copy keys.** Added: `owner.events` and the `adminEvents.*`, `adminEventEdit.*` and `adminEventEntries.*` keys of the three new pages. A site that overrides copy needs none of them.
+5. **Copy keys.** Added: `owner.events`, `add.role.decoration`, and the `adminEvents.*`, `adminEventEdit.*` and `adminEventEntries.*` keys of the three new pages. A site that overrides copy needs none of them.
 6. `npm run build`, then redeploy.
 
 ## 0.5.1
