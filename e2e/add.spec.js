@@ -60,7 +60,7 @@ async function pasteLink(page, id) {
 test('add, signed in: step 1 asks for the link and names who is adding, and axe is clean', async ({ page }) => {
   await signInAs(page, 'member');
   await checkPage(page, '/add');
-  await expect(page.locator('.c-add-link__as')).toHaveText('adding as @dev_member');
+  await expect(page.locator('.c-add-link__as')).toHaveText('Adding as @dev_member');
   await expect(page.locator('#c-add-url')).toBeVisible();
   await expect(page.locator('.c-add__steps')).toBeVisible();
   await expect(page.locator('[data-add-form] .btn--primary')).toBeEnabled();
@@ -78,7 +78,7 @@ test('edit, as the owner: the steps, the picker and the sheet, a Save bar and th
   await checkPage(page, `/edit/translation/${LONG}`);
   await expect(page.locator('.c-add-details')).toBeVisible();
   await expect(page.locator('.c-speaker-step')).toBeVisible();
-  await expect(page.locator('.c-edit__actions [data-action="save"]')).toHaveText('save changes');
+  await expect(page.locator('.c-edit__actions [data-action="save"]')).toHaveText('Save changes');
   await expect(page.locator('.c-edit__history')).toBeVisible();
   // The edit API takes an existing event only: no "new event" choice here.
   await expect(page.locator('#c-add-event option[value="new"]')).toHaveCount(0);
@@ -110,7 +110,7 @@ test('add: a post with no markers saves as plain text, with nothing pinned', asy
   await gotoReady(page, '/add');
   await pasteLink(page, NO_MARKERS);
   await page.locator('[data-action="next"]').click();
-  await expect(page.locator('.c-speaker-step__intro')).toHaveText('no speaker markers found. the entry saves as plain text.');
+  await expect(page.locator('.c-speaker-step__intro')).toHaveText('No speaker markers found. The entry saves as plain text.');
   await expect(page.locator('[data-action="save"]')).toBeEnabled();
   await page.locator('[data-action="save"]').click();
   await page.waitForURL(`**/t/${NO_MARKERS}`);
@@ -139,7 +139,7 @@ test('add: a mapped marker and a plain line save; the edit page puts the bubble 
 
   // Step 3: the preview matched the marker by emoji, and Save is offered.
   await page.locator('[data-action="next"]').click();
-  await expect(page.locator('.c-speaker-step__intro')).toHaveText('we found 1 speaker marker.');
+  await expect(page.locator('.c-speaker-step__intro')).toHaveText('We found 1 speaker marker.');
   await expect(page.locator('[data-marker="☀️"] .c-speaker-step__pick')).toHaveText('☀️ sol');
   await expect(page.locator('[data-action="save"]')).toBeEnabled();
 

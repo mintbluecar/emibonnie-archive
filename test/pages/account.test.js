@@ -24,7 +24,7 @@ const flush = () => new Promise((resolve) => { setTimeout(resolve, 0); });
 test('composeAccount: the handle, an "open profile" link, and totals', () => {
   const markup = String(composeAccount(ACCOUNT));
   assert.match(markup, /<h1 class="heading heading--md" data-handle>@tl_alpha<\/h1>/);
-  assert.match(markup, /<a class="c-account__open-profile" href="https:\/\/x\.com\/tl_alpha"[^>]*>open profile ↗<\/a>/);
+  assert.match(markup, /<a class="c-account__open-profile" href="https:\/\/x\.com\/tl_alpha"[^>]*>Open profile ↗<\/a>/);
   assert.match(markup, /4 translations/);
 });
 
@@ -37,22 +37,22 @@ test('composeAccount: no "open profile" link when the matched kind defines no pr
 
 test('composeAccount: the segmented control has no "with…" (there is no second translator to combine with)', () => {
   const markup = String(composeAccount(ACCOUNT));
-  assert.match(markup, /by event/);
-  assert.match(markup, /all, newest/);
-  assert.ok(!markup.includes('with…'));
+  assert.match(markup, /By event/);
+  assert.match(markup, /All, newest/);
+  assert.ok(!markup.includes('With…'));
 });
 
 test('composeAccount: grouped by event, a shared story, and a post', () => {
   const markup = String(composeAccount(ACCOUNT));
   assert.match(markup, /SOLLUNA AT STARFEST · 18 Oct 2026/);
   assert.match(markup, /luna tiktok live · 12 Feb 2026/);
-  assert.match(markup, /<h2 class="label label--section">shared story · 2 Mar 2026<\/h2>/);
-  assert.match(markup, /<h2 class="label label--section">posts<\/h2>/);
+  assert.match(markup, /<h2 class="label label--section">Shared story · 2 Mar 2026<\/h2>/);
+  assert.match(markup, /<h2 class="label label--section">Posts<\/h2>/);
 });
 
 test('composeOptedOut: only account.optedOut, and nothing else from the page', () => {
   const markup = String(composeOptedOut());
-  assert.match(markup, /this translator has opted out/);
+  assert.match(markup, /This translator has opted out/);
   assert.ok(!markup.includes('c-hub__seg'), 'no segmented control');
   assert.ok(!markup.includes('c-hub-group'), 'no groups');
   assert.ok(!markup.includes('data-handle'), 'not even the handle');
@@ -62,7 +62,7 @@ test('composeOptedOut: still the page shell (header/tab bar/footer), just with t
   const markup = String(composeOptedOut());
   assert.match(markup, /<header class="c-header" data-compact>/);
   assert.match(markup, /c-tabbar/);
-  assert.match(markup, /c-empty-state__message">this translator has opted out/);
+  assert.match(markup, /c-empty-state__message">This translator has opted out/);
 });
 
 test('bind: switching to "all, newest" re-renders flat, without a group label', () => {
@@ -134,7 +134,7 @@ test('start: an opted-out account\'s title and DOM contain no handle (review rou
     assert.ok(!globalThis.document.title.includes('tl_gamma'), `title leaked the handle: ${globalThis.document.title}`);
     assert.ok(!allText(root).includes('tl_gamma'), 'no handle anywhere in the rendered DOM');
     assert.ok(!root.querySelector('[data-handle]'), 'not even the handle element');
-    assert.match(root.querySelector('.c-empty-state__message')?.children?.[0]?.textContent ?? '', /this translator has opted out/);
+    assert.match(root.querySelector('.c-empty-state__message')?.children?.[0]?.textContent ?? '', /This translator has opted out/);
   } finally {
     cleanup();
   }
@@ -145,7 +145,7 @@ test('start: a 404 from the API renders account.notFound', async () => {
   mock.method(globalThis, 'fetch', async () => new Response('not found', { status: 404 }));
   try {
     await start();
-    assert.match(root.querySelector('.c-empty-state__message')?.children?.[0]?.textContent ?? '', /translator not found/);
+    assert.match(root.querySelector('.c-empty-state__message')?.children?.[0]?.textContent ?? '', /Translator not found/);
   } finally {
     cleanup();
   }
@@ -156,7 +156,7 @@ test('start: a non-404 failure renders the generic page.loadFailed fallback, nev
   mock.method(globalThis, 'fetch', async () => { throw new Error('network down'); });
   try {
     await start();
-    assert.match(root.querySelector('.c-empty-state__message')?.children?.[0]?.textContent ?? '', /something went wrong, try again/);
+    assert.match(root.querySelector('.c-empty-state__message')?.children?.[0]?.textContent ?? '', /Something went wrong, try again/);
   } finally {
     cleanup();
   }
@@ -186,7 +186,7 @@ test('composeAccount (Task 9b): entries are compact previews, not full bubbles',
 test('composeAccount (Task 10d): searches within this translator -- the box names them, preset as a removable chip; the opted-out page has no box', () => {
   const markup = String(composeAccount(ACCOUNT));
   const handle = ACCOUNT.account.handle;
-  assert.ok(markup.includes(`placeholder="search @${handle}…"`));
+  assert.ok(markup.includes(`placeholder="Search @${handle}…"`));
   assert.ok(markup.includes(`data-field="account" data-value="${handle}"`));
   assert.match(markup, /<div data-search-list>[\s\S]*c-hub__seg/);
   assert.ok(!String(composeOptedOut()).includes('c-header__search-box'));

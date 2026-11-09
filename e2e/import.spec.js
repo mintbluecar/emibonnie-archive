@@ -168,7 +168,7 @@ test('long handles, URLs and Thai text wrap inside the rows table', async ({ pag
 
   // No horizontal scroll, the table has its headings, and axe passes.
   await checkPage(page, `/admin/imports/${jobId}`);
-  await expect(page.locator('table.table thead th')).toHaveText(['state', 'translator', 'text', 'event', 'actions']);
+  await expect(page.locator('table.table thead th')).toHaveText(['State', 'Translator', 'Text', 'Event', 'Actions']);
 
   const cells = await page.locator('table.table tbody td').evaluateAll((tds) => tds.map((td) => {
     const box = td.getBoundingClientRect();

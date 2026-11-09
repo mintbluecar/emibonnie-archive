@@ -104,7 +104,7 @@ test('embedSources off (the example site, as served): one "original tweet" link,
   const errors = await trackOwnErrors(page);
   await gotoReady(page, `/t/${LIVE}`);
   await expect(page.locator('.c-item__footer a[href^="https://x.com/"]')).toHaveCount(1);
-  await expect(page.locator('.c-item__footer a[href^="https://x.com/"]')).toHaveText('original tweet');
+  await expect(page.locator('.c-item__footer a[href^="https://x.com/"]')).toHaveText('Original tweet');
   await expect(page.locator('blockquote.twitter-tweet')).toHaveCount(0);
   await expect(page.locator('[data-action="copy-link"]')).toBeVisible();
   expect(asked).toEqual([]);
@@ -165,7 +165,7 @@ test('embedSources on, X blocked (Task 10c l, q; 10d extra): the embed\'s attrib
   await expect(quote).toHaveAttribute('data-conversation', 'none');
   // Task 10d extra: no data-width -- X's embed fills its container up to 550px (docs.x.com embedded-posts FAQ).
   await expect(quote).not.toHaveAttribute('data-width', /.*/);
-  await expect(page.locator('.c-embed-box h2.c-embed-box__label')).toHaveText('original tweet');
+  await expect(page.locator('.c-embed-box h2.c-embed-box__label')).toHaveText('Original tweet');
   const box = page.locator('.c-embed-box');
   const more = page.locator('.c-embed-box__more');
   // Task 10d extra: the column's width up to 550px, centred in the column (the box's parent's content box).
@@ -191,11 +191,11 @@ test('embedSources on, X blocked (Task 10c l, q; 10d extra): the embed\'s attrib
   const clip = page.locator('.c-embed-box__clip');
   expect(await clip.evaluate((el) => el.getBoundingClientRect().height)).toBeLessThanOrEqual(321);
   await expect(more).toHaveAttribute('aria-expanded', 'false');
-  await expect(more).toHaveAttribute('aria-label', 'show full tweet');
+  await expect(more).toHaveAttribute('aria-label', 'Show full tweet');
   await more.focus();
   await page.keyboard.press('Enter');
   await expect(more).toHaveAttribute('aria-expanded', 'true');
-  await expect(more).toHaveAttribute('aria-label', 'show less');
+  await expect(more).toHaveAttribute('aria-label', 'Show less');
   await expect(more).toBeFocused();
   expect(await clip.evaluate((el) => el.getBoundingClientRect().height)).toBeGreaterThan(400);
   await page.keyboard.press('Enter');

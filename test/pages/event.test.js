@@ -51,27 +51,27 @@ test('composeEvent: no "more" button when a section has no further page', () => 
 test('composeEvent: a "more" button with the right data-kind/data-offset when a section has hasMore', () => {
   const markup = String(composeEvent(EVENT_PAGED));
   assert.match(markup, /data-offset="1"/);
-  assert.match(markup, /<button type="button" class="btn btn--quiet btn--block" data-action="more" data-kind="translation">more<\/button>/);
+  assert.match(markup, /<button type="button" class="btn btn--quiet btn--block" data-action="more" data-kind="translation">More<\/button>/);
 });
 
 test('composeEvent: the newest-first toggle and the report link', () => {
   const markup = String(composeEvent(EVENT));
-  assert.match(markup, /<button type="button" class="btn btn--quiet c-event__newest-toggle" aria-pressed="false" data-action="newest-first">newest first<\/button>/);
-  assert.match(markup, /<button class="btn btn--quiet c-event__report" type="button" data-action="report">report<\/button>/);
+  assert.match(markup, /<button type="button" class="btn btn--quiet c-event__newest-toggle" aria-pressed="false" data-action="newest-first">Newest first<\/button>/);
+  assert.match(markup, /<button class="btn btn--quiet c-event__report" type="button" data-action="report">Report<\/button>/);
   assert.match(markup, /<dialog[^>]*aria-labelledby="c-report-title"/);
 });
 
 test('composeEvent (Task 10d): searches within the event -- its box says so, its entries are the in-place list, and there is no separate search icon', async () => {
   const { eventSearch } = await import('../../public/js/pages/event.js');
   const markup = String(composeEvent(EVENT));
-  assert.match(markup, /placeholder="search this event…"/);
+  assert.match(markup, /placeholder="Search this event…"/);
   assert.ok(!markup.includes('c-event__search'), 'no icon to a search page');
   assert.ok(!markup.includes('/search'));
   assert.match(markup, /<div data-search-list>[\s\S]*data-event-sections/, 'the list is the entries and their own controls');
   assert.ok(markup.indexOf('SOLLUNA HAPPY DAY</h1>') < markup.indexOf('data-search-list'), 'the event\'s head stays above the results');
   const search = eventSearch(EVENT.event, 'q=hug');
   assert.equal(search.state.event, EVENT.event.slug, 'the event is preset');
-  assert.match(String(composeEvent(EVENT, search)), /data-field="event"[^>]*aria-label="remove SOLLUNA HAPPY DAY/);
+  assert.match(String(composeEvent(EVENT, search)), /data-field="event"[^>]*aria-label="Remove SOLLUNA HAPPY DAY/);
 });
 
 test('composeEvent: includes the page shell\'s compact header, so the wide top bar shows the logo/wordmark too (review #3)', () => {
@@ -120,7 +120,7 @@ test('start: a non-404 failure renders the generic page.loadFailed fallback, nev
   mock.method(globalThis, 'fetch', async () => { throw new Error('network down'); });
   try {
     await start();
-    assert.match(root.querySelector('.c-empty-state__message')?.children?.[0]?.textContent ?? '', /something went wrong, try again/);
+    assert.match(root.querySelector('.c-empty-state__message')?.children?.[0]?.textContent ?? '', /Something went wrong, try again/);
   } finally {
     mock.restoreAll();
     delete (/** @type {any} */ (globalThis)).document;

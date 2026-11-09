@@ -30,23 +30,23 @@ test('composePerson: the person header, in their colour, and the counts line', (
   assert.match(markup, /c-person-header/);
   assert.match(markup, /data-c="#c47a12"/);
   assert.match(markup, /<h1 class="c-person-header__name">sol<\/h1>/);
-  assert.match(markup, /in 6\u00a0translations · 3\u00a0events · 0\u00a0shared\u00a0stories/);
+  assert.match(markup, /In 6\u00a0translations · 3\u00a0events · 0\u00a0shared\u00a0stories/);
 });
 
 test('composePerson (Task 10d): searches within this person -- the box names them, and there is no separate search icon', () => {
   const markup = String(composePerson(PERSON));
-  assert.match(markup, /placeholder="search sol…"/);
+  assert.match(markup, /placeholder="Search sol…"/);
   assert.ok(!markup.includes('c-person__search'));
   assert.ok(!markup.includes('/search'));
   assert.match(markup, /<div data-search-list>[\s\S]*c-hub__seg/);
-  assert.match(markup, /data-field="people" data-value="1"[^>]*aria-label="remove ☀️ sol"/, 'the person is a removable chip from the start');
+  assert.match(markup, /data-field="people" data-value="1"[^>]*aria-label="Remove ☀️ sol"/, 'the person is a removable chip from the start');
 });
 
 test('composePerson: the segmented control, with "with…" (person only)', () => {
   const markup = String(composePerson(PERSON));
-  assert.match(markup, /by event/);
-  assert.match(markup, /all, newest/);
-  assert.match(markup, /with…/);
+  assert.match(markup, /By event/);
+  assert.match(markup, /All, newest/);
+  assert.match(markup, /With…/);
 });
 
 test('composePerson: grouped by event, each event name its own group label', () => {
@@ -58,7 +58,7 @@ test('composePerson: grouped by event, each event name its own group label', () 
 
 test('composePerson: two standalone posts (no event) fold into one "posts" group', () => {
   const markup = String(composePerson(PERSON));
-  const postsHeadings = markup.match(/<h2 class="label label--section">posts<\/h2>/g) ?? [];
+  const postsHeadings = markup.match(/<h2 class="label label--section">Posts<\/h2>/g) ?? [];
   assert.equal(postsHeadings.length, 1, 'one "posts" heading, not one per post');
   assert.match(markup, /href="\/t\/1900000000000000009"/);
   assert.match(markup, /href="\/t\/1900000000000000008"/);
@@ -66,8 +66,8 @@ test('composePerson: two standalone posts (no event) fold into one "posts" group
 
 test('composePerson: a shared-story item groups under "shared story · <day>", distinct from "posts" and from an event', () => {
   const markup = String(composePerson(PERSON_GROUPS));
-  assert.match(markup, /<h2 class="label label--section">shared story · 2 Mar 2026<\/h2>/);
-  assert.match(markup, /<h2 class="label label--section">posts<\/h2>/);
+  assert.match(markup, /<h2 class="label label--section">Shared story · 2 Mar 2026<\/h2>/);
+  assert.match(markup, /<h2 class="label label--section">Posts<\/h2>/);
   assert.match(markup, /SOLLUNA AT STARFEST · 18 Oct 2026/);
 });
 
@@ -221,7 +221,7 @@ test('start: a 404 from the API renders person.notFound', async () => {
   mock.method(globalThis, 'fetch', async () => new Response('not found', { status: 404 }));
   try {
     await start();
-    assert.equal(emptyStateText(root), 'person not found');
+    assert.equal(emptyStateText(root), 'Person not found');
   } finally {
     cleanup();
   }
@@ -232,7 +232,7 @@ test('start: a non-404 failure renders the generic page.loadFailed fallback, nev
   mock.method(globalThis, 'fetch', async () => { throw new Error('network down'); });
   try {
     await start();
-    assert.equal(emptyStateText(root), 'something went wrong, try again');
+    assert.equal(emptyStateText(root), 'Something went wrong, try again');
   } finally {
     cleanup();
   }

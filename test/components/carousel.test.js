@@ -103,7 +103,7 @@ test('bind: tapping a slide opens the zoom dialog with that image', () => {
     const dialog = root.querySelector('.c-zoom');
     assert.ok(dialog, 'a zoom dialog was mounted');
     assert.match(dialog?.querySelector('.c-zoom__img')?.getAttribute('src') ?? '', /a\.jpg/);
-    assert.equal(dialog?.getAttribute('aria-label'), 'full-screen image');
+    assert.equal(dialog?.getAttribute('aria-label'), 'Full-screen image');
     assert.match(dialog?.querySelector('.c-zoom__close')?.getAttribute('class') ?? '', /^btn btn--overlay btn--icon btn--round /, 'a round overlay button (styling system Task 13)');
   } finally {
     delete (/** @type {any} */ (globalThis)).document;

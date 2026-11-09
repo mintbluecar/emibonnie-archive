@@ -8,5 +8,5 @@ test('add report (fix round 2): a missing bare ":" marker is shown as the speake
   const lines = [];
   const code = report(/** @type {any} */ ({ status: 'needs_speakers', sourceId: '1', missing: [{ marker: ':', count: 2 }, { marker: '💜', count: 1 }] }), (l) => lines.push(l));
   assert.equal(code, 2);
-  assert.deepEqual(lines.slice(1), ['  missing (no emoji) (2 lines)', '  missing 💜 (1 lines)']);
+  assert.deepEqual(lines.slice(1), ['  missing (No emoji) (2 lines)', '  missing 💜 (1 lines)']);
 });

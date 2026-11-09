@@ -25,6 +25,6 @@ test('reporting an item shows the thank-you and keeps the dialog usable', async 
   await page.locator('[data-action="report"]').click();
   await page.locator('[data-report-reason]').fill('wrong credit');
   await page.locator('[data-report-submit]').click();
-  await expect(page.locator('[data-report-status]')).toHaveText('thanks — the owner will look at it');
+  await expect(page.locator('[data-report-status]')).toHaveText('Thanks — the owner will look at it');
   await expect(page.locator('[data-report-submit]')).toBeDisabled();
 });

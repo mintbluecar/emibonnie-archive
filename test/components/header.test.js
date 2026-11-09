@@ -27,13 +27,13 @@ test('header: with `search`, has a search box with the given placeholder and an 
   const markup = String(render(SEARCH));
   assert.match(markup, /<input class="c-header__search-box"[^>]*placeholder="search what they said…"/);
   assert.match(String(render({ search: { placeholder: 'search this event…' } })), /placeholder="search this event…"/);
-  assert.match(markup, /aria-label="filters"/);
+  assert.match(markup, /aria-label="Filters"/);
   assert.match(markup, /M4 6h16M7 12h10M10 18h4/);
 });
 
 test('header (Task 10d): the filter button shows the active-filter count, in its label and a badge', () => {
   const markup = String(render({ search: { placeholder: 'x', filterCount: 2 } }));
-  assert.match(markup, /title="filters, 2 active" aria-label="filters, 2 active"/);
+  assert.match(markup, /title="Filters, 2 active" aria-label="Filters, 2 active"/);
   assert.match(markup, /<span class="c-header__filter-count" aria-hidden="true">2<\/span>/);
 });
 
@@ -74,7 +74,7 @@ test('header (Task 10d): with `search` the bar has no search icon (the box is ri
   for (const props of [{}, { compact: true }]) {
     const markup = String(render(props));
     assert.ok(!markup.includes('c-header__search'), 'no search row, so no box that could navigate');
-    assert.match(markup, /<a class="btn btn--quiet btn--icon c-header__icon c-header__find" href="\/" title="search" aria-label="search">\s*<svg[^>]*aria-hidden="true"/);
+    assert.match(markup, /<a class="btn btn--quiet btn--icon c-header__icon c-header__find" href="\/" title="Search" aria-label="Search">\s*<svg[^>]*aria-hidden="true"/);
   }
   assert.ok(!String(render({ compact: true })).includes('c-header__below'), 'a compact page with no search has nothing below the bar');
 });
@@ -86,7 +86,7 @@ test('header (fix round 1, I3; owner rule): every icon-only control carries a ti
       assert.ok(tag.includes(`title="${label}"`), tag);
     }
   }
-  assert.match(String(render(SEARCH)), /class="btn btn--secondary btn--icon c-header__filter-btn" type="button" title="filters" aria-label="filters"/);
+  assert.match(String(render(SEARCH)), /class="btn btn--secondary btn--icon c-header__filter-btn" type="button" title="Filters" aria-label="Filters"/);
 });
 
 test('fix round 1, I3 (owner rule): no button or link in public/js has an aria-label without a title (an icon-only control shows its name on hover)', async () => {

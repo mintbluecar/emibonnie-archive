@@ -169,7 +169,7 @@ test('scoped page: its own filter is a removable chip; removing it widens the se
     assert.match(calls[0], /eventSlug=starfest/, 'searches within the event');
     const chip = /** @type {any} */ (root.querySelector('[data-action="remove-filter"][data-field="event"]'));
     assert.ok(chip, 'the event is a chip');
-    assert.match(chip.getAttribute('aria-label'), /remove starfest 2026/);
+    assert.match(chip.getAttribute('aria-label'), /Remove starfest 2026/);
     assert.ok(!root.querySelector('[data-action="clear-filters"]'), 'nothing beyond the page filter to clear');
     assert.equal(root.querySelector('.c-header__search-box').getAttribute('placeholder'), 'search this event…');
     chip.click();
@@ -177,7 +177,7 @@ test('scoped page: its own filter is a removable chip; removing it widens the se
     assert.equal(urls.at(-1), '/e/starfest?q=hug&scope=all', 'on the page\'s own path, so a reload keeps it removed');
     assert.doesNotMatch(calls.at(-1), /eventSlug/, 'the whole archive');
     assert.ok(!listShown(root), 'still results, on this page');
-    assert.equal(root.querySelector('.c-header__search-box').getAttribute('placeholder'), 'search what they said…', 'the placeholder says what is searched now');
+    assert.equal(root.querySelector('.c-header__search-box').getAttribute('placeholder'), 'Search what they said…', 'the placeholder says what is searched now');
     /** @type {any} */ (root.querySelector('[data-action="clear-filters"]')).click();
     await flush();
     assert.equal(urls.at(-1), '/e/starfest?q=hug', '"clear all" brings the page filter back');
@@ -263,7 +263,7 @@ test('the filter sheet opened from the list view shows the real match count (rev
     /** @type {any} */ (root.querySelector('.c-header__filter-btn')).click();
     await flush();
     const applyBtn = /** @type {any} */ (root.querySelector('.c-filter-sheet__apply'));
-    assert.equal(applyBtn.children.map((/** @type {any} */ c) => c.textContent).join(''), 'show 42');
+    assert.equal(applyBtn.children.map((/** @type {any} */ c) => c.textContent).join(''), 'Show 42');
     const selected = root.querySelectorAll('[data-filter="event"] option').find((/** @type {any} */ o) => o.getAttribute('value') === 'starfest');
     assert.ok(selected && selected.getAttribute('selected') !== null, 'the event is already chosen');
   } finally {
@@ -284,7 +284,7 @@ test('a refetch failure shows the error state but keeps the chips, so there is a
     fail = true;
     /** @type {any} */ (root.querySelector('[data-action="remove-filter"][data-field="types"]')).click();
     await flush();
-    assert.match(errorText(root), /something went wrong/);
+    assert.match(errorText(root), /Something went wrong/);
     assert.ok(root.querySelector('[data-action="clear-filters"]'), 'the active-filters row is still there');
   } finally {
     cleanup();
@@ -370,7 +370,7 @@ test('resultsBody (Task 9b): a results line above the results counts every match
   assert.ok(withQ.indexOf('c-search__count') < withQ.indexOf('data-search-results'));
   assert.match(body({ ...EMPTY_STATE, people: [1] }, 1), /<p class="meta c-search__count">1 translation · newest first<\/p>/);
   assert.ok(!body({ ...EMPTY_STATE, q: 'zzz' }, 0).includes('c-search__count'), 'no results: no count line');
-  assert.match(body({ ...EMPTY_STATE, q: 'zzz' }, 0), /no results/);
+  assert.match(body({ ...EMPTY_STATE, q: 'zzz' }, 0), /No results/);
 });
 
 test('prepare: a q out of the 2-100 range in a hand-edited URL is dropped', () => {
@@ -396,10 +396,10 @@ test('fix round 1, I2: one live region, outside the re-mounted results, announce
     assert.equal(status(root), '3 translations · best match first');
     body = { count: 0, results: [] };
     await typeAndSettle(root, 'zz');
-    assert.equal(status(root), 'no results');
+    assert.equal(status(root), 'No results');
     body = 'fail';
     await typeAndSettle(root, 'yy');
-    assert.equal(status(root), 'something went wrong, try again');
+    assert.equal(status(root), 'Something went wrong, try again');
     await typeAndSettle(root, '');
     assert.equal(status(root), '', 'the list is back: nothing to announce');
   } finally {
@@ -459,7 +459,7 @@ test('fix round 1, M6: a scoped page with its own chip removed and an empty box 
     assert.equal(urls.at(-1), '/e/starfest?scope=all');
     assert.ok(root.querySelector('[data-search-list]').hidden, 'the event\'s own list is not what is searched now');
     assert.ok(!root.querySelector('.c-search').hidden);
-    assert.match(root.querySelector('.c-search__hint').children[0].textContent, /type to search everything/);
+    assert.match(root.querySelector('.c-search__hint').children[0].textContent, /Type to search everything/);
     assert.equal(calls.length, 0, 'no search for the hint');
     /** @type {any} */ (root.querySelector('[data-action="clear-filters"]')).click();
     await flush();
