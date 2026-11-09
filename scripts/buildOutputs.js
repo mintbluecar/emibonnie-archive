@@ -81,7 +81,9 @@ const BUILD_CACHE_HEADERS = [{ source: '/build/(.*)', headers: [{ key: 'Cache-Co
 
 /**
  * `src/site/generated.js`: a statically-importable module so Vercel bundles
- * it, with no runtime `fs` reads in functions.
+ * it, with no runtime `fs` reads in functions. `site` carries its `Site`
+ * type, so tsc checks the literal against the schema instead of widening
+ * it (a font's `style: "normal"` read as any string fails `Site`).
  * @param {import('../src/site/schema.js').Site} site
  * @param {Record<string, string>} copy
  * @param {{ logo: string|null }} [assets] public paths of the site's copied assets (the logo, for link previews)
@@ -90,7 +92,7 @@ const BUILD_CACHE_HEADERS = [{ source: '/build/(.*)', headers: [{ key: 'Cache-Co
 export function buildGeneratedSiteModule(site, copy, assets = { logo: null }) {
   return (
     `${GENERATED_HEADER}// @ts-check\n` +
-    `export const site = ${JSON.stringify(site, null, 2)};\n\n` +
+    `/** @type {import('./schema.js').Site} */\nexport const site = ${JSON.stringify(site, null, 2)};\n\n` +
     `export const copy = ${JSON.stringify(copy, null, 2)};\n\n` +
     `/** @type {{ logo: string|null }} */\nexport const assets = ${JSON.stringify(assets)};\n`
   );
