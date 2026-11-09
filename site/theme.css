@@ -3,7 +3,9 @@
  * src/styles/tokens.css (see docs/site-settings.md, "Light and dark").
  * Values from the spec's "Visual design" section: paper, card, line, ink,
  * muted, the logo's orange -> pink gradient, and IBM Plex Sans Thai for
- * Thai text.
+ * Thai text. Everything else is Figtree (owner's pick, 2026-11-09, over
+ * the engine's rounded Nunito), self-hosted from site/fonts/ and
+ * declared in site.json's `fonts`.
  *
  * Light values sit on a plain :root. The engine's dark blocks outrank it,
  * so dark mode (the device's, or forced with the header's switch) keeps
@@ -13,6 +15,14 @@
  */
 
 :root {
+  --font-body: 'Figtree', sans-serif;
+  /* Subtle corners (owner's pick, 2026-11-09, over the engine's rounder
+     defaults); pills stay pills. */
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-card: 8px;
   --font-script: 'IBM Plex Sans Thai', sans-serif;
   --color-bg: #f6efe3;
   --color-card: #fffdf8;
