@@ -473,6 +473,7 @@
   "adminEventEntries.col.people": "people",
   "adminEventEntries.col.tweet": "tweet",
   "adminEventEntries.col.state": "state",
+  "adminEventEntries.openTweet": "open on X",
   "adminEventEntries.tick": "tick tweet {id}",
   "adminEventEntries.state.pending": "pending",
   "adminEventEntries.state.published": "published",
